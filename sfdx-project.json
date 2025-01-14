@@ -1,12 +1,28 @@
 {
   "packageDirectories": [
-    {
-      "path": "force-app",
-      "default": true
-    }
+      {
+          "path": "sportsmgmt",
+          "package": "Sports Management Core",
+          "versionName": "Version 1.0",
+          "versionNumber": "1.0.0.NEXT",
+          "default": true,
+          "namespace": "sportsmgmt"
+      },
+      {
+          "path": "sportsmgmt-football",
+          "package": "Sports Management Football",
+          "versionName": "Version 1.0",
+          "versionNumber": "1.0.0.NEXT",
+          "dependencies": [
+              {
+                  "package": "Sports Management Core",
+                  "versionNumber": "1.0.0.LATEST"
+              }
+          ]
+      }
   ],
-  "name": "andyDeveloperOrg",
-  "namespace": "",
+  "name": "sports-league-management",
+  "namespace": "sportsmgmt",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "62.0"
+  "sourceApiVersion": "59.0"
 }

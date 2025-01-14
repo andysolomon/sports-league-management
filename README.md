@@ -1,18 +1,85 @@
-# Salesforce DX Project: Next Steps
 
-Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
+# Sports League Management System
 
-## How Do You Plan to Deploy Your Changes?
+A modular, extensible Salesforce solution for sports league management built with TypeScript-enabled LWC components.
 
-Do you want to deploy a set of changes, or create a self-contained application? Choose a [development model](https://developer.salesforce.com/tools/vscode/en/user-guide/development-models).
+## Dev Hub Setup
 
-## Configure Your Salesforce DX Project
+1. Enable Dev Hub in your org:
+   ```bash
+   sf org open --target-org your-dev-hub
+   ```
+   Then navigate to Setup → Development → Dev Hub and enable "Dev Hub" and "Unlocked Packages and Second-Generation Managed Packages"
 
-The `sfdx-project.json` file contains useful configuration information for your project. See [Salesforce DX Project Configuration](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_ws_config.htm) in the _Salesforce DX Developer Guide_ for details about this file.
+2. Authenticate CLI:
+   ```bash
+   sf org login web --set-default-dev-hub
+   ```
 
-## Read All About It
+## Scratch Org Creation
 
-- [Salesforce Extensions Documentation](https://developer.salesforce.com/tools/vscode/)
-- [Salesforce CLI Setup Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_setup.meta/sfdx_setup/sfdx_setup_intro.htm)
-- [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_intro.htm)
-- [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
+1. Create scratch org:
+   ```bash
+   sf org create scratch --definition-file config/project-scratch-def.json --alias sports-dev --duration-days 1
+   ```
+
+2. Set as default:
+   ```bash
+   sf config set target-org=sports-dev
+   ```
+
+3. Deploy project:
+   ```bash
+   sf project deploy start
+   ```
+
+## Project Structure
+
+```
+sportsmgmt/                     # Core package
+├── main/default/
+│   ├── applications/          # App configurations
+│   ├── classes/              
+│   │   ├── interfaces/        # Core interfaces
+│   │   ├── abstracts/         # Abstract base classes
+│   │   ├── di/               # Dependency injection
+│   │   ├── services/         # Service layer
+│   │   ├── repositories/     # Data access
+│   │   └── factories/        # Object factories
+│   ├── lwc/                  # Lightning Web Components
+│   ├── objects/              # Custom objects
+│   └── permissionsets/       # Permission sets
+│
+sportsmgmt-football/           # Football-specific implementation
+└── main/default/             # Sport-specific components
+```
+
+## Development Workflow
+
+1. Create feature branch:
+   ```bash
+   git checkout -b feat/W-XXXXX-description
+   ```
+
+2. Deploy changes:
+   ```bash
+   sf project deploy start
+   ```
+
+3. Run tests:
+   ```bash
+   sf apex test run --wait 10
+   ```
+
+## Features
+
+- Multi-sport support through modular architecture
+- TypeScript-enabled LWC components
+- SOLID principles implementation
+- Comprehensive testing framework
+
+## Package Dependencies
+
+The solution consists of two packages:
+- `sportsmgmt` - Core framework
+- `sportsmgmt-football` - Football-specific implementation

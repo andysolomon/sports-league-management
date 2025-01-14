@@ -1,13 +1,33 @@
 {
-  "orgName": "andrewsolomon company",
+  "orgName": "Sports League Dev",
   "edition": "Developer",
-  "features": ["EnableSetPasswordInApi"],
+  "hasSampleData": false,
+  "features": [
+      "API",
+      "AuthorApex",
+      "DebugApex",
+      "EnableSetPasswordInApi",
+      "MultiCurrency",
+      "PersonAccounts",
+      "Sites",
+      "Communities"
+  ],
   "settings": {
-    "lightningExperienceSettings": {
-      "enableS1DesktopEnabled": true
-    },
-    "mobileSettings": {
-      "enableS1EncryptedStoragePref2": false
-    }
+      "lightningExperienceSettings": {
+          "enableS1DesktopEnabled": true
+      },
+      "mobileSettings": {
+          "enableS1EncryptedStoragePref2": false
+      },
+      "communitiesSettings": {
+          "enableNetworksEnabled": true
+      },
+      "languageSettings": {
+          "enableTranslationWorkbench": true
+      },
+      "userEngagementSettings": {
+          "enableOrchestrationInSandbox": true,
+          "enableShowSalesforceUserAssist": false
+      }
   }
 }
