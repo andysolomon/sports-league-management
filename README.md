@@ -83,3 +83,38 @@ sportsmgmt-football/           # Football-specific implementation
 The solution consists of two packages:
 - `sportsmgmt` - Core framework
 - `sportsmgmt-football` - Football-specific implementation
+
+## Development Environment Setup
+
+### Code Quality Tools
+
+The project uses several tools to ensure code quality and consistency:
+
+- **ESLint**: JavaScript/LWC linting
+  - Configuration: `.eslintrc.json`
+  - Run: `npm run lint`
+  - Fix: `npm run lint:fix`
+
+- **Prettier**: Code formatting
+  - Configuration: `.prettierrc`
+  - Run: `npm run prettier`
+  - Verify: `npm run prettier:verify`
+
+- **Jest**: LWC testing
+  - Configuration: `jest.config.js`
+  - Run all tests: `npm test`
+  - Watch mode: `npm run test:watch`
+  - Debug mode: `npm run test:debug`
+
+### VS Code Setup
+
+Recommended extensions:
+- Salesforce Extension Pack
+- ESLint
+- Prettier
+- Jest
+
+Workspace settings are preconfigured in `.vscode/settings.json` for:
+- Format on save
+- Default formatters per language
+- Salesforce CLI integration
