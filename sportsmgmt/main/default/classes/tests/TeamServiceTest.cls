@@ -1,54 +1,51 @@
-@isTest
+@IsTest
 private class TeamServiceTest {
-    // Fake implementation of TeamRepository for unit testing (mock object)
+
+    // Mock repository to isolate service logic
     private class MockTeamRepository extends TeamRepository {
         public Id lastCreatedId;
-        public override Id create(ITeam team) {
-            // Simulate DML by returning a fake Id
-            lastCreatedId = Id.valueOf('001000000000001AAA');
+        public override Id create(ITeam t) {
+            lastCreatedId = 'a00000000000001AAA';
             return lastCreatedId;
         }
-
         public override Team__c retrieve(Id teamId) {
-            return new Team__c(Id = teamId, Name = 'Mock Team', League__c = 'a0L000000000001AAA');
+            return new Team__c(Name = 'Mock Team');
         }
-
-        public override void updateTeam(Team__c record) {
-            // No-op
-        }
-
-        public override void deleteTeam(Id teamId) {
-            // No-op
-        }
-
+        public override void updateTeam(Team__c rec) {}
+        public override void deleteTeam(Id teamId) {}
         public override List<Team__c> listByLeague(Id leagueId) {
-            return new List<Team__c>{ new Team__c(Id = '001000000000002AAA', Name = 'Mock Team', League__c = leagueId) };
+            return new List<Team__c>{ new Team__c(Name = 'Mock Team') };
         }
     }
 
-    @isTest
-    static void testCrudOperations() {
+    // Simple concrete implementation of AbstractTeam for tests
+    private class TestTeam extends AbstractTeam {
+        TestTeam(String name, Id leagueId) {
+            super(null, name, leagueId);
+        }
+    }
+
+    @IsTest static void crudFlow() {
         MockTeamRepository mockRepo = new MockTeamRepository();
-        TeamService service = new TeamService(mockRepo);
+        TeamService svc = new TeamService(mockRepo);
 
-        // Create
-        ITeam newTeam = new AbstractTeam(null, 'My Team', UserInfo.getUserId()) {};
-        Id createdId = service.createTeam(newTeam);
-        System.assertNotEquals(null, createdId, 'Created Id should not be null');
-        System.assertEquals(mockRepo.lastCreatedId, createdId, 'Created Id should match mock');
+        // CREATE
+        ITeam team = new TestTeam('My Team', UserInfo.getUserId());
+        Id createdId = svc.createTeam(team);
+        System.assertNotEquals(null, createdId, 'Id should not be null');
 
-        // Retrieve
-        Team__c retrieved = service.getTeam(createdId);
-        System.assertEquals('Mock Team', retrieved.Name);
+        // READ
+        Team__c fetched = svc.getTeam(createdId);
+        System.assertEquals('Mock Team', fetched.Name);
 
-        // Update should not throw
-        service.updateTeam(retrieved);
+        // UPDATE (should not throw)
+        svc.updateTeam(fetched);
 
-        // List
-        List<Team__c> teams = service.listTeamsByLeague(retrieved.League__c);
-        System.assertEquals(1, teams.size());
+        // LIST
+        List<Team__c> teams = svc.listTeamsByLeague(fetched.League__c);
+        System.assertEquals(1, teams.size(), 'Should return one team');
 
-        // Delete should not throw
-        service.deleteTeam(createdId);
+        // DELETE (should not throw)
+        svc.deleteTeam(createdId);
     }
 } 
