@@ -1,12 +1,21 @@
-/* eslint-env node */
-// Script to seed League and Team sample data into the default org (or alias provided)
-// Usage: node scripts/seed-data.js [alias]
+#!/usr/bin/env node
 
-const { execSync } = require('child_process');
-const path = require('path');
+/**
+ * Sports Management - Data Seeding Script
+ * 
+ * Script to seed League and Team sample data into the default org (or alias provided)
+ * Usage: node scripts/seed-data.js [alias]
+ */
+
+import { execSync } from 'child_process';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const orgAlias = process.argv[2] || 'sports-scratch';
-const planPath = path.join(__dirname, '..', 'data', 'league-team-plan.json');
+const planPath = join(__dirname, '..', 'data', 'league-team-plan.json');
 
 try {
   console.log(`\n🏈  Importing League & Team sample data into org: ${orgAlias}\n`);
