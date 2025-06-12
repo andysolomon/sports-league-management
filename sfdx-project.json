@@ -1,35 +1,26 @@
 {
   "packageDirectories": [
-    {
-      "path": "sportsmgmt",
-      "package": "Sports Management Core",
-      "versionName": "Version 1.0",
-      "versionNumber": "1.0.0.NEXT",
-      "default": true,
-      "description": "Core platform features for sports management - sport-agnostic functionality"
-    },
-    {
-      "path": "sportsmgmt-football",
-      "package": "Sports Management Football",
-      "versionName": "Version 1.0",
-      "versionNumber": "1.0.0.NEXT",
-      "description": "Football-specific implementations and features",
-      "dependencies": [
-        {
+      {
+          "path": "sportsmgmt",
           "package": "Sports Management Core",
-          "versionNumber": "1.0.0.LATEST"
-        }
-      ]
-    }
+          "versionName": "Version 1.0",
+          "versionNumber": "1.0.0.NEXT",
+          "default": true
+      },
+      {
+          "path": "sportsmgmt-football",
+          "package": "Sports Management Football",
+          "versionName": "Version 1.0",
+          "versionNumber": "1.0.0.NEXT",
+          "dependencies": [
+              {
+                  "package": "Sports Management Core",
+                  "versionNumber": "1.0.0.LATEST"
+              }
+          ]
+      }
   ],
   "name": "sports-league-management",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "62.0",
-  "packageAliases": {
-    "Sports Management Core": "0Hobm0000000TMzCAM",
-    "Sports Management Football": "0Hobm0000000TObCAM"
-  },
-  "plugins": {
-    "salesforce-alm": {}
-  }
+  "sourceApiVersion": "64.0"
 }
