@@ -4,7 +4,9 @@
     <description>Workspace for league administrators to manage leagues, teams, and divisions.</description>
     <label>Sports League Management</label>
     <navType>Standard</navType>
+    <uiType>Lightning</uiType>
+    <formFactors>Large</formFactors>
+    <isNavAutoTempTabsDisabled>false</isNavAutoTempTabsDisabled>
+    <isNavPersonalizationDisabled>false</isNavPersonalizationDisabled>
     <tabs>standard-Home</tabs>
-    <tabs>CustomObject:League__c</tabs>
-    <tabs>CustomObject:Team__c</tabs>
 </CustomApplication> 
