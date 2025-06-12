@@ -1,0 +1,12 @@
+[
+  {
+    "attributes": { "type": "Team__c", "referenceId": "teamRef1" },
+    "Name": "Dallas Cowboys",
+    "League__c": "@leagueRef1"
+  },
+  {
+    "attributes": { "type": "Team__c", "referenceId": "teamRef2" },
+    "Name": "New England Patriots",
+    "League__c": "@leagueRef1"
+  }
+] 
