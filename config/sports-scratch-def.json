@@ -1,0 +1,37 @@
+{
+  "orgName": "Sports League Scratch",
+  "edition": "Developer",
+  "hasSampleData": false,
+  "features": [
+    "AuthorApex",
+    "DebugApex",
+    "EnableSetPasswordInApi",
+    "MultiCurrency",
+    "PersonAccounts",
+    "Sites",
+    "Communities",
+    "RecordTypes",
+    "ServiceCloud"
+  ],
+  "settings": {
+    "lightningExperienceSettings": {
+      "enableS1DesktopEnabled": true
+    },
+    "mobileSettings": {
+      "enableS1EncryptedStoragePref2": false
+    },
+    "communitiesSettings": {
+      "enableNetworksEnabled": true
+    },
+    "languageSettings": {
+      "enableTranslationWorkbench": true
+    },
+    "userEngagementSettings": {
+      "enableOrchestrationInSandbox": true,
+      "enableShowSalesforceUserAssist": false
+    },
+    "chatterSettings": {
+      "enableChatter": true
+    }
+  }
+} 
