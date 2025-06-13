@@ -20,7 +20,7 @@ Your Sports League Management project is well-configured with:
 - **Package Structure**: Core package (`sportsmgmt`) + Sport-specific packages (`sportsmgmt-football`)
 - **API Version**: 58.0
 - **Architecture**: SOLID principles with dependency injection
-- **Testing**: Comprehensive Jest (LWC) and Apex test coverage
+- **Testing**: Comprehensive Jest (LWC) and Apex test coverage (94% org-wide coverage)
 - **Development Tools**: ESLint, Prettier, automated scripts
 
 ### Project Configuration Files
@@ -28,6 +28,50 @@ Your Sports League Management project is well-configured with:
 - `config/project-scratch-def.json` - Scratch org definition
 - `package.json` - Node.js dependencies and scripts
 - `.forceignore` - Files to exclude from deployments
+
+### Project Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Lightning Web Components"
+        LWC1["Team Management<br/>Components"]
+        LWC2["League Management<br/>Components"]
+    end
+    
+    subgraph "Apex Controllers"
+        CTRL["TeamDetailsController<br/>@AuraEnabled methods"]
+    end
+    
+    subgraph "Service Layer"
+        SVC["TeamService<br/>Business Logic"]
+    end
+    
+    subgraph "Repository Layer"
+        REPO["TeamRepository<br/>Data Access"]
+        IREPO["ITeamRepository<br/>Interface"]
+    end
+    
+    subgraph "Data Models"
+        WRAPPER["TeamWrapper<br/>Data Transfer Object"]
+        ABSTRACT["AbstractTeam<br/>Base Class"]
+    end
+    
+    subgraph "Salesforce Objects"
+        TEAM["Team__c<br/>Custom Object"]
+        LEAGUE["League__c<br/>Custom Object"]
+    end
+    
+    LWC1 --> CTRL
+    LWC2 --> CTRL
+    CTRL --> SVC
+    SVC --> IREPO
+    IREPO --> REPO
+    REPO --> TEAM
+    REPO --> LEAGUE
+    SVC --> WRAPPER
+    WRAPPER --> ABSTRACT
+    TEAM --> LEAGUE
+```
 
 ## SF CLI Commands for Your Project
 
@@ -105,6 +149,41 @@ sf data create record --sobject Team__c --values "Name='Test Team' City__c='Test
 
 ## Custom Objects Structure
 
+### Data Model Overview
+
+```mermaid
+erDiagram
+    League__c {
+        Id Id PK
+        Name Name
+        RecordTypeId RecordTypeId
+        CreatedDate CreatedDate
+        LastModifiedDate LastModifiedDate
+    }
+    
+    Team__c {
+        Id Id PK
+        Name Name
+        City__c City
+        Stadium__c Stadium
+        Founded_Year__c Founded_Year
+        League__c League_Id FK
+        Location__c Location
+        CreatedDate CreatedDate
+        LastModifiedDate LastModifiedDate
+    }
+    
+    RecordType {
+        Id Id PK
+        DeveloperName DeveloperName
+        Name Name
+        SobjectType SobjectType
+    }
+    
+    League__c ||--o{ Team__c : "has many"
+    RecordType ||--o{ League__c : "classifies"
+```
+
 ### 1. League__c (Parent Object)
 
 **Purpose**: Represents sports leagues (NFL, MLS, etc.)
@@ -136,6 +215,7 @@ sf data create record --sobject Team__c --values "Name='Test Team' City__c='Test
 - `Stadium__c` - Home stadium name (Text, 100 chars)
 - `Founded_Year__c` - Year team was founded (Number, 4 digits)
 - `League__c` - Lookup to League__c (required)
+- `Location__c` - Geographic location information
 
 **Relationships**:
 - Many-to-One with `League__c` (Lookup relationship)
@@ -147,17 +227,78 @@ sf data create record --sobject Team__c --values "Name='Test Team' City__c='Test
 - Search enabled
 - Bulk API and Streaming API enabled
 
-### Data Model Diagram
+### Class Architecture Diagram
 
-```
-League__c (1) -----> (n) Team__c
-    |                    |
-    ├─ Name              ├─ Name
-    ├─ RecordType        ├─ City__c
-    └─ (System Fields)   ├─ Stadium__c
-                         ├─ Founded_Year__c
-                         ├─ League__c (Lookup)
-                         └─ (System Fields)
+```mermaid
+classDiagram
+    class ITeamRepository {
+        <<interface>>
+        +retrieve(Id teamId) TeamWrapper
+        +listByLeague(Id leagueId) List~TeamWrapper~
+        +getAllTeams() List~TeamWrapper~
+        +create(TeamWrapper team) TeamWrapper
+        +updateTeam(TeamWrapper team) TeamWrapper
+        +deleteTeam(Id teamId) void
+    }
+    
+    class TeamRepository {
+        +retrieve(Id teamId) TeamWrapper
+        +listByLeague(Id leagueId) List~TeamWrapper~
+        +getAllTeams() List~TeamWrapper~
+        +create(TeamWrapper team) TeamWrapper
+        +updateTeam(TeamWrapper team) TeamWrapper
+        +deleteTeam(Id teamId) void
+        -buildTeamWrapper(Team__c team) TeamWrapper
+    }
+    
+    class TeamService {
+        -ITeamRepository repository
+        +TeamService(ITeamRepository repo)
+        +getTeam(Id teamId) TeamWrapper
+        +getAllTeams() List~TeamWrapper~
+        +listTeamsByLeague(Id leagueId) List~TeamWrapper~
+        +createTeam(TeamWrapper team) TeamWrapper
+        +updateTeam(TeamWrapper team) TeamWrapper
+        +deleteTeam(Id teamId) void
+    }
+    
+    class TeamDetailsController {
+        +getTeamById(Id teamId) TeamWrapper
+        +getAllTeams() List~TeamWrapper~
+        +getTeamsByLeague(Id leagueId) List~TeamWrapper~
+        -convertToTeamRecord(TeamWrapper wrapper) Team__c
+    }
+    
+    class AbstractTeam {
+        #String name
+        #String city
+        #String stadium
+        #Integer foundedYear
+        #Id leagueId
+        #String location
+        +AbstractTeam()
+        +AbstractTeam(String name, String city, String stadium, Integer year, Id league, String location)
+        +getName() String
+        +getCity() String
+        +getStadium() String
+        +getFoundedYear() Integer
+        +getLeagueId() Id
+        +getLocation() String
+    }
+    
+    class TeamWrapper {
+        -Team__c originalRecord
+        +TeamWrapper(Team__c record)
+        +TeamWrapper(String name, String city, String stadium, Integer year, Id league, String location)
+        +getOriginalRecord() Team__c
+        +clone() TeamWrapper
+    }
+    
+    ITeamRepository <|.. TeamRepository : implements
+    TeamService --> ITeamRepository : uses
+    TeamDetailsController --> TeamService : uses
+    AbstractTeam <|-- TeamWrapper : extends
+    TeamWrapper --> Team__c : wraps
 ```
 
 ## Salesforce Object Reference Integration
@@ -200,9 +341,77 @@ Your data model follows Salesforce best practices:
 - Game__c → Team__c (Many-to-Many via junction)
 - Season__c → League__c (Many-to-One)
 
+### Future Data Model Extensions
+
+```mermaid
+erDiagram
+    League__c {
+        Id Id PK
+        Name Name
+        RecordTypeId RecordTypeId
+    }
+    
+    Team__c {
+        Id Id PK
+        Name Name
+        City__c City
+        Stadium__c Stadium
+        League__c League_Id FK
+    }
+    
+    Player__c {
+        Id Id PK
+        Name Name
+        Position__c Position
+        Jersey_Number__c Jersey_Number
+        Team__c Team_Id FK
+    }
+    
+    Season__c {
+        Id Id PK
+        Name Name
+        Start_Date__c Start_Date
+        End_Date__c End_Date
+        League__c League_Id FK
+    }
+    
+    Game__c {
+        Id Id PK
+        Name Name
+        Game_Date__c Game_Date
+        Home_Team__c Home_Team_Id FK
+        Away_Team__c Away_Team_Id FK
+        Season__c Season_Id FK
+    }
+    
+    League__c ||--o{ Team__c : "has many"
+    Team__c ||--o{ Player__c : "has many"
+    League__c ||--o{ Season__c : "has many"
+    Season__c ||--o{ Game__c : "has many"
+    Team__c ||--o{ Game__c : "home team"
+    Team__c ||--o{ Game__c : "away team"
+```
+
 ## Practical SF CLI Workflows
 
 ### 1. Development Workflow
+
+```mermaid
+flowchart TD
+    A["Start Development"] --> B["Create Scratch Org<br/>node scripts/create-scratch-org.js"]
+    B --> C["Deploy Objects<br/>sf project deploy start --source-dir objects"]
+    C --> D["Deploy Classes<br/>sf project deploy start --source-dir classes"]
+    D --> E["Deploy LWC<br/>sf project deploy start --source-dir lwc"]
+    E --> F["Load Test Data<br/>sf data import tree --plan data/plan.json"]
+    F --> G["Run Apex Tests<br/>sf apex test run --wait 10"]
+    G --> H["Run LWC Tests<br/>sf force lightning lwc test run"]
+    H --> I{"Tests Pass?"}
+    I -->|Yes| J["Open Org<br/>sf org open"]
+    I -->|No| K["Fix Issues"]
+    K --> G
+    J --> L["Manual Testing"]
+    L --> M["Ready for Production"]
+```
 
 ```bash
 # 1. Create and setup scratch org
@@ -228,6 +437,29 @@ sf org open --target-org sports-dev
 
 ### 2. Data Management Workflow
 
+```mermaid
+flowchart LR
+    A["Create Leagues"] --> B["Create Teams"]
+    B --> C["Validate Relationships"]
+    C --> D["Export for Backup"]
+    D --> E["Query Performance Check"]
+    
+    subgraph "Data Creation"
+        A1["Professional Leagues<br/>NFL, MLS, NBA"]
+        A2["Amateur Leagues<br/>Local, College"]
+    end
+    
+    subgraph "Team Creation"
+        B1["NFL Teams<br/>Cowboys, Patriots"]
+        B2["MLS Teams<br/>FC Dallas, Revolution"]
+    end
+    
+    A --> A1
+    A --> A2
+    B --> B1
+    B --> B2
+```
+
 ```bash
 # Create sample leagues
 sf data create record --sobject League__c --values "Name='NFL' RecordTypeId=[Professional_RT_ID]"
@@ -245,6 +477,27 @@ sf data export tree --query "SELECT Id, Name, City__c, Stadium__c, Founded_Year_
 ```
 
 ### 3. Testing and Validation Workflow
+
+```mermaid
+flowchart TD
+    A["Start Testing"] --> B["Run Unit Tests<br/>sf apex test run"]
+    B --> C{"Coverage > 90%?"}
+    C -->|No| D["Add More Tests"]
+    D --> B
+    C -->|Yes| E["Run Integration Tests"]
+    E --> F["Run LWC Tests<br/>sf force lightning lwc test run"]
+    F --> G["Validate Deployment<br/>sf project deploy validate"]
+    G --> H{"Validation Pass?"}
+    H -->|No| I["Fix Issues"]
+    I --> B
+    H -->|Yes| J["Ready for Deployment"]
+    
+    subgraph "Test Coverage Achieved"
+        K["94% Org-Wide Coverage<br/>60 Total Tests<br/>100% Pass Rate"]
+    end
+    
+    J --> K
+```
 
 ```bash
 # Run all tests with coverage
@@ -266,6 +519,26 @@ sf apex get test --test-run-id [TEST_RUN_ID] --code-coverage
 ```
 
 ### 4. Package Management Workflow
+
+```mermaid
+flowchart LR
+    A["Create Package Version"] --> B["Test in Scratch Org"]
+    B --> C["Install in UAT"]
+    C --> D["User Acceptance Testing"]
+    D --> E{"UAT Pass?"}
+    E -->|No| F["Fix Issues"]
+    F --> A
+    E -->|Yes| G["Promote Version"]
+    G --> H["Install in Production"]
+    
+    subgraph "Package Structure"
+        I["sportsmgmt<br/>Core Package"]
+        J["sportsmgmt-football<br/>Sport-Specific"]
+    end
+    
+    A --> I
+    A --> J
+```
 
 ```bash
 # Create package versions (using your automation)
@@ -309,6 +582,26 @@ sf data query --query "SELECT COUNT() FROM Team__c WHERE Stadium__c != null"
 
 ### Performance Monitoring
 
+```mermaid
+graph TB
+    A["Performance Monitoring"] --> B["SOQL Query Analysis"]
+    A --> C["API Usage Monitoring"]
+    A --> D["Governor Limits Check"]
+    
+    B --> B1["Query Execution Time"]
+    B --> B2["Record Count Analysis"]
+    B --> B3["Index Usage Validation"]
+    
+    C --> C1["Daily API Calls"]
+    C --> C2["Bulk API Usage"]
+    C --> C3["Streaming API Limits"]
+    
+    D --> D1["SOQL Queries (100/200)"]
+    D --> D2["DML Statements (150)"]
+    D --> D3["Heap Size (6MB/12MB)"]
+    D --> D4["CPU Time (10s/60s)"]
+```
+
 ```bash
 # Check SOQL query performance
 sf data query --query "SELECT Id, Name, (SELECT Id, Name FROM Teams__r) FROM League__c" --perflog
@@ -351,6 +644,29 @@ sf data delete bulk --sobject Team__c --file data/test-teams-to-delete.csv
 
 ### 1. Object Design Best Practices
 
+```mermaid
+mindmap
+  root((Object Design<br/>Best Practices))
+    Field Naming
+      Descriptive Names
+      Consistent Conventions
+      Appropriate Types
+    Relationships
+      Proper Constraints
+      Meaningful Names
+      Flexible Design
+    Object Features
+      History Tracking
+      Reports Enabled
+      Search Enabled
+      Bulk API Support
+    Security
+      Field-Level Security
+      Object Permissions
+      Sharing Rules
+      Validation Rules
+```
+
 ✅ **Field Naming**:
 - Use descriptive names: `Founded_Year__c` not `Year__c`
 - Follow naming conventions: `City__c`, `Stadium__c`
@@ -389,6 +705,28 @@ sf data delete bulk --sobject Team__c --file data/test-teams-to-delete.csv
 
 ### 3. Performance Optimization
 
+```mermaid
+graph LR
+    A["Performance Optimization"] --> B["SOQL Best Practices"]
+    A --> C["Bulk Operations"]
+    A --> D["Governor Limits"]
+    
+    B --> B1["Selective WHERE Clauses"]
+    B --> B2["Indexed Fields"]
+    B --> B3["Avoid Queries in Loops"]
+    B --> B4["Limit Result Sets"]
+    
+    C --> C1["Design for Bulk"]
+    C --> C2["Test with 200+ Records"]
+    C --> C3["Batch Processing"]
+    C --> C4["Monitor Limits"]
+    
+    D --> D1["SOQL Queries: 100/200"]
+    D --> D2["DML Statements: 150"]
+    D --> D3["Heap Size: 6MB/12MB"]
+    D --> D4["CPU Time: 10s/60s"]
+```
+
 ✅ **SOQL Queries**:
 - Use selective WHERE clauses
 - Avoid queries in loops
@@ -414,6 +752,19 @@ sf data delete bulk --sobject Team__c --file data/test-teams-to-delete.csv
 - Implement proper access controls
 - Validate CRUD permissions
 - Test security scenarios
+
+### 5. Test Coverage Achievement
+
+```mermaid
+pie title Test Coverage by Class
+    "AbstractTeam" : 100
+    "TeamService" : 100
+    "TeamWrapper" : 100
+    "TeamDetailsController" : 96
+    "TeamRepository" : 81
+```
+
+**Current Achievement**: 94% org-wide coverage with 60 total tests
 
 ## Useful Commands Reference
 
@@ -469,6 +820,18 @@ sf data import tree --plan data/league-team-plan.json
 
 This guide provides a comprehensive foundation for working with SF CLI and Salesforce Object Reference in your Sports Management project. Your current architecture follows Salesforce best practices and provides a solid foundation for extension.
 
+### Current Project Status
+
+```mermaid
+graph LR
+    A["Project Status"] --> B["✅ 94% Test Coverage"]
+    A --> C["✅ 60 Total Tests"]
+    A --> D["✅ 100% Pass Rate"]
+    A --> E["✅ SOLID Architecture"]
+    A --> F["✅ Dependency Injection"]
+    A --> G["✅ Comprehensive Documentation"]
+```
+
 ### Next Steps
 
 1. **Extend the Data Model**: Add Player__c, Game__c, Season__c objects
@@ -482,4 +845,5 @@ This guide provides a comprehensive foundation for working with SF CLI and Sales
 - [Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/)
 - [Salesforce Object Reference](https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/)
 - [Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/)
-- [Lightning Web Components Developer Guide](https://developer.salesforce.com/docs/component-library/documentation/en/lwc) 
+- [Lightning Web Components Developer Guide](https://developer.salesforce.com/docs/component-library/documentation/en/lwc)
+- [Mermaid Documentation](https://mermaid.js.org/) 
