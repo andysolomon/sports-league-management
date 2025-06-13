@@ -6,10 +6,30 @@ public virtual class TeamRepository {
         if (team == null) {
             throw new TeamRepositoryException('Team cannot be null');
         }
-        Team__c record = new Team__c(
-            Name = team.getName(),
-            League__c = team.getLeagueId()
-        );
+        
+        Team__c record;
+        // If it's a TeamWrapper with an original record, use that for full field support
+        if (team instanceof TeamWrapper) {
+            TeamWrapper wrapper = (TeamWrapper) team;
+            Team__c originalRecord = wrapper.getOriginalRecord();
+            if (originalRecord != null) {
+                record = originalRecord.clone(false, false, false, false);
+                // Apply current TeamWrapper values to ensure we use the most up-to-date data
+                record.Name = team.getName();
+                record.League__c = team.getLeagueId();
+            } else {
+                record = new Team__c(
+                    Name = team.getName(),
+                    League__c = team.getLeagueId()
+                );
+            }
+        } else {
+            record = new Team__c(
+                Name = team.getName(),
+                League__c = team.getLeagueId()
+            );
+        }
+        
         insert record;
         return record.Id;
     }
@@ -21,7 +41,7 @@ public virtual class TeamRepository {
         if (teamId == null) {
             throw new TeamRepositoryException('Team Id cannot be null');
         }
-        return [SELECT Id, Name, League__c FROM Team__c WHERE Id = :teamId LIMIT 1];
+        return [SELECT Id, Name, City__c, Stadium__c, Founded_Year__c, Location__c, League__c, League__r.Name FROM Team__c WHERE Id = :teamId LIMIT 1];
     }
 
     /**
@@ -45,7 +65,14 @@ public virtual class TeamRepository {
      * Returns all teams in a league.
      */
     public virtual List<Team__c> listByLeague(Id leagueId) {
-        return [SELECT Id, Name, League__c FROM Team__c WHERE League__c = :leagueId];
+        return [SELECT Id, Name, City__c, Stadium__c, Founded_Year__c, Location__c, League__c, League__r.Name FROM Team__c WHERE League__c = :leagueId];
+    }
+
+    /**
+     * Returns all teams with full details.
+     */
+    public virtual List<Team__c> getAllTeams() {
+        return [SELECT Id, Name, City__c, Stadium__c, Founded_Year__c, Location__c, League__c, League__r.Name FROM Team__c ORDER BY Name LIMIT 50];
     }
 
     public class TeamRepositoryException extends Exception {}

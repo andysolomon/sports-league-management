@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <defaultLandingTab>standard-Home</defaultLandingTab>
+    <description>Workspace for league administrators to manage leagues, teams, and divisions.</description>
+    <label>Sports League Management</label>
+    <navType>Standard</navType>
+    <uiType>Lightning</uiType>
+    <formFactors>Large</formFactors>
+    <isNavAutoTempTabsDisabled>false</isNavAutoTempTabsDisabled>
+    <isNavPersonalizationDisabled>false</isNavPersonalizationDisabled>
+    <tabs>standard-Home</tabs>
+    <tabs>League__c</tabs>
+    <tabs>Team__c</tabs>
+    <tabs>Team_Details</tabs>
+</CustomApplication> 

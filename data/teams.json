@@ -1,0 +1,36 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "Team__c", "referenceId": "teamRef1" },
+      "Name": "Dallas Cowboys",
+      "City__c": "Dallas",
+      "Stadium__c": "AT&T Stadium",
+      "Founded_Year__c": 1960,
+      "League__c": "@leagueRef1"
+    },
+    {
+      "attributes": { "type": "Team__c", "referenceId": "teamRef2" },
+      "Name": "New England Patriots",
+      "City__c": "Foxborough",
+      "Stadium__c": "Gillette Stadium",
+      "Founded_Year__c": 1960,
+      "League__c": "@leagueRef1"
+    },
+    {
+      "attributes": { "type": "Team__c", "referenceId": "teamRef3" },
+      "Name": "LA Galaxy",
+      "City__c": "Los Angeles",
+      "Stadium__c": "Dignity Health Sports Park",
+      "Founded_Year__c": 1996,
+      "League__c": "@leagueRef2"
+    },
+    {
+      "attributes": { "type": "Team__c", "referenceId": "teamRef4" },
+      "Name": "Seattle Sounders FC",
+      "City__c": "Seattle",
+      "Stadium__c": "Lumen Field",
+      "Founded_Year__c": 2007,
+      "League__c": "@leagueRef2"
+    }
+  ]
+} 

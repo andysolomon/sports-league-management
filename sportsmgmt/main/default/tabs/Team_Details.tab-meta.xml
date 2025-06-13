@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Tab for viewing team details</description>
+    <flexiPage>Team_Details_Page</flexiPage>
+    <label>Team Details</label>
+    <motif>Custom63: Handshake</motif>
+</CustomTab> 
