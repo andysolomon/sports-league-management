@@ -58,9 +58,9 @@ export default class TeamDetails extends LightningElement {
         }
     }
 
-    async loadSelectedTeam() {
+    async loadSelectedTeam(teamId = this.selectedTeamId) {
         try {
-            this.team = await getTeamById({ teamId: this.selectedTeamId });
+            this.team = await getTeamById({ teamId: teamId });
             this.error = undefined;
             this.isLoading = false;
         } catch (error) {
@@ -114,7 +114,7 @@ export default class TeamDetails extends LightningElement {
     handleRefresh() {
         this.isLoading = true;
         if (this.recordId) {
-            this.loadSelectedTeam();
+            this.loadSelectedTeam(this.recordId);
         } else if (this.selectedTeamId) {
             this.loadSelectedTeam();
         } else {

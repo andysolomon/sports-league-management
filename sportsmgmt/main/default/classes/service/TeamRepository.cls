@@ -14,7 +14,9 @@ public virtual class TeamRepository {
             Team__c originalRecord = wrapper.getOriginalRecord();
             if (originalRecord != null) {
                 record = originalRecord.clone(false, false, false, false);
-                record.Id = null; // Ensure no ID for insert
+                // Apply current TeamWrapper values to ensure we use the most up-to-date data
+                record.Name = team.getName();
+                record.League__c = team.getLeagueId();
             } else {
                 record = new Team__c(
                     Name = team.getName(),
