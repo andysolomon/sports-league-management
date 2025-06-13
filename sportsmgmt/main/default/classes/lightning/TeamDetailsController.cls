@@ -25,8 +25,7 @@ public with sharing class TeamDetailsController {
             List<ITeam> teams = teamService.getAllTeamsAsInterface();
             return convertToTeamRecords(teams);
         } catch (Exception e) {
-            System.debug('Error in getAllTeams: ' + e.getMessage());
-            System.debug('Stack trace: ' + e.getStackTraceString());
+            StructuredLogger.logError('TeamDetailsController', 'getAllTeams', e);
             if (Test.isRunningTest()) {
                 throw e; // Re-throw in test mode for debugging
             }
@@ -48,8 +47,7 @@ public with sharing class TeamDetailsController {
             ITeam team = teamService.getTeamByIdAsInterface(teamId);
             return team != null ? convertToTeamRecord(team) : null;
         } catch (Exception e) {
-            System.debug('Error in getTeamById: ' + e.getMessage());
-            System.debug('Stack trace: ' + e.getStackTraceString());
+            StructuredLogger.logError('TeamDetailsController', 'getTeamById', e);
             if (Test.isRunningTest()) {
                 throw e; // Re-throw in test mode for debugging
             }
@@ -71,7 +69,7 @@ public with sharing class TeamDetailsController {
             List<ITeam> teams = teamService.getTeamsByLeagueAsInterface(leagueId);
             return convertToTeamRecords(teams);
         } catch (Exception e) {
-            System.debug('Error in getTeamsByLeague: ' + e.getMessage());
+            StructuredLogger.logError('TeamDetailsController', 'getTeamsByLeague', e);
             return new List<Team__c>(); // Return empty list instead of throwing
         }
     }
@@ -98,7 +96,7 @@ public with sharing class TeamDetailsController {
         if (team == null) {
             return null;
         }
-        
+
         // If it's a TeamWrapper with an original record, return the original record
         if (team instanceof TeamWrapper) {
             TeamWrapper wrapper = (TeamWrapper) team;
@@ -107,14 +105,10 @@ public with sharing class TeamDetailsController {
                 return originalRecord; // Return the original record with all fields and relationships
             }
         }
-        
+
         // For mock testing or when no original record is available, reconstruct the Team__c record
-        Team__c teamRecord = new Team__c(
-            Id = team.getId(),
-            Name = team.getName(),
-            League__c = team.getLeagueId()
-        );
-        
+        Team__c teamRecord = new Team__c(Id = team.getId(), Name = team.getName(), League__c = team.getLeagueId());
+
         // For testing with mock data, we need to populate additional fields
         if (Test.isRunningTest()) {
             // Extract additional data from the mock team if it's a TeamWrapper
@@ -125,7 +119,7 @@ public with sharing class TeamDetailsController {
                 teamRecord.Stadium__c = getMockStadium(team.getName());
                 teamRecord.Founded_Year__c = getMockFoundedYear(team.getName());
                 teamRecord.Location__c = getMockLocation(team.getName());
-                
+
                 // Create mock league relationship
                 if (team.getLeagueId() != null) {
                     teamRecord.League__c = team.getLeagueId();
@@ -134,7 +128,7 @@ public with sharing class TeamDetailsController {
                 }
             }
         }
-        
+
         return teamRecord;
     }
 
@@ -143,9 +137,12 @@ public with sharing class TeamDetailsController {
      */
     @TestVisible
     private static String getMockCity(String teamName) {
-        if (teamName == 'Mock Team Alpha') return 'Mock City Alpha';
-        if (teamName == 'Mock Team Beta') return 'Mock City Beta';
-        if (teamName != null && teamName.startsWith('Bulk Team ')) return teamName.replace('Bulk Team ', 'Bulk City ');
+        if (teamName == 'Mock Team Alpha')
+            return 'Mock City Alpha';
+        if (teamName == 'Mock Team Beta')
+            return 'Mock City Beta';
+        if (teamName != null && teamName.startsWith('Bulk Team '))
+            return teamName.replace('Bulk Team ', 'Bulk City ');
         return 'Mock City';
     }
 
@@ -154,9 +151,12 @@ public with sharing class TeamDetailsController {
      */
     @TestVisible
     private static String getMockStadium(String teamName) {
-        if (teamName == 'Mock Team Alpha') return 'Mock Stadium Alpha';
-        if (teamName == 'Mock Team Beta') return 'Mock Stadium Beta';
-        if (teamName != null && teamName.startsWith('Bulk Team ')) return teamName.replace('Bulk Team ', 'Bulk Stadium ');
+        if (teamName == 'Mock Team Alpha')
+            return 'Mock Stadium Alpha';
+        if (teamName == 'Mock Team Beta')
+            return 'Mock Stadium Beta';
+        if (teamName != null && teamName.startsWith('Bulk Team '))
+            return teamName.replace('Bulk Team ', 'Bulk Stadium ');
         return 'Mock Stadium';
     }
 
@@ -165,8 +165,10 @@ public with sharing class TeamDetailsController {
      */
     @TestVisible
     private static Integer getMockFoundedYear(String teamName) {
-        if (teamName == 'Mock Team Alpha') return 1990;
-        if (teamName == 'Mock Team Beta') return 1995;
+        if (teamName == 'Mock Team Alpha')
+            return 1990;
+        if (teamName == 'Mock Team Beta')
+            return 1995;
         if (teamName != null && teamName.startsWith('Bulk Team ')) {
             String numStr = teamName.replace('Bulk Team ', '');
             try {
@@ -184,8 +186,10 @@ public with sharing class TeamDetailsController {
      */
     @TestVisible
     private static String getMockLocation(String teamName) {
-        if (teamName == 'Mock Team Alpha') return 'Mock City Alpha, State';
-        if (teamName == 'Mock Team Beta') return 'Mock City Beta, State';
+        if (teamName == 'Mock Team Alpha')
+            return 'Mock City Alpha, State';
+        if (teamName == 'Mock Team Beta')
+            return 'Mock City Beta, State';
         if (teamName != null && teamName.startsWith('Bulk Team ')) {
             String cityName = teamName.replace('Bulk Team ', 'Bulk City ');
             return cityName + ', State';
@@ -198,7 +202,8 @@ public with sharing class TeamDetailsController {
      */
     @TestVisible
     private static String getMockLeagueName(String leagueId) {
-        if (leagueId == 'a01000000000001AAA') return 'Mock Football League';
+        if (leagueId == 'a01000000000001AAA')
+            return 'Mock Football League';
         return 'Mock League';
     }
-} 
+}
