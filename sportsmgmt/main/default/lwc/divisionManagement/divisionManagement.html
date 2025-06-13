@@ -1,0 +1,306 @@
+<template>
+    <!-- Loading Spinner -->
+    <template if:true={isLoading}>
+        <lightning-spinner alternative-text="Loading..." variant="brand"></lightning-spinner>
+    </template>
+
+    <div class="slds-card">
+        <div class="slds-card__header slds-grid">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="standard:groups" size="medium"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span class="slds-text-heading_medium">Division Management</span>
+                    </h2>
+                </div>
+            </header>
+            <div class="slds-no-flex">
+                <lightning-button
+                    variant="brand"
+                    label="Create Division"
+                    onclick={handleCreateDivision}
+                    icon-name="utility:add">
+                </lightning-button>
+            </div>
+        </div>
+
+        <div class="slds-card__body slds-card__body_inner">
+            <!-- Filters -->
+            <div class="slds-grid slds-gutters slds-wrap slds-m-bottom_medium">
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                    <lightning-combobox
+                        name="leagueFilter"
+                        label="Filter by League"
+                        value={selectedLeagueId}
+                        placeholder="Select a league"
+                        options={leagueOptions}
+                        onchange={handleLeagueChange}>
+                    </lightning-combobox>
+                </div>
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                    <lightning-combobox
+                        name="divisionSelector"
+                        label="Select Division"
+                        value={selectedDivisionId}
+                        placeholder="Select a division"
+                        options={divisionOptions}
+                        onchange={handleDivisionChange}>
+                    </lightning-combobox>
+                </div>
+            </div>
+
+            <!-- Team Assignment Section -->
+            <template if:true={selectedDivisionId}>
+                <div class="slds-m-bottom_medium">
+                    <div class="slds-grid slds-gutters slds-grid_align-spread">
+                        <div class="slds-col">
+                            <h3 class="slds-text-heading_small">Teams in Division</h3>
+                        </div>
+                        <div class="slds-col slds-no-flex">
+                            <lightning-button
+                                variant="neutral"
+                                label="Assign Team"
+                                onclick={handleAssignTeam}
+                                icon-name="utility:share">
+                            </lightning-button>
+                        </div>
+                    </div>
+                    
+                    <template if:true={hasTeamsInDivision}>
+                        <div class="slds-m-top_small">
+                            <template for:each={teamsInDivision} for:item="team">
+                                <div key={team.Id} class="slds-box slds-box_x-small slds-m-bottom_x-small">
+                                    <div class="slds-grid slds-grid_align-spread">
+                                        <div class="slds-col">
+                                            <span class="slds-text-body_regular">{team.Name}</span>
+                                            <template if:true={team.City__c}>
+                                                <span class="slds-text-color_weak"> - {team.City__c}</span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    
+                    <template if:false={hasTeamsInDivision}>
+                        <div class="slds-m-top_small">
+                            <p class="slds-text-color_weak">No teams assigned to this division.</p>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Divisions List -->
+            <template if:true={hasFilteredDivisions}>
+                <div class="slds-m-top_medium">
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Divisions</h3>
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <template for:each={filteredDivisions} for:item="division">
+                            <div key={division.Id} class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-3">
+                                <div class="slds-box">
+                                    <div class="slds-grid slds-grid_align-spread">
+                                        <div class="slds-col">
+                                            <h4 class="slds-text-heading_small">{division.Name}</h4>
+                                            <p class="slds-text-color_weak">
+                                                League: {division.League__r.Name}
+                                            </p>
+                                        </div>
+                                        <div class="slds-col slds-no-flex">
+                                            <lightning-button-menu
+                                                alternative-text="Division Actions"
+                                                icon-size="x-small">
+                                                <lightning-menu-item
+                                                    value="edit"
+                                                    label="Edit"
+                                                    data-id={division.Id}
+                                                    onclick={handleEditDivision}>
+                                                </lightning-menu-item>
+                                                <lightning-menu-item
+                                                    value="delete"
+                                                    label="Delete"
+                                                    data-id={division.Id}
+                                                    onclick={handleDeleteDivision}>
+                                                </lightning-menu-item>
+                                            </lightning-button-menu>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            
+            <template if:false={hasFilteredDivisions}>
+                <div class="slds-m-top_medium">
+                    <div class="slds-align_absolute-center">
+                        <div class="slds-text-color_weak">
+                            <lightning-icon icon-name="utility:groups" size="large"></lightning-icon>
+                            <p class="slds-m-top_small">No divisions found</p>
+                            <p class="slds-text-color_weak">Create your first division to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Create Division Modal -->
+    <template if:true={showCreateModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" 
+                            title="Close" onclick={closeCreateModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Create New Division</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form-element">
+                        <label class="slds-form-element__label" for="create-division-name">Division Name</label>
+                        <div class="slds-form-element__control">
+                            <input type="text" id="create-division-name" class="slds-input" 
+                                   value={divisionName} onchange={handleDivisionNameChange} 
+                                   placeholder="Enter division name" />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <lightning-combobox
+                            name="createLeague"
+                            label="League"
+                            value={selectedLeagueId}
+                            placeholder="Select a league"
+                            options={leagueOptions}
+                            onchange={handleLeagueChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={closeCreateModal}>Cancel</button>
+                    <button class="slds-button slds-button_brand" onclick={handleSaveCreate}>Create</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- Edit Division Modal -->
+    <template if:true={showEditModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" 
+                            title="Close" onclick={closeEditModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Edit Division</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form-element">
+                        <label class="slds-form-element__label" for="edit-division-name">Division Name</label>
+                        <div class="slds-form-element__control">
+                            <input type="text" id="edit-division-name" class="slds-input" 
+                                   value={divisionName} onchange={handleDivisionNameChange} 
+                                   placeholder="Enter division name" />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <lightning-combobox
+                            name="editLeague"
+                            label="League"
+                            value={selectedLeagueId}
+                            placeholder="Select a league"
+                            options={leagueOptions}
+                            onchange={handleLeagueChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={closeEditModal}>Cancel</button>
+                    <button class="slds-button slds-button_brand" onclick={handleSaveEdit}>Save</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- Delete Division Modal -->
+    <template if:true={showDeleteModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" 
+                            title="Close" onclick={closeDeleteModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Delete Division</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p>Are you sure you want to delete the division <strong>{deletingDivision.Name}</strong>?</p>
+                    <p class="slds-m-top_small slds-text-color_error">
+                        This action cannot be undone. Teams in this division will be unassigned.
+                    </p>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={closeDeleteModal}>Cancel</button>
+                    <button class="slds-button slds-button_destructive" onclick={handleConfirmDelete}>Delete</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- Assign Team Modal -->
+    <template if:true={showAssignModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" 
+                            title="Close" onclick={closeAssignModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Assign Team to Division</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form-element">
+                        <lightning-combobox
+                            name="assignTeam"
+                            label="Team"
+                            value={selectedTeamId}
+                            placeholder="Select a team"
+                            options={teamOptions}
+                            onchange={handleTeamChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <lightning-combobox
+                            name="assignDivision"
+                            label="Division"
+                            value={selectedDivisionId}
+                            placeholder="Select a division"
+                            options={divisionOptions}
+                            onchange={handleDivisionChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={closeAssignModal}>Cancel</button>
+                    <button class="slds-button slds-button_brand" onclick={handleAssignTeamToDivision}>Assign</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template> 
