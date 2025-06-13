@@ -40,10 +40,11 @@ describe('c-testable-component', () => {
         // Wait for async rendering to complete
         await Promise.resolve();
 
-        // Test that the component is an instance of the expected class
-        expect(element instanceof TestableComponent).toBe(true);
+        // Test that the component has the expected tag name
+        expect(element.tagName.toLowerCase()).toBe('c-testable-component');
         
         // Verify shadow DOM exists and is accessible
-        expect(element.shadowRoot).toBeInstanceOf(ShadowRoot);
+        // In LWC-Jest, shadowRoot is a SyntheticShadowRoot extending DocumentFragment
+        expect(element.shadowRoot).toBeInstanceOf(DocumentFragment);
     });
 });
