@@ -21,7 +21,7 @@ public virtual class TeamRepository {
         if (teamId == null) {
             throw new TeamRepositoryException('Team Id cannot be null');
         }
-        return [SELECT Id, Name, League__c FROM Team__c WHERE Id = :teamId LIMIT 1];
+        return [SELECT Id, Name, City__c, Stadium__c, Founded_Year__c, League__c, League__r.Name FROM Team__c WHERE Id = :teamId LIMIT 1];
     }
 
     /**
@@ -45,7 +45,14 @@ public virtual class TeamRepository {
      * Returns all teams in a league.
      */
     public virtual List<Team__c> listByLeague(Id leagueId) {
-        return [SELECT Id, Name, League__c FROM Team__c WHERE League__c = :leagueId];
+        return [SELECT Id, Name, City__c, Stadium__c, Founded_Year__c, League__c, League__r.Name FROM Team__c WHERE League__c = :leagueId];
+    }
+
+    /**
+     * Returns all teams with full details.
+     */
+    public virtual List<Team__c> getAllTeams() {
+        return [SELECT Id, Name, City__c, Stadium__c, Founded_Year__c, League__c, League__r.Name FROM Team__c ORDER BY Name LIMIT 50];
     }
 
     public class TeamRepositoryException extends Exception {}

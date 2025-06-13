@@ -18,16 +18,20 @@
     "precommit": "lint-staged"
   },
   "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/preset-env": "^7.27.2",
     "@lwc/eslint-plugin-lwc": "^1.1.2",
     "@prettier/plugin-xml": "^2.0.1",
     "@salesforce/eslint-config-lwc": "^3.2.3",
     "@salesforce/eslint-plugin-aura": "^2.0.0",
     "@salesforce/eslint-plugin-lightning": "^1.0.0",
     "@salesforce/sfdx-lwc-jest": "^1.1.0",
+    "babel-jest": "^29.7.0",
     "eslint": "^8.11.0",
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-jest": "^26.1.2",
     "husky": "^7.0.4",
+    "jest-canvas-mock": "^2.5.2",
     "lint-staged": "^12.3.7",
     "prettier": "^2.6.0",
     "prettier-plugin-apex": "^1.10.0"

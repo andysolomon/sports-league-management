@@ -1,6 +1,6 @@
-const { jestConfig } = require('@salesforce/sfdx-lwc-jest/config');
+import { jestConfig } from '@salesforce/sfdx-lwc-jest/config.js';
 
-module.exports = {
+export default {
     ...jestConfig,
     moduleNameMapper: {
         '^@salesforce/apex$': '<rootDir>/sportsmgmt/test/jest-mocks/apex',

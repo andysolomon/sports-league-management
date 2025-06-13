@@ -1,0 +1,132 @@
+<template>
+    <lightning-card title="Team Details" icon-name="custom:custom63">
+        <div slot="actions">
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="border-filled"
+                alternative-text="Refresh"
+                title="Refresh"
+                onclick={handleRefresh}>
+            </lightning-button-icon>
+        </div>
+        
+        <div class="slds-p-horizontal_medium">
+            <!-- Loading Spinner -->
+            <template if:true={isLoading}>
+                <div class="slds-align_absolute-center slds-p-vertical_large">
+                    <lightning-spinner alternative-text="Loading team details..." size="medium"></lightning-spinner>
+                </div>
+            </template>
+
+            <!-- Error State -->
+            <template if:true={error}>
+                <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_error" role="alert">
+                    <span class="slds-assistive-text">Error</span>
+                    <h2>Error loading team details. Please try again.</h2>
+                </div>
+            </template>
+
+            <!-- Team Selector (when no recordId provided) -->
+            <template if:true={showTeamSelector}>
+                <div class="slds-form-element slds-m-bottom_medium">
+                    <label class="slds-form-element__label" for="team-selector">Select a Team</label>
+                    <div class="slds-form-element__control">
+                        <div class="slds-select_container">
+                            <select class="slds-select" id="team-selector" onchange={handleTeamSelection}>
+                                <option value="">--Select a Team--</option>
+                                <template for:each={teams} for:item="team">
+                                    <option key={team.Id} value={team.Id}>{team.Name}</option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Team Details Content -->
+            <template if:true={hasTeamData}>
+                <div class="slds-grid slds-wrap slds-gutters">
+                    <!-- Team Name -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label slds-text-title_caps">Team Name</label>
+                            <div class="slds-form-element__control">
+                                <div class="slds-text-heading_medium slds-text-color_default">
+                                    {teamName}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- City -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label slds-text-title_caps">City</label>
+                            <div class="slds-form-element__control">
+                                <div class="slds-text-body_regular">
+                                    <template if:true={teamCity}>
+                                        {teamCity}
+                                    </template>
+                                    <template if:false={teamCity}>
+                                        <span class="slds-text-color_weak">Not specified</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stadium -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label slds-text-title_caps">Stadium</label>
+                            <div class="slds-form-element__control">
+                                <div class="slds-text-body_regular">
+                                    <template if:true={teamStadium}>
+                                        {teamStadium}
+                                    </template>
+                                    <template if:false={teamStadium}>
+                                        <span class="slds-text-color_weak">Not specified</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Founded Year -->
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                        <div class="slds-form-element">
+                            <label class="slds-form-element__label slds-text-title_caps">Founded Year</label>
+                            <div class="slds-form-element__control">
+                                <div class="slds-text-body_regular">
+                                    <template if:true={teamFoundedYear}>
+                                        {teamFoundedYear}
+                                    </template>
+                                    <template if:false={teamFoundedYear}>
+                                        <span class="slds-text-color_weak">Not specified</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- League Information -->
+                    <div class="slds-col slds-size_1-of-1">
+                        <div class="slds-form-element slds-m-top_medium">
+                            <label class="slds-form-element__label slds-text-title_caps">League</label>
+                            <div class="slds-form-element__control">
+                                <div class="slds-text-body_regular">
+                                    <template if:true={leagueName}>
+                                        {leagueName}
+                                    </template>
+                                    <template if:false={leagueName}>
+                                        <span class="slds-text-color_weak">No league assigned</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template> 

@@ -53,5 +53,12 @@ public with sharing class TeamService {
         return repository.listByLeague(leagueId);
     }
 
+    /**
+     * Gets all teams with full details.
+     */
+    public List<Team__c> getAllTeams() {
+        return repository.getAllTeams();
+    }
+
     public class TeamServiceException extends Exception {}
 } 

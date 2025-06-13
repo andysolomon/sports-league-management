@@ -22,5 +22,5 @@
   ],
   "name": "sports-league-management",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "64.0"
+  "sourceApiVersion": "58.0"
 }
