@@ -9,4 +9,7 @@
     <isNavAutoTempTabsDisabled>false</isNavAutoTempTabsDisabled>
     <isNavPersonalizationDisabled>false</isNavPersonalizationDisabled>
     <tabs>standard-Home</tabs>
+    <tabs>League__c</tabs>
+    <tabs>Team__c</tabs>
+    <tabs>Team_Details</tabs>
 </CustomApplication> 

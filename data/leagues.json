@@ -1,6 +1,12 @@
-[
-  {
-    "attributes": { "type": "League__c", "referenceId": "leagueRef1" },
-    "Name": "National Football League"
-  }
-] 
+{
+  "records": [
+    {
+      "attributes": { "type": "League__c", "referenceId": "leagueRef1" },
+      "Name": "National Football League"
+    },
+    {
+      "attributes": { "type": "League__c", "referenceId": "leagueRef2" },
+      "Name": "Major League Soccer"
+    }
+  ]
+} 
