@@ -5,8 +5,7 @@
           "package": "Sports Management Core",
           "versionName": "Version 1.0",
           "versionNumber": "1.0.0.NEXT",
-          "default": true,
-          "namespace": "sportsmgmt"
+          "default": true
       },
       {
           "path": "sportsmgmt-football",
@@ -22,7 +21,6 @@
       }
   ],
   "name": "sports-league-management",
-  "namespace": "sportsmgmt",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "59.0"
+  "sourceApiVersion": "64.0"
 }
