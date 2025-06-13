@@ -1,19 +1,25 @@
+#!/usr/bin/env node
+
 /* eslint-env node */
 // Script: create-app.js
 // Creates a Lightning app (CustomApplication) in the target org via metadata deployment.
 // Usage: node scripts/create-app.js "Sports League Management" [alias]
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import { join, dirname } from 'path';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const APP_LABEL = process.argv[2] || 'Sports League Management';
 const ORG_ALIAS = process.argv[3] || 'sports-scratch';
 
 const API_NAME = APP_LABEL.replace(/\s+/g, '_'); // simple conversion -> Sports_League_Management
-const metaDir = path.join(__dirname, '..', 'temp-app');
-const appDir = path.join(metaDir, 'applications');
-const filePath = path.join(appDir, `${API_NAME}.app-meta.xml`);
+const metaDir = join(__dirname, '..', 'temp-app');
+const appDir = join(metaDir, 'applications');
+const filePath = join(appDir, `${API_NAME}.app-meta.xml`);
 
 // Ensure dir
 fs.mkdirSync(appDir, { recursive: true });
