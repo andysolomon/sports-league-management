@@ -116,7 +116,7 @@ private class DivisionRepositoryTest {
     @IsTest
     static void testUpdateDivision_ValidRecord() {
         // Given
-        Division__c testDivision = [SELECT Id, Name FROM Division__c LIMIT 1];
+        Division__c testDivision = [SELECT Id, Name, League__c FROM Division__c LIMIT 1];
         DivisionRepository repo = new DivisionRepository();
         testDivision.Name = 'Updated Division Name';
         
@@ -141,25 +141,45 @@ private class DivisionRepositoryTest {
             repo.updateDivision(null);
             Assert.fail('Should throw exception for null record');
         } catch (DivisionRepository.DivisionRepositoryException e) {
-            Assert.areEqual('Division record cannot be null', e.getMessage(), 'Should have correct error message');
+            Assert.areEqual('Invalid Division record', e.getMessage(), 'Should have correct error message');
         }
         Test.stopTest();
     }
     
     @IsTest
-    static void testDeleteDivision_ValidId() {
+    static void testDeleteDivision_ValidId_NoTeams() {
         // Given
-        Division__c testDivision = [SELECT Id FROM Division__c LIMIT 1];
+        League__c league = [SELECT Id FROM League__c LIMIT 1];
+        Division__c divisionToDelete = new Division__c(Name = 'To Be Deleted', League__c = league.Id);
+        insert divisionToDelete;
+
         DivisionRepository repo = new DivisionRepository();
         
         // When
         Test.startTest();
-        repo.deleteDivision(testDivision.Id);
+        repo.deleteDivision(divisionToDelete.Id);
         Test.stopTest();
         
         // Then
-        List<Division__c> remaining = [SELECT Id FROM Division__c WHERE Id = :testDivision.Id];
+        List<Division__c> remaining = [SELECT Id FROM Division__c WHERE Id = :divisionToDelete.Id];
         Assert.areEqual(0, remaining.size(), 'Division should be deleted');
+    }
+
+    @IsTest
+    static void testDeleteDivision_WithTeams_ThrowsException() {
+        // Given
+        Division__c testDivisionWithTeam = [SELECT Id FROM Division__c WHERE Name = 'Eastern Division' LIMIT 1];
+        DivisionRepository repo = new DivisionRepository();
+        
+        // When/Then
+        Test.startTest();
+        try {
+            repo.deleteDivision(testDivisionWithTeam.Id);
+            Assert.fail('Should throw exception when deleting division with teams');
+        } catch (DivisionRepository.DivisionRepositoryException e) {
+            Assert.isTrue(e.getMessage().contains('Cannot delete division with assigned teams'), 'Should have correct error message');
+        }
+        Test.stopTest();
     }
     
     @IsTest

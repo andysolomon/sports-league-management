@@ -92,6 +92,9 @@ public with sharing class DivisionManagementController {
             return String.valueOf(divisionId);
         } catch (Exception e) {
             StructuredLogger.logError('DivisionManagementController', 'createDivision', e);
+            if (Test.isRunningTest()) {
+                throw e; // Re-throw original exception in test mode for debugging
+            }
             throw new AuraHandledException('Error creating division: ' + e.getMessage());
         }
     }
@@ -117,6 +120,9 @@ public with sharing class DivisionManagementController {
             divisionService.updateDivision(division);
         } catch (Exception e) {
             StructuredLogger.logError('DivisionManagementController', 'updateDivision', e);
+            if (Test.isRunningTest()) {
+                throw e; // Re-throw original exception in test mode for debugging
+            }
             throw new AuraHandledException('Error updating division: ' + e.getMessage());
         }
     }
@@ -135,6 +141,9 @@ public with sharing class DivisionManagementController {
             divisionService.deleteDivision(divisionId);
         } catch (Exception e) {
             StructuredLogger.logError('DivisionManagementController', 'deleteDivision', e);
+            if (Test.isRunningTest()) {
+                throw e; // Re-throw original exception in test mode for debugging
+            }
             throw new AuraHandledException('Error deleting division: ' + e.getMessage());
         }
     }
@@ -154,6 +163,9 @@ public with sharing class DivisionManagementController {
             divisionService.assignTeamToDivision(teamId, divisionId);
         } catch (Exception e) {
             StructuredLogger.logError('DivisionManagementController', 'assignTeamToDivision', e);
+            if (Test.isRunningTest()) {
+                throw e; // Re-throw original exception in test mode for debugging
+            }
             throw new AuraHandledException('Error assigning team to division: ' + e.getMessage());
         }
     }

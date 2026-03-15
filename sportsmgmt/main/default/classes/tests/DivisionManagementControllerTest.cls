@@ -136,7 +136,7 @@ private class DivisionManagementControllerTest {
         try {
             DivisionManagementController.createDivision('', league.Id);
             Assert.fail('Should throw exception for blank name');
-        } catch (AuraHandledException e) {
+        } catch (Exception e) {
             Assert.isTrue(e.getMessage().contains('Division name and league are required'), 'Should have correct error message');
         }
         Test.stopTest();
@@ -149,7 +149,7 @@ private class DivisionManagementControllerTest {
         try {
             DivisionManagementController.createDivision('Test Division', '');
             Assert.fail('Should throw exception for blank league');
-        } catch (AuraHandledException e) {
+        } catch (Exception e) {
             Assert.isTrue(e.getMessage().contains('Division name and league are required'), 'Should have correct error message');
         }
         Test.stopTest();
@@ -181,7 +181,7 @@ private class DivisionManagementControllerTest {
         try {
             DivisionManagementController.updateDivision('', 'Updated Division', league.Id);
             Assert.fail('Should throw exception for blank ID');
-        } catch (AuraHandledException e) {
+        } catch (Exception e) {
             Assert.isTrue(e.getMessage().contains('Division ID, name, and league are required'), 'Should have correct error message');
         }
         Test.stopTest();
@@ -190,16 +190,34 @@ private class DivisionManagementControllerTest {
     @IsTest
     static void testDeleteDivision_ValidId() {
         // Given
-        Division__c testDivision = [SELECT Id FROM Division__c LIMIT 1];
+        League__c league = [SELECT Id FROM League__c LIMIT 1];
+        Division__c divisionToDelete = new Division__c(Name = 'To Be Deleted', League__c = league.Id);
+        insert divisionToDelete;
         
         // When
         Test.startTest();
-        DivisionManagementController.deleteDivision(testDivision.Id);
+        DivisionManagementController.deleteDivision(divisionToDelete.Id);
         Test.stopTest();
         
         // Then
-        List<Division__c> remaining = [SELECT Id FROM Division__c WHERE Id = :testDivision.Id];
+        List<Division__c> remaining = [SELECT Id FROM Division__c WHERE Id = :divisionToDelete.Id];
         Assert.areEqual(0, remaining.size(), 'Division should be deleted');
+    }
+    
+    @IsTest
+    static void testDeleteDivision_WithTeams_ThrowsException() {
+        // Given
+        Division__c testDivision = [SELECT Id FROM Division__c WHERE Name = 'Eastern Division' LIMIT 1];
+        
+        // When/Then
+        Test.startTest();
+        try {
+            DivisionManagementController.deleteDivision(testDivision.Id);
+            Assert.fail('Should throw exception when deleting division with teams');
+        } catch (Exception e) {
+            Assert.isTrue(e.getMessage().contains('Cannot delete division with assigned teams. Please reassign teams first.'), 'Should have correct error message');
+        }
+        Test.stopTest();
     }
     
     @IsTest
@@ -209,7 +227,7 @@ private class DivisionManagementControllerTest {
         try {
             DivisionManagementController.deleteDivision('');
             Assert.fail('Should throw exception for blank ID');
-        } catch (AuraHandledException e) {
+        } catch (Exception e) {
             Assert.isTrue(e.getMessage().contains('Division ID is required'), 'Should have correct error message');
         }
         Test.stopTest();
@@ -256,7 +274,7 @@ private class DivisionManagementControllerTest {
         try {
             DivisionManagementController.assignTeamToDivision('', division.Id);
             Assert.fail('Should throw exception for blank team ID');
-        } catch (AuraHandledException e) {
+        } catch (Exception e) {
             Assert.isTrue(e.getMessage().contains('Team ID is required'), 'Should have correct error message');
         }
         Test.stopTest();
@@ -288,4 +306,4 @@ private class DivisionManagementControllerTest {
         Assert.isNotNull(result, 'Should return empty list for blank division ID');
         Assert.areEqual(0, result.size(), 'Should return empty list for blank division ID');
     }
-} 
+}

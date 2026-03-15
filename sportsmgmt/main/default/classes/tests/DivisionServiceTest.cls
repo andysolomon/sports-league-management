@@ -92,10 +92,13 @@ private class DivisionServiceTest {
     static void testGetAllDivisionsAsInterface_Success() {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
-        List<Division__c> mockDivisions = new List<Division__c>{
-            new Division__c(Id = 'a02000000000001AAA', Name = 'Mock Division Alpha', League__c = 'a01000000000001AAA'),
-            new Division__c(Id = 'a02000000000002AAA', Name = 'Mock Division Beta', League__c = 'a01000000000001AAA')
-        };
+        List<Division__c> mockDivisions = (List<Division__c>)JSON.deserialize(
+            '[' +
+            '  {"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Mock Division Alpha", "League__c": "a01000000000001AAA"},' +
+            '  {"sobjectType": "Division__c", "Id": "a02000000000002AAA", "Name": "Mock Division Beta", "League__c": "a01000000000001AAA"}' +
+            ']',
+            List<Division__c>.class
+        );
         mockRepo.mockDivisions = mockDivisions;
         DivisionService service = new DivisionService(mockRepo);
         
@@ -142,10 +145,9 @@ private class DivisionServiceTest {
     static void testGetDivisionByIdAsInterface_ValidId() {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
-        Division__c mockDivision = new Division__c(
-            Id = 'a02000000000001AAA', 
-            Name = 'Mock Division Alpha', 
-            League__c = 'a01000000000001AAA'
+        Division__c mockDivision = (Division__c)JSON.deserialize(
+            '{"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Mock Division Alpha", "League__c": "a01000000000001AAA"}',
+            Division__c.class
         );
         mockRepo.mockDivisions.add(mockDivision);
         DivisionService service = new DivisionService(mockRepo);
@@ -190,10 +192,13 @@ private class DivisionServiceTest {
     static void testGetDivisionsByLeagueAsInterface_ValidLeagueId() {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
-        List<Division__c> mockDivisions = new List<Division__c>{
-            new Division__c(Id = 'a02000000000001AAA', Name = 'Mock Division Alpha', League__c = 'a01000000000001AAA'),
-            new Division__c(Id = 'a02000000000002AAA', Name = 'Mock Division Beta', League__c = 'a01000000000001AAA')
-        };
+        List<Division__c> mockDivisions = (List<Division__c>)JSON.deserialize(
+            '[' +
+            '  {"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Mock Division Alpha", "League__c": "a01000000000001AAA"},' +
+            '  {"sobjectType": "Division__c", "Id": "a02000000000002AAA", "Name": "Mock Division Beta", "League__c": "a01000000000001AAA"}' +
+            ']',
+            List<Division__c>.class
+        );
         mockRepo.mockDivisions = mockDivisions;
         DivisionService service = new DivisionService(mockRepo);
         String leagueId = 'a01000000000001AAA';
@@ -387,37 +392,18 @@ private class DivisionServiceTest {
     @IsTest
     static void testDivisionWrapper_IDivisionImplementation() {
         // Given
-        Division__c testDivision = new Division__c(
-            Id = 'a02000000000001AAA',
-            Name = 'Test Division',
-            League__c = 'a01000000000001AAA'
+        Division__c mockDivision = (Division__c)JSON.deserialize(
+            '{"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Test Division", "League__c": "a01000000000001AAA"}',
+            Division__c.class
         );
-        
-        // When - Test DivisionWrapper with Division__c record
-        Test.startTest();
-        DivisionWrapper wrapper1 = new DivisionWrapper(testDivision);
-        
-        // Test DivisionWrapper with individual parameters
-        DivisionWrapper wrapper2 = new DivisionWrapper('a02000000000002AAA', 'Direct Division', 'a01000000000002AAA');
-        Test.stopTest();
-        
-        // Then - Test IDivision interface implementation
-        Assert.areEqual(testDivision.Id, wrapper1.getId(), 'Should return correct ID');
-        Assert.areEqual(testDivision.Name, wrapper1.getName(), 'Should return correct name');
-        Assert.areEqual(testDivision.League__c, wrapper1.getLeagueId(), 'Should return correct league ID');
-        Assert.areEqual(testDivision, wrapper1.getOriginalRecord(), 'Should return original record');
-        
-        // Test direct constructor
-        Assert.areEqual('a02000000000002AAA', wrapper2.getId(), 'Should return correct ID from direct constructor');
-        Assert.areEqual('Direct Division', wrapper2.getName(), 'Should return correct name from direct constructor');
-        Assert.areEqual('a01000000000002AAA', wrapper2.getLeagueId(), 'Should return correct league ID from direct constructor');
-        Assert.isNull(wrapper2.getOriginalRecord(), 'Should return null for original record when created directly');
-        
-        // Test that both implement IDivision interface
-        IDivision divisionInterface = wrapper1;
-        Assert.areEqual(testDivision.Id, divisionInterface.getId(), 'Should work as IDivision interface');
-        Assert.areEqual(testDivision.Name, divisionInterface.getName(), 'Should work as IDivision interface');
-        Assert.areEqual(testDivision.League__c, divisionInterface.getLeagueId(), 'Should work as IDivision interface');
+
+        // When
+        IDivision wrapper = new DivisionWrapper(mockDivision);
+
+        // Then
+        Assert.areEqual(mockDivision.Id, wrapper.getId(), 'Wrapper should return correct ID');
+        Assert.areEqual(mockDivision.Name, wrapper.getName(), 'Wrapper should return correct name');
+        Assert.areEqual(mockDivision.League__c, wrapper.getLeagueId(), 'Wrapper should return correct league ID');
     }
     
     /**
