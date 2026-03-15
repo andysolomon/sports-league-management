@@ -12,7 +12,6 @@ export default {
         '^lightning/messageService$':
             '<rootDir>/sportsmgmt/test/jest-mocks/lightning/messageService'
     },
-    setupFiles: ['jest-canvas-mock'],
     testTimeout: 10000,
     coverageThreshold: {
         global: {
