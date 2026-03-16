@@ -29,6 +29,24 @@ npm run test:unit:watch
 npm run test:unit:debug
 ```
 
+### E2E Testing (Playwright)
+```bash
+# Run E2E tests against scratch org (headless)
+npm run test:e2e
+
+# Run E2E tests with visible browser
+npm run test:e2e:headed
+
+# Run E2E tests with HTML report
+npm run test:e2e:report
+
+# Convenience script (checks org, loads seed data, runs tests)
+./scripts/run-e2e-tests.sh [org-alias] [--headed] [--report]
+
+# Install Playwright browsers (first time only)
+npx playwright install chromium
+```
+
 ### Code Quality and Linting
 ```bash
 # Run linter
@@ -149,14 +167,19 @@ This is a multi-package Salesforce DX project with modular architecture:
 
 ### Lightning Experience Integration
 - **Apps:** Sports League Management app with proper permission sets
-- **Permission Sets:** `Sports_League_Management_Access` for app access
+- **Permission Sets:**
+  - `Sports_League_Management_Access` — App visibility only
+  - `League_Administrator` — Full CRUD on all 5 objects
+  - `Team_Manager` — CRUD on Team/Player, Read on League/Division/Season
+  - `Data_Viewer` — Read-only on all 5 objects
 - **Navigation:** Custom tabs and flexipages configured
 
 ### Automation Scripts
 - **`create-scratch-org.js`** - Complete scratch org setup with users and permissions
-- **`setup-users.js`** - User and permission configuration
+- **`setup-users.js`** - User and permission configuration (assigns role-based permission sets)
 - **`seed-data.js`** - Test data creation
 - **`package-management.sh`** - Package version management
+- **`run-e2e-tests.sh`** - Run Playwright E2E tests against a scratch org
 
 ## Common Tasks
 

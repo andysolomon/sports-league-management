@@ -12,6 +12,7 @@ export default {
         '^lightning/messageService$':
             '<rootDir>/sportsmgmt/test/jest-mocks/lightning/messageService'
     },
+    testPathIgnorePatterns: ['<rootDir>/e2e/'],
     testTimeout: 10000,
     coverageThreshold: {
         global: {

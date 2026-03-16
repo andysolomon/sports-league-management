@@ -13,7 +13,7 @@ import { execSync } from 'child_process';
 
 // Configuration
 const SCRATCH_ORG_ALIAS = process.argv[2] || 'sports-scratch';
-const PERMISSION_SET_NAME = 'Sports_League_Management_Access';
+const APP_ACCESS_PERM_SET = 'Sports_League_Management_Access';
 
 // User profiles to configure (using existing users)
 const USERS_CONFIG = [
@@ -24,8 +24,8 @@ const USERS_CONFIG = [
         lastName: 'Administrator',
         email: 'league.admin@example.com',
         profileName: 'System Administrator',
-        permissionSets: [PERMISSION_SET_NAME],
-        description: 'Primary league administrator with full access',
+        permissionSets: [APP_ACCESS_PERM_SET, 'League_Administrator'],
+        description: 'Primary league administrator with full CRUD access on all objects',
         createNew: true
     },
     {
@@ -35,8 +35,8 @@ const USERS_CONFIG = [
         lastName: 'Manager',
         email: 'team.manager@sportsorg.scratch',
         findByName: 'Integration User',
-        permissionSets: [PERMISSION_SET_NAME],
-        description: 'Team manager with limited access to team data (updating Integration User)',
+        permissionSets: [APP_ACCESS_PERM_SET, 'Team_Manager'],
+        description: 'Team manager with CRUD on Team/Player, read-only on League/Division/Season',
         createNew: false
     },
     {
@@ -46,8 +46,8 @@ const USERS_CONFIG = [
         lastName: 'Viewer',
         email: 'data.viewer@sportsorg.scratch',
         findByName: 'Security User',
-        permissionSets: [],
-        description: 'Read-only user for testing access controls (updating Security User)',
+        permissionSets: [APP_ACCESS_PERM_SET, 'Data_Viewer'],
+        description: 'Read-only user with view access on all objects',
         createNew: false
     }
 ];
@@ -125,28 +125,39 @@ function getCurrentUser() {
 }
 
 /**
- * Ensure permission set exists
+ * Ensure all required permission sets exist and return a map of Name -> Id
  */
-function ensurePermissionSet() {
-    console.log(`\n🔐 Checking permission set: ${PERMISSION_SET_NAME}`);
-    
+function ensurePermissionSets() {
+    // Collect all unique permission set names from user configs
+    const allPermSetNames = [...new Set(
+        USERS_CONFIG.flatMap(u => u.permissionSets)
+    )];
+
+    console.log(`\n🔐 Checking permission sets: ${allPermSetNames.join(', ')}`);
+
+    const permSetMap = {};
+
     try {
-        const query = `sf data query --query "SELECT Id, Name FROM PermissionSet WHERE Name = '${PERMISSION_SET_NAME}'" --target-org ${SCRATCH_ORG_ALIAS} --json`;
-        const result = executeCommand(query, 'Checking permission set');
+        const nameList = allPermSetNames.map(n => `'${n}'`).join(',');
+        const query = `sf data query --query "SELECT Id, Name FROM PermissionSet WHERE Name IN (${nameList})" --target-org ${SCRATCH_ORG_ALIAS} --json`;
+        const result = executeCommand(query, 'Checking permission sets');
         const queryResult = JSON.parse(result);
-        
-        if (queryResult.result.records.length === 0) {
-            console.log(`⚠️  Permission set '${PERMISSION_SET_NAME}' not found. Please deploy it first.`);
-            console.log(`   Run: sf project deploy start --source-dir sportsmgmt/main/default/permissionsets --target-org ${SCRATCH_ORG_ALIAS}`);
-            return null;
+
+        for (const record of queryResult.result.records) {
+            permSetMap[record.Name] = record.Id;
+            console.log(`✅ Permission set found: ${record.Name} (${record.Id})`);
         }
-        
-        const permissionSet = queryResult.result.records[0];
-        console.log(`✅ Permission set found: ${permissionSet.Id}`);
-        return permissionSet;
+
+        const missing = allPermSetNames.filter(n => !permSetMap[n]);
+        if (missing.length > 0) {
+            console.log(`⚠️  Missing permission sets: ${missing.join(', ')}. Please deploy them first.`);
+            console.log(`   Run: sf project deploy start --source-dir sportsmgmt/main/default/permissionsets --target-org ${SCRATCH_ORG_ALIAS}`);
+        }
+
+        return permSetMap;
     } catch (error) {
-        console.error(`❌ Failed to check permission set: ${error.message}`);
-        return null;
+        console.error(`❌ Failed to check permission sets: ${error.message}`);
+        return permSetMap;
     }
 }
 
@@ -334,29 +345,35 @@ async function main() {
         // Get current user (optional)
         const currentUser = getCurrentUser();
         
-        // Ensure permission set exists
-        const permissionSet = ensurePermissionSet();
-        
+        // Ensure all permission sets exist
+        const permSetMap = ensurePermissionSets();
+
         // Create users
         const createdUsers = [];
         for (const userConfig of USERS_CONFIG) {
             try {
                 const user = createUser(userConfig);
                 createdUsers.push({ ...user, ...userConfig });
-                
-                // Assign permission sets if available
-                if (permissionSet && userConfig.permissionSets.includes(PERMISSION_SET_NAME)) {
-                    assignPermissionSet(user.Id, permissionSet.Id, user.Username);
+
+                // Assign all configured permission sets
+                for (const psName of userConfig.permissionSets) {
+                    const psId = permSetMap[psName];
+                    if (psId) {
+                        assignPermissionSet(user.Id, psId, user.Username);
+                        console.log(`   → ${psName}`);
+                    } else {
+                        console.log(`   ⚠️  Skipping ${psName} (not found in org)`);
+                    }
                 }
-                
+
             } catch (error) {
-                console.error(`⚠️  Skipping user ${userConfig.username} due to error`);
+                console.error(`⚠️  Skipping user ${userConfig.username || userConfig.findByName} due to error`);
             }
         }
-        
-        // Assign permission set to current user if available
-        if (permissionSet && currentUser) {
-            assignPermissionSet(currentUser.Id, permissionSet.Id, currentUser.Username);
+
+        // Assign app access permission set to current user if available
+        if (permSetMap[APP_ACCESS_PERM_SET] && currentUser) {
+            assignPermissionSet(currentUser.Id, permSetMap[APP_ACCESS_PERM_SET], currentUser.Username);
         }
         
         // Generate report

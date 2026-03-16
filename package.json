@@ -11,6 +11,9 @@
     "test:unit": "sf force lightning lwc test run",
     "test:unit:watch": "sf force lightning lwc test run --watch",
     "test:unit:debug": "sf force lightning lwc test run --debug",
+    "test:e2e": "npx playwright test",
+    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e:report": "npx playwright test --reporter=html && npx playwright show-report",
     "lint": "eslint **/{aura,lwc}/**",
     "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
     "prettier:verify": "prettier --list-different \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
@@ -18,6 +21,7 @@
     "precommit": "lint-staged"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@babel/core": "^7.27.4",
     "@babel/preset-env": "^7.27.2",
     "@lwc/eslint-plugin-lwc": "^1.1.2",

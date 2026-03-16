@@ -44,6 +44,11 @@ $RECYCLE.BIN/
 **/.venv/
 **/venv/
 
+# Playwright E2E test artifacts
+test-results/
+playwright-report/
+.auth/
+
 # AI assistant workspace
 .cursor/
 cursor_*.md
