@@ -68,6 +68,12 @@ importers:
       '@clerk/nextjs':
         specifier: ^6.12.0
         version: 6.39.0(next@15.5.13(@babel/core@7.29.0)(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@sports-management/api-contracts':
+        specifier: workspace:*
+        version: link:../../packages/api-contracts
+      '@sports-management/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       jsforce:
         specifier: ^3.6.0
         version: 3.10.14(@types/node@22.19.15)
@@ -81,9 +87,15 @@ importers:
         specifier: ^19.1.0
         version: 19.2.4(react@19.2.4)
     devDependencies:
+      '@clerk/testing':
+        specifier: ^1.4.0
+        version: 1.14.3(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@eslint/eslintrc':
         specifier: ^3.0.0
         version: 3.3.5
+      '@playwright/test':
+        specifier: ^1.50.0
+        version: 1.58.2
       '@tailwindcss/postcss':
         specifier: ^4.1.0
         version: 4.2.1
@@ -105,6 +117,25 @@ importers:
       tailwindcss:
         specifier: ^4.1.0
         version: 4.2.1
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
+  packages/api-contracts:
+    dependencies:
+      '@sports-management/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+    devDependencies:
+      typescript:
+        specifier: ^5.8.0
+        version: 5.9.3
+
+  packages/shared-types:
+    devDependencies:
       typescript:
         specifier: ^5.8.0
         version: 5.9.3
@@ -799,6 +830,18 @@ packages:
       react:
         optional: true
       react-dom:
+        optional: true
+
+  '@clerk/testing@1.14.3':
+    resolution: {integrity: sha512-2yOLWq5RnfN9/c5jnMmGxi55BDEtU1WnFMa7wBnAGSimLICaE2MZ4nhejgLT5SEjwL7LJpp+8GVeqW8ywR9JEQ==}
+    engines: {node: '>=18.17.0'}
+    peerDependencies:
+      '@playwright/test': ^1
+      cypress: ^13 || ^14
+    peerDependenciesMeta:
+      '@playwright/test':
+        optional: true
+      cypress:
         optional: true
 
   '@clerk/types@4.101.20':
@@ -2227,6 +2270,10 @@ packages:
     resolution: {integrity: sha512-yxJ2mFy/sibVQlu5qHjOkf9J3K6zgmCxgJ94u2EdvDOV09H+32LtRswEcUsmUWN72pVLOEnTSRaIVVzVQgS0dg==}
     engines: {node: '>=8'}
     deprecated: Use your platform's native DOMException instead
+
+  dotenv@17.2.2:
+    resolution: {integrity: sha512-Sf2LSQP+bOlhKWWyhFsn0UsfdK/kCWRv1iuA2gXAwt3dyNabr6QSj00I2V10pidqz69soatm9ZwZvpQMTIOd5Q==}
+    engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -4417,6 +4464,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -5371,6 +5421,18 @@ snapshots:
     optionalDependencies:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)
+
+  '@clerk/testing@1.14.3(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@clerk/backend': 2.33.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@clerk/shared': 3.47.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@clerk/types': 4.101.20(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      dotenv: 17.2.2
+    optionalDependencies:
+      '@playwright/test': 1.58.2
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@clerk/types@4.101.20(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
@@ -6947,6 +7009,8 @@ snapshots:
   domexception@2.0.1:
     dependencies:
       webidl-conversions: 5.0.0
+
+  dotenv@17.2.2: {}
 
   dunder-proto@1.0.1:
     dependencies:
@@ -9743,3 +9807,5 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  zod@3.25.76: {}

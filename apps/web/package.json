@@ -8,14 +8,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed",
+    "test:e2e:report": "playwright test --config e2e/playwright.config.ts --reporter=html && playwright show-report"
   },
   "dependencies": {
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "@clerk/nextjs": "^6.12.0",
-    "jsforce": "^3.6.0"
+    "jsforce": "^3.6.0",
+    "@sports-management/shared-types": "workspace:*",
+    "@sports-management/api-contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -26,6 +31,8 @@
     "tailwindcss": "^4.1.0",
     "@eslint/eslintrc": "^3.0.0",
     "eslint": "^9.0.0",
-    "eslint-config-next": "^15.3.0"
+    "eslint-config-next": "^15.3.0",
+    "@playwright/test": "^1.50.0",
+    "@clerk/testing": "^1.4.0"
   }
 }
