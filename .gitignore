@@ -71,3 +71,4 @@ out/
 # AI assistant workspace
 .cursor/
 cursor_*.md
+.vercel
