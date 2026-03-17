@@ -15,7 +15,7 @@ Queries a work item from Agile Accelerator, reads the story details, explores th
 
 Examples:
 - `/plan-story W-000025` — plan W-000025, auto-detect sprint plan doc
-- `/plan-story W-000025 docs/SPRINT_2025_08_PLAN.md` — plan W-000025, write to specific doc
+- `/plan-story W-000025 docs/sprints/SPRINT_2025_08_PLAN.md` — plan W-000025, write to specific doc
 
 ## Constants
 

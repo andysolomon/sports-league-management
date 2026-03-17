@@ -10,7 +10,9 @@
 set -euo pipefail
 
 ORG="sprts-mng"
-SPRINT_PLAN="docs/SPRINT_2025_07_PLAN.md"
+
+# Dynamically find the latest sprint plan doc
+SPRINT_PLAN=$(ls -t docs/sprints/SPRINT_*_PLAN.md docs/SPRINT_*_PLAN.md 2>/dev/null | head -1 || true)
 
 # Read hook input from stdin
 INPUT=$(cat)

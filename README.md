@@ -92,19 +92,19 @@ The project uses several tools to ensure code quality and consistency:
 
 - **ESLint**: JavaScript/LWC linting
   - Configuration: `.eslintrc.json`
-  - Run: `npm run lint`
-  - Fix: `npm run lint:fix`
+  - Run: `pnpm run lint`
+  - Fix: `pnpm run lint:fix`
 
 - **Prettier**: Code formatting
   - Configuration: `.prettierrc`
-  - Run: `npm run prettier`
-  - Verify: `npm run prettier:verify`
+  - Run: `pnpm run prettier`
+  - Verify: `ppnpm run prettier:verify`
 
 - **Jest**: LWC testing
   - Configuration: `jest.config.js`
-  - Run all tests: `npm test`
-  - Watch mode: `npm run test:watch`
-  - Debug mode: `npm run test:debug`
+  - Run all tests: `pnpm test`
+  - Watch mode: `pnpm run test:watch`
+  - Debug mode: `pnpm run test:debug`
 
 ### VS Code Setup
 

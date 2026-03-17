@@ -24,37 +24,37 @@ sf apex test run --wait 10 --code-coverage --result-format human
 sf apex test run --tests DivisionManagementControllerTest,DivisionRepositoryTest,DivisionServiceTest --wait 10
 
 # Run LWC tests
-npm run test:unit
-npm run test:unit:watch
-npm run test:unit:debug
+pnpm run test:unit
+pnpm run test:unit:watch
+pnpm run test:unit:debug
 ```
 
 ### E2E Testing (Playwright)
 ```bash
 # Run E2E tests against scratch org (headless)
-npm run test:e2e
+pnpm run test:e2e
 
 # Run E2E tests with visible browser
-npm run test:e2e:headed
+pnpm run test:e2e:headed
 
 # Run E2E tests with HTML report
-npm run test:e2e:report
+pnpm run test:e2e:report
 
 # Convenience script (checks org, loads seed data, runs tests)
 ./scripts/run-e2e-tests.sh [org-alias] [--headed] [--report]
 
 # Install Playwright browsers (first time only)
-npx playwright install chromium
+pnpm exec playwright install chromium
 ```
 
 ### Code Quality and Linting
 ```bash
 # Run linter
-npm run lint
+pnpm run lint
 
 # Run Prettier formatting
-npm run prettier
-npm run prettier:verify
+pnpm run prettier
+pnpm run prettier:verify
 
 # Run all LWC tests with coverage
 sf force lightning lwc test run
@@ -88,6 +88,13 @@ This is a multi-package Salesforce DX project with modular architecture:
 - **`config/`** - Scratch org definitions
 - **`scripts/`** - Automation scripts for setup and data management
 - **`data/`** - Test data and import plans
+
+### Package Manager
+- **pnpm** with `shamefully-hoist=true` (required for `@salesforce/sfdx-lwc-jest` compatibility)
+- **Turborepo** for monorepo task orchestration (`turbo.json`)
+- **Corepack** manages the pnpm version (`packageManager` field in `package.json`)
+- **Workspace directories:** `apps/` (applications), `packages/` (shared libraries)
+- Salesforce DX directories (`sportsmgmt/`, `sportsmgmt-football/`) are NOT workspace packages
 
 ### Package Dependencies
 - `sportsmgmt-football` depends on `sportsmgmt` (core package)
@@ -142,7 +149,7 @@ This is a multi-package Salesforce DX project with modular architecture:
 ## Development Guidelines
 
 ### Before Making Changes
-1. **Always run tests first:** `sf apex test run --wait 10` and `npm run test:unit`
+1. **Always run tests first:** `sf apex test run --wait 10` and `pnpm run test:unit`
 2. **Check current coverage:** Ensure org-wide coverage stays above 90%
 3. **Use dependency injection:** Follow established DI patterns for testability
 

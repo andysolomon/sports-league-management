@@ -1,23 +1,24 @@
 {
   "name": "sports-management",
   "version": "1.0.0",
+  "packageManager": "pnpm@9.15.4",
   "description": "Sports League Management application for Salesforce",
   "type": "module",
   "scripts": {
     "setup-users": "node scripts/setup-users.js",
     "create-scratch-org": "node scripts/create-scratch-org.js",
     "seed-data": "node scripts/seed-data.js",
-    "test": "npm run test:unit",
+    "test": "pnpm run test:unit",
     "test:unit": "sf force lightning lwc test run",
     "test:unit:watch": "sf force lightning lwc test run --watch",
     "test:unit:debug": "sf force lightning lwc test run --debug",
-    "test:e2e": "npx playwright test",
-    "test:e2e:headed": "npx playwright test --headed",
-    "test:e2e:report": "npx playwright test --reporter=html && npx playwright show-report",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright test --reporter=html && playwright show-report",
     "lint": "eslint **/{aura,lwc}/**",
     "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
     "prettier:verify": "prettier --list-different \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
-    "postinstall": "husky install",
+    "prepare": "husky install",
     "precommit": "lint-staged"
   },
   "devDependencies": {
@@ -37,7 +38,8 @@
     "husky": "^7.0.4",
     "lint-staged": "^12.3.7",
     "prettier": "^2.6.0",
-    "prettier-plugin-apex": "^1.10.0"
+    "prettier-plugin-apex": "^1.10.0",
+    "turbo": "^2.3.0"
   },
   "lint-staged": {
     "**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}": [
@@ -62,7 +64,7 @@
     "league"
   ],
   "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
   }
 }

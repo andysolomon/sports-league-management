@@ -6,7 +6,7 @@ The Division Management feature (branch `feat/W-000016`) is architecturally comp
 
 **Blocking issue:** LWC Jest tests fail with `TypeError: Cannot read properties of undefined (reading 'prototype')` caused by `jest-canvas-mock` v2.5.2 being CJS-only while the project uses ESM (`"type": "module"`). No LWC components use canvas APIs — the dependency is unnecessary.
 
-The next sprint (2025.07) starts 2026-03-17 with Season & Player Management, documented in `docs/SPRINT_2025_07_PLAN.md`.
+The next sprint (2025.07) starts 2026-03-17 with Season & Player Management, documented in `docs/sprints/SPRINT_2025_07_PLAN.md`.
 
 ## Steps
 
@@ -47,7 +47,7 @@ git commit -m "feat(W-000016): Remove unused jest-canvas-mock; fix ESM test fail
 
 ### 6. Save plan in docs/
 
-Create `docs/W-000016_DIVISION_MANAGEMENT_PLAN.md` with this plan's contents.
+Create `docs/work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md` with this plan's contents.
 
 ## Critical Files
 
@@ -56,7 +56,7 @@ Create `docs/W-000016_DIVISION_MANAGEMENT_PLAN.md` with this plan's contents.
 | `jest.config.js` | Remove setupFiles entry |
 | `package.json` | Remove jest-canvas-mock dep |
 | `.gitignore` | Add `cursor_*.md` pattern |
-| `docs/W-000016_DIVISION_MANAGEMENT_PLAN.md` | Create plan doc |
+| `docs/work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md` | Create plan doc |
 
 ## Verification
 

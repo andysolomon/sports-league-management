@@ -72,11 +72,11 @@ E2E tests verifying role-based access for all three user roles.
 Documentation and convenience scripts for E2E testing.
 
 **Implementation:**
-- `docs/E2E_TESTING_GUIDE.md` — Prerequisites, running tests, writing new tests, troubleshooting
+- `docs/guides/E2E_TESTING_GUIDE.md` — Prerequisites, running tests, writing new tests, troubleshooting
 - `scripts/run-e2e-tests.sh` — Checks org, loads seed data, runs Playwright
 - `package.json` — Added `test:e2e:report` script
 - `CLAUDE.md` — Added E2E testing section
-- `docs/SPRINT_2025_08_PLAN.md` — This file
+- `docs/sprints/SPRINT_2025_08_PLAN.md` — This file
 
 ## Permission Matrix
 
@@ -105,8 +105,8 @@ Documentation and convenience scripts for E2E testing.
 - `sportsmgmt/main/default/permissionsets/Team_Manager.permissionset-meta.xml`
 - `sportsmgmt/main/default/permissionsets/Data_Viewer.permissionset-meta.xml`
 - `scripts/run-e2e-tests.sh`
-- `docs/E2E_TESTING_GUIDE.md`
-- `docs/SPRINT_2025_08_PLAN.md`
+- `docs/guides/E2E_TESTING_GUIDE.md`
+- `docs/sprints/SPRINT_2025_08_PLAN.md`
 
 **Modified Files (4):**
 - `package.json` — Added Playwright dependency and scripts
