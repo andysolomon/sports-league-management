@@ -21,7 +21,7 @@ Examples:
 ## Constants
 
 - **Org alias:** `sprts-mng`
-- **Sprint plan doc:** `docs/SPRINT_2025_07_PLAN.md`
+- **Sprint plan doc:** `docs/sprints/SPRINT_2025_07_PLAN.md`
 
 ## Steps
 
@@ -42,7 +42,7 @@ Examples:
    - Report the status change.
 
 4. **Add implementation plan** (when moving to `In Progress` or `Closed`):
-   - Read the sprint plan doc (`docs/SPRINT_2025_07_PLAN.md`)
+   - Read the sprint plan doc (`docs/sprints/SPRINT_2025_07_PLAN.md`)
    - Find the section for the work item (search for the `### W-XXXXXX:` heading)
    - Extract the implementation plan from the `<details>` block if present
    - If an implementation plan exists, update the story's Details field:

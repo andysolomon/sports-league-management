@@ -2,7 +2,7 @@
 name: deploy-and-test
 description: Deploy to scratch org and run Apex tests. Run this after completing a story implementation.
 disable-model-invocation: false
-allowed-tools: Bash(sf *), Bash(npm run *)
+allowed-tools: Bash(sf *), Bash(pnpm run *), Bash(pnpm exec *)
 ---
 
 # Deploy and Run Apex Tests
@@ -33,11 +33,11 @@ Deploy the project to the scratch org and run Apex tests to verify the implement
 
 3. **Run LWC Jest tests**:
    ```
-   npm run test:unit
+   pnpm run test:unit
    ```
-   - If `npm run test:unit` fails due to environment issues, fall back to running jest directly:
+   - If `pnpm run test:unit` fails due to environment issues, fall back to running jest directly:
      ```
-     npx jest --config jest.config.js
+     pnpm exec jest --config jest.config.js
      ```
 
 4. **Report results**:

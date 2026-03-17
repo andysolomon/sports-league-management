@@ -49,6 +49,20 @@ test-results/
 playwright-report/
 .auth/
 
+# pnpm
+pnpm-debug.log*
+
+# Turborepo
+.turbo/
+
+# Next.js
+.next/
+out/
+
+# Environment locals
+.env.local
+.env*.local
+
 # AI assistant workspace
 .cursor/
 cursor_*.md

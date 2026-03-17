@@ -7,8 +7,8 @@
 # Prerequisites:
 #   - Active scratch org with deployed metadata
 #   - Seed data loaded (node scripts/seed-data.js)
-#   - npm dependencies installed (npm install)
-#   - Playwright browsers installed (npx playwright install chromium)
+#   - pnpm dependencies installed (pnpm install)
+#   - Playwright browsers installed (pnpm exec playwright install chromium)
 
 set -euo pipefail
 
@@ -53,9 +53,9 @@ else
 fi
 
 # Ensure Playwright browsers are installed
-if ! npx playwright install --dry-run chromium > /dev/null 2>&1; then
+if ! pnpm exec playwright install --dry-run chromium > /dev/null 2>&1; then
   echo "📦 Installing Playwright browsers..."
-  npx playwright install chromium
+  pnpm exec playwright install chromium
 fi
 
 # Get org info for environment variables
@@ -73,7 +73,7 @@ echo ""
 
 # Run tests
 SF_ORG_ALIAS="${ORG_ALIAS}" SF_INSTANCE_URL="${INSTANCE_URL}" \
-  npx playwright test ${HEADED} ${REPORT}
+  pnpm exec playwright test ${HEADED} ${REPORT}
 
 EXIT_CODE=$?
 
@@ -83,13 +83,13 @@ if [ ${EXIT_CODE} -eq 0 ]; then
 else
   echo ""
   echo "❌ Some E2E tests failed. Check the report above for details."
-  echo "   For an HTML report, run: npm run test:e2e:report"
+  echo "   For an HTML report, run: pnpm run test:e2e:report"
 fi
 
 # Open report if requested
 if [ -n "${REPORT}" ] && [ ${EXIT_CODE} -eq 0 ]; then
   echo "📊 Opening HTML report..."
-  npx playwright show-report
+  pnpm exec playwright show-report
 fi
 
 exit ${EXIT_CODE}
