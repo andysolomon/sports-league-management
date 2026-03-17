@@ -132,4 +132,62 @@ private class TeamRestResourceTest {
         RestResponse res = RestContext.response;
         Assert.isTrue(res.statusCode == 404 || res.statusCode == 500, 'Should return error status');
     }
+
+    @IsTest
+    static void testUpdateTeam_Success() {
+        // Given
+        Team__c team = [SELECT Id FROM Team__c WHERE Name = 'Test Team Alpha' LIMIT 1];
+        Map<String, Object> requestBody = new Map<String, Object>{
+            'name' => 'Updated Team Alpha',
+            'city' => 'New City',
+            'stadium' => 'New Stadium'
+        };
+
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/sportsmgmt/v1/teams/' + team.Id;
+        req.httpMethod = 'PUT';
+        req.requestBody = Blob.valueOf(JSON.serialize(requestBody));
+        RestContext.request = req;
+        RestContext.response = new RestResponse();
+
+        // When
+        Test.startTest();
+        TeamRestResource.doPut();
+        Test.stopTest();
+
+        // Then
+        RestResponse res = RestContext.response;
+        Assert.areEqual(200, res.statusCode, 'Should return 200');
+        Map<String, Object> body = (Map<String, Object>)JSON.deserializeUntyped(
+            res.responseBody.toString());
+        Assert.isTrue((Boolean)body.get('success'), 'Should be successful');
+        Map<String, Object> data = (Map<String, Object>)body.get('data');
+        Assert.areEqual('Updated Team Alpha', data.get('name'), 'Should return updated name');
+        Assert.areEqual('New City', data.get('city'), 'Should return updated city');
+        Assert.areEqual('New Stadium', data.get('stadium'), 'Should return updated stadium');
+    }
+
+    @IsTest
+    static void testUpdateTeam_NoId() {
+        // Given
+        Map<String, Object> requestBody = new Map<String, Object>{
+            'name' => 'Updated Name'
+        };
+
+        RestRequest req = new RestRequest();
+        req.requestURI = '/services/apexrest/sportsmgmt/v1/teams';
+        req.httpMethod = 'PUT';
+        req.requestBody = Blob.valueOf(JSON.serialize(requestBody));
+        RestContext.request = req;
+        RestContext.response = new RestResponse();
+
+        // When
+        Test.startTest();
+        TeamRestResource.doPut();
+        Test.stopTest();
+
+        // Then
+        RestResponse res = RestContext.response;
+        Assert.areEqual(400, res.statusCode, 'Should return 400 for missing ID');
+    }
 }

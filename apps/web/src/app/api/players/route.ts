@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getPlayers, getPlayersByTeam } from "@/lib/salesforce-api";
+import { getPlayers, getPlayersByTeam, createPlayer } from "@/lib/salesforce-api";
+import { CreatePlayerInputSchema } from "@sports-management/api-contracts";
+import { authorizeTeamMutation } from "@/lib/authorization";
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
@@ -10,4 +12,31 @@ export async function GET(request: NextRequest) {
   const teamId = request.nextUrl.searchParams.get("teamId");
   const data = teamId ? await getPlayersByTeam(teamId) : await getPlayers();
   return NextResponse.json(data);
+}
+
+export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const parsed = CreatePlayerInputSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const authorization = await authorizeTeamMutation(parsed.data.teamId);
+  if (!authorization.isAuthorized) {
+    return NextResponse.json(
+      { error: "You are not authorized to manage this team" },
+      { status: 403 },
+    );
+  }
+
+  const data = await createPlayer(parsed.data);
+  return NextResponse.json(data, { status: 201 });
 }
