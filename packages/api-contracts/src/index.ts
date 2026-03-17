@@ -6,6 +6,9 @@ import type {
   TeamDto,
   PlayerDto,
   SeasonDto,
+  CreatePlayerInput,
+  UpdatePlayerInput,
+  UpdateTeamInput,
 } from "@sports-management/shared-types";
 
 // --- Entity schemas ---
@@ -50,6 +53,35 @@ export const SeasonDtoSchema = z.object({
   endDate: z.string().nullable(),
   status: z.string(),
 }) satisfies z.ZodType<SeasonDto>;
+
+// --- Mutation input schemas ---
+
+export const CreatePlayerInputSchema = z.object({
+  name: z.string().min(1),
+  teamId: z.string().min(1),
+  position: z.string().min(1),
+  jerseyNumber: z.number().nullable().optional(),
+  dateOfBirth: z.string().nullable().optional(),
+  status: z.string().min(1),
+}) satisfies z.ZodType<CreatePlayerInput>;
+
+export const UpdatePlayerInputSchema = z.object({
+  name: z.string().min(1).optional(),
+  teamId: z.string().min(1).optional(),
+  position: z.string().min(1).optional(),
+  jerseyNumber: z.number().nullable().optional(),
+  dateOfBirth: z.string().nullable().optional(),
+  status: z.string().min(1).optional(),
+}) satisfies z.ZodType<UpdatePlayerInput>;
+
+export const UpdateTeamInputSchema = z.object({
+  name: z.string().min(1).optional(),
+  city: z.string().min(1).optional(),
+  stadium: z.string().min(1).optional(),
+  foundedYear: z.number().nullable().optional(),
+  location: z.string().min(1).optional(),
+  divisionId: z.string().min(1).optional(),
+}) satisfies z.ZodType<UpdateTeamInput>;
 
 // --- API envelope factory ---
 

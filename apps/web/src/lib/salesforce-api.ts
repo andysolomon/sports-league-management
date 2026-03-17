@@ -6,6 +6,9 @@ import type {
   TeamDto,
   PlayerDto,
   SeasonDto,
+  CreatePlayerInput,
+  UpdatePlayerInput,
+  UpdateTeamInput,
 } from "@sports-management/shared-types";
 
 const BASE = "/services/apexrest/sportsmgmt/v1";
@@ -13,6 +16,24 @@ const BASE = "/services/apexrest/sportsmgmt/v1";
 async function request<T>(path: string): Promise<T> {
   const conn = await getSalesforceConnection();
   const res = (await conn.request(`${BASE}${path}`)) as ApiResponse<T>;
+  if (!res.success) {
+    throw new Error(res.message ?? "Salesforce API error");
+  }
+  return res.data;
+}
+
+async function mutate<T>(
+  path: string,
+  method: "POST" | "PUT" | "DELETE",
+  body?: unknown,
+): Promise<T> {
+  const conn = await getSalesforceConnection();
+  const res = (await conn.request({
+    url: `${conn.instanceUrl}${BASE}${path}`,
+    method,
+    body: body ? JSON.stringify(body) : undefined,
+    headers: { "Content-Type": "application/json" },
+  })) as ApiResponse<T>;
   if (!res.success) {
     throw new Error(res.message ?? "Salesforce API error");
   }
@@ -66,4 +87,28 @@ export function getSeasons(): Promise<SeasonDto[]> {
 
 export function getSeason(id: string): Promise<SeasonDto> {
   return request<SeasonDto>(`/seasons/${id}`);
+}
+
+// Player mutations
+export function createPlayer(input: CreatePlayerInput): Promise<PlayerDto> {
+  return mutate<PlayerDto>("/players", "POST", input);
+}
+
+export function updatePlayer(
+  id: string,
+  input: UpdatePlayerInput,
+): Promise<PlayerDto> {
+  return mutate<PlayerDto>(`/players/${id}`, "PUT", input);
+}
+
+export function deletePlayer(id: string): Promise<null> {
+  return mutate<null>(`/players/${id}`, "DELETE");
+}
+
+// Team mutations
+export function updateTeam(
+  id: string,
+  input: UpdateTeamInput,
+): Promise<TeamDto> {
+  return mutate<TeamDto>(`/teams/${id}`, "PUT", input);
 }

@@ -45,3 +45,32 @@ export interface SeasonDto {
   endDate: string | null;
   status: string;
 }
+
+// --- Mutation input types ---
+
+export interface CreatePlayerInput {
+  name: string;
+  teamId: string;
+  position: string;
+  jerseyNumber?: number | null;
+  dateOfBirth?: string | null;
+  status: string;
+}
+
+export interface UpdatePlayerInput {
+  name?: string;
+  teamId?: string;
+  position?: string;
+  jerseyNumber?: number | null;
+  dateOfBirth?: string | null;
+  status?: string;
+}
+
+export interface UpdateTeamInput {
+  name?: string;
+  city?: string;
+  stadium?: string;
+  foundedYear?: number | null;
+  location?: string;
+  divisionId?: string;
+}
