@@ -36,7 +36,7 @@ Examples:
    - If a path was provided in arguments, use that.
    - Otherwise, find the latest sprint plan doc:
      ```
-     ls docs/SPRINT_*_PLAN.md
+     ls docs/sprints/SPRINT_*_PLAN.md
      ```
    - If no sprint plan doc exists, note that one will need to be created.
 

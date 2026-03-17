@@ -1,8 +1,10 @@
+import { createSign } from "crypto";
 import Connection from "jsforce/lib/connection";
 import OAuth2 from "jsforce/lib/oauth2";
 
 let cachedConnection: Connection | null = null;
 let tokenExpiresAt = 0;
+let pendingConnection: Promise<Connection> | null = null;
 
 const TOKEN_LIFETIME_MS = 2 * 60 * 60 * 1000; // 2 hours
 const REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
@@ -16,10 +18,24 @@ export async function getSalesforceConnection(): Promise<Connection> {
     return cachedConnection;
   }
 
+  if (pendingConnection) {
+    return pendingConnection;
+  }
+
+  pendingConnection = authorize();
+  try {
+    const conn = await pendingConnection;
+    return conn;
+  } finally {
+    pendingConnection = null;
+  }
+}
+
+async function authorize(): Promise<Connection> {
   const loginUrl = process.env.SF_LOGIN_URL ?? "https://login.salesforce.com";
   const clientId = process.env.SF_CLIENT_ID;
   const username = process.env.SF_USERNAME;
-  const privateKey = process.env.SF_PRIVATE_KEY;
+  const privateKey = process.env.SF_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
   if (!clientId || !username || !privateKey) {
     throw new Error(
@@ -27,12 +43,33 @@ export async function getSalesforceConnection(): Promise<Connection> {
     );
   }
 
-  const oauth2 = new OAuth2({ clientId, loginUrl });
-  const conn = new Connection({ loginUrl, oauth2 });
+  const assertion = buildJwtAssertion({ clientId, username, privateKey, loginUrl });
 
-  await (conn as any).authorize({
+  const tokenUrl = `${loginUrl}/services/oauth2/token`;
+  const body = new URLSearchParams({
     grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-    assertion: buildJwtAssertion({ clientId, username, privateKey, loginUrl }),
+    assertion,
+  });
+
+  const resp = await fetch(tokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  if (!resp.ok) {
+    const error = await resp.text();
+    throw new Error(`Salesforce JWT auth failed: ${error}`);
+  }
+
+  const token = (await resp.json()) as {
+    access_token: string;
+    instance_url: string;
+  };
+
+  const conn = new Connection({
+    instanceUrl: token.instance_url,
+    accessToken: token.access_token,
   });
 
   cachedConnection = conn;
@@ -47,11 +84,8 @@ function buildJwtAssertion(params: {
   privateKey: string;
   loginUrl: string;
 }): string {
-  // JWT assertion is constructed and signed at request time.
-  // In production, use a proper JWT library (e.g., jose) to sign the assertion.
-  // For now, this returns a placeholder — the Connected App must be configured
-  // for JWT bearer flow with the corresponding certificate.
-  const { clientId, username, loginUrl } = params;
+  const { clientId, username, privateKey, loginUrl } = params;
+
   const header = Buffer.from(JSON.stringify({ alg: "RS256" })).toString("base64url");
   const now = Math.floor(Date.now() / 1000);
   const payload = Buffer.from(
@@ -63,7 +97,10 @@ function buildJwtAssertion(params: {
     })
   ).toString("base64url");
 
-  // TODO: Sign with privateKey using crypto.sign() or jose library
-  // This placeholder will not work without proper JWT signing
-  return `${header}.${payload}.SIGNATURE_PLACEHOLDER`;
+  const signingInput = `${header}.${payload}`;
+  const sign = createSign("RSA-SHA256");
+  sign.update(signingInput);
+  const signature = sign.sign(privateKey, "base64url");
+
+  return `${signingInput}.${signature}`;
 }
