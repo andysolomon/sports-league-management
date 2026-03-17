@@ -39,6 +39,11 @@ $RECYCLE.BIN/
 # Local environment variables
 .env
 
+# Certificates and private keys
+*.key
+*.crt
+*.pem
+
 # Python Salesforce Functions
 **/__pycache__/
 **/.venv/
