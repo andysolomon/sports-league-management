@@ -11,8 +11,8 @@ test.describe("Dashboard Overview", () => {
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   });
 
-  test("displays 4 stat cards with correct labels", async ({ page }) => {
-    const labels = ["Teams", "Players", "Seasons", "Divisions"];
+  test("displays 5 stat cards with correct labels", async ({ page }) => {
+    const labels = ["Leagues", "Teams", "Players", "Seasons", "Divisions"];
     for (const label of labels) {
       await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
     }
@@ -21,23 +21,23 @@ test.describe("Dashboard Overview", () => {
   test("stat card counts are greater than zero", async ({ page }) => {
     const main = page.locator("main");
     const cards = main.locator("a[href^='/dashboard/']");
-    await expect(cards).toHaveCount(4);
+    await expect(cards).toHaveCount(5);
 
     for (const card of await cards.all()) {
-      const countText = await card.locator("p.text-3xl").textContent();
+      const countText = await card.locator("p.text-2xl").textContent();
       expect(Number(countText)).toBeGreaterThan(0);
     }
   });
 
   test("Teams count is at least 4", async ({ page }) => {
     const teamsCard = page.locator("a[href='/dashboard/teams']");
-    const count = await teamsCard.locator("p.text-3xl").textContent();
+    const count = await teamsCard.locator("p.text-2xl").textContent();
     expect(Number(count)).toBeGreaterThanOrEqual(4);
   });
 
   test("Players count is at least 12", async ({ page }) => {
     const playersCard = page.locator("a[href='/dashboard/players']");
-    const count = await playersCard.locator("p.text-3xl").textContent();
+    const count = await playersCard.locator("p.text-2xl").textContent();
     expect(Number(count)).toBeGreaterThanOrEqual(12);
   });
 
@@ -45,5 +45,26 @@ test.describe("Dashboard Overview", () => {
     await page.locator("a[href='/dashboard/teams']").click();
     await expect(page).toHaveURL("/dashboard/teams");
     await expect(page.getByRole("heading", { name: "Teams" })).toBeVisible();
+  });
+
+  test("clicking Leagues stat card navigates to leagues page", async ({ page }) => {
+    await page.locator("a[href='/dashboard/leagues']").click();
+    await expect(page).toHaveURL("/dashboard/leagues");
+    await expect(page.getByRole("heading", { name: "Leagues" })).toBeVisible();
+  });
+
+  test("stat cards have icon with colored background", async ({ page }) => {
+    const cards = page.locator("main").locator("a[href^='/dashboard/']");
+    const firstCard = cards.first();
+    await expect(firstCard.locator(".bg-primary\\/10")).toBeVisible();
+    await expect(firstCard.locator("svg")).toBeVisible();
+  });
+
+  test("cards have hover shadow class", async ({ page }) => {
+    const cards = page.locator("main").locator("a[href^='/dashboard/']");
+    for (const card of await cards.all()) {
+      const innerCard = card.locator("[class*='hover\\:shadow-md']");
+      await expect(innerCard).toHaveCount(1);
+    }
   });
 });
