@@ -3,6 +3,7 @@ import { setupClerkTestingToken } from "@clerk/testing/playwright";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/dashboard" },
+  { label: "Leagues", href: "/dashboard/leagues" },
   { label: "Teams", href: "/dashboard/teams" },
   { label: "Players", href: "/dashboard/players" },
   { label: "Seasons", href: "/dashboard/seasons" },
@@ -54,5 +55,21 @@ test.describe("Dashboard Navigation", () => {
     await page.goto("/dashboard");
 
     await expect(page.locator("[data-clerk-component='user-button']")).toBeVisible();
+  });
+
+  test("Leagues nav active highlighting", async ({ page }) => {
+    await page.goto("/dashboard/leagues");
+
+    const leaguesLink = page.locator("aside").getByRole("link", { name: "Leagues" });
+    await expect(leaguesLink).toHaveClass(/bg-primary/);
+
+    const overviewLink = page.locator("aside").getByRole("link", { name: "Overview" });
+    await expect(overviewLink).not.toHaveClass(/bg-primary/);
+  });
+
+  test("navigation has accessibility role", async ({ page }) => {
+    await page.goto("/dashboard");
+
+    await expect(page.locator('nav[role="navigation"]')).toBeVisible();
   });
 });
