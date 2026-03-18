@@ -16,4 +16,11 @@
 - `docs/guides/USER_SETUP.md`
 - `docs/sprints/SPRINT_2025_07_PLAN.md`
 - `docs/sprints/SPRINT_2025_08_PLAN.md`
+- `docs/sprints/SPRINT_2025_09_PLAN.md`
 - `docs/work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md`
+
+## Related READMEs
+
+- `sportsmgmt/README.md` — Core Salesforce package components and architecture
+- `sportsmgmt-football/README.md` — Football-specific extension package (scaffolded, not yet implemented)
+- `apps/web/README.md` — Next.js frontend: setup, architecture, auth, Salesforce integration

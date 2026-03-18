@@ -13,71 +13,70 @@ The Sports Management Core package provides the foundational framework for sport
 
 ## Core Components
 
-### Objects
-- `Team__c` - Core team information
-- `Player__c` - Player profiles and basic information
-- `League__c` - League configuration and settings
-- `Game__c` - Game tracking and results
-- `Season__c` - Season management
+### Custom Objects
 
-### Classes
-- `TeamService` - Team management business logic
-- `PlayerService` - Player management operations
-- `GameService` - Game tracking and scoring
-- `LeagueUtility` - League configuration utilities
-- `SportsConstants` - Shared constants and enums
+- **`League__c`** — Parent object for leagues with RecordType support
+- **`Division__c`** — Divisions within a league
+- **`Team__c`** — Teams with lookup to League__c; includes City, Stadium, Founded Year, Location fields
+- **`Player__c`** — Player profiles linked to teams
+- **`Season__c`** — Season management with date ranges and status
+
+### Apex Classes
+
+**Controllers** (`classes/lightning/`):
+- `DivisionManagementController` — LWC controller for division CRUD
+- `PlayerRosterController` — LWC controller for player roster management
+- `SeasonManagementController` — LWC controller for season operations
+- `TeamDetailsController` — LWC controller for team detail views
+
+**Services** (`classes/service/`):
+- `DivisionService`, `LeagueService`, `PlayerService`, `SeasonService`, `TeamService` — Business logic layer
+- `DivisionRepository`, `LeagueRepository`, `PlayerRepository`, `SeasonRepository`, `TeamRepository` — Data access layer
+
+**REST Resources** (`classes/rest/`):
+- `LeagueRestResource` — `/sportsmgmt/v1/leagues`
+- `DivisionRestResource` — `/sportsmgmt/v1/divisions`
+- `TeamRestResource` — `/sportsmgmt/v1/teams`
+- `PlayerRestResource` — `/sportsmgmt/v1/players`
+- `SeasonRestResource` — `/sportsmgmt/v1/seasons`
+- `RestResponseDto`, `RestUtils` — Shared response envelope and utilities
+
+**Domain** (`classes/util/`):
+- `IDivision`, `ITeam` — Domain interfaces
+- `AbstractTeam` — Base implementation with common functionality
+- `DivisionWrapper`, `TeamWrapper` — Bridge domain interfaces and sObjects
+- `StructuredLogger` — JSON-based structured logging utility
 
 ### Lightning Web Components
-- `teamList` - Display teams in a league
-- `playerProfile` - Player information display
-- `gameSchedule` - Game scheduling interface
-- `leagueStandings` - League standings display
 
-### Flows
-- `Team_Registration` - New team registration process
-- `Player_Assignment` - Assign players to teams
-- `Game_Scheduling` - Schedule league games
+- `divisionManagement` — Division list and CRUD operations
+- `playerRoster` — Player roster management within a team
+- `seasonManagement` — Season list and management
+- `teamDetails` — Team detail view with related data
+
+### Data Model
+
+```
+League__c (1) ────> (n) Division__c
+League__c (1) ────> (n) Team__c
+Team__c   (1) ────> (n) Player__c
+League__c (1) ────> (n) Season__c
+```
 
 ## Design Principles
 
-### Sport-Agnostic Design
-- All components should work regardless of sport type
-- Use polymorphism for sport-specific behavior
-- Avoid hardcoded sport-specific rules or calculations
+- **Interface Abstraction** — Business logic works with `IDivision`, `ITeam` rather than sObjects
+- **Dependency Injection** — Constructor-based DI for services, `@TestVisible` setters for controllers
+- **Repository Pattern** — Clear separation between service logic and data access
+- **Wrapper Pattern** — `DivisionWrapper`, `TeamWrapper` bridge domain interfaces and sObjects
+- **Security** — All classes use `with sharing`
 
-### Extensibility
-- Use interfaces and abstract classes where appropriate
-- Provide extension points for sport-specific implementations
-- Design for dependency injection
+## Testing
 
-### Data Model
-```
-League__c (1) -----> (n) Team__c
-Team__c (1) -----> (n) Player__c
-League__c (1) -----> (n) Game__c
-Game__c (n) -----> (2) Team__c (Home/Away)
-```
-
-## Usage Guidelines
-
-### For Core Package Development
-1. Keep all logic sport-agnostic
-2. Use configuration objects for customizable behavior
-3. Provide clear extension points for sport packages
-4. Document all public APIs
-
-### For Sport Package Integration
-1. Extend, don't override core functionality
-2. Use core services and utilities
-3. Add sport-specific fields to core objects
-4. Implement sport-specific interfaces
-
-## Testing Strategy
-
-- Unit tests for all service classes
-- LWC tests for all components
-- Integration tests for flow processes
-- Minimum 90% code coverage required
+- 94% org-wide coverage with 60+ tests
+- Mock implementations for unit testing (e.g., `MockDivisionRepository`)
+- `@TestSetup` with JSON deserialization for complex test data
+- Bulk testing for governor limit validation
 
 ## Dependencies
 
