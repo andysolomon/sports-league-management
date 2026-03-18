@@ -3,17 +3,30 @@
 import { useState } from "react";
 import type { TeamDto } from "@sports-management/shared-types";
 import { UpdateTeamInputSchema } from "@sports-management/api-contracts";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface TeamEditFormProps {
   team: TeamDto;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  onCancel: () => void;
 }
 
 export default function TeamEditForm({
   team,
+  open,
+  onOpenChange,
   onSuccess,
-  onCancel,
 }: TeamEditFormProps) {
   const [name, setName] = useState(team.name);
   const [city, setCity] = useState(team.city);
@@ -56,105 +69,99 @@ export default function TeamEditForm({
         throw new Error(err.error ?? "Failed to update team");
       }
 
+      toast.success("Team updated successfully");
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-900">Edit Team</h3>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Team</DialogTitle>
+          <DialogDescription>
+            Update the team&apos;s information.
+          </DialogDescription>
+        </DialogHeader>
 
         {error && (
-          <div className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="team-name">Name</Label>
+            <Input
+              id="team-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              City
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="team-city">City</Label>
+            <Input
+              id="team-city"
               type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Stadium
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="team-stadium">Stadium</Label>
+            <Input
+              id="team-stadium"
               type="text"
               value={stadium}
               onChange={(e) => setStadium(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Founded Year
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="team-founded">Founded Year</Label>
+            <Input
+              id="team-founded"
               type="number"
               value={foundedYear}
               onChange={(e) => setFoundedYear(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Location
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="team-location">Location</Label>
+            <Input
+              id="team-location"
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
+            <Button
               type="button"
-              onClick={onCancel}
+              variant="outline"
+              onClick={() => onOpenChange(false)}
               disabled={submitting}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={submitting}>
               {submitting ? "Saving..." : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

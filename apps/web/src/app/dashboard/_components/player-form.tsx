@@ -6,21 +6,41 @@ import {
   CreatePlayerInputSchema,
   UpdatePlayerInputSchema,
 } from "@sports-management/api-contracts";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface PlayerFormProps {
   mode: "create" | "edit";
   teamId: string;
   player?: PlayerDto;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  onCancel: () => void;
 }
 
 export default function PlayerForm({
   mode,
   teamId,
   player,
+  open,
+  onOpenChange,
   onSuccess,
-  onCancel,
 }: PlayerFormProps) {
   const [name, setName] = useState(player?.name ?? "");
   const [position, setPosition] = useState(player?.position ?? "");
@@ -62,6 +82,7 @@ export default function PlayerForm({
           const err = await res.json();
           throw new Error(err.error ?? "Failed to create player");
         }
+        toast.success("Player added successfully");
       } else {
         const parsed = UpdatePlayerInputSchema.safeParse(data);
         if (!parsed.success) {
@@ -77,119 +98,115 @@ export default function PlayerForm({
           const err = await res.json();
           throw new Error(err.error ?? "Failed to update player");
         }
+        toast.success("Player updated successfully");
       }
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="mx-4 w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {mode === "create" ? "Add Player" : "Edit Player"}
-        </h3>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "create" ? "Add Player" : "Edit Player"}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "create"
+              ? "Add a new player to the team roster."
+              : "Update the player's information."}
+          </DialogDescription>
+        </DialogHeader>
 
         {error && (
-          <div className="mt-2 rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name *
-            </label>
-            <input
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="player-name">Name *</Label>
+            <Input
+              id="player-name"
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Position *
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="player-position">Position *</Label>
+            <Input
+              id="player-position"
               type="text"
               required
               value={position}
               onChange={(e) => setPosition(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Jersey Number
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="player-jersey">Jersey Number</Label>
+            <Input
+              id="player-jersey"
               type="number"
               value={jerseyNumber}
               onChange={(e) => setJerseyNumber(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Date of Birth
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="player-dob">Date of Birth</Label>
+            <Input
+              id="player-dob"
               type="date"
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Status *
-            </label>
-            <select
-              required
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="Active">Active</option>
-              <option value="Injured">Injured</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+          <div className="space-y-2">
+            <Label htmlFor="player-status">Status *</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="player-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Injured">Injured</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
-            <button
+            <Button
               type="button"
-              onClick={onCancel}
+              variant="outline"
+              onClick={() => onOpenChange(false)}
               disabled={submitting}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" disabled={submitting}>
               {submitting
                 ? "Saving..."
                 : mode === "create"
                   ? "Add Player"
                   : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

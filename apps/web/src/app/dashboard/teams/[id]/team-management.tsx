@@ -6,6 +6,13 @@ import type { TeamDto, PlayerDto } from "@sports-management/shared-types";
 import PlayerForm from "../../_components/player-form";
 import TeamEditForm from "../../_components/team-edit-form";
 import DeleteConfirm from "../../_components/delete-confirm";
+import { DataTable, type Column } from "@/components/data-table";
+import { StatusBadge } from "@/components/status-badge";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { UserCircle, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface TeamManagementProps {
   team: TeamDto;
@@ -44,164 +51,168 @@ export default function TeamManagement({
         const err = await res.json();
         throw new Error(err.error ?? "Failed to delete player");
       }
+      toast.success("Player deleted successfully");
       handleSuccess();
-    } catch {
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to delete player";
+      toast.error(message);
       setIsDeleting(false);
     }
   }
 
+  const columns: Column<PlayerDto & Record<string, unknown>>[] = [
+    { key: "name", header: "Name", sortable: true },
+    { key: "position", header: "Position", sortable: true },
+    {
+      key: "jerseyNumber",
+      header: "Jersey #",
+      sortable: true,
+      render: (p) => p.jerseyNumber ?? "\u2014",
+    },
+    {
+      key: "status",
+      header: "Status",
+      sortable: true,
+      render: (p) => <StatusBadge status={p.status} />,
+    },
+  ];
+
   return (
     <>
-      <div className="mb-8 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex items-start justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">{team.name}</h2>
-          {canManage && (
-            <button
-              type="button"
-              onClick={() => setModal({ type: "editTeam" })}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Edit Team
-            </button>
-          )}
-        </div>
-        <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
-          {team.city && (
-            <div>
-              <dt className="font-medium text-gray-500">City</dt>
-              <dd className="mt-1 text-gray-900">{team.city}</dd>
-            </div>
-          )}
-          {team.stadium && (
-            <div>
-              <dt className="font-medium text-gray-500">Stadium</dt>
-              <dd className="mt-1 text-gray-900">{team.stadium}</dd>
-            </div>
-          )}
-          {team.foundedYear && (
-            <div>
-              <dt className="font-medium text-gray-500">Founded</dt>
-              <dd className="mt-1 text-gray-900">{team.foundedYear}</dd>
-            </div>
-          )}
-          {team.location && (
-            <div>
-              <dt className="font-medium text-gray-500">Location</dt>
-              <dd className="mt-1 text-gray-900">{team.location}</dd>
-            </div>
-          )}
-        </dl>
-      </div>
+      <Card className="mb-8">
+        <CardContent className="pt-6">
+          <div className="flex items-start justify-between">
+            <h2 className="text-2xl font-bold text-gray-900">{team.name}</h2>
+            {canManage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setModal({ type: "editTeam" })}
+              >
+                <Pencil className="mr-1 h-3 w-3" />
+                Edit Team
+              </Button>
+            )}
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+            {team.city && (
+              <div>
+                <dt className="font-medium text-gray-500">City</dt>
+                <dd className="mt-1 text-gray-900">{team.city}</dd>
+              </div>
+            )}
+            {team.stadium && (
+              <div>
+                <dt className="font-medium text-gray-500">Stadium</dt>
+                <dd className="mt-1 text-gray-900">{team.stadium}</dd>
+              </div>
+            )}
+            {team.foundedYear && (
+              <div>
+                <dt className="font-medium text-gray-500">Founded</dt>
+                <dd className="mt-1 text-gray-900">{team.foundedYear}</dd>
+              </div>
+            )}
+            {team.location && (
+              <div>
+                <dt className="font-medium text-gray-500">Location</dt>
+                <dd className="mt-1 text-gray-900">{team.location}</dd>
+              </div>
+            )}
+          </dl>
+        </CardContent>
+      </Card>
 
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">
           Player Roster ({players.length})
         </h3>
         {canManage && (
-          <button
-            type="button"
-            onClick={() => setModal({ type: "addPlayer" })}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary/90"
-          >
+          <Button onClick={() => setModal({ type: "addPlayer" })}>
             Add Player
-          </button>
+          </Button>
         )}
       </div>
 
       {players.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Position
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Jersey #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Status
-                </th>
-                {canManage && (
-                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Actions
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {players.map((player) => (
-                <tr key={player.id}>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                    {player.name}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {player.position}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {player.jerseyNumber ?? "\u2014"}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                    {player.status}
-                  </td>
-                  {canManage && (
-                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setModal({ type: "editPlayer", player })
-                        }
-                        className="mr-2 text-primary hover:underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setModal({ type: "deletePlayer", player })
-                        }
-                        className="text-red-600 hover:underline"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={players as (PlayerDto & Record<string, unknown>)[]}
+          columns={columns}
+          searchPlaceholder="Search players..."
+          searchKeys={["name", "position", "status"]}
+          actions={
+            canManage
+              ? (player) => (
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setModal({
+                          type: "editPlayer",
+                          player: player as unknown as PlayerDto,
+                        })
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() =>
+                        setModal({
+                          type: "deletePlayer",
+                          player: player as unknown as PlayerDto,
+                        })
+                      }
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )
+              : undefined
+          }
+        />
       ) : (
-        <p className="text-gray-500">No players on this team.</p>
-      )}
-
-      {modal.type === "editTeam" && (
-        <TeamEditForm
-          team={team}
-          onSuccess={handleSuccess}
-          onCancel={() => setModal({ type: "none" })}
+        <EmptyState
+          icon={UserCircle}
+          title="No players on this team"
+          description="Add players to build the team roster."
+          action={
+            canManage ? (
+              <Button onClick={() => setModal({ type: "addPlayer" })}>
+                Add Player
+              </Button>
+            ) : undefined
+          }
         />
       )}
 
-      {modal.type === "addPlayer" && (
-        <PlayerForm
-          mode="create"
-          teamId={team.id}
-          onSuccess={handleSuccess}
-          onCancel={() => setModal({ type: "none" })}
-        />
-      )}
+      <TeamEditForm
+        team={team}
+        open={modal.type === "editTeam"}
+        onOpenChange={(open) => !open && setModal({ type: "none" })}
+        onSuccess={handleSuccess}
+      />
+
+      <PlayerForm
+        mode="create"
+        teamId={team.id}
+        open={modal.type === "addPlayer"}
+        onOpenChange={(open) => !open && setModal({ type: "none" })}
+        onSuccess={handleSuccess}
+      />
 
       {modal.type === "editPlayer" && (
         <PlayerForm
           mode="edit"
           teamId={team.id}
           player={modal.player}
+          open
+          onOpenChange={(open) => !open && setModal({ type: "none" })}
           onSuccess={handleSuccess}
-          onCancel={() => setModal({ type: "none" })}
         />
       )}
 
