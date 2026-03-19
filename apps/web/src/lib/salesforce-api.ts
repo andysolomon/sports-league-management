@@ -15,7 +15,8 @@ const BASE = "/services/apexrest/sportsmgmt/v1";
 
 async function request<T>(path: string): Promise<T> {
   const conn = await getSalesforceConnection();
-  const res = (await conn.request(`${BASE}${path}`)) as ApiResponse<T>;
+  const raw = await conn.request(`${BASE}${path}`);
+  const res = (typeof raw === "string" ? JSON.parse(raw) : raw) as ApiResponse<T>;
   if (!res.success) {
     throw new Error(res.message ?? "Salesforce API error");
   }
@@ -28,12 +29,13 @@ async function mutate<T>(
   body?: unknown,
 ): Promise<T> {
   const conn = await getSalesforceConnection();
-  const res = (await conn.request({
+  const raw = await conn.request({
     url: `${conn.instanceUrl}${BASE}${path}`,
     method,
     body: body ? JSON.stringify(body) : undefined,
     headers: { "Content-Type": "application/json" },
-  })) as ApiResponse<T>;
+  });
+  const res = (typeof raw === "string" ? JSON.parse(raw) : raw) as ApiResponse<T>;
   if (!res.success) {
     throw new Error(res.message ?? "Salesforce API error");
   }
