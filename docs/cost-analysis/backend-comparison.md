@@ -46,7 +46,7 @@ Assumptions:
 | **Scale** | 10K | 3K | 30K | **$165–330** | **$75** | **$25–50** | **~$115** |
 | **Enterprise** | 100K | 30K | 300K | **BREAKS\*** | **$599** | **$50–200** | **$200–2,000\*\*** |
 
-**\* Salesforce API limit ceiling:** Enterprise Edition includes ~101K API calls/day (base 15K + 1K per license × 86 licenses at $165/mo). At 300K calls/day, you'd need Unlimited Edition ($330/mo) or 300+ Platform licenses — economically unviable for a $15/mo ARPU product.
+**\* Salesforce API limit ceiling:** Enterprise Edition includes ~101K API calls/day (base 100K + 1K per license). At 300K raw calls/day you'd need Unlimited Edition ($330/mo) or additional API call packs. However, with Composite API batching (25x multiplier) and BFF caching, Enterprise can support 50K-100K MAU — see Section 7. The "BREAKS" label applies to raw, unoptimized traffic at 100K users.
 
 **\*\* Clerk is the hidden cost bomb:** Clerk charges $0.02/MAU after 10K. At 100K MAUs = ~$1,825/mo, dwarfing all database costs. Consider Auth.js (free, self-hosted) or Clerk's enterprise negotiation at this scale.
 
@@ -90,6 +90,8 @@ xychart-beta
 ```
 
 > Bars represent: Salesforce (blue), Supabase (green), Convex (orange), Vercel-Native (purple). At 100K users, Clerk auth ($1,825) dominates all non-Salesforce stacks. Salesforce "BREAKS" is represented as $2,500 to illustrate the cost/feasibility cliff.
+>
+> **Rendering note:** The `xychart-beta` syntax is experimental in Mermaid and may not render on all GitHub views. If the chart doesn't display, refer to the cost tables in Sections 3 and 5 for the same data.
 
 ---
 
@@ -100,16 +102,35 @@ xychart-beta
 | Edition | Base API Calls/24h | Per-License Bonus | Total (1 license) | Total (5 licenses) |
 |---------|-------------------|-------------------|--------------------|---------------------|
 | Developer (free) | 15,000 | — | 15,000 | — |
-| Platform ($25/user/mo) | 15,000 | +1,000/license | 16,000 | 20,000 |
-| Enterprise ($165/user/mo) | 15,000 | +1,000/license | 16,000 | 20,000 |
-| Unlimited ($330/user/mo) | 15,000 | +1,000/license | Negotiable | Negotiable |
+| Platform Starter ($25/user/mo) | ~5,000* | +200/license | ~5,200 | ~6,000 |
+| Enterprise ($165/user/mo) | **100,000** | +1,000/license | 101,000 | 105,000 |
+| Unlimited ($330/user/mo) | **100,000** | +5,000/license | 105,000 | 125,000 |
 
-**Critical insight:** Each Platform license adds only 1,000 API calls/day. To get 300K calls/day, you'd need 285 Platform licenses = $7,125/mo — absurd for a product with $15 ARPU. Even at 30K calls/day (10K users), you need 15 licenses = $375/mo.
+\* Platform Starter API allocations vary and are lower than Enterprise. The [Salesforce edition comparison PDF](https://www.salesforce.com/content/dam/web/en_us/www/documents/pricing/salesforce-platform-pricing-editions.pdf) lists 200 REST API calls/day for Platform Starter. Verify against your actual org via `System.OrgLimits.getMap().get('DailyApiRequests')`.
+
+> **Source:** [Salesforce API Limits and Monitoring](https://developer.salesforce.com/blogs/2024/11/api-limits-and-monitoring-your-api-usage), [Limits Cheatsheet](https://developer.salesforce.com/docs/atlas.en-us.242.0.salesforce_app_limits_cheatsheet.meta/salesforce_app_limits_cheatsheet/salesforce_app_limits_platform_api.htm)
+
+**Critical insight:** Enterprise Edition provides **100,000 base API calls/day** — significantly more headroom than Platform Starter. With Composite API (25 sub-requests per call) and BFF caching, Enterprise supports 50K-100K MAU. Platform Starter's low allocation (~200-5,000/day) makes it unsuitable as the sole production license for BFF-heavy traffic.
 
 **Mitigations available:**
 - Composite API (25 sub-requests per call) — see Section 7
 - BFF response caching (Redis/memory) — dramatically reduces repeat calls
 - Bulk API for batch operations (doesn't count against REST limits)
+
+### Which Salesforce Edition Do You Need?
+
+| Edition | Cost/User/Mo | Base API Calls | Custom Objects | Best For |
+|---------|-------------|---------------|----------------|----------|
+| Developer (free) | $0 | 15,000 | 400+ | Development and testing only — **not for production** |
+| Platform Starter | $25 | ~5,000 | 10 | Low-traffic production with minimal API use |
+| Platform Plus | $100 | Higher (negotiable) | 110 | Production with moderate API and workflow needs |
+| Enterprise (Sales/Service Cloud) | $165 | **100,000** | 200+ | Production SaaS backend with heavy API traffic |
+
+**For sprtsmng's BFF architecture:** Enterprise Edition ($165/user/mo) is the realistic production choice. The 100K base API calls give comfortable headroom for 1K-10K users. Platform Starter ($25/mo) is only viable if you add aggressive BFF caching early.
+
+**Object limit note:** sprtsmng currently has 5 custom objects (League, Team, Division, Season, Player). Platform Starter's 10-object limit works now but leaves only 5 slots for Game, Venue, Registration, Payment, and other future objects. Enterprise has 200+ and is not a concern.
+
+> **Important:** The $165/user/month price is for **Sales Cloud Enterprise** or **Service Cloud Enterprise**, not "Platform Enterprise." Platform-specific pricing (Starter at $25, Plus at $100) is a separate product line with different API allocations. See [Salesforce Platform Pricing](https://www.salesforce.com/editions-pricing/platform/).
 
 ### Supabase Pricing
 
@@ -141,6 +162,21 @@ xychart-beta
 | Vercel | Hobby free | Pro $20/mo |
 
 **Strengths:** Best Vercel integration (auto-provisioned env vars, unified billing), serverless-native, Neon branching for preview deployments. **Weakness:** Assembling multiple services vs. one platform.
+
+### ISV/OEM Licensing (AppExchange Distribution)
+
+If you distribute via AppExchange, the cost model is different from buying your own licenses. See [Salesforce ISV/OEM license comparison](https://developer.salesforce.com/docs/atlas.en-us.202.0.packagingGuide.meta/packagingGuide/oem_user_license_comparison.htm).
+
+| Model | How It Works | Cost to You |
+|-------|-------------|-------------|
+| **ISVforce** (existing SF customers) | Customer installs your managed package in their own org | **15%** of your app revenue |
+| **ISVforce** (new-to-Salesforce) | Customer gets SF licenses bundled | **25%** of your app revenue |
+| **OEM Embedded** | You resell SF licenses with your app | $25/user/mo + **25%** revenue share |
+| **AppExchange Security Review** | One-time listing fee | **$2,700** |
+
+**Impact at scale:** At 1,000 League-tier customers ($499/yr each = $499K/yr revenue), a 25% ISV share = ~$125K/year to Salesforce. On the 15% tier (existing SF customers), that's ~$75K/year. This should be modeled into long-term unit economics.
+
+**Recommendation:** Use ISVforce for the AppExchange channel (lower share for existing SF customers). For the standalone SaaS channel, run your own production org with purchased licenses to avoid the revenue share entirely. See [teamsnap-competitive-analysis.md](teamsnap-competitive-analysis.md) for the full margin comparison.
 
 ---
 
@@ -353,6 +389,14 @@ Clerk is the single largest cost risk outside of Salesforce API limits:
 - **Clerk enterprise negotiation** — volume discounts available at 50K+ MAU
 
 **Recommendation:** Clerk is excellent for launch velocity (already integrated). Plan to evaluate alternatives at 25K MAU when costs reach ~$300/mo. The `@sprtsmng/shared-types` abstraction means auth provider is swappable.
+
+---
+
+## Related Documents
+
+- **[TeamSnap Competitive Analysis](teamsnap-competitive-analysis.md)** — Head-to-head pricing, margin comparison, and competitive viability assessment vs. TeamSnap
+- **[User Billing Model](user-billing-model.md)** — User types, auth boundaries, permission set mapping, money flow, and the tier enforcement gap
+- **[Excalidraw Diagram](backend-cost-comparison.excalidraw)** — Visual comparison of architecture stacks and cost badges ([PNG](backend-cost-comparison.png))
 
 ---
 

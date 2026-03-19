@@ -33,6 +33,15 @@
 |---|---|
 | [work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md](work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md) | Division management feature implementation plan |
 
+## Cost Analysis
+
+| Document | Description |
+|---|---|
+| [cost-analysis/backend-comparison.md](cost-analysis/backend-comparison.md) | Salesforce vs Supabase vs Convex vs Vercel-Native cost and scalability comparison |
+| [cost-analysis/teamsnap-competitive-analysis.md](cost-analysis/teamsnap-competitive-analysis.md) | Head-to-head pricing and margin analysis vs TeamSnap |
+| [cost-analysis/user-billing-model.md](cost-analysis/user-billing-model.md) | User types, auth boundaries, permission sets, billing flows, and tier enforcement gap |
+| [cost-analysis/backend-cost-comparison.png](cost-analysis/backend-cost-comparison.png) | Visual comparison diagram (Excalidraw) |
+
 ## Other
 
 | Document | Description |
