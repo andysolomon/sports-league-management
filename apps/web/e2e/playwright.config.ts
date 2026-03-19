@@ -17,8 +17,15 @@ export default defineConfig({
   globalSetup: "./global-setup.ts",
   projects: [
     {
-      name: "chromium",
+      name: "health",
+      testMatch: "health.spec.ts",
       use: { browserName: "chromium" },
+    },
+    {
+      name: "chromium",
+      testIgnore: "health.spec.ts",
+      use: { browserName: "chromium" },
+      dependencies: ["health"],
     },
   ],
   webServer: {

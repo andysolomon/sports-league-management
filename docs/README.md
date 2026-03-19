@@ -1,26 +1,48 @@
-# Docs Index
+# Documentation Index
 
-## Structure
+## Guides
 
-- `docs/agile/` — Agile Accelerator and work-tracking guides
-- `docs/external-frontend/` — external app, auth, and monorepo exploration docs
-- `docs/guides/` — operational and developer guides
-- `docs/sprints/` — sprint planning documents
-- `docs/work-items/` — individual work-item or story plans
+| Document | Description |
+|---|---|
+| [guides/E2E_TESTING_GUIDE.md](guides/E2E_TESTING_GUIDE.md) | Playwright E2E test setup, patterns, and running tests |
+| [guides/USER_SETUP.md](guides/USER_SETUP.md) | Scratch org user creation and permission set assignment |
+| [guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md](guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md) | Salesforce CLI commands and custom object reference |
 
-## Key Files
+## Sprint Plans
 
-- `docs/agile/AGILE_ACCELERATOR_CLI_GUIDE.md`
-- `docs/guides/E2E_TESTING_GUIDE.md`
-- `docs/guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md`
-- `docs/guides/USER_SETUP.md`
-- `docs/sprints/SPRINT_2025_07_PLAN.md`
-- `docs/sprints/SPRINT_2025_08_PLAN.md`
-- `docs/sprints/SPRINT_2025_09_PLAN.md`
-- `docs/work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md`
+| Sprint | Focus |
+|---|---|
+| [sprints/SPRINT_2025_07_PLAN.md](sprints/SPRINT_2025_07_PLAN.md) | Initial Salesforce package setup |
+| [sprints/SPRINT_2025_08_PLAN.md](sprints/SPRINT_2025_08_PLAN.md) | REST API and service layer |
+| [sprints/SPRINT_2025_09_PLAN.md](sprints/SPRINT_2025_09_PLAN.md) | External frontend and monorepo |
+| [sprints/SPRINT_2025_10_PLAN.md](sprints/SPRINT_2025_10_PLAN.md) | Frontend enhancement with shadcn/ui (W-000034 through W-000040) |
+| [sprints/SPRINT_2025_10_E2E_PLAN.md](sprints/SPRINT_2025_10_E2E_PLAN.md) | E2E test coverage for Sprint 2025.10 stories |
+
+## Architecture and Decisions
+
+| Document | Description |
+|---|---|
+| [external-frontend/EXTERNAL_FRONTEND_ARCHITECTURE_OPTIONS.md](external-frontend/EXTERNAL_FRONTEND_ARCHITECTURE_OPTIONS.md) | Evaluation of frontend architecture options |
+| [external-frontend/EXTERNAL_FRONTEND_DECISION.md](external-frontend/EXTERNAL_FRONTEND_DECISION.md) | Decision record: Next.js + Clerk + Salesforce JWT |
+| [external-frontend/EXTERNAL_FRONTEND_CURRENT_STATE.md](external-frontend/EXTERNAL_FRONTEND_CURRENT_STATE.md) | Current state of the external frontend |
+| [external-frontend/MONOREPO_MIGRATION_PLAN.md](external-frontend/MONOREPO_MIGRATION_PLAN.md) | Migration to pnpm workspace monorepo |
+
+## Work Items
+
+| Document | Description |
+|---|---|
+| [work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md](work-items/W-000016_DIVISION_MANAGEMENT_PLAN.md) | Division management feature implementation plan |
+
+## Other
+
+| Document | Description |
+|---|---|
+| [agile/AGILE_ACCELERATOR_CLI_GUIDE.md](agile/AGILE_ACCELERATOR_CLI_GUIDE.md) | Using Agile Accelerator via Salesforce CLI |
+| [market-insights/](market-insights/) | Business plan, competitors, monetization, MVP, roadmap |
 
 ## Related READMEs
 
-- `sportsmgmt/README.md` — Core Salesforce package components and architecture
-- `sportsmgmt-football/README.md` — Football-specific extension package (scaffolded, not yet implemented)
-- `apps/web/README.md` — Next.js frontend: setup, architecture, auth, Salesforce integration
+- [Root README](../README.md) — Project overview, quick start, full development workflow
+- [apps/web/README.md](../apps/web/README.md) — Next.js frontend: setup, architecture, auth, testing
+- [sportsmgmt/README.md](../sportsmgmt/README.md) — Core Salesforce package: objects, Apex, LWC, REST API
+- [sportsmgmt-football/README.md](../sportsmgmt-football/README.md) — Football extension package
