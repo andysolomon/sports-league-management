@@ -1,16 +1,8 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g., v0.1.0)'
-        required: true
-        type: string
-      milestone_number:
-        description: 'GitHub milestone number (1=v0.1.0, 2=v0.2.0, etc.)'
-        required: true
-        type: string
+  push:
+    branches: [main]
 
 permissions:
   contents: write
@@ -18,125 +10,31 @@ permissions:
 
 jobs:
   release:
-    name: Create Release
+    name: Semantic Release
     runs-on: ubuntu-latest
+    # Skip release on commits made by semantic-release itself (version bumps)
+    if: "!contains(github.event.head_commit.message, 'chore(release):')"
 
     steps:
-      - name: Validate version format
-        run: |
-          if [[ ! "${{ inputs.version }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid version format '${{ inputs.version }}'. Expected format: v0.1.0"
-            exit 1
-          fi
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
 
-      - name: Configure Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
 
-      - name: Get milestone title
-        id: milestone
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run semantic-release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TITLE=$(gh api repos/${{ github.repository }}/milestones/${{ inputs.milestone_number }} --jq '.title')
-          echo "title=$TITLE" >> $GITHUB_OUTPUT
-          echo "Milestone: $TITLE"
-
-      - name: Generate release notes from milestone
-        id: notes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          MILESTONE_TITLE="${{ steps.milestone.outputs.title }}"
-
-          # Get closed issues for this milestone
-          ISSUES_JSON=$(gh issue list \
-            --milestone "$MILESTONE_TITLE" \
-            --state closed \
-            --json number,title,labels \
-            --limit 100)
-
-          # Generate grouped release notes
-          NOTES="## What's Changed in ${{ inputs.version }}\n\n"
-
-          # Group by epic label
-          for EPIC in "infrastructure" "payments" "launch" "growth" "scale"; do
-            EPIC_ISSUES=$(echo "$ISSUES_JSON" | jq -r --arg epic "epic: $EPIC" \
-              '.[] | select(.labels[]?.name == $epic) | "- #\(.number) \(.title)"')
-
-            if [ -n "$EPIC_ISSUES" ]; then
-              EPIC_TITLE=$(echo "$EPIC" | sed 's/.*/\u&/')
-              NOTES+="### ${EPIC_TITLE}\n${EPIC_ISSUES}\n\n"
-            fi
-          done
-
-          # Add any issues without an epic label
-          UNLABELED=$(echo "$ISSUES_JSON" | jq -r \
-            '[.[] | select(all(.labels[].name; startswith("epic:") | not))] | .[] | "- #\(.number) \(.title)"')
-
-          if [ -n "$UNLABELED" ]; then
-            NOTES+="### Other\n${UNLABELED}\n\n"
-          fi
-
-          ISSUE_COUNT=$(echo "$ISSUES_JSON" | jq length)
-          NOTES+="---\n**${ISSUE_COUNT} issues closed** in milestone [$MILESTONE_TITLE](https://github.com/${{ github.repository }}/milestone/${{ inputs.milestone_number }})\n"
-
-          # Get previous tag for changelog link
-          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$PREV_TAG" ]; then
-            NOTES+="\n**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${{ inputs.version }}"
-          fi
-
-          # Write to file to preserve formatting
-          echo -e "$NOTES" > /tmp/release-notes.md
-          cat /tmp/release-notes.md
-
-      - name: Bump version in package.json files
-        run: |
-          VERSION="${{ inputs.version }}"
-          SEMVER="${VERSION#v}"  # Strip 'v' prefix
-
-          # Update root package.json
-          jq --arg v "$SEMVER" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
-
-          # Update apps/web/package.json
-          jq --arg v "$SEMVER" '.version = $v' apps/web/package.json > apps/web/package.json.tmp && mv apps/web/package.json.tmp apps/web/package.json
-
-          git add package.json apps/web/package.json
-          git commit -m "chore: bump version to ${VERSION}"
-          git push origin main
-
-      - name: Create and push tag
-        run: |
-          git tag -a "${{ inputs.version }}" -m "Release ${{ inputs.version }}"
-          git push origin "${{ inputs.version }}"
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "${{ inputs.version }}" \
-            --title "${{ inputs.version }}" \
-            --notes-file /tmp/release-notes.md \
-            --target main
-
-      - name: Close milestone
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method PATCH \
-            repos/${{ github.repository }}/milestones/${{ inputs.milestone_number }} \
-            -f state=closed
-
-          echo "### Release ${{ inputs.version }} complete!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Tag: \`${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Milestone: ${{ steps.milestone.outputs.title }} (closed)" >> $GITHUB_STEP_SUMMARY
-          echo "- [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ inputs.version }})" >> $GITHUB_STEP_SUMMARY
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
