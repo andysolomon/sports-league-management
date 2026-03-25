@@ -1,0 +1,155 @@
+name: Salesforce Package
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sportsmgmt/**'
+      - 'sportsmgmt-football/**'
+      - 'sfdx-project.json'
+
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - validate
+          - create-core-version
+          - create-football-version
+          - create-versions
+      skip_validation:
+        description: 'Skip package validation (faster, no test coverage)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  validate:
+    name: Validate Salesforce Metadata
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.action == 'validate')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli
+
+      - name: Authenticate to Dev Hub
+        run: |
+          echo "${{ secrets.SF_DEVHUB_JWT_KEY }}" > /tmp/server.key
+          sf org login jwt \
+            --client-id "${{ secrets.SF_DEVHUB_CLIENT_ID }}" \
+            --jwt-key-file /tmp/server.key \
+            --username "${{ secrets.SF_DEVHUB_USERNAME }}" \
+            --set-default-dev-hub \
+            --alias devhub
+          rm /tmp/server.key
+
+      - name: Create Scratch Org
+        run: |
+          sf org create scratch \
+            --definition-file config/project-scratch-def.json \
+            --alias ci-scratch \
+            --wait 10 \
+            --duration-days 1 \
+            --set-default
+
+      - name: Deploy Source
+        run: sf project deploy start --target-org ci-scratch
+
+      - name: Run Apex Tests
+        run: |
+          sf apex test run \
+            --target-org ci-scratch \
+            --wait 10 \
+            --code-coverage \
+            --result-format human
+
+      - name: Validate Coverage
+        run: |
+          COVERAGE=$(sf apex test run --target-org ci-scratch --wait 10 --code-coverage --result-format json | jq -r '.result.summary.orgWideCoverage' | tr -d '%')
+          echo "Org-wide coverage: ${COVERAGE}%"
+          if [ "$(echo "$COVERAGE < 90" | bc)" -eq 1 ]; then
+            echo "::error::Coverage ${COVERAGE}% is below 90% threshold"
+            exit 1
+          fi
+
+      - name: Delete Scratch Org
+        if: always()
+        run: sf org delete scratch --target-org ci-scratch --no-prompt || true
+
+  create-version:
+    name: Create Package Version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.action != 'validate'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli
+
+      - name: Authenticate to Dev Hub
+        run: |
+          echo "${{ secrets.SF_DEVHUB_JWT_KEY }}" > /tmp/server.key
+          sf org login jwt \
+            --client-id "${{ secrets.SF_DEVHUB_CLIENT_ID }}" \
+            --jwt-key-file /tmp/server.key \
+            --username "${{ secrets.SF_DEVHUB_USERNAME }}" \
+            --set-default-dev-hub \
+            --alias devhub
+          rm /tmp/server.key
+
+      - name: Create Package Version
+        run: |
+          SKIP_FLAG=""
+          if [ "${{ inputs.skip_validation }}" = "true" ]; then
+            SKIP_FLAG="--skip-validation"
+          fi
+
+          case "${{ inputs.action }}" in
+            create-core-version)
+              sf package version create \
+                --package "Sports Management Core" \
+                --installation-key-bypass \
+                --wait 15 \
+                --code-coverage \
+                $SKIP_FLAG
+              ;;
+            create-football-version)
+              sf package version create \
+                --package "Sports Management Football" \
+                --installation-key-bypass \
+                --wait 15 \
+                --code-coverage \
+                $SKIP_FLAG
+              ;;
+            create-versions)
+              sf package version create \
+                --package "Sports Management Core" \
+                --installation-key-bypass \
+                --wait 15 \
+                --code-coverage \
+                $SKIP_FLAG
+
+              sf package version create \
+                --package "Sports Management Football" \
+                --installation-key-bypass \
+                --wait 15 \
+                --code-coverage \
+                $SKIP_FLAG
+              ;;
+          esac
+
+      - name: List Package Versions
+        run: |
+          echo "### Core Package Versions" >> $GITHUB_STEP_SUMMARY
+          sf package version list --package "Sports Management Core" --json | jq -r '.result[] | "- \(.SubscriberPackageVersionId) (\(.Version)) — \(.ReleaseState)"' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Football Package Versions" >> $GITHUB_STEP_SUMMARY
+          sf package version list --package "Sports Management Football" --json | jq -r '.result[] | "- \(.SubscriberPackageVersionId) (\(.Version)) — \(.ReleaseState)"' >> $GITHUB_STEP_SUMMARY
