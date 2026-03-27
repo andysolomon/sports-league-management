@@ -415,7 +415,7 @@ private class TeamRepositoryTest {
     @IsTest
     static void testDeleteTeam_NonExistentId() {
         // Given
-        String nonExistentId = 'a00000000000000AAA'; // Valid format but non-existent
+        String nonExistentId = Team__c.SObjectType.getDescribe().getKeyPrefix() + '000000000000AAA'; // Valid format but non-existent
         TeamRepository repository = new TeamRepository();
         
         // When/Then

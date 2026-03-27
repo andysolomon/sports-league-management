@@ -1,0 +1,77 @@
+name: Close Milestone
+
+on:
+  workflow_dispatch:
+    inputs:
+      milestone_number:
+        description: 'GitHub milestone number (1=v0.1.0, 2=v0.2.0, etc.)'
+        required: true
+        type: string
+
+permissions:
+  issues: write
+
+jobs:
+  close-milestone:
+    name: Generate Milestone Report & Close
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get milestone title
+        id: milestone
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE=$(gh api repos/${{ github.repository }}/milestones/${{ inputs.milestone_number }} --jq '.title')
+          echo "title=$TITLE" >> $GITHUB_OUTPUT
+          echo "Milestone: $TITLE"
+
+      - name: Generate milestone summary
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MILESTONE_TITLE="${{ steps.milestone.outputs.title }}"
+
+          ISSUES_JSON=$(gh issue list \
+            --milestone "$MILESTONE_TITLE" \
+            --state closed \
+            --json number,title,labels \
+            --limit 100)
+
+          OPEN_COUNT=$(gh issue list \
+            --milestone "$MILESTONE_TITLE" \
+            --state open \
+            --json number \
+            --jq 'length')
+
+          if [ "$OPEN_COUNT" -gt 0 ]; then
+            echo "::warning::Milestone '$MILESTONE_TITLE' still has $OPEN_COUNT open issues"
+          fi
+
+          echo "### Milestone: $MILESTONE_TITLE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          for EPIC in "infrastructure" "payments" "launch" "growth" "scale"; do
+            EPIC_ISSUES=$(echo "$ISSUES_JSON" | jq -r --arg epic "epic: $EPIC" \
+              '.[] | select(.labels[]?.name == $epic) | "- #\(.number) \(.title)"')
+
+            if [ -n "$EPIC_ISSUES" ]; then
+              EPIC_TITLE=$(echo "$EPIC" | sed 's/.*/\u&/')
+              echo "#### ${EPIC_TITLE}" >> $GITHUB_STEP_SUMMARY
+              echo "$EPIC_ISSUES" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+          ISSUE_COUNT=$(echo "$ISSUES_JSON" | jq length)
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "**${ISSUE_COUNT} issues closed**, **${OPEN_COUNT} still open**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Close milestone
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PATCH \
+            repos/${{ github.repository }}/milestones/${{ inputs.milestone_number }} \
+            -f state=closed
+          echo "Milestone closed."

@@ -5,7 +5,18 @@
  */
 @IsTest
 private class TeamServiceTest {
-    
+
+    // Dynamic ID generation — prefixes vary by org
+    private static String teamPrefix = Team__c.SObjectType.getDescribe().getKeyPrefix();
+    private static String leaguePrefix = League__c.SObjectType.getDescribe().getKeyPrefix();
+
+    private static Id fakeTeamId(Integer seq) {
+        return Id.valueOf(teamPrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+    private static Id fakeLeagueId(Integer seq) {
+        return Id.valueOf(leaguePrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+
     /**
      * @description Mock repository for testing service layer in isolation
      */
@@ -26,7 +37,7 @@ private class TeamServiceTest {
                 throw new TeamRepositoryException('Mock repository error');
             }
             this.lastCreatedTeam = team;
-            return 'a00000000000001AAA'; // Mock ID
+            return fakeTeamId(1); // Mock ID
         }
         
         public override Team__c retrieve(Id teamId) {
@@ -74,8 +85,8 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         List<Team__c> mockTeams = new List<Team__c>{
-            new Team__c(Id = 'a00000000000001AAA', Name = 'Mock Team Alpha', League__c = 'a01000000000001AAA'),
-            new Team__c(Id = 'a00000000000002AAA', Name = 'Mock Team Beta', League__c = 'a01000000000001AAA')
+            new Team__c(Id = fakeTeamId(1), Name = 'Mock Team Alpha', League__c = fakeLeagueId(1)),
+            new Team__c(Id = fakeTeamId(2), Name = 'Mock Team Beta', League__c = fakeLeagueId(1))
         };
         mockRepo.mockTeams = mockTeams;
         TeamService service = new TeamService(mockRepo);
@@ -124,13 +135,13 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         Team__c mockTeam = new Team__c(
-            Id = 'a00000000000001AAA', 
+            Id = fakeTeamId(1), 
             Name = 'Mock Team Alpha', 
-            League__c = 'a01000000000001AAA'
+            League__c = fakeLeagueId(1)
         );
         mockRepo.mockTeams.add(mockTeam);
         TeamService service = new TeamService(mockRepo);
-        String teamId = 'a00000000000001AAA';
+        String teamId = fakeTeamId(1);
         
         // When
         Test.startTest();
@@ -152,7 +163,7 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         TeamService service = new TeamService(mockRepo);
-        String invalidId = 'a00000000000999AAA'; // ID that doesn't match mock data
+        String invalidId = fakeTeamId(999); // ID that doesn't match mock data
         
         // When
         Test.startTest();
@@ -191,12 +202,12 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         List<Team__c> mockTeams = new List<Team__c>{
-            new Team__c(Id = 'a00000000000001AAA', Name = 'Mock Team Alpha', League__c = 'a01000000000001AAA'),
-            new Team__c(Id = 'a00000000000002AAA', Name = 'Mock Team Beta', League__c = 'a01000000000001AAA')
+            new Team__c(Id = fakeTeamId(1), Name = 'Mock Team Alpha', League__c = fakeLeagueId(1)),
+            new Team__c(Id = fakeTeamId(2), Name = 'Mock Team Beta', League__c = fakeLeagueId(1))
         };
         mockRepo.mockTeams = mockTeams;
         TeamService service = new TeamService(mockRepo);
-        String leagueId = 'a01000000000001AAA';
+        String leagueId = fakeLeagueId(1);
         
         // When
         Test.startTest();
@@ -317,9 +328,9 @@ private class TeamServiceTest {
     static void testTeamWrapper_AbstractTeamImplementation() {
         // Given
         Team__c testTeam = new Team__c(
-            Id = 'a00000000000001AAA',
+            Id = fakeTeamId(1),
             Name = 'Test Team',
-            League__c = 'a01000000000001AAA'
+            League__c = fakeLeagueId(1)
         );
         
         // When - Test TeamWrapper with Team__c record
@@ -327,7 +338,7 @@ private class TeamServiceTest {
         TeamWrapper wrapper1 = new TeamWrapper(testTeam);
         
         // Test TeamWrapper with individual parameters
-        TeamWrapper wrapper2 = new TeamWrapper('a00000000000002AAA', 'Direct Team', 'a01000000000002AAA');
+        TeamWrapper wrapper2 = new TeamWrapper(fakeTeamId(2), 'Direct Team', fakeLeagueId(2));
         Test.stopTest();
         
         // Then - Test ITeam interface implementation
@@ -337,9 +348,9 @@ private class TeamServiceTest {
         Assert.areEqual(testTeam, wrapper1.getOriginalRecord(), 'Should return original record');
         
         // Test direct constructor
-        Assert.areEqual('a00000000000002AAA', wrapper2.getId(), 'Should return correct ID from direct constructor');
+        Assert.areEqual(fakeTeamId(2), wrapper2.getId(), 'Should return correct ID from direct constructor');
         Assert.areEqual('Direct Team', wrapper2.getName(), 'Should return correct name from direct constructor');
-        Assert.areEqual('a01000000000002AAA', wrapper2.getLeagueId(), 'Should return correct league ID from direct constructor');
+        Assert.areEqual(fakeLeagueId(2), wrapper2.getLeagueId(), 'Should return correct league ID from direct constructor');
         Assert.isNull(wrapper2.getOriginalRecord(), 'Should return null for original record when created directly');
         
         // Test that both implement ITeam interface
@@ -355,18 +366,18 @@ private class TeamServiceTest {
     @IsTest
     static void testAbstractTeam_ProtectedMethods() {
         // Given - Create a test subclass to access protected methods
-        TestTeamSubclass testTeam = new TestTeamSubclass('a00000000000001AAA', 'Original Name', 'a01000000000001AAA');
+        TestTeamSubclass testTeam = new TestTeamSubclass(fakeTeamId(1), 'Original Name', fakeLeagueId(1));
         
         // When - Test protected setters
         Test.startTest();
         testTeam.testSetName('Updated Name');
-        testTeam.testSetLeagueId('a01000000000002AAA');
+        testTeam.testSetLeagueId(fakeLeagueId(2));
         Test.stopTest();
         
         // Then - Verify the changes
         Assert.areEqual('Updated Name', testTeam.getName(), 'Should update name through protected setter');
-        Assert.areEqual('a01000000000002AAA', testTeam.getLeagueId(), 'Should update league ID through protected setter');
-        Assert.areEqual('a00000000000001AAA', testTeam.getId(), 'ID should remain unchanged');
+        Assert.areEqual(fakeLeagueId(2), testTeam.getLeagueId(), 'Should update league ID through protected setter');
+        Assert.areEqual(fakeTeamId(1), testTeam.getId(), 'ID should remain unchanged');
     }
 
     /**
@@ -394,7 +405,7 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         TeamService service = new TeamService(mockRepo);
-        ITeam newTeam = new TeamWrapper(null, 'New Team', 'a01000000000001AAA');
+        ITeam newTeam = new TeamWrapper(null, 'New Team', fakeLeagueId(1));
         
         // When
         Test.startTest();
@@ -403,7 +414,7 @@ private class TeamServiceTest {
         
         // Then
         Assert.isNotNull(result, 'Should return created team ID');
-        Assert.areEqual('a00000000000001AAA', result, 'Should return mock ID');
+        Assert.areEqual(fakeTeamId(1), result, 'Should return mock ID');
         Assert.areEqual(newTeam, mockRepo.lastCreatedTeam, 'Should pass team to repository');
     }
 
@@ -416,7 +427,7 @@ private class TeamServiceTest {
         MockTeamRepository mockRepo = new MockTeamRepository();
         mockRepo.shouldThrowException = true;
         TeamService service = new TeamService(mockRepo);
-        ITeam newTeam = new TeamWrapper(null, 'New Team', 'a01000000000001AAA');
+        ITeam newTeam = new TeamWrapper(null, 'New Team', fakeLeagueId(1));
         
         // When/Then
         Test.startTest();
@@ -437,13 +448,13 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         Team__c mockTeam = new Team__c(
-            Id = 'a00000000000001AAA',
+            Id = fakeTeamId(1),
             Name = 'Mock Team',
-            League__c = 'a01000000000001AAA'
+            League__c = fakeLeagueId(1)
         );
         mockRepo.mockTeams.add(mockTeam);
         TeamService service = new TeamService(mockRepo);
-        Id teamId = 'a00000000000001AAA';
+        Id teamId = fakeTeamId(1);
         
         // When
         Test.startTest();
@@ -465,7 +476,7 @@ private class TeamServiceTest {
         MockTeamRepository mockRepo = new MockTeamRepository();
         mockRepo.shouldThrowException = true;
         TeamService service = new TeamService(mockRepo);
-        Id teamId = 'a00000000000001AAA';
+        Id teamId = fakeTeamId(1);
         
         // When/Then
         Test.startTest();
@@ -487,9 +498,9 @@ private class TeamServiceTest {
         MockTeamRepository mockRepo = new MockTeamRepository();
         TeamService service = new TeamService(mockRepo);
         Team__c teamToUpdate = new Team__c(
-            Id = 'a00000000000001AAA',
+            Id = fakeTeamId(1),
             Name = 'Updated Team',
-            League__c = 'a01000000000001AAA'
+            League__c = fakeLeagueId(1)
         );
         
         // When
@@ -511,9 +522,9 @@ private class TeamServiceTest {
         mockRepo.shouldThrowException = true;
         TeamService service = new TeamService(mockRepo);
         Team__c teamToUpdate = new Team__c(
-            Id = 'a00000000000001AAA',
+            Id = fakeTeamId(1),
             Name = 'Updated Team',
-            League__c = 'a01000000000001AAA'
+            League__c = fakeLeagueId(1)
         );
         
         // When/Then
@@ -535,7 +546,7 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         TeamService service = new TeamService(mockRepo);
-        Id teamId = 'a00000000000001AAA';
+        Id teamId = fakeTeamId(1);
         
         // When
         Test.startTest();
@@ -555,7 +566,7 @@ private class TeamServiceTest {
         MockTeamRepository mockRepo = new MockTeamRepository();
         mockRepo.shouldThrowException = true;
         TeamService service = new TeamService(mockRepo);
-        Id teamId = 'a00000000000001AAA';
+        Id teamId = fakeTeamId(1);
         
         // When/Then
         Test.startTest();
@@ -576,12 +587,12 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         List<Team__c> mockTeams = new List<Team__c>{
-            new Team__c(Id = 'a00000000000001AAA', Name = 'Team 1', League__c = 'a01000000000001AAA'),
-            new Team__c(Id = 'a00000000000002AAA', Name = 'Team 2', League__c = 'a01000000000001AAA')
+            new Team__c(Id = fakeTeamId(1), Name = 'Team 1', League__c = fakeLeagueId(1)),
+            new Team__c(Id = fakeTeamId(2), Name = 'Team 2', League__c = fakeLeagueId(1))
         };
         mockRepo.mockTeams = mockTeams;
         TeamService service = new TeamService(mockRepo);
-        Id leagueId = 'a01000000000001AAA';
+        Id leagueId = fakeLeagueId(1);
         
         // When
         Test.startTest();
@@ -603,7 +614,7 @@ private class TeamServiceTest {
         MockTeamRepository mockRepo = new MockTeamRepository();
         mockRepo.shouldThrowException = true;
         TeamService service = new TeamService(mockRepo);
-        Id leagueId = 'a01000000000001AAA';
+        Id leagueId = fakeLeagueId(1);
         
         // When/Then
         Test.startTest();
@@ -624,9 +635,9 @@ private class TeamServiceTest {
         // Given
         MockTeamRepository mockRepo = new MockTeamRepository();
         List<Team__c> mockTeams = new List<Team__c>{
-            new Team__c(Id = 'a00000000000001AAA', Name = 'Team 1', League__c = 'a01000000000001AAA'),
-            new Team__c(Id = 'a00000000000002AAA', Name = 'Team 2', League__c = 'a01000000000001AAA'),
-            new Team__c(Id = 'a00000000000003AAA', Name = 'Team 3', League__c = 'a01000000000001AAA')
+            new Team__c(Id = fakeTeamId(1), Name = 'Team 1', League__c = fakeLeagueId(1)),
+            new Team__c(Id = fakeTeamId(2), Name = 'Team 2', League__c = fakeLeagueId(1)),
+            new Team__c(Id = fakeTeamId(3), Name = 'Team 3', League__c = fakeLeagueId(1))
         };
         mockRepo.mockTeams = mockTeams;
         TeamService service = new TeamService(mockRepo);

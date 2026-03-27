@@ -5,7 +5,22 @@
  */
 @IsTest
 private class DivisionServiceTest {
-    
+
+    // Dynamic ID generation — prefixes vary by org
+    private static String teamPrefix = Team__c.SObjectType.getDescribe().getKeyPrefix();
+    private static String leaguePrefix = League__c.SObjectType.getDescribe().getKeyPrefix();
+    private static String divisionPrefix = Division__c.SObjectType.getDescribe().getKeyPrefix();
+
+    private static Id fakeTeamId(Integer seq) {
+        return Id.valueOf(teamPrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+    private static Id fakeLeagueId(Integer seq) {
+        return Id.valueOf(leaguePrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+    private static Id fakeDivisionId(Integer seq) {
+        return Id.valueOf(divisionPrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+
     /**
      * @description Mock repository for testing service layer in isolation
      */
@@ -30,7 +45,7 @@ private class DivisionServiceTest {
                 throw new DivisionRepositoryException('Mock repository error');
             }
             this.lastCreatedDivision = division;
-            return 'a02000000000001AAA'; // Mock ID
+            return fakeDivisionId(1); // Mock ID
         }
         
         public override Division__c retrieve(Id divisionId) {
@@ -94,14 +109,14 @@ private class DivisionServiceTest {
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         List<Division__c> mockDivisions = (List<Division__c>)JSON.deserialize(
             '[' +
-            '  {"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Mock Division Alpha", "League__c": "a01000000000001AAA"},' +
-            '  {"sobjectType": "Division__c", "Id": "a02000000000002AAA", "Name": "Mock Division Beta", "League__c": "a01000000000001AAA"}' +
+            '  {"sobjectType": "Division__c", "Id": "' + fakeDivisionId(1) + '", "Name": "Mock Division Alpha", "League__c": "' + fakeLeagueId(1) + '"},' +
+            '  {"sobjectType": "Division__c", "Id": "' + fakeDivisionId(2) + '", "Name": "Mock Division Beta", "League__c": "' + fakeLeagueId(1) + '"}' +
             ']',
             List<Division__c>.class
         );
         mockRepo.mockDivisions = mockDivisions;
         DivisionService service = new DivisionService(mockRepo);
-        
+
         // When
         Test.startTest();
         List<IDivision> result = service.getAllDivisionsAsInterface();
@@ -146,12 +161,12 @@ private class DivisionServiceTest {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         Division__c mockDivision = (Division__c)JSON.deserialize(
-            '{"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Mock Division Alpha", "League__c": "a01000000000001AAA"}',
+            '{"sobjectType": "Division__c", "Id": "' + fakeDivisionId(1) + '", "Name": "Mock Division Alpha", "League__c": "' + fakeLeagueId(1) + '"}',
             Division__c.class
         );
         mockRepo.mockDivisions.add(mockDivision);
         DivisionService service = new DivisionService(mockRepo);
-        String divisionId = 'a02000000000001AAA';
+        String divisionId = fakeDivisionId(1);
         
         // When
         Test.startTest();
@@ -194,14 +209,14 @@ private class DivisionServiceTest {
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         List<Division__c> mockDivisions = (List<Division__c>)JSON.deserialize(
             '[' +
-            '  {"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Mock Division Alpha", "League__c": "a01000000000001AAA"},' +
-            '  {"sobjectType": "Division__c", "Id": "a02000000000002AAA", "Name": "Mock Division Beta", "League__c": "a01000000000001AAA"}' +
+            '  {"sobjectType": "Division__c", "Id": "' + fakeDivisionId(1) + '", "Name": "Mock Division Alpha", "League__c": "' + fakeLeagueId(1) + '"},' +
+            '  {"sobjectType": "Division__c", "Id": "' + fakeDivisionId(2) + '", "Name": "Mock Division Beta", "League__c": "' + fakeLeagueId(1) + '"}' +
             ']',
             List<Division__c>.class
         );
         mockRepo.mockDivisions = mockDivisions;
         DivisionService service = new DivisionService(mockRepo);
-        String leagueId = 'a01000000000001AAA';
+        String leagueId = fakeLeagueId(1);
         
         // When
         Test.startTest();
@@ -248,16 +263,16 @@ private class DivisionServiceTest {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         DivisionService service = new DivisionService(mockRepo);
-        IDivision newDivision = new DivisionWrapper(null, 'New Division', 'a01000000000001AAA');
-        
+        IDivision newDivision = new DivisionWrapper(null, 'New Division', fakeLeagueId(1));
+
         // When
         Test.startTest();
         Id result = service.createDivision(newDivision);
         Test.stopTest();
-        
+
         // Then
         Assert.isNotNull(result, 'Should return created division ID');
-        Assert.areEqual('a02000000000001AAA', result, 'Should return mock ID');
+        Assert.areEqual(fakeDivisionId(1), result, 'Should return mock ID');
         Assert.areEqual(newDivision, mockRepo.lastCreatedDivision, 'Should pass division to repository');
     }
     
@@ -269,8 +284,8 @@ private class DivisionServiceTest {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         DivisionService service = new DivisionService(mockRepo);
-        Id teamId = 'a00000000000001AAA';
-        Id divisionId = 'a02000000000001AAA';
+        Id teamId = fakeTeamId(1);
+        Id divisionId = fakeDivisionId(1);
         
         // When
         Test.startTest();
@@ -290,8 +305,8 @@ private class DivisionServiceTest {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         DivisionService service = new DivisionService(mockRepo);
-        Id teamId = 'a00000000000001AAA';
-        Id newDivisionId = 'a02000000000002AAA';
+        Id teamId = fakeTeamId(1);
+        Id newDivisionId = fakeDivisionId(2);
         
         // When
         Test.startTest();
@@ -311,8 +326,8 @@ private class DivisionServiceTest {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         DivisionService service = new DivisionService(mockRepo);
-        Id teamId = 'a00000000000001AAA';
-        
+        Id teamId = fakeTeamId(1);
+
         // When
         Test.startTest();
         service.removeTeamFromDivision(teamId);
@@ -331,12 +346,12 @@ private class DivisionServiceTest {
         // Given
         MockDivisionRepository mockRepo = new MockDivisionRepository();
         List<Team__c> mockTeams = new List<Team__c>{
-            new Team__c(Id = 'a00000000000001AAA', Name = 'Team Alpha', Division__c = 'a02000000000001AAA'),
-            new Team__c(Id = 'a00000000000002AAA', Name = 'Team Beta', Division__c = 'a02000000000001AAA')
+            new Team__c(Id = fakeTeamId(1), Name = 'Team Alpha', Division__c = fakeDivisionId(1)),
+            new Team__c(Id = fakeTeamId(2), Name = 'Team Beta', Division__c = fakeDivisionId(1))
         };
         mockRepo.mockTeams = mockTeams;
         DivisionService service = new DivisionService(mockRepo);
-        Id divisionId = 'a02000000000001AAA';
+        Id divisionId = fakeDivisionId(1);
         
         // When
         Test.startTest();
@@ -393,7 +408,7 @@ private class DivisionServiceTest {
     static void testDivisionWrapper_IDivisionImplementation() {
         // Given
         Division__c mockDivision = (Division__c)JSON.deserialize(
-            '{"sobjectType": "Division__c", "Id": "a02000000000001AAA", "Name": "Test Division", "League__c": "a01000000000001AAA"}',
+            '{"sobjectType": "Division__c", "Id": "' + fakeDivisionId(1) + '", "Name": "Test Division", "League__c": "' + fakeLeagueId(1) + '"}',
             Division__c.class
         );
 
@@ -419,7 +434,7 @@ private class DivisionServiceTest {
         for (Integer i = 1; i <= 200; i++) {
             Division__c division = new Division__c(
                 Name = 'Bulk Division ' + i,
-                League__c = 'a01000000000001AAA'
+                League__c = fakeLeagueId(1)
             );
             bulkDivisions.add(division);
         }
