@@ -1,11 +1,17 @@
 @IsTest
 private class TeamServiceTest {
 
+    // Dynamic ID generation — prefix varies by org
+    private static String teamPrefix = Team__c.SObjectType.getDescribe().getKeyPrefix();
+    private static Id fakeTeamId(Integer seq) {
+        return Id.valueOf(teamPrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+
     // Mock repository to isolate service logic
     private class MockTeamRepository extends TeamRepository {
         public Id lastCreatedId;
         public override Id create(ITeam t) {
-            lastCreatedId = 'a00000000000001AAA';
+            lastCreatedId = fakeTeamId(1);
             return lastCreatedId;
         }
         public override Team__c retrieve(Id teamId) {

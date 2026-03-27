@@ -5,7 +5,18 @@
  */
 @IsTest
 private class TeamDetailsControllerTest {
-    
+
+    // Dynamic ID generation — prefixes vary by org
+    private static String teamPrefix = Team__c.SObjectType.getDescribe().getKeyPrefix();
+    private static String leaguePrefix = League__c.SObjectType.getDescribe().getKeyPrefix();
+
+    private static Id fakeTeamId(Integer seq) {
+        return Id.valueOf(teamPrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+    private static Id fakeLeagueId(Integer seq) {
+        return Id.valueOf(leaguePrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+
     /**
      * @description Mock implementation of TeamService for testing
      */
@@ -31,23 +42,23 @@ private class TeamDetailsControllerTest {
         private void setupMockData() {
             // Create mock team objects using TeamWrapper
             Team__c mockTeamRecord1 = new Team__c(
-                Id = 'a00000000000001AAA',
+                Id = fakeTeamId(1),
                 Name = 'Mock Team Alpha',
                 City__c = 'Mock City Alpha',
                 Stadium__c = 'Mock Stadium Alpha',
                 Founded_Year__c = 1990,
                 Location__c = 'Mock City Alpha, State',
-                League__c = 'a01000000000001AAA'
+                League__c = fakeLeagueId(1)
             );
             
             Team__c mockTeamRecord2 = new Team__c(
-                Id = 'a00000000000002AAA',
+                Id = fakeTeamId(2),
                 Name = 'Mock Team Beta',
                 City__c = 'Mock City Beta',
                 Stadium__c = 'Mock Stadium Beta',
                 Founded_Year__c = 1995,
                 Location__c = 'Mock City Beta, State',
-                League__c = 'a01000000000001AAA'
+                League__c = fakeLeagueId(1)
             );
             
             this.mockTeam = new TeamWrapper(mockTeamRecord1);
@@ -71,10 +82,10 @@ private class TeamDetailsControllerTest {
             }
             this.expectedTeamId = teamId;
             // Return null for invalid IDs, return mock team for valid format IDs
-            if (teamId == 'a00000000000999AAA') {
+            if (teamId == fakeTeamId(999)) {
                 return null; // Invalid ID case
             }
-            if (teamId == 'a00000000000001AAA') {
+            if (teamId == fakeTeamId(1)) {
                 return mockTeam; // Valid ID case
             }
             return mockTeam; // Default to returning mock team for other valid format IDs
@@ -163,7 +174,7 @@ private class TeamDetailsControllerTest {
         // Given
         MockTeamService mockService = new MockTeamService();
         TeamDetailsController.setServiceForTesting(mockService);
-        String teamId = 'a00000000000001AAA';
+        String teamId = fakeTeamId(1);
         
         // When
         Test.startTest();
@@ -177,7 +188,7 @@ private class TeamDetailsControllerTest {
         Assert.areEqual('Mock Stadium Alpha', result.Stadium__c, 'Should return correct stadium');
         Assert.areEqual(1990, result.Founded_Year__c, 'Should return correct founded year');
         Assert.areEqual('Mock City Alpha, State', result.Location__c, 'Should return correct location');
-        Assert.areEqual('a01000000000001AAA', result.League__c, 'Should return correct league ID');
+        Assert.areEqual(fakeLeagueId(1), result.League__c, 'Should return correct league ID');
     }
     
     /**
@@ -188,7 +199,7 @@ private class TeamDetailsControllerTest {
         // Given
         MockTeamService mockService = new MockTeamService();
         TeamDetailsController.setServiceForTesting(mockService);
-        String invalidId = 'a00000000000999AAA';
+        String invalidId = fakeTeamId(999);
         
         // When
         Test.startTest();
@@ -243,7 +254,7 @@ private class TeamDetailsControllerTest {
         // Given
         MockTeamService mockService = new MockTeamService(true);
         TeamDetailsController.setServiceForTesting(mockService);
-        String teamId = 'a00000000000001AAA';
+        String teamId = fakeTeamId(1);
         
         // When/Then
         Test.startTest();
@@ -271,7 +282,7 @@ private class TeamDetailsControllerTest {
         // When
         Test.startTest();
         List<Team__c> allTeams = TeamDetailsController.getAllTeams();
-        Team__c specificTeam = TeamDetailsController.getTeamById('a00000000000001AAA');
+        Team__c specificTeam = TeamDetailsController.getTeamById(fakeTeamId(1));
         Test.stopTest();
         
         // Then
@@ -282,7 +293,7 @@ private class TeamDetailsControllerTest {
         Assert.areEqual('Mock Team Alpha', specificTeam.Name, 'Should return correct team');
         
         // Verify service was called with correct parameters
-        Assert.areEqual('a00000000000001AAA', mockService.expectedTeamId, 'Service should be called with correct team ID');
+        Assert.areEqual(fakeTeamId(1), mockService.expectedTeamId, 'Service should be called with correct team ID');
     }
     
     /**
@@ -393,13 +404,13 @@ private class TeamDetailsControllerTest {
         List<ITeam> bulkMockTeams = new List<ITeam>();
         for (Integer i = 1; i <= 200; i++) {
             Team__c bulkTeam = new Team__c(
-                Id = 'a0000000000' + String.valueOf(i).leftPad(4, '0') + 'AAA',
+                Id = fakeTeamId(i),
                 Name = 'Bulk Team ' + i,
                 City__c = 'Bulk City ' + i,
                 Stadium__c = 'Bulk Stadium ' + i,
                 Founded_Year__c = 2000 + Math.mod(i, 24),
                 Location__c = 'Bulk City ' + i + ', State',
-                League__c = 'a01000000000001AAA'
+                League__c = fakeLeagueId(1)
             );
             bulkMockTeams.add(new TeamWrapper(bulkTeam));
         }
@@ -421,7 +432,7 @@ private class TeamDetailsControllerTest {
         Assert.isTrue(Limits.getCpuTime() <= Limits.getLimitCpuTime(), 'Should not exceed CPU time limits');
         
         // Test individual team retrieval
-        Team__c retrievedTeam = TeamDetailsController.getTeamById('test-id');
+        Team__c retrievedTeam = TeamDetailsController.getTeamById(fakeTeamId(1));
         Assert.isNotNull(retrievedTeam, 'Should retrieve individual team');
         Assert.areEqual('Mock Team Alpha', retrievedTeam.Name, 'Should return mock team');
         
@@ -466,8 +477,8 @@ private class TeamDetailsControllerTest {
         Assert.areEqual('Mock City, State', TeamDetailsController.getMockLocation('Other Team'), 'Should return default mock location');
         
         // Test getMockLeagueName method
-        Assert.areEqual('Mock Football League', TeamDetailsController.getMockLeagueName('a01000000000001AAA'), 'Should return correct league name for known ID');
-        Assert.areEqual('Mock League', TeamDetailsController.getMockLeagueName('a01000000000002AAA'), 'Should return default league name for unknown ID');
+        Assert.areEqual('Mock Football League', TeamDetailsController.getMockLeagueName(fakeLeagueId(1)), 'Should return correct league name for known ID');
+        Assert.areEqual('Mock League', TeamDetailsController.getMockLeagueName(fakeLeagueId(2)), 'Should return default league name for unknown ID');
     }
 
     /**
@@ -478,7 +489,7 @@ private class TeamDetailsControllerTest {
         // Given
         MockTeamService mockService = new MockTeamService(true);
         TeamDetailsController.setServiceForTesting(mockService);
-        String leagueId = 'a01000000000001AAA';
+        String leagueId = fakeLeagueId(1);
         
         // When
         Test.startTest();
@@ -536,7 +547,7 @@ private class TeamDetailsControllerTest {
         // Given
         MockTeamService mockService = new MockTeamService();
         TeamDetailsController.setServiceForTesting(mockService);
-        String leagueId = 'a01000000000001AAA';
+        String leagueId = fakeLeagueId(1);
         
         // When
         Test.startTest();

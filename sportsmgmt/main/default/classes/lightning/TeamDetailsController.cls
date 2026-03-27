@@ -202,7 +202,9 @@ public with sharing class TeamDetailsController {
      */
     @TestVisible
     private static String getMockLeagueName(String leagueId) {
-        if (leagueId == 'a01000000000001AAA')
+        String leaguePrefix = League__c.SObjectType.getDescribe().getKeyPrefix();
+        Id fakeLeague1 = Id.valueOf(leaguePrefix + '000000000001AAA');
+        if (leagueId == String.valueOf(fakeLeague1))
             return 'Mock Football League';
         return 'Mock League';
     }

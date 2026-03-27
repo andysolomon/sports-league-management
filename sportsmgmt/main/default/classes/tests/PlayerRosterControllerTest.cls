@@ -6,6 +6,17 @@
 @IsTest
 private class PlayerRosterControllerTest {
 
+    // Dynamic ID generation — prefixes vary by org
+    private static String teamPrefix = Team__c.SObjectType.getDescribe().getKeyPrefix();
+    private static String playerPrefix = Player__c.SObjectType.getDescribe().getKeyPrefix();
+
+    private static Id fakeTeamId(Integer seq) {
+        return Id.valueOf(teamPrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+    private static Id fakePlayerId(Integer seq) {
+        return Id.valueOf(playerPrefix + '0'.repeat(12 - String.valueOf(seq).length()) + seq + 'AAA');
+    }
+
     /**
      * @description Mock implementation of PlayerService for testing
      */
@@ -32,9 +43,9 @@ private class PlayerRosterControllerTest {
 
         private void setupMockData() {
             Player__c mockPlayerRecord1 = new Player__c(
-                Id = 'a1g000000000001AAA',
+                Id = fakePlayerId(1),
                 Name = 'Mock Player Alpha',
-                Team__c = 'a00000000000001AAA',
+                Team__c = fakeTeamId(1),
                 Position__c = 'Forward',
                 Jersey_Number__c = 10,
                 Date_of_Birth__c = Date.newInstance(1995, 3, 15),
@@ -42,9 +53,9 @@ private class PlayerRosterControllerTest {
             );
 
             Player__c mockPlayerRecord2 = new Player__c(
-                Id = 'a1g000000000002AAA',
+                Id = fakePlayerId(2),
                 Name = 'Mock Player Beta',
-                Team__c = 'a00000000000002AAA',
+                Team__c = fakeTeamId(2),
                 Position__c = 'Goalkeeper',
                 Jersey_Number__c = 1,
                 Date_of_Birth__c = Date.newInstance(1998, 7, 22),
@@ -88,7 +99,7 @@ private class PlayerRosterControllerTest {
                 throw new QueryException('Mock service error');
             }
             this.lastCreatedPlayer = player;
-            return 'a1g000000000003AAA';
+            return fakePlayerId(3);
         }
 
         public override void updatePlayer(Player__c record) {
@@ -169,7 +180,7 @@ private class PlayerRosterControllerTest {
         // Given
         MockPlayerService mockService = new MockPlayerService();
         PlayerRosterController.setServiceForTesting(mockService);
-        String playerId = 'a1g000000000001AAA';
+        String playerId = fakePlayerId(1);
 
         // When
         Test.startTest();
@@ -204,7 +215,7 @@ private class PlayerRosterControllerTest {
         // Given
         MockPlayerService mockService = new MockPlayerService(true);
         PlayerRosterController.setServiceForTesting(mockService);
-        String playerId = 'a1g000000000001AAA';
+        String playerId = fakePlayerId(1);
 
         // When/Then
         Test.startTest();
@@ -226,7 +237,7 @@ private class PlayerRosterControllerTest {
         // Given
         MockPlayerService mockService = new MockPlayerService();
         PlayerRosterController.setServiceForTesting(mockService);
-        String teamId = 'a00000000000001AAA';
+        String teamId = fakeTeamId(1);
 
         // When
         Test.startTest();
@@ -260,7 +271,7 @@ private class PlayerRosterControllerTest {
         // Given
         MockPlayerService mockService = new MockPlayerService(true);
         PlayerRosterController.setServiceForTesting(mockService);
-        String teamId = 'a00000000000001AAA';
+        String teamId = fakeTeamId(1);
 
         // When
         Test.startTest();
@@ -283,13 +294,13 @@ private class PlayerRosterControllerTest {
         // When
         Test.startTest();
         String result = PlayerRosterController.createPlayer(
-            'New Player', 'a00000000000001AAA', 'Midfielder', 7, Date.newInstance(2000, 1, 15), 'Active'
+            'New Player', fakeTeamId(1), 'Midfielder', 7, Date.newInstance(2000, 1, 15), 'Active'
         );
         Test.stopTest();
 
         // Then
         Assert.isNotNull(result, 'Should return created player ID');
-        Assert.areEqual('a1g000000000003AAA', result, 'Should return mock ID');
+        Assert.areEqual(String.valueOf(fakePlayerId(3)), result, 'Should return mock ID');
         Assert.isNotNull(mockService.lastCreatedPlayer, 'Service should have received player');
         Assert.areEqual('New Player', mockService.lastCreatedPlayer.getName(), 'Should pass correct name');
     }
@@ -303,7 +314,7 @@ private class PlayerRosterControllerTest {
         // When/Then
         Test.startTest();
         try {
-            PlayerRosterController.createPlayer('', 'a00000000000001AAA', 'Midfielder', 7, Date.newInstance(2000, 1, 15), 'Active');
+            PlayerRosterController.createPlayer('', fakeTeamId(1), 'Midfielder', 7, Date.newInstance(2000, 1, 15), 'Active');
             Assert.fail('Should throw exception for blank name');
         } catch (Exception e) {
             Assert.isTrue(e.getMessage().contains('Player name and team are required'), 'Should have correct error message');
@@ -337,7 +348,7 @@ private class PlayerRosterControllerTest {
         // When/Then
         Test.startTest();
         try {
-            PlayerRosterController.createPlayer('New Player', 'a00000000000001AAA', 'Midfielder', 7, Date.newInstance(2000, 1, 15), 'Active');
+            PlayerRosterController.createPlayer('New Player', fakeTeamId(1), 'Midfielder', 7, Date.newInstance(2000, 1, 15), 'Active');
             Assert.fail('Should throw exception when service throws exception');
         } catch (QueryException e) {
             Assert.areEqual('Mock service error', e.getMessage(), 'Should propagate service exception');
@@ -358,7 +369,7 @@ private class PlayerRosterControllerTest {
         // When
         Test.startTest();
         PlayerRosterController.updatePlayer(
-            'a1g000000000001AAA', 'Updated Player', 'a00000000000001AAA', 'Defender', 4, Date.newInstance(1996, 5, 20), 'Active'
+            fakePlayerId(1), 'Updated Player', fakeTeamId(1), 'Defender', 4, Date.newInstance(1996, 5, 20), 'Active'
         );
         Test.stopTest();
 
@@ -378,7 +389,7 @@ private class PlayerRosterControllerTest {
         // When/Then
         Test.startTest();
         try {
-            PlayerRosterController.updatePlayer('', 'Updated Player', 'a00000000000001AAA', 'Defender', 4, Date.newInstance(1996, 5, 20), 'Active');
+            PlayerRosterController.updatePlayer('', 'Updated Player', fakeTeamId(1), 'Defender', 4, Date.newInstance(1996, 5, 20), 'Active');
             Assert.fail('Should throw exception for blank ID');
         } catch (Exception e) {
             Assert.isTrue(e.getMessage().contains('Player ID, name, and team are required'), 'Should have correct error message');
@@ -395,7 +406,7 @@ private class PlayerRosterControllerTest {
         // When/Then
         Test.startTest();
         try {
-            PlayerRosterController.updatePlayer('a1g000000000001AAA', 'Updated Player', 'a00000000000001AAA', 'Defender', 4, Date.newInstance(1996, 5, 20), 'Active');
+            PlayerRosterController.updatePlayer(fakePlayerId(1), 'Updated Player', fakeTeamId(1), 'Defender', 4, Date.newInstance(1996, 5, 20), 'Active');
             Assert.fail('Should throw exception when service throws exception');
         } catch (QueryException e) {
             Assert.areEqual('Mock service error', e.getMessage(), 'Should propagate service exception');
@@ -415,11 +426,11 @@ private class PlayerRosterControllerTest {
 
         // When
         Test.startTest();
-        PlayerRosterController.deletePlayer('a1g000000000001AAA');
+        PlayerRosterController.deletePlayer(fakePlayerId(1));
         Test.stopTest();
 
         // Then
-        Assert.areEqual('a1g000000000001AAA', String.valueOf(mockService.lastDeletedId), 'Should pass correct ID to service');
+        Assert.areEqual(String.valueOf(fakePlayerId(1)), String.valueOf(mockService.lastDeletedId), 'Should pass correct ID to service');
     }
 
     @IsTest
@@ -448,7 +459,7 @@ private class PlayerRosterControllerTest {
         // When/Then
         Test.startTest();
         try {
-            PlayerRosterController.deletePlayer('a1g000000000001AAA');
+            PlayerRosterController.deletePlayer(fakePlayerId(1));
             Assert.fail('Should throw exception when service throws exception');
         } catch (QueryException e) {
             Assert.areEqual('Mock service error', e.getMessage(), 'Should propagate service exception');
