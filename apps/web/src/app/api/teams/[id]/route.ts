@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getTeam, getPlayersByTeam, updateTeam } from "@/lib/salesforce-api";
 import { UpdateTeamInputSchema } from "@sports-management/api-contracts";
 import { authorizeTeamMutation } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET(
   _request: Request,
@@ -13,11 +14,15 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
-  const [team, players] = await Promise.all([
-    getTeam(id),
-    getPlayersByTeam(id),
-  ]);
-  return NextResponse.json({ team, players });
+  try {
+    const [team, players] = await Promise.all([
+      getTeam(id),
+      getPlayersByTeam(id),
+    ]);
+    return NextResponse.json({ team, players });
+  } catch (error) {
+    return handleApiError(error, `/api/teams/${id}`);
+  }
 }
 
 export async function PUT(
@@ -48,6 +53,10 @@ export async function PUT(
     );
   }
 
-  const data = await updateTeam(id, parsed.data);
-  return NextResponse.json(data);
+  try {
+    const data = await updateTeam(id, parsed.data);
+    return NextResponse.json(data);
+  } catch (error) {
+    return handleApiError(error, `/api/teams/${id}`);
+  }
 }
