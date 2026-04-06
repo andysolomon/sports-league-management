@@ -7,6 +7,7 @@ import {
   Calendar,
   Layers,
   Trophy,
+  CreditCard,
 } from "lucide-react";
 import NavLink from "./nav-link";
 
@@ -17,6 +18,7 @@ const navItems = [
   { href: "/dashboard/players", label: "Players", icon: UserCircle },
   { href: "/dashboard/seasons", label: "Seasons", icon: Calendar },
   { href: "/dashboard/divisions", label: "Divisions", icon: Layers },
+  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
 ];
 
 interface SidebarProps {

@@ -33,7 +33,9 @@
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "resend": "^6.10.0",
     "sonner": "^2.0.7",
+    "stripe": "^22.0.0",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
