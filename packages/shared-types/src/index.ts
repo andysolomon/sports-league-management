@@ -74,3 +74,16 @@ export interface UpdateTeamInput {
   location?: string;
   divisionId?: string;
 }
+
+// --- Subscription tier types ---
+
+export type Tier = "free" | "plus" | "club" | "league";
+
+export type BillingStatus = "active" | "past_due" | "canceled";
+
+export interface UserSubscription {
+  tier: Tier;
+  billingStatus: BillingStatus;
+  stripeCustomerId?: string;
+  currentPeriodEnd?: string;
+}
