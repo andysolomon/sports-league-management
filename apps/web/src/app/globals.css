@@ -3,7 +3,7 @@
 @theme {
   --color-primary: #2563eb;
   --color-primary-foreground: #ffffff;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --animate-in: enter 0.2s ease-out;
   --animate-out: exit 0.2s ease-in;

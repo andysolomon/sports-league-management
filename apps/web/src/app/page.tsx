@@ -1,26 +1,27 @@
-import { SignedIn, SignedOut } from "@clerk/nextjs";
-import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { MarketingHeader } from "@/components/marketing/header";
+import { MarketingHero } from "@/components/marketing/hero";
+import { HowItWorks } from "@/components/marketing/how-it-works";
+import { Features } from "@/components/marketing/features";
+import { Screenshots } from "@/components/marketing/screenshots";
+import { PricingSection } from "@/components/marketing/pricing-section";
+import { MarketingFooter } from "@/components/marketing/footer";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { userId } = await auth();
+  const isSignedIn = userId !== null;
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center">
-      <h1 className="mb-8 text-4xl font-bold">Sports League Management</h1>
-      <SignedIn>
-        <Link
-          href="/dashboard"
-          className="rounded-lg bg-primary px-6 py-3 text-primary-foreground hover:opacity-90"
-        >
-          Go to Dashboard
-        </Link>
-      </SignedIn>
-      <SignedOut>
-        <Link
-          href="/sign-in"
-          className="rounded-lg bg-primary px-6 py-3 text-primary-foreground hover:opacity-90"
-        >
-          Sign In
-        </Link>
-      </SignedOut>
-    </main>
+    <>
+      <MarketingHeader isSignedIn={isSignedIn} />
+      <main id="main">
+        <MarketingHero isSignedIn={isSignedIn} />
+        <HowItWorks />
+        <Features />
+        <Screenshots />
+        <PricingSection />
+      </main>
+      <MarketingFooter isSignedIn={isSignedIn} />
+    </>
   );
 }
