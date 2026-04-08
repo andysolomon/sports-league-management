@@ -1,44 +1,31 @@
-/**
- * Screenshots section for the marketing landing page.
- *
- * NOTE: This currently renders placeholder boxes labeled with the dashboard
- * view name. Real screenshots should be added at:
- *   - apps/web/public/screenshots/dashboard-leagues.png
- *   - apps/web/public/screenshots/dashboard-team-detail.png
- *   - apps/web/public/screenshots/dashboard-players.png
- *
- * Once those files exist, replace the <Placeholder /> JSX with <Image />
- * components from next/image (already imported below for forward-compat).
- */
+import Image from "next/image";
 
 const screenshots = [
   {
+    src: "/screenshots/dashboard-leagues.png",
+    width: 1079,
+    height: 689,
     label: "Leagues view",
     caption: "See every league at a glance",
-    file: "dashboard-leagues.png",
+    alt: "Leagues list view in the sprtsmng dashboard showing two leagues",
   },
   {
+    src: "/screenshots/dashboard-team-detail.png",
+    width: 1514,
+    height: 695,
     label: "Team detail",
     caption: "Drill into a team to find a player in two clicks",
-    file: "dashboard-team-detail.png",
+    alt: "Team detail page showing the Dallas Cowboys roster with players, positions, and statuses",
   },
   {
+    src: "/screenshots/dashboard-players.png",
+    width: 1677,
+    height: 763,
     label: "Players grid",
     caption: "Manage your full roster from one screen",
-    file: "dashboard-players.png",
+    alt: "Players grid view showing the full roster with names, positions, jersey numbers, and statuses",
   },
 ];
-
-function Placeholder({ label }: { label: string }) {
-  return (
-    <div
-      className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 text-sm font-medium text-zinc-400"
-      aria-label={`${label} screenshot placeholder`}
-    >
-      [{label}]
-    </div>
-  );
-}
 
 export function Screenshots() {
   return (
@@ -58,8 +45,17 @@ export function Screenshots() {
 
         <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-8 sm:grid-cols-3">
           {screenshots.map((shot) => (
-            <figure key={shot.file} className="flex flex-col">
-              <Placeholder label={shot.label} />
+            <figure key={shot.src} className="flex flex-col">
+              <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 shadow-sm">
+                <Image
+                  src={shot.src}
+                  alt={shot.alt}
+                  width={shot.width}
+                  height={shot.height}
+                  className="h-auto w-full"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+              </div>
               <figcaption className="mt-3 text-center text-sm text-zinc-600">
                 {shot.caption}
               </figcaption>
