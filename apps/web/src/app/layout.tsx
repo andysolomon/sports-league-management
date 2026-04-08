@@ -39,6 +39,17 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "sprtsmng",
+  url: "https://sprtsmng.andrewsolomon.dev",
+  logo: "https://sprtsmng.andrewsolomon.dev/icon",
+  description:
+    "The simplest way to run your youth sports team. Roster, schedule, notifications — all in one place.",
+  sameAs: ["https://github.com/andysolomon/sports-league-management"],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -48,6 +59,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className={inter.variable}>
         <body className="font-sans antialiased">
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
           {children}
           <Toaster position="bottom-right" richColors closeButton />
           <Analytics />
