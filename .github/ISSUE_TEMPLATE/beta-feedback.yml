@@ -1,0 +1,54 @@
+name: Beta Feedback
+description: Report a bug, suggest a feature, or share feedback as a beta user
+title: "[Beta] "
+labels: ["beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying sprtsmng during the soft launch. Your feedback shapes the product. Replies usually arrive within 24 hours.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of feedback
+      options:
+        - Bug
+        - Feature request
+        - General feedback
+        - Question
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened (or what would you like to see)?
+      description: Be as specific as you can. For bugs, screenshots help a lot.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce (for bugs)
+      description: |
+        1. I went to ...
+        2. I clicked ...
+        3. I expected ... but instead ...
+      placeholder: |
+        1.
+        2.
+        3.
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / device
+      placeholder: e.g., Chrome on macOS, Safari on iPhone 15
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact (optional)
+      description: Email if you'd like a follow-up. Leave blank to be anonymous.
