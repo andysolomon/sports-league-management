@@ -1,7 +1,5 @@
 #!/usr/bin/env -S tsx
 import meow from "meow";
-import React from "react";
-import { render, Box, Text } from "ink";
 
 const cli = meow(
   `
@@ -19,23 +17,6 @@ const cli = meow(
   { importMeta: import.meta },
 );
 
-function App() {
-  return (
-    <Box flexDirection="column" padding={1}>
-      <Text bold color="blue">
-        sprtsmng tui
-      </Text>
-      <Text dimColor>v0.4.0 — internal operator console</Text>
-      <Text> </Text>
-      <Text>
-        <Text color="gray">Press </Text>
-        <Text bold>Ctrl+C</Text>
-        <Text color="gray"> to quit.</Text>
-      </Text>
-    </Box>
-  );
-}
-
 const command = cli.input[0];
 
 if (command === "login") {
@@ -48,7 +29,10 @@ if (command === "login") {
     process.exit(1);
   }
 } else if (command === undefined) {
-  render(<App />);
+  const React = await import("react");
+  const { render } = await import("ink");
+  const { App } = await import("./App.js");
+  render(React.createElement(App));
 } else {
   console.error(`Unknown command: ${command}`);
   console.error(cli.help);
