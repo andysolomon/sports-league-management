@@ -84,7 +84,7 @@ describe("runLogin", () => {
       statusText: "Unauthorized",
     }) as unknown as typeof fetch;
 
-    await expect(runLogin()).rejects.toThrow("Verification failed: 401");
+    await expect(runLogin()).rejects.toThrow("Run 'pnpm tui login' to re-authenticate");
 
     // auth.json should not exist
     const { readCredentials } = await import("../lib/credentials.js");
