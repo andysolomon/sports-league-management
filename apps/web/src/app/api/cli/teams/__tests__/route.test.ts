@@ -7,6 +7,7 @@ vi.mock("@clerk/nextjs/server", () => ({
 vi.mock("@/lib/salesforce-api", () => ({
   getTeams: vi.fn(),
   getTeamsByLeague: vi.fn(),
+  createTeam: vi.fn(),
 }));
 vi.mock("@/lib/api-error", () => ({
   handleApiError: vi.fn((_err: unknown, _ctx: string) => {
@@ -16,14 +17,15 @@ vi.mock("@/lib/api-error", () => ({
 }));
 
 import { auth } from "@clerk/nextjs/server";
-import { getTeams, getTeamsByLeague } from "@/lib/salesforce-api";
-import { GET } from "../route";
+import { getTeams, getTeamsByLeague, createTeam } from "@/lib/salesforce-api";
+import { GET, POST } from "../route";
 
 const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 const mockGetTeams = getTeams as unknown as ReturnType<typeof vi.fn>;
 const mockGetTeamsByLeague = getTeamsByLeague as unknown as ReturnType<
   typeof vi.fn
 >;
+const mockCreateTeam = createTeam as unknown as ReturnType<typeof vi.fn>;
 
 function makeRequest(url: string) {
   return new NextRequest(new URL(url, "http://localhost:3000"));
@@ -71,5 +73,49 @@ describe("GET /api/cli/teams", () => {
 
     const res = await GET(makeRequest("/api/cli/teams"));
     expect(res.status).toBe(503);
+  });
+});
+
+function makePostRequest(body: unknown) {
+  return new NextRequest(new URL("/api/cli/teams", "http://localhost:3000"), {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("POST /api/cli/teams", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue({ userId: null, tokenType: null });
+    const res = await POST(
+      makePostRequest({ name: "Test", leagueId: "lg1", city: "NYC", stadium: "S1" }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("creates a team and returns 201", async () => {
+    mockAuth.mockResolvedValue({ userId: "u1", tokenType: "api_key" });
+    mockCreateTeam.mockResolvedValue({
+      id: "t_new",
+      name: "New Team",
+      leagueId: "lg1",
+      city: "NYC",
+      stadium: "S1",
+    });
+
+    const res = await POST(
+      makePostRequest({ name: "New Team", leagueId: "lg1", city: "NYC", stadium: "S1" }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.name).toBe("New Team");
+    expect(mockCreateTeam).toHaveBeenCalledWith({
+      name: "New Team",
+      leagueId: "lg1",
+      city: "NYC",
+      stadium: "S1",
+    });
   });
 });

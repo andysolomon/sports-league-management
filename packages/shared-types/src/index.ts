@@ -66,6 +66,13 @@ export interface UpdatePlayerInput {
   status?: string;
 }
 
+export interface CreateTeamInput {
+  name: string;
+  leagueId: string;
+  city: string;
+  stadium: string;
+}
+
 export interface UpdateTeamInput {
   name?: string;
   city?: string;

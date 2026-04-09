@@ -8,10 +8,11 @@ const cli = meow(
 
   Commands
     login          Authenticate with sprtsmng by pasting an API key
-    leagues        Browse leagues (list view)
-    seasons        Browse seasons
-    divisions      Browse divisions
-    (no command)   Launch the interactive TUI
+    leagues              Browse leagues (list view)
+    seasons              Browse seasons
+    divisions            Browse divisions
+    import-teams <csv>   Bulk import teams from a CSV file
+    (no command)         Launch the interactive TUI
 
   Environment
     SPRTSMNG_API_URL    Override the backend URL (default: production)
@@ -26,6 +27,20 @@ if (command === "login") {
   const { runLogin } = await import("./commands/login.js");
   try {
     await runLogin();
+    process.exit(0);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+} else if (command === "import-teams") {
+  const csvPath = cli.input[1];
+  if (!csvPath) {
+    console.error("Usage: pnpm tui import-teams <path-to-csv>");
+    process.exit(1);
+  }
+  const { runImportTeams } = await import("./commands/import-teams.js");
+  try {
+    await runImportTeams(csvPath);
     process.exit(0);
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
