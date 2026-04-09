@@ -14,7 +14,7 @@ type LoadState =
 export function TeamsScreen() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [cursor, setCursor] = useState(0);
-  const { params, back } = useScreen();
+  const { params, push, back } = useScreen();
 
   const leagueId = params.leagueId as string;
   const leagueName = (params.leagueName as string) ?? leagueId;
@@ -58,6 +58,12 @@ export function TeamsScreen() {
   useKeyboardNav({
     onUp: () => setCursor((c) => Math.max(0, c - 1)),
     onDown: () => setCursor((c) => Math.min(teamCount - 1, c + 1)),
+    onSelect: () => {
+      if (state.status === "loaded" && state.teams[cursor]) {
+        const team = state.teams[cursor];
+        push("players", { teamId: team.id, teamName: team.name });
+      }
+    },
     onBack: back,
   });
 
