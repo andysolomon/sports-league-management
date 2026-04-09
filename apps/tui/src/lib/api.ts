@@ -144,6 +144,33 @@ export async function fetchDivisions(
   return (await res.json()) as DivisionDto[];
 }
 
+export interface CreateTeamInput {
+  name: string;
+  leagueId: string;
+  city: string;
+  stadium: string;
+}
+
+export async function createTeam(
+  baseUrl: string,
+  apiKey: string,
+  input: CreateTeamInput,
+): Promise<TeamDto> {
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/teams`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+    },
+    "Failed to create team",
+  );
+  return (await res.json()) as TeamDto;
+}
+
 export interface WhoamiResponse {
   userId: string;
   email: string | null;

@@ -8,6 +8,7 @@ import type {
   SeasonDto,
   CreatePlayerInput,
   UpdatePlayerInput,
+  CreateTeamInput,
   UpdateTeamInput,
 } from "@sports-management/shared-types";
 
@@ -112,6 +113,10 @@ export function deletePlayer(id: string): Promise<null> {
 }
 
 // Team mutations
+export function createTeam(input: CreateTeamInput): Promise<TeamDto> {
+  return mutate<TeamDto>("/teams", "POST", input);
+}
+
 export function updateTeam(
   id: string,
   input: UpdateTeamInput,

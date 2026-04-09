@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
-import { getTeams, getTeamsByLeague } from "@/lib/salesforce-api";
+import { getTeams, getTeamsByLeague, createTeam } from "@/lib/salesforce-api";
 import { handleApiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +29,32 @@ export async function GET(request: NextRequest) {
     const data = leagueId ? await getTeamsByLeague(leagueId) : await getTeams();
     return NextResponse.json(data);
   } catch (error) {
-    return handleApiError(error, "/api/cli/teams");
+    return handleApiError(error, "/api/cli/teams GET");
+  }
+}
+
+/**
+ * POST /api/cli/teams
+ *
+ * Creates a new team. Body: { name, leagueId, city, stadium }.
+ */
+export async function POST(request: NextRequest) {
+  const authResult = await auth({
+    acceptsToken: ["session_token", "api_key"],
+  });
+
+  if (authResult.tokenType === null) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!authResult.userId) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const data = await createTeam(body);
+    return NextResponse.json(data, { status: 201 });
+  } catch (error) {
+    return handleApiError(error, "/api/cli/teams POST");
   }
 }
