@@ -10,6 +10,10 @@ A full-stack sports league management platform combining a Salesforce backend (A
 │  Clerk Auth ─► BFF API Routes ─► Salesforce REST API            │
 │  shadcn/ui + Tailwind CSS + Playwright E2E                      │
 ├─────────────────────────────────────────────────────────────────┤
+│  Ink TUI (apps/tui)                                             │
+│  Clerk API Keys ─► /api/cli/* BFF Routes ─► Salesforce REST API │
+│  Browse, bulk import, debug — terminal operator console          │
+├─────────────────────────────────────────────────────────────────┤
 │  Shared Packages                                                │
 │  @sports-management/shared-types    TypeScript DTOs              │
 │  @sports-management/api-contracts   Zod runtime validation       │
@@ -24,7 +28,8 @@ A full-stack sports league management platform combining a Salesforce backend (A
 
 ```
 ├── apps/
-│   └── web/                   Next.js 15 frontend (Clerk + Salesforce JWT)
+│   ├── web/                   Next.js 15 frontend (Clerk + Salesforce JWT)
+│   └── tui/                   Ink 7 terminal UI (internal operator console)
 ├── packages/
 │   ├── shared-types/          TypeScript DTO interfaces
 │   └── api-contracts/         Zod validation schemas
@@ -67,6 +72,26 @@ pnpm --filter @sports-management/web dev
 
 The web app runs at `http://localhost:3000`. See [apps/web/README.md](apps/web/README.md) for environment variable setup.
 
+### TUI (Terminal Operator Console)
+
+```bash
+# Authenticate (one-time: visit /cli-auth in browser, paste the API key)
+pnpm tui login
+
+# Launch interactive TUI
+pnpm tui
+
+# Or go directly to a screen
+pnpm tui leagues
+pnpm tui seasons
+pnpm tui divisions
+
+# Bulk import teams from CSV
+pnpm tui import-teams ./teams.csv
+```
+
+See [apps/tui/README.md](apps/tui/README.md) for keyboard shortcuts, navigation, and CSV format.
+
 ## Development Workflow
 
 ### Salesforce Development
@@ -107,6 +132,12 @@ sf apex test run --wait 10 --code-coverage --result-format human
 
 # LWC Jest tests (37 tests across 5 suites)
 pnpm exec jest --config jest.config.js
+
+# TUI tests (88 tests)
+pnpm --filter @sports-management/tui test:unit
+
+# Web app tests (74 tests)
+pnpm --filter @sports-management/web test:unit
 
 # E2E tests — Playwright (81 tests across 14 specs)
 pnpm --filter @sports-management/web test:e2e          # Headless
@@ -166,6 +197,7 @@ sf project deploy validate --source-dir sportsmgmt
 
 | Document | Description |
 |---|---|
+| [apps/tui/README.md](apps/tui/README.md) | TUI setup, commands, keyboard shortcuts, architecture |
 | [apps/web/README.md](apps/web/README.md) | Web app setup, architecture, auth, Salesforce integration |
 | [sportsmgmt/README.md](sportsmgmt/README.md) | Core Salesforce package — objects, Apex classes, LWC |
 | [sportsmgmt-football/README.md](sportsmgmt-football/README.md) | Football extension package |
