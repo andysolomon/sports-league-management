@@ -42,6 +42,72 @@ export async function fetchTeams(
   return (await res.json()) as TeamDto[];
 }
 
+export interface PlayerDto {
+  id: string;
+  name: string;
+  teamId: string;
+  position: string;
+  jerseyNumber: number | null;
+  dateOfBirth: string | null;
+  status: string;
+}
+
+export async function fetchPlayers(
+  baseUrl: string,
+  apiKey: string,
+  teamId: string,
+): Promise<PlayerDto[]> {
+  const res = await fetch(
+    `${baseUrl}/api/cli/players?teamId=${encodeURIComponent(teamId)}`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch players: ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as PlayerDto[];
+}
+
+export interface SeasonDto {
+  id: string;
+  name: string;
+  leagueId: string;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+}
+
+export async function fetchSeasons(
+  baseUrl: string,
+  apiKey: string,
+): Promise<SeasonDto[]> {
+  const res = await fetch(`${baseUrl}/api/cli/seasons`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch seasons: ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as SeasonDto[];
+}
+
+export interface DivisionDto {
+  id: string;
+  name: string;
+  leagueId: string;
+}
+
+export async function fetchDivisions(
+  baseUrl: string,
+  apiKey: string,
+): Promise<DivisionDto[]> {
+  const res = await fetch(`${baseUrl}/api/cli/divisions`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch divisions: ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as DivisionDto[];
+}
+
 export interface WhoamiResponse {
   userId: string;
   email: string | null;

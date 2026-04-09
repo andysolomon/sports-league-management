@@ -9,6 +9,8 @@ const cli = meow(
   Commands
     login          Authenticate with sprtsmng by pasting an API key
     leagues        Browse leagues (list view)
+    seasons        Browse seasons
+    divisions      Browse divisions
     (no command)   Launch the interactive TUI
 
   Environment
@@ -29,11 +31,11 @@ if (command === "login") {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
-} else if (command === "leagues") {
+} else if (command === "leagues" || command === "seasons" || command === "divisions") {
   const React = await import("react");
   const { render } = await import("ink");
   const { App } = await import("./App.js");
-  render(React.createElement(App, { initialScreen: "leagues" }));
+  render(React.createElement(App, { initialScreen: command }));
 } else if (command === undefined) {
   const React = await import("react");
   const { render } = await import("ink");
