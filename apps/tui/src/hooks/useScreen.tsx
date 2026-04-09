@@ -11,8 +11,17 @@ interface ScreenState {
 
 const ScreenContext = createContext<ScreenState | null>(null);
 
-export function ScreenProvider({ children }: { children: React.ReactNode }) {
-  const [stack, setStack] = useState<Screen[]>(["home"]);
+interface ScreenProviderProps {
+  children: React.ReactNode;
+  initialScreen?: Screen;
+}
+
+export function ScreenProvider({ children, initialScreen }: ScreenProviderProps) {
+  const [stack, setStack] = useState<Screen[]>(
+    initialScreen && initialScreen !== "home"
+      ? ["home", initialScreen]
+      : ["home"],
+  );
 
   const push = useCallback((screen: Screen) => {
     setStack((prev) => [...prev, screen]);
