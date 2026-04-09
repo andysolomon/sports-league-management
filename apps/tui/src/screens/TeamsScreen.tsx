@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Box, Text } from "ink";
 import { useKeyboardNav } from "../hooks/useKeyboardNav.js";
+import { useMultiSelect } from "../hooks/useMultiSelect.js";
 import { useScreen } from "../hooks/useScreen.js";
 import { fetchTeams, type TeamDto } from "../lib/api.js";
 import { readCredentials } from "../lib/credentials.js";
@@ -19,6 +20,10 @@ export function TeamsScreen() {
   const leagueId = params.leagueId as string;
   const leagueName = (params.leagueName as string) ?? leagueId;
 
+  const teams = state.status === "loaded" ? state.teams : [];
+  const { selectedCount, toggle, selectAll, clearAll, isSelected } =
+    useMultiSelect(teams);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -33,10 +38,8 @@ export function TeamsScreen() {
       }
 
       try {
-        const teams = await fetchTeams(getApiBaseUrl(), creds.apiKey, leagueId);
-        if (!cancelled) {
-          setState({ status: "loaded", teams });
-        }
+        const data = await fetchTeams(getApiBaseUrl(), creds.apiKey, leagueId);
+        if (!cancelled) setState({ status: "loaded", teams: data });
       } catch (err) {
         if (!cancelled) {
           setState({
@@ -53,17 +56,20 @@ export function TeamsScreen() {
     };
   }, [leagueId]);
 
-  const teamCount = state.status === "loaded" ? state.teams.length : 0;
-
   useKeyboardNav({
     onUp: () => setCursor((c) => Math.max(0, c - 1)),
-    onDown: () => setCursor((c) => Math.min(teamCount - 1, c + 1)),
+    onDown: () => setCursor((c) => Math.min(teams.length - 1, c + 1)),
     onSelect: () => {
-      if (state.status === "loaded" && state.teams[cursor]) {
-        const team = state.teams[cursor];
+      if (teams[cursor]) {
+        const team = teams[cursor];
         push("players", { teamId: team.id, teamName: team.name });
       }
     },
+    onToggle: () => {
+      if (teams[cursor]) toggle(teams[cursor].id);
+    },
+    onSelectAll: () => selectAll(),
+    onClearAll: () => clearAll(),
     onBack: back,
   });
 
@@ -80,7 +86,7 @@ export function TeamsScreen() {
     );
   }
 
-  if (state.teams.length === 0) {
+  if (teams.length === 0) {
     return (
       <Box flexDirection="column">
         <Text>No teams in {leagueName}.</Text>
@@ -91,10 +97,16 @@ export function TeamsScreen() {
 
   return (
     <Box flexDirection="column">
-      <Text bold>Teams in {leagueName} ({state.teams.length})</Text>
+      <Box gap={1}>
+        <Text bold>Teams in {leagueName} ({teams.length})</Text>
+        {selectedCount > 0 && (
+          <Text dimColor>· {selectedCount} selected</Text>
+        )}
+      </Box>
       <Text> </Text>
-      {state.teams.map((team, i) => (
+      {teams.map((team, i) => (
         <Box key={team.id} gap={1}>
+          <Text>{isSelected(team.id) ? "[✓]" : "[ ]"}</Text>
           <Text color={i === cursor ? "blue" : undefined}>
             {i === cursor ? "❯" : " "}
           </Text>
