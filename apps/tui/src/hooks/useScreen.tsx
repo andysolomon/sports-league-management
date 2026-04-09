@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useState } from "react";
 
-export type Screen = "home" | "leagues" | "league-detail" | "teams" | "players" | "seasons" | "divisions";
+export type Screen = "home" | "leagues" | "league-detail" | "teams" | "players" | "seasons" | "divisions" | "debug";
 
 export type ScreenParams = Record<string, unknown>;
 
