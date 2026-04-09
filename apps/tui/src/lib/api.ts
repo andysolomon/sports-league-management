@@ -171,6 +171,27 @@ export async function createTeam(
   return (await res.json()) as TeamDto;
 }
 
+export async function reassignPlayer(
+  baseUrl: string,
+  apiKey: string,
+  playerId: string,
+  newTeamId: string,
+): Promise<PlayerDto> {
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/players/${encodeURIComponent(playerId)}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ teamId: newTeamId }),
+    },
+    "Failed to reassign player",
+  );
+  return (await res.json()) as PlayerDto;
+}
+
 export interface WhoamiResponse {
   userId: string;
   email: string | null;
