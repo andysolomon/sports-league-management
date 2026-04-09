@@ -10,6 +10,8 @@ import { PlayersScreen } from "./screens/PlayersScreen.js";
 import { SeasonsScreen } from "./screens/SeasonsScreen.js";
 import { DivisionsScreen } from "./screens/DivisionsScreen.js";
 import { DebugScreen } from "./screens/DebugScreen.js";
+import { ErrorsScreen } from "./screens/ErrorsScreen.js";
+import { ErrorDetailScreen } from "./screens/ErrorDetailScreen.js";
 
 const MENU_ITEMS: { label: string; screen: Screen }[] = [
   { label: "Browse leagues", screen: "leagues" },
@@ -59,6 +61,10 @@ function CurrentScreen() {
       return <DivisionsScreen />;
     case "debug":
       return <DebugScreen />;
+    case "errors":
+      return <ErrorsScreen />;
+    case "error-detail":
+      return <ErrorDetailScreen />;
     default:
       return <HomeScreen />;
   }
@@ -79,6 +85,7 @@ function AppInner() {
       if (current === "debug") back();
       else push("debug");
     },
+    onErrors: () => push("errors"),
   });
 
   return (
