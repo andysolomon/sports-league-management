@@ -1,41 +1,94 @@
 import { apiTracker } from "./api-tracker.js";
 import { errorTracker } from "./error-tracker.js";
 
+const RETRY_DELAY_MS = 500;
+
 async function instrumentedFetch(
   url: string,
   options: RequestInit,
   errorLabel: string,
 ): Promise<Response> {
-  const start = Date.now();
-  const res = await fetch(url, options);
   const parsedUrl = new URL(url);
   const path = parsedUrl.pathname + parsedUrl.search;
+  const method = options.method ?? "GET";
 
-  // Record timing for all calls (success and failure)
-  apiTracker.record({
-    method: options.method ?? "GET",
-    path,
-    status: res.status,
-    durationMs: Date.now() - start,
-    timestamp: new Date().toISOString(),
-  });
+  // Attempt fetch with one retry on network errors
+  let res: Response;
+  try {
+    const start = Date.now();
+    res = await fetch(url, options);
+    apiTracker.record({
+      method,
+      path,
+      status: res.status,
+      durationMs: Date.now() - start,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (networkErr) {
+    // Network error (ECONNREFUSED, timeout, DNS) — retry once after delay
+    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    try {
+      const start = Date.now();
+      res = await fetch(url, options);
+      apiTracker.record({
+        method,
+        path,
+        status: res.status,
+        durationMs: Date.now() - start,
+        timestamp: new Date().toISOString(),
+      });
+    } catch {
+      // Retry also failed — surface actionable error
+      const baseUrl = parsedUrl.origin;
+      const message = `Cannot reach the server at ${baseUrl}. Check your network and SPRTSMNG_API_URL.`;
+      errorTracker.record({
+        timestamp: new Date().toISOString(),
+        status: 0,
+        route: path,
+        message,
+        payload: networkErr instanceof Error ? networkErr.message : String(networkErr),
+      });
+      throw new Error(message);
+    }
+  }
 
-  // Record errors before throwing
+  // Handle HTTP errors
   if (!res.ok) {
     let payload: unknown = null;
+    let bffMessage: string | null = null;
     try {
-      payload = await res.clone().json();
+      const body = await res.clone().json();
+      payload = body;
+      bffMessage =
+        typeof body === "object" && body !== null
+          ? (body as Record<string, unknown>).message as string ??
+            (body as Record<string, unknown>).error as string ??
+            null
+          : null;
     } catch {
-      // response body isn't JSON — that's fine
+      // response body isn't JSON
     }
+
+    // 401 — expired or revoked credentials
+    let message: string;
+    if (res.status === 401) {
+      message =
+        "Your session has expired or been revoked. Run 'pnpm tui login' to re-authenticate.";
+    } else if (bffMessage) {
+      // Use the BFF's user-facing message when available (e.g., 503)
+      message = `${errorLabel}: ${bffMessage}`;
+    } else {
+      message = `${errorLabel}: ${res.status} ${res.statusText}`;
+    }
+
     errorTracker.record({
       timestamp: new Date().toISOString(),
       status: res.status,
       route: path,
-      message: `${errorLabel}: ${res.status} ${res.statusText}`,
+      message,
       payload,
     });
-    throw new Error(`${errorLabel}: ${res.status} ${res.statusText}`);
+    throw new Error(message);
   }
 
   return res;
