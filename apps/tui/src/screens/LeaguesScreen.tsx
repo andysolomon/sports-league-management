@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Box, Text } from "ink";
 import { useKeyboardNav } from "../hooks/useKeyboardNav.js";
+import { useMultiSelect } from "../hooks/useMultiSelect.js";
 import { useScreen } from "../hooks/useScreen.js";
 import { fetchLeagues, type LeagueDto } from "../lib/api.js";
 import { readCredentials } from "../lib/credentials.js";
@@ -16,6 +17,10 @@ export function LeaguesScreen() {
   const [cursor, setCursor] = useState(0);
   const { push, back } = useScreen();
 
+  const leagues = state.status === "loaded" ? state.leagues : [];
+  const { selectedCount, toggle, selectAll, clearAll, isSelected } =
+    useMultiSelect(leagues);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -30,10 +35,8 @@ export function LeaguesScreen() {
       }
 
       try {
-        const leagues = await fetchLeagues(getApiBaseUrl(), creds.apiKey);
-        if (!cancelled) {
-          setState({ status: "loaded", leagues });
-        }
+        const data = await fetchLeagues(getApiBaseUrl(), creds.apiKey);
+        if (!cancelled) setState({ status: "loaded", leagues: data });
       } catch (err) {
         if (!cancelled) {
           setState({
@@ -50,18 +53,20 @@ export function LeaguesScreen() {
     };
   }, []);
 
-  const leagueCount =
-    state.status === "loaded" ? state.leagues.length : 0;
-
   useKeyboardNav({
     onUp: () => setCursor((c) => Math.max(0, c - 1)),
-    onDown: () => setCursor((c) => Math.min(leagueCount - 1, c + 1)),
+    onDown: () => setCursor((c) => Math.min(leagues.length - 1, c + 1)),
     onSelect: () => {
-      if (state.status === "loaded" && state.leagues[cursor]) {
-        const league = state.leagues[cursor];
+      if (leagues[cursor]) {
+        const league = leagues[cursor];
         push("teams", { leagueId: league.id, leagueName: league.name });
       }
     },
+    onToggle: () => {
+      if (leagues[cursor]) toggle(leagues[cursor].id);
+    },
+    onSelectAll: () => selectAll(),
+    onClearAll: () => clearAll(),
     onBack: back,
   });
 
@@ -78,7 +83,7 @@ export function LeaguesScreen() {
     );
   }
 
-  if (state.leagues.length === 0) {
+  if (leagues.length === 0) {
     return (
       <Box flexDirection="column">
         <Text>No leagues found.</Text>
@@ -89,15 +94,21 @@ export function LeaguesScreen() {
 
   return (
     <Box flexDirection="column">
-      <Text bold>Leagues ({state.leagues.length})</Text>
+      <Box gap={1}>
+        <Text bold>Leagues ({leagues.length})</Text>
+        {selectedCount > 0 && (
+          <Text dimColor>· {selectedCount} selected</Text>
+        )}
+      </Box>
       <Text> </Text>
-      {state.leagues.map((league, i) => (
-        <Box key={league.id}>
+      {leagues.map((league, i) => (
+        <Box key={league.id} gap={1}>
+          <Text>{isSelected(league.id) ? "[✓]" : "[ ]"}</Text>
           <Text color={i === cursor ? "blue" : undefined}>
-            {i === cursor ? "❯ " : "  "}
+            {i === cursor ? "❯" : " "}
           </Text>
           <Text bold={i === cursor}>{league.name}</Text>
-          <Text dimColor> ({league.id})</Text>
+          <Text dimColor>({league.id})</Text>
         </Box>
       ))}
     </Box>
