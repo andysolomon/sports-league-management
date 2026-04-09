@@ -12,6 +12,7 @@ import { DivisionsScreen } from "./screens/DivisionsScreen.js";
 import { DebugScreen } from "./screens/DebugScreen.js";
 import { ErrorsScreen } from "./screens/ErrorsScreen.js";
 import { ErrorDetailScreen } from "./screens/ErrorDetailScreen.js";
+import { TeamPickerScreen } from "./screens/TeamPickerScreen.js";
 
 const MENU_ITEMS: { label: string; screen: Screen }[] = [
   { label: "Browse leagues", screen: "leagues" },
@@ -65,6 +66,8 @@ function CurrentScreen() {
       return <ErrorsScreen />;
     case "error-detail":
       return <ErrorDetailScreen />;
+    case "team-picker":
+      return <TeamPickerScreen />;
     default:
       return <HomeScreen />;
   }

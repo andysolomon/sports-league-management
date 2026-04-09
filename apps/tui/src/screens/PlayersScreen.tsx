@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Box, Text } from "ink";
 import { useKeyboardNav } from "../hooks/useKeyboardNav.js";
 import { useScreen } from "../hooks/useScreen.js";
+import { useMultiSelect } from "../hooks/useMultiSelect.js";
 import { fetchPlayers, type PlayerDto } from "../lib/api.js";
 import { readCredentials } from "../lib/credentials.js";
 import { getApiBaseUrl } from "../lib/config.js";
@@ -14,7 +15,7 @@ type LoadState =
 export function PlayersScreen() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [cursor, setCursor] = useState(0);
-  const { params, back } = useScreen();
+  const { params, push, back } = useScreen();
 
   const teamId = params.teamId as string;
   const teamName = (params.teamName as string) ?? teamId;
@@ -40,11 +41,28 @@ export function PlayersScreen() {
     return () => { cancelled = true; };
   }, [teamId]);
 
-  const count = state.status === "loaded" ? state.players.length : 0;
+  const players = state.status === "loaded" ? state.players : [];
+  const { selectedCount, toggle, selectAll, clearAll, isSelected } =
+    useMultiSelect(players);
 
   useKeyboardNav({
     onUp: () => setCursor((c) => Math.max(0, c - 1)),
-    onDown: () => setCursor((c) => Math.min(count - 1, c + 1)),
+    onDown: () => setCursor((c) => Math.min(players.length - 1, c + 1)),
+    onToggle: () => {
+      if (players[cursor]) toggle(players[cursor].id);
+    },
+    onSelectAll: () => selectAll(),
+    onClearAll: () => clearAll(),
+    onReassign: () => {
+      if (selectedCount > 0) {
+        const selectedPlayers = players.filter((p) => isSelected(p.id));
+        push("team-picker", {
+          playerIds: selectedPlayers.map((p) => p.id),
+          playerNames: selectedPlayers.map((p) => p.name),
+          leagueId: params.leagueId,
+        });
+      }
+    },
     onBack: back,
   });
 
@@ -70,10 +88,16 @@ export function PlayersScreen() {
 
   return (
     <Box flexDirection="column">
-      <Text bold>Players in {teamName} ({state.players.length})</Text>
+      <Box gap={1}>
+        <Text bold>Players in {teamName} ({players.length})</Text>
+        {selectedCount > 0 && (
+          <Text dimColor>· {selectedCount} selected · press r to reassign</Text>
+        )}
+      </Box>
       <Text> </Text>
-      {state.players.map((p, i) => (
+      {players.map((p, i) => (
         <Box key={p.id} gap={1}>
+          <Text>{isSelected(p.id) ? "[✓]" : "[ ]"}</Text>
           <Text color={i === cursor ? "blue" : undefined}>{i === cursor ? "❯" : " "}</Text>
           <Text bold={i === cursor}>{p.name}</Text>
           <Text dimColor>{p.position}</Text>
