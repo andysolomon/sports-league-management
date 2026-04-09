@@ -65,6 +65,10 @@ export function getTeams(): Promise<TeamDto[]> {
   return request<TeamDto[]>("/teams");
 }
 
+export function getTeamsByLeague(leagueId: string): Promise<TeamDto[]> {
+  return request<TeamDto[]>(`/teams?leagueId=${encodeURIComponent(leagueId)}`);
+}
+
 export function getTeam(id: string): Promise<TeamDto> {
   return request<TeamDto>(`/teams/${id}`);
 }

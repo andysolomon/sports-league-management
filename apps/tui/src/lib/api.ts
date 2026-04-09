@@ -16,6 +16,32 @@ export async function fetchLeagues(
   return (await res.json()) as LeagueDto[];
 }
 
+export interface TeamDto {
+  id: string;
+  name: string;
+  leagueId: string;
+  city: string;
+  stadium: string;
+  foundedYear: number | null;
+  location: string;
+  divisionId: string;
+}
+
+export async function fetchTeams(
+  baseUrl: string,
+  apiKey: string,
+  leagueId: string,
+): Promise<TeamDto[]> {
+  const res = await fetch(
+    `${baseUrl}/api/cli/teams?leagueId=${encodeURIComponent(leagueId)}`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch teams: ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as TeamDto[];
+}
+
 export interface WhoamiResponse {
   userId: string;
   email: string | null;

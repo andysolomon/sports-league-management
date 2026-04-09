@@ -5,6 +5,7 @@ import { useKeyboardNav } from "./hooks/useKeyboardNav.js";
 import { ScreenProvider, useScreen } from "./hooks/useScreen.js";
 import { readCredentials } from "./lib/credentials.js";
 import { LeaguesScreen } from "./screens/LeaguesScreen.js";
+import { TeamsScreen } from "./screens/TeamsScreen.js";
 
 function HomeScreen() {
   const { push } = useScreen();
@@ -32,6 +33,8 @@ function CurrentScreen() {
   switch (current) {
     case "leagues":
       return <LeaguesScreen />;
+    case "teams":
+      return <TeamsScreen />;
     default:
       return <HomeScreen />;
   }
