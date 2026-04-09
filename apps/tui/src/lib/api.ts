@@ -1,3 +1,22 @@
+import { apiTracker } from "./api-tracker.js";
+
+async function trackedFetch(
+  url: string,
+  options: RequestInit,
+): Promise<Response> {
+  const start = Date.now();
+  const res = await fetch(url, options);
+  const parsedUrl = new URL(url);
+  apiTracker.record({
+    method: options.method ?? "GET",
+    path: parsedUrl.pathname + parsedUrl.search,
+    status: res.status,
+    durationMs: Date.now() - start,
+    timestamp: new Date().toISOString(),
+  });
+  return res;
+}
+
 export interface LeagueDto {
   id: string;
   name: string;
@@ -7,7 +26,7 @@ export async function fetchLeagues(
   baseUrl: string,
   apiKey: string,
 ): Promise<LeagueDto[]> {
-  const res = await fetch(`${baseUrl}/api/cli/leagues`, {
+  const res = await trackedFetch(`${baseUrl}/api/cli/leagues`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
   if (!res.ok) {
@@ -80,7 +99,7 @@ export async function fetchSeasons(
   baseUrl: string,
   apiKey: string,
 ): Promise<SeasonDto[]> {
-  const res = await fetch(`${baseUrl}/api/cli/seasons`, {
+  const res = await trackedFetch(`${baseUrl}/api/cli/seasons`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
   if (!res.ok) {
@@ -99,7 +118,7 @@ export async function fetchDivisions(
   baseUrl: string,
   apiKey: string,
 ): Promise<DivisionDto[]> {
-  const res = await fetch(`${baseUrl}/api/cli/divisions`, {
+  const res = await trackedFetch(`${baseUrl}/api/cli/divisions`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
   if (!res.ok) {
@@ -119,7 +138,7 @@ export async function verifyApiKey(
   baseUrl: string,
   apiKey: string,
 ): Promise<WhoamiResponse> {
-  const res = await fetch(`${baseUrl}/api/cli/whoami`, {
+  const res = await trackedFetch(`${baseUrl}/api/cli/whoami`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
   if (!res.ok) {

@@ -9,6 +9,7 @@ import { TeamsScreen } from "./screens/TeamsScreen.js";
 import { PlayersScreen } from "./screens/PlayersScreen.js";
 import { SeasonsScreen } from "./screens/SeasonsScreen.js";
 import { DivisionsScreen } from "./screens/DivisionsScreen.js";
+import { DebugScreen } from "./screens/DebugScreen.js";
 
 const MENU_ITEMS: { label: string; screen: Screen }[] = [
   { label: "Browse leagues", screen: "leagues" },
@@ -56,6 +57,8 @@ function CurrentScreen() {
       return <SeasonsScreen />;
     case "divisions":
       return <DivisionsScreen />;
+    case "debug":
+      return <DebugScreen />;
     default:
       return <HomeScreen />;
   }
@@ -63,12 +66,20 @@ function CurrentScreen() {
 
 function AppInner() {
   const [email, setEmail] = useState<string | null>(null);
+  const { current, push, back } = useScreen();
 
   useEffect(() => {
     readCredentials().then((creds) => {
       if (creds?.email) setEmail(creds.email);
     });
   }, []);
+
+  useKeyboardNav({
+    onDebug: () => {
+      if (current === "debug") back();
+      else push("debug");
+    },
+  });
 
   return (
     <Layout email={email}>

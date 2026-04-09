@@ -5,6 +5,7 @@ export interface KeyboardNavHandlers {
   onDown?: () => void;
   onSelect?: () => void;
   onBack?: () => void;
+  onDebug?: () => void;
   onToggle?: () => void;
   onSelectAll?: () => void;
   onClearAll?: () => void;
@@ -16,6 +17,7 @@ export interface KeyboardNavHandlers {
  * - ↓ / j     → onDown
  * - Enter     → onSelect
  * - Escape    → onBack
+ * - d         → onDebug (toggle debug panel)
  * - Space     → onToggle (multi-select)
  * - Ctrl+A    → onSelectAll
  * - Ctrl+D    → onClearAll
@@ -43,6 +45,10 @@ export function useKeyboardNav(handlers?: KeyboardNavHandlers): void {
     }
     if (key.escape) {
       handlers?.onBack?.();
+      return;
+    }
+    if (input === "d") {
+      handlers?.onDebug?.();
       return;
     }
     if (input === " ") {
