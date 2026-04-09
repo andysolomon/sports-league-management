@@ -27,10 +27,19 @@ const isPublicRoute = createRouteMatcher([
   "/manifest.webmanifest",
 ]);
 
+// CLI BFF routes accept BOTH interactive session cookies and Clerk API keys.
+// This lets the same endpoints serve in-page fetches (e.g. from a debug
+// button) and out-of-band CLI calls from the sprtsmng TUI.
+const isCliRoute = createRouteMatcher(["/api/cli/(.*)"]);
+
 export default clerkMiddleware(async (auth, request) => {
   const { pathname } = request.nextUrl;
   if (pathname.match(/\/org\/(null|undefined)(\/|$)/)) {
     return NextResponse.redirect(new URL("/", request.url));
+  }
+  if (isCliRoute(request)) {
+    await auth.protect({ token: ["session_token", "api_key"] });
+    return;
   }
   if (!isPublicRoute(request)) {
     await auth.protect();
