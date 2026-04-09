@@ -1,19 +1,43 @@
 import { apiTracker } from "./api-tracker.js";
+import { errorTracker } from "./error-tracker.js";
 
-async function trackedFetch(
+async function instrumentedFetch(
   url: string,
   options: RequestInit,
+  errorLabel: string,
 ): Promise<Response> {
   const start = Date.now();
   const res = await fetch(url, options);
   const parsedUrl = new URL(url);
+  const path = parsedUrl.pathname + parsedUrl.search;
+
+  // Record timing for all calls (success and failure)
   apiTracker.record({
     method: options.method ?? "GET",
-    path: parsedUrl.pathname + parsedUrl.search,
+    path,
     status: res.status,
     durationMs: Date.now() - start,
     timestamp: new Date().toISOString(),
   });
+
+  // Record errors before throwing
+  if (!res.ok) {
+    let payload: unknown = null;
+    try {
+      payload = await res.clone().json();
+    } catch {
+      // response body isn't JSON — that's fine
+    }
+    errorTracker.record({
+      timestamp: new Date().toISOString(),
+      status: res.status,
+      route: path,
+      message: `${errorLabel}: ${res.status} ${res.statusText}`,
+      payload,
+    });
+    throw new Error(`${errorLabel}: ${res.status} ${res.statusText}`);
+  }
+
   return res;
 }
 
@@ -26,12 +50,11 @@ export async function fetchLeagues(
   baseUrl: string,
   apiKey: string,
 ): Promise<LeagueDto[]> {
-  const res = await trackedFetch(`${baseUrl}/api/cli/leagues`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch leagues: ${res.status} ${res.statusText}`);
-  }
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/leagues`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+    "Failed to fetch leagues",
+  );
   return (await res.json()) as LeagueDto[];
 }
 
@@ -51,13 +74,11 @@ export async function fetchTeams(
   apiKey: string,
   leagueId: string,
 ): Promise<TeamDto[]> {
-  const res = await fetch(
+  const res = await instrumentedFetch(
     `${baseUrl}/api/cli/teams?leagueId=${encodeURIComponent(leagueId)}`,
     { headers: { Authorization: `Bearer ${apiKey}` } },
+    "Failed to fetch teams",
   );
-  if (!res.ok) {
-    throw new Error(`Failed to fetch teams: ${res.status} ${res.statusText}`);
-  }
   return (await res.json()) as TeamDto[];
 }
 
@@ -76,13 +97,11 @@ export async function fetchPlayers(
   apiKey: string,
   teamId: string,
 ): Promise<PlayerDto[]> {
-  const res = await fetch(
+  const res = await instrumentedFetch(
     `${baseUrl}/api/cli/players?teamId=${encodeURIComponent(teamId)}`,
     { headers: { Authorization: `Bearer ${apiKey}` } },
+    "Failed to fetch players",
   );
-  if (!res.ok) {
-    throw new Error(`Failed to fetch players: ${res.status} ${res.statusText}`);
-  }
   return (await res.json()) as PlayerDto[];
 }
 
@@ -99,12 +118,11 @@ export async function fetchSeasons(
   baseUrl: string,
   apiKey: string,
 ): Promise<SeasonDto[]> {
-  const res = await trackedFetch(`${baseUrl}/api/cli/seasons`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch seasons: ${res.status} ${res.statusText}`);
-  }
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/seasons`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+    "Failed to fetch seasons",
+  );
   return (await res.json()) as SeasonDto[];
 }
 
@@ -118,12 +136,11 @@ export async function fetchDivisions(
   baseUrl: string,
   apiKey: string,
 ): Promise<DivisionDto[]> {
-  const res = await trackedFetch(`${baseUrl}/api/cli/divisions`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch divisions: ${res.status} ${res.statusText}`);
-  }
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/divisions`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+    "Failed to fetch divisions",
+  );
   return (await res.json()) as DivisionDto[];
 }
 
@@ -138,11 +155,10 @@ export async function verifyApiKey(
   baseUrl: string,
   apiKey: string,
 ): Promise<WhoamiResponse> {
-  const res = await trackedFetch(`${baseUrl}/api/cli/whoami`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Verification failed: ${res.status} ${res.statusText}`);
-  }
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/whoami`,
+    { headers: { Authorization: `Bearer ${apiKey}` } },
+    "Verification failed",
+  );
   return (await res.json()) as WhoamiResponse;
 }
