@@ -131,20 +131,20 @@ export function updateTeam(
 
 export async function upsertLeague(name: string): Promise<{ dto: LeagueDto; created: boolean }> {
   const conn = await getSalesforceConnection();
-  const existing = await conn.query<{ Id: string; Name: string }>(
-    `SELECT Id, Name FROM League__c WHERE Name = '${name.replace(/'/g, "\\'")}'  LIMIT 1`,
+  const existing = await conn.query<{ Id: string; Name: string; Clerk_Org_Id__c: string | null }>(
+    `SELECT Id, Name, Clerk_Org_Id__c FROM League__c WHERE Name = '${name.replace(/'/g, "\\'")}'  LIMIT 1`,
   );
 
   if (existing.totalSize > 0) {
     const rec = existing.records[0];
-    return { dto: { id: rec.Id, name: rec.Name }, created: false };
+    return { dto: { id: rec.Id, name: rec.Name, orgId: rec.Clerk_Org_Id__c ?? null }, created: false };
   }
 
   const result = await conn.sobject("League__c").create({ Name: name });
   if (!result.success) {
     throw new Error(`Failed to create league: ${result.errors?.map((e) => e.message).join(", ") ?? "unknown error"}`);
   }
-  return { dto: { id: result.id, name }, created: true };
+  return { dto: { id: result.id, name, orgId: null }, created: true };
 }
 
 export async function upsertDivision(

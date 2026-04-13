@@ -19,6 +19,7 @@ import type {
 export const LeagueDtoSchema = z.object({
   id: z.string(),
   name: z.string(),
+  orgId: z.string().nullable(),
 }) satisfies z.ZodType<LeagueDto>;
 
 export const DivisionDtoSchema = z.object({
