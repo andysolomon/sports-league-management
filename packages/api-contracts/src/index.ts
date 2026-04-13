@@ -6,6 +6,9 @@ import type {
   TeamDto,
   PlayerDto,
   SeasonDto,
+  CreateLeagueInput,
+  CreateDivisionInput,
+  CreateTeamInput,
   CreatePlayerInput,
   UpdatePlayerInput,
   UpdateTeamInput,
@@ -56,6 +59,22 @@ export const SeasonDtoSchema = z.object({
 
 // --- Mutation input schemas ---
 
+export const CreateLeagueInputSchema = z.object({
+  name: z.string().min(1),
+}) satisfies z.ZodType<CreateLeagueInput>;
+
+export const CreateDivisionInputSchema = z.object({
+  name: z.string().min(1),
+  leagueId: z.string().min(1),
+}) satisfies z.ZodType<CreateDivisionInput>;
+
+export const CreateTeamInputSchema = z.object({
+  name: z.string().min(1),
+  leagueId: z.string().min(1),
+  city: z.string().min(1),
+  stadium: z.string().min(1),
+}) satisfies z.ZodType<CreateTeamInput>;
+
 export const CreatePlayerInputSchema = z.object({
   name: z.string().min(1),
   teamId: z.string().min(1),
@@ -82,6 +101,13 @@ export const UpdateTeamInputSchema = z.object({
   location: z.string().min(1).optional(),
   divisionId: z.string().min(1).optional(),
 }) satisfies z.ZodType<UpdateTeamInput>;
+
+// --- Import schema ---
+
+export {
+  LeagueImportSchema,
+  type LeagueImportPayload,
+} from "./import-schema.js";
 
 // --- API envelope factory ---
 

@@ -66,6 +66,15 @@ export interface UpdatePlayerInput {
   status?: string;
 }
 
+export interface CreateLeagueInput {
+  name: string;
+}
+
+export interface CreateDivisionInput {
+  name: string;
+  leagueId: string;
+}
+
 export interface CreateTeamInput {
   name: string;
   leagueId: string;
@@ -80,6 +89,28 @@ export interface UpdateTeamInput {
   foundedYear?: number | null;
   location?: string;
   divisionId?: string;
+}
+
+// --- Import types ---
+
+export interface ImportResultCounts {
+  leagues: number;
+  divisions: number;
+  teams: number;
+  players: number;
+}
+
+export interface ImportError {
+  entity: string;
+  name: string;
+  message: string;
+}
+
+export interface ImportResult {
+  leagueId: string;
+  created: ImportResultCounts;
+  updated: ImportResultCounts;
+  errors: ImportError[];
 }
 
 // --- Subscription tier types ---

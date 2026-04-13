@@ -263,3 +263,30 @@ export async function verifyApiKey(
   );
   return (await res.json()) as WhoamiResponse;
 }
+
+export interface ImportResultDto {
+  leagueId: string;
+  created: { leagues: number; divisions: number; teams: number; players: number };
+  updated: { leagues: number; divisions: number; teams: number; players: number };
+  errors: Array<{ entity: string; name: string; message: string }>;
+}
+
+export async function importJson(
+  baseUrl: string,
+  apiKey: string,
+  payload: unknown,
+): Promise<ImportResultDto> {
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/import`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+    "Failed to import data",
+  );
+  return (await res.json()) as ImportResultDto;
+}
