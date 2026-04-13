@@ -1,0 +1,31 @@
+{
+  "groups": [
+    {
+      "name": "American Football Conference",
+      "abbreviation": "AFC",
+      "children": [
+        {
+          "name": "AFC East",
+          "abbreviation": "EAST",
+          "teams": [
+            { "id": "2", "displayName": "Buffalo Bills" },
+            { "id": "15", "displayName": "Miami Dolphins" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "National Football Conference",
+      "abbreviation": "NFC",
+      "children": [
+        {
+          "name": "NFC West",
+          "abbreviation": "WEST",
+          "teams": [
+            { "id": "25", "displayName": "San Francisco 49ers" }
+          ]
+        }
+      ]
+    }
+  ]
+}

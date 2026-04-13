@@ -1,0 +1,30 @@
+{
+  "athletes": [
+    {
+      "position": "offense",
+      "items": [
+        {
+          "fullName": "Tua Tagovailoa",
+          "jersey": "1",
+          "dateOfBirth": "1998-03-02T07:00Z",
+          "position": { "abbreviation": "QB" },
+          "status": { "name": "Active" },
+          "headshot": { "href": "https://a.espncdn.com/i/headshots/nfl/players/full/4241479.png" }
+        }
+      ]
+    },
+    {
+      "position": "defense",
+      "items": [
+        {
+          "fullName": "Jaelan Phillips",
+          "jersey": "15",
+          "dateOfBirth": "1999-09-28T07:00Z",
+          "position": { "abbreviation": "DE" },
+          "status": { "name": "Injured Reserve" },
+          "headshot": { "href": "https://a.espncdn.com/i/headshots/nfl/players/full/4361423.png" }
+        }
+      ]
+    }
+  ]
+}

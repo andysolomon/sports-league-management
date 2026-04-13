@@ -1,0 +1,15 @@
+{
+  "team": {
+    "id": "15",
+    "displayName": "Miami Dolphins",
+    "name": "Dolphins",
+    "location": "Miami",
+    "abbreviation": "MIA",
+    "logos": [{ "href": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png" }],
+    "franchise": {
+      "venue": {
+        "fullName": "Hard Rock Stadium"
+      }
+    }
+  }
+}

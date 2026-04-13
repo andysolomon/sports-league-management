@@ -1,0 +1,15 @@
+{
+  "team": {
+    "id": "25",
+    "displayName": "San Francisco 49ers",
+    "name": "49ers",
+    "location": "San Francisco",
+    "abbreviation": "SF",
+    "logos": [{ "href": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png" }],
+    "franchise": {
+      "venue": {
+        "fullName": "Levi's Stadium"
+      }
+    }
+  }
+}
