@@ -22,7 +22,8 @@
     "RESEND_API_KEY",
     "RESEND_FROM_EMAIL",
     "NEXT_PUBLIC_APP_URL",
-    "SPRTSMNG_API_URL"
+    "SPRTSMNG_API_URL",
+    "CRON_SECRET"
   ],
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": ["dist/**", ".next/**"] },
