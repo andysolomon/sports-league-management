@@ -7,11 +7,12 @@ const cli = meow(
     $ pnpm tui [command]
 
   Commands
-    login          Authenticate with sprtsmng by pasting an API key
+    login                Authenticate with sprtsmng by pasting an API key
     leagues              Browse leagues (list view)
     seasons              Browse seasons
     divisions            Browse divisions
     import-teams <csv>   Bulk import teams from a CSV file
+    import-json <json>   Import leagues, teams, and players from a JSON file
     (no command)         Launch the interactive TUI
 
   Environment
@@ -41,6 +42,20 @@ if (command === "login") {
   const { runImportTeams } = await import("./commands/import-teams.js");
   try {
     await runImportTeams(csvPath);
+    process.exit(0);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+} else if (command === "import-json") {
+  const jsonPath = cli.input[1];
+  if (!jsonPath) {
+    console.error("Usage: pnpm tui import-json <path-to-json>");
+    process.exit(1);
+  }
+  const { runImportJson } = await import("./commands/import-json.js");
+  try {
+    await runImportJson(jsonPath);
     process.exit(0);
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));

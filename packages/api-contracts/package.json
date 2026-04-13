@@ -11,13 +11,15 @@
   },
   "scripts": {
     "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@sports-management/shared-types": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^4.1.2"
   }
 }
