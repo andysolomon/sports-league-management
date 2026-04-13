@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getTeam, getPlayersByTeam, updateTeam } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { UpdateTeamInputSchema } from "@sports-management/api-contracts";
 import { authorizeTeamMutation } from "@/lib/authorization";
 import { handleApiError } from "@/lib/api-error";
@@ -15,9 +16,10 @@ export async function GET(
   }
   const { id } = await params;
   try {
+    const orgContext = await resolveOrgContext(userId);
     const [team, players] = await Promise.all([
-      getTeam(id),
-      getPlayersByTeam(id),
+      getTeam(id, orgContext),
+      getPlayersByTeam(id, orgContext),
     ]);
     return NextResponse.json({ team, players });
   } catch (error) {

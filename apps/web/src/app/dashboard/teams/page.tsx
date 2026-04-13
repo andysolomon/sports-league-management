@@ -1,8 +1,15 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { getTeams } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 
 export default async function TeamsPage() {
-  const teams = await getTeams();
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const orgContext = await resolveOrgContext(userId);
+  const teams = await getTeams(orgContext.visibleLeagueIds);
 
   return (
     <div>

@@ -1,15 +1,24 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { getLeagues, getDivisions, getTeams } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { Trophy, Layers, Users } from "lucide-react";
 
 export default async function LeaguesPage() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const orgContext = await resolveOrgContext(userId);
+  const ids = orgContext.visibleLeagueIds;
+
   const [leagues, divisions, teams] = await Promise.all([
-    getLeagues(),
-    getDivisions(),
-    getTeams(),
+    getLeagues(ids),
+    getDivisions(ids),
+    getTeams(ids),
   ]);
 
   const divisionsByLeague = new Map<string, typeof divisions>();
@@ -90,7 +99,7 @@ export default async function LeaguesPage() {
                                     </span>
                                     {team.city && (
                                       <span className="text-gray-400">
-                                        \u2014 {team.city}
+                                        &mdash; {team.city}
                                       </span>
                                     )}
                                   </Link>

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSalesforceConnection } from "@/lib/salesforce";
-import { getLeagues } from "@/lib/salesforce-api";
 
 export async function GET() {
   const checks: Record<string, unknown> = {};
@@ -19,8 +18,9 @@ export async function GET() {
   }
 
   try {
-    const leagues = await getLeagues();
-    checks.data = `ok (${leagues.length} leagues)`;
+    const conn = await getSalesforceConnection();
+    const result = await conn.query<{ Id: string }>("SELECT Id FROM League__c LIMIT 1");
+    checks.data = `ok (query returned ${result.totalSize} record(s))`;
   } catch (err) {
     checks.data = `FAILED: ${err instanceof Error ? err.message : String(err)}`;
     return NextResponse.json(checks, { status: 503 });

@@ -97,6 +97,7 @@ async function instrumentedFetch(
 export interface LeagueDto {
   id: string;
   name: string;
+  orgId: string | null;
 }
 
 export async function fetchLeagues(

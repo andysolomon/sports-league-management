@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/salesforce-api", () => ({ getPlayersByTeam: vi.fn() }));
+vi.mock("@/lib/org-context", () => ({ resolveOrgContext: vi.fn() }));
 vi.mock("@/lib/api-error", () => ({
   handleApiError: vi.fn(() => {
     const { NextResponse } = require("next/server");
@@ -12,10 +13,18 @@ vi.mock("@/lib/api-error", () => ({
 
 import { auth } from "@clerk/nextjs/server";
 import { getPlayersByTeam } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { GET } from "../route";
 
 const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 const mockGetPlayers = getPlayersByTeam as unknown as ReturnType<typeof vi.fn>;
+const mockResolveOrgContext = resolveOrgContext as unknown as ReturnType<typeof vi.fn>;
+
+const fakeOrgContext = {
+  userId: "u1",
+  orgIds: ["org_1"],
+  visibleLeagueIds: ["lg_1"],
+};
 
 function req(url: string) {
   return new NextRequest(new URL(url, "http://localhost:3000"));
@@ -38,11 +47,12 @@ describe("GET /api/cli/players", () => {
 
   it("returns players filtered by team", async () => {
     mockAuth.mockResolvedValue({ userId: "u1", tokenType: "api_key" });
+    mockResolveOrgContext.mockResolvedValue(fakeOrgContext);
     mockGetPlayers.mockResolvedValue([
       { id: "p1", name: "Player 1", position: "GK", jerseyNumber: 1, status: "Active" },
     ]);
     const res = await GET(req("/api/cli/players?teamId=t1"));
     expect(res.status).toBe(200);
-    expect(mockGetPlayers).toHaveBeenCalledWith("t1");
+    expect(mockGetPlayers).toHaveBeenCalledWith("t1", fakeOrgContext);
   });
 });

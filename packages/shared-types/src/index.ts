@@ -8,6 +8,7 @@ export interface ApiResponse<T> {
 export interface LeagueDto {
   id: string;
   name: string;
+  orgId: string | null;
 }
 
 export interface DivisionDto {

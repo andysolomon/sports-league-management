@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { getTeams, getTeamsByLeague, createTeam } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { handleApiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,10 @@ export async function GET(request: NextRequest) {
   const leagueId = request.nextUrl.searchParams.get("leagueId");
 
   try {
-    const data = leagueId ? await getTeamsByLeague(leagueId) : await getTeams();
+    const orgContext = await resolveOrgContext(authResult.userId);
+    const data = leagueId
+      ? await getTeamsByLeague(leagueId, orgContext)
+      : await getTeams(orgContext.visibleLeagueIds);
     return NextResponse.json(data);
   } catch (error) {
     return handleApiError(error, "/api/cli/teams GET");

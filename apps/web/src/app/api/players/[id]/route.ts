@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getPlayer, updatePlayer, deletePlayer } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { UpdatePlayerInputSchema } from "@sports-management/api-contracts";
 import { authorizeTeamMutation } from "@/lib/authorization";
 import { handleApiError } from "@/lib/api-error";
@@ -15,7 +16,8 @@ export async function GET(
   }
   const { id } = await params;
   try {
-    const data = await getPlayer(id);
+    const orgContext = await resolveOrgContext(userId);
+    const data = await getPlayer(id, orgContext);
     return NextResponse.json(data);
   } catch (error) {
     return handleApiError(error, `/api/players/${id}`);
@@ -34,7 +36,8 @@ export async function PUT(
   const { id } = await params;
 
   try {
-    const existing = await getPlayer(id);
+    const orgContext = await resolveOrgContext(userId);
+    const existing = await getPlayer(id, orgContext);
 
     const authorization = await authorizeTeamMutation(existing.teamId);
     if (!authorization.isAuthorized) {
@@ -72,7 +75,8 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const existing = await getPlayer(id);
+    const orgContext = await resolveOrgContext(userId);
+    const existing = await getPlayer(id, orgContext);
 
     const authorization = await authorizeTeamMutation(existing.teamId);
     if (!authorization.isAuthorized) {

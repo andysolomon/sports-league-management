@@ -1,8 +1,15 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { getSeasons } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { SeasonsTable } from "./seasons-table";
 
 export default async function SeasonsPage() {
-  const seasons = await getSeasons();
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const orgContext = await resolveOrgContext(userId);
+  const seasons = await getSeasons(orgContext.visibleLeagueIds);
 
   return (
     <div>

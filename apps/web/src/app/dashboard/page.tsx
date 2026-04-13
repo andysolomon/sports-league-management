@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import {
   getTeams,
   getPlayers,
@@ -6,6 +8,7 @@ import {
   getDivisions,
   getLeagues,
 } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Trophy,
@@ -24,12 +27,18 @@ const statCards = [
 ] as const;
 
 export default async function DashboardPage() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const orgContext = await resolveOrgContext(userId);
+  const ids = orgContext.visibleLeagueIds;
+
   const [leagues, teams, players, seasons, divisions] = await Promise.all([
-    getLeagues(),
-    getTeams(),
-    getPlayers(),
-    getSeasons(),
-    getDivisions(),
+    getLeagues(ids),
+    getTeams(ids),
+    getPlayers(ids),
+    getSeasons(ids),
+    getDivisions(ids),
   ]);
 
   const counts: Record<string, number> = {

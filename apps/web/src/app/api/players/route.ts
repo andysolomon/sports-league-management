@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getPlayers, getPlayersByTeam, createPlayer } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { CreatePlayerInputSchema } from "@sports-management/api-contracts";
 import { authorizeTeamMutation } from "@/lib/authorization";
 import { handleApiError } from "@/lib/api-error";
@@ -11,8 +12,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
+    const orgContext = await resolveOrgContext(userId);
     const teamId = request.nextUrl.searchParams.get("teamId");
-    const data = teamId ? await getPlayersByTeam(teamId) : await getPlayers();
+    const data = teamId
+      ? await getPlayersByTeam(teamId, orgContext)
+      : await getPlayers(orgContext.visibleLeagueIds);
     return NextResponse.json(data);
   } catch (error) {
     return handleApiError(error, "/api/players");
