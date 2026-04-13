@@ -174,21 +174,19 @@ export async function upsertTeam(input: {
   stadium: string;
   leagueId: string;
   divisionId: string;
+  logoUrl?: string | null;
 }): Promise<{ dto: TeamDto; created: boolean }> {
   const conn = await getSalesforceConnection();
-  const existing = await conn.query<{
+  type TeamRec = {
     Id: string; Name: string; League__c: string; City__c: string;
     Stadium__c: string; Founded_Year__c: number | null;
-    Location__c: string; Division__c: string;
-  }>(
-    `SELECT Id, Name, League__c, City__c, Stadium__c, Founded_Year__c, Location__c, Division__c FROM Team__c WHERE Name = '${input.name.replace(/'/g, "\\'")}' AND League__c = '${input.leagueId}' LIMIT 1`,
+    Location__c: string; Division__c: string; Logo_URL__c: string | null;
+  };
+  const existing = await conn.query<TeamRec>(
+    `SELECT Id, Name, League__c, City__c, Stadium__c, Founded_Year__c, Location__c, Division__c, Logo_URL__c FROM Team__c WHERE Name = '${input.name.replace(/'/g, "\\'")}' AND League__c = '${input.leagueId}' LIMIT 1`,
   );
 
-  const toDto = (rec: {
-    Id: string; Name: string; League__c: string; City__c: string;
-    Stadium__c: string; Founded_Year__c: number | null;
-    Location__c: string; Division__c: string;
-  }): TeamDto => ({
+  const toDto = (rec: TeamRec): TeamDto => ({
     id: rec.Id,
     name: rec.Name,
     leagueId: rec.League__c,
@@ -197,6 +195,7 @@ export async function upsertTeam(input: {
     foundedYear: rec.Founded_Year__c ?? null,
     location: rec.Location__c ?? "",
     divisionId: rec.Division__c ?? "",
+    logoUrl: rec.Logo_URL__c ?? null,
   });
 
   if (existing.totalSize > 0) {
@@ -206,8 +205,9 @@ export async function upsertTeam(input: {
       City__c: input.city,
       Stadium__c: input.stadium,
       Division__c: input.divisionId,
+      ...(input.logoUrl !== undefined && { Logo_URL__c: input.logoUrl }),
     });
-    const updated = { ...rec, City__c: input.city, Stadium__c: input.stadium, Division__c: input.divisionId };
+    const updated = { ...rec, City__c: input.city, Stadium__c: input.stadium, Division__c: input.divisionId, Logo_URL__c: input.logoUrl ?? rec.Logo_URL__c };
     return { dto: toDto(updated), created: false };
   }
 
@@ -217,6 +217,7 @@ export async function upsertTeam(input: {
     City__c: input.city,
     Stadium__c: input.stadium,
     Division__c: input.divisionId,
+    Logo_URL__c: input.logoUrl ?? null,
   });
   if (!result.success) {
     throw new Error(`Failed to create team: ${result.errors?.map((e) => e.message).join(", ") ?? "unknown error"}`);
@@ -226,6 +227,7 @@ export async function upsertTeam(input: {
       Id: result.id, Name: input.name, League__c: input.leagueId,
       City__c: input.city, Stadium__c: input.stadium,
       Founded_Year__c: null, Location__c: "", Division__c: input.divisionId,
+      Logo_URL__c: input.logoUrl ?? null,
     }),
     created: true,
   };
@@ -238,18 +240,21 @@ export async function upsertPlayer(input: {
   jerseyNumber?: number | null;
   dateOfBirth?: string | null;
   status: string;
+  headshotUrl?: string | null;
 }): Promise<{ dto: PlayerDto; created: boolean }> {
   const conn = await getSalesforceConnection();
   const existing = await conn.query<{
     Id: string; Name: string; Team__c: string; Position__c: string;
     Jersey_Number__c: number | null; Date_of_Birth__c: string | null; Status__c: string;
+    Headshot_URL__c: string | null;
   }>(
-    `SELECT Id, Name, Team__c, Position__c, Jersey_Number__c, Date_of_Birth__c, Status__c FROM Player__c WHERE Name = '${input.name.replace(/'/g, "\\'")}' AND Team__c = '${input.teamId}' LIMIT 1`,
+    `SELECT Id, Name, Team__c, Position__c, Jersey_Number__c, Date_of_Birth__c, Status__c, Headshot_URL__c FROM Player__c WHERE Name = '${input.name.replace(/'/g, "\\'")}' AND Team__c = '${input.teamId}' LIMIT 1`,
   );
 
   const toDto = (rec: {
     Id: string; Name: string; Team__c: string; Position__c: string;
     Jersey_Number__c: number | null; Date_of_Birth__c: string | null; Status__c: string;
+    Headshot_URL__c: string | null;
   }): PlayerDto => ({
     id: rec.Id,
     name: rec.Name,
@@ -258,6 +263,7 @@ export async function upsertPlayer(input: {
     jerseyNumber: rec.Jersey_Number__c ?? null,
     dateOfBirth: rec.Date_of_Birth__c ?? null,
     status: rec.Status__c ?? "",
+    headshotUrl: rec.Headshot_URL__c ?? null,
   });
 
   if (existing.totalSize > 0) {
@@ -268,6 +274,7 @@ export async function upsertPlayer(input: {
       Jersey_Number__c: input.jerseyNumber ?? null,
       Date_of_Birth__c: input.dateOfBirth ?? null,
       Status__c: input.status,
+      ...(input.headshotUrl !== undefined && { Headshot_URL__c: input.headshotUrl }),
     });
     return {
       dto: toDto({
@@ -276,6 +283,7 @@ export async function upsertPlayer(input: {
         Jersey_Number__c: input.jerseyNumber ?? null,
         Date_of_Birth__c: input.dateOfBirth ?? null,
         Status__c: input.status,
+        Headshot_URL__c: input.headshotUrl ?? rec.Headshot_URL__c,
       }),
       created: false,
     };
@@ -288,6 +296,7 @@ export async function upsertPlayer(input: {
     Jersey_Number__c: input.jerseyNumber ?? null,
     Date_of_Birth__c: input.dateOfBirth ?? null,
     Status__c: input.status,
+    Headshot_URL__c: input.headshotUrl ?? null,
   });
   if (!result.success) {
     throw new Error(`Failed to create player: ${result.errors?.map((e) => e.message).join(", ") ?? "unknown error"}`);
@@ -297,6 +306,7 @@ export async function upsertPlayer(input: {
       Id: result.id, Name: input.name, Team__c: input.teamId,
       Position__c: input.position, Jersey_Number__c: input.jerseyNumber ?? null,
       Date_of_Birth__c: input.dateOfBirth ?? null, Status__c: input.status,
+      Headshot_URL__c: input.headshotUrl ?? null,
     }),
     created: true,
   };
@@ -342,6 +352,7 @@ export async function bulkImportLeague(
           stadium: team.stadium,
           leagueId,
           divisionId,
+          logoUrl: team.logoUrl,
         });
         teamId = teamResult.dto.id;
         if (teamResult.created) created.teams++; else updated.teams++;
@@ -359,6 +370,7 @@ export async function bulkImportLeague(
             jerseyNumber: player.jerseyNumber,
             dateOfBirth: player.dateOfBirth,
             status: player.status,
+            headshotUrl: player.headshotUrl,
           });
           if (playerResult.created) created.players++; else updated.players++;
         } catch (err) {

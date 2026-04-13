@@ -36,6 +36,7 @@ export const TeamDtoSchema = z.object({
   foundedYear: z.number().nullable(),
   location: z.string(),
   divisionId: z.string(),
+  logoUrl: z.string().nullable(),
 }) satisfies z.ZodType<TeamDto>;
 
 export const PlayerDtoSchema = z.object({
@@ -46,6 +47,7 @@ export const PlayerDtoSchema = z.object({
   jerseyNumber: z.number().nullable(),
   dateOfBirth: z.string().nullable(),
   status: z.string(),
+  headshotUrl: z.string().nullable(),
 }) satisfies z.ZodType<PlayerDto>;
 
 export const SeasonDtoSchema = z.object({

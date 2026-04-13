@@ -28,6 +28,26 @@
                 <default>false</default>
                 <label>Inactive</label>
             </value>
+            <value>
+                <fullName>Injured Reserve</fullName>
+                <default>false</default>
+                <label>Injured Reserve</label>
+            </value>
+            <value>
+                <fullName>Practice Squad</fullName>
+                <default>false</default>
+                <label>Practice Squad</label>
+            </value>
+            <value>
+                <fullName>Suspended</fullName>
+                <default>false</default>
+                <label>Suspended</label>
+            </value>
+            <value>
+                <fullName>Physically Unable to Perform</fullName>
+                <default>false</default>
+                <label>Physically Unable to Perform</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
