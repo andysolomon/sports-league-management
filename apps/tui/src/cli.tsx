@@ -13,6 +13,7 @@ const cli = meow(
     divisions            Browse divisions
     import-teams <csv>   Bulk import teams from a CSV file
     import-json <json>   Import leagues, teams, and players from a JSON file
+    sync-nfl             Sync all NFL teams and rosters from ESPN
     (no command)         Launch the interactive TUI
 
   Environment
@@ -56,6 +57,15 @@ if (command === "login") {
   const { runImportJson } = await import("./commands/import-json.js");
   try {
     await runImportJson(jsonPath);
+    process.exit(0);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+} else if (command === "sync-nfl") {
+  const { runSyncNfl } = await import("./commands/sync-nfl.js");
+  try {
+    await runSyncNfl();
     process.exit(0);
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
