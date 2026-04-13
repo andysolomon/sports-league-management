@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await bulkImportLeague(parsed.data);
+    const result = await bulkImportLeague(parsed.data, authResult.userId);
     return NextResponse.json(result);
   } catch (error) {
     return handleApiError(error, "/api/cli/import POST");

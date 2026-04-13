@@ -1,8 +1,15 @@
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { getPlayers } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { PlayersTable } from "./players-table";
 
 export default async function PlayersPage() {
-  const players = await getPlayers();
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const orgContext = await resolveOrgContext(userId);
+  const players = await getPlayers(orgContext.visibleLeagueIds);
 
   return (
     <div>

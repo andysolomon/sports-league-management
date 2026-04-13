@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { getPlayersByTeam } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { handleApiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getPlayersByTeam(teamId);
+    const orgContext = await resolveOrgContext(authResult.userId);
+    const data = await getPlayersByTeam(teamId, orgContext);
     return NextResponse.json(data);
   } catch (error) {
     return handleApiError(error, "/api/cli/players");

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getUserTier, getStripeCustomerId } from "@/lib/authorization";
 import { TIER_CONFIGS } from "@/lib/tiers";
 import { getTeams } from "@/lib/salesforce-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BillingActions } from "./_components/billing-actions";
@@ -27,7 +28,8 @@ export default async function BillingPage({
   // Fetch usage stats from Salesforce
   let teamCount = 0;
   try {
-    const teams = await getTeams();
+    const orgContext = await resolveOrgContext(userId);
+    const teams = await getTeams(orgContext.visibleLeagueIds);
     teamCount = teams.length;
   } catch {
     // Salesforce errors should not break the billing page

@@ -1,0 +1,182 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const { mockGetOrganizationMembershipList, mockQuery } = vi.hoisted(() => ({
+  mockGetOrganizationMembershipList: vi.fn(),
+  mockQuery: vi.fn(),
+}));
+
+vi.mock("@clerk/nextjs/server", () => ({
+  clerkClient: vi.fn().mockResolvedValue({
+    users: {
+      getOrganizationMembershipList: mockGetOrganizationMembershipList,
+    },
+  }),
+}));
+
+vi.mock("../salesforce", () => ({
+  getSalesforceConnection: vi.fn().mockResolvedValue({
+    query: mockQuery,
+  }),
+}));
+
+vi.mock("react", () => ({
+  cache: (fn: Function) => fn,
+}));
+
+import { resolveOrgContext, requireLeagueAccess, requireOrgAdmin, getLeagueOrgId } from "../org-context";
+
+describe("resolveOrgContext", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns visible league IDs for user with org memberships", async () => {
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [
+        { organization: { id: "org_abc" } },
+        { organization: { id: "org_def" } },
+      ],
+    });
+
+    mockQuery.mockResolvedValue({
+      records: [
+        { Id: "league_1" },
+        { Id: "league_2" },
+        { Id: "league_public" },
+      ],
+    });
+
+    const ctx = await resolveOrgContext("user_123");
+
+    expect(ctx.userId).toBe("user_123");
+    expect(ctx.orgIds).toEqual(["org_abc", "org_def"]);
+    expect(ctx.visibleLeagueIds).toEqual(["league_1", "league_2", "league_public"]);
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("org_abc"),
+    );
+    expect(mockQuery).toHaveBeenCalledWith(
+      expect.stringContaining("Clerk_Org_Id__c = null"),
+    );
+  });
+
+  it("returns only public leagues when user has no orgs", async () => {
+    mockGetOrganizationMembershipList.mockResolvedValue({ data: [] });
+    mockQuery.mockResolvedValue({
+      records: [{ Id: "league_public" }],
+    });
+
+    const ctx = await resolveOrgContext("user_no_orgs");
+
+    expect(ctx.orgIds).toEqual([]);
+    expect(ctx.visibleLeagueIds).toEqual(["league_public"]);
+    expect(mockQuery).toHaveBeenCalledWith(
+      "SELECT Id FROM League__c WHERE Clerk_Org_Id__c = null",
+    );
+  });
+
+  it("handles pagination of org memberships", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, i) => ({
+      organization: { id: `org_${i}` },
+    }));
+    const secondPage = [{ organization: { id: "org_100" } }];
+
+    mockGetOrganizationMembershipList
+      .mockResolvedValueOnce({ data: firstPage })
+      .mockResolvedValueOnce({ data: secondPage });
+
+    mockQuery.mockResolvedValue({ records: [] });
+
+    const ctx = await resolveOrgContext("user_many_orgs");
+
+    expect(ctx.orgIds).toHaveLength(101);
+    expect(mockGetOrganizationMembershipList).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("requireLeagueAccess", () => {
+  it("does not throw when league is in visible set", () => {
+    const ctx = {
+      userId: "u1",
+      orgIds: ["org_1"],
+      visibleLeagueIds: ["lg_1", "lg_2"],
+    };
+    expect(() => requireLeagueAccess("lg_1", ctx)).not.toThrow();
+  });
+
+  it("throws when league is not in visible set", () => {
+    const ctx = {
+      userId: "u1",
+      orgIds: ["org_1"],
+      visibleLeagueIds: ["lg_1"],
+    };
+    expect(() => requireLeagueAccess("lg_other", ctx)).toThrow(
+      "You do not have access to this league",
+    );
+  });
+});
+
+describe("requireOrgAdmin", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("does not throw when user is org admin", async () => {
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [
+        { organization: { id: "org_abc" }, role: "org:admin" },
+      ],
+    });
+
+    await expect(requireOrgAdmin("org_abc", "user_123")).resolves.toBeUndefined();
+  });
+
+  it("throws when user is not admin", async () => {
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [
+        { organization: { id: "org_abc" }, role: "org:member" },
+      ],
+    });
+
+    await expect(requireOrgAdmin("org_abc", "user_123")).rejects.toThrow(
+      "You must be an admin",
+    );
+  });
+
+  it("throws when user is not a member of the org at all", async () => {
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [
+        { organization: { id: "org_other" }, role: "org:admin" },
+      ],
+    });
+
+    await expect(requireOrgAdmin("org_abc", "user_123")).rejects.toThrow(
+      "You must be an admin",
+    );
+  });
+});
+
+describe("getLeagueOrgId", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns org ID for a league with an org", async () => {
+    mockQuery.mockResolvedValue({
+      totalSize: 1,
+      records: [{ Clerk_Org_Id__c: "org_abc" }],
+    });
+
+    const orgId = await getLeagueOrgId("league_1");
+    expect(orgId).toBe("org_abc");
+  });
+
+  it("returns null for a public league", async () => {
+    mockQuery.mockResolvedValue({
+      totalSize: 1,
+      records: [{ Clerk_Org_Id__c: null }],
+    });
+
+    const orgId = await getLeagueOrgId("league_public");
+    expect(orgId).toBeNull();
+  });
+
+  it("throws when league not found", async () => {
+    mockQuery.mockResolvedValue({ totalSize: 0, records: [] });
+
+    await expect(getLeagueOrgId("nonexistent")).rejects.toThrow("League not found");
+  });
+});
