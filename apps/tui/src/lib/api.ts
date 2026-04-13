@@ -290,3 +290,26 @@ export async function importJson(
   );
   return (await res.json()) as ImportResultDto;
 }
+
+export interface SyncReportDto {
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  importResult: ImportResultDto | null;
+  adapterErrors: string[];
+}
+
+export async function syncNfl(
+  baseUrl: string,
+  apiKey: string,
+): Promise<SyncReportDto> {
+  const res = await instrumentedFetch(
+    `${baseUrl}/api/cli/import/nfl-sync`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    },
+    "Failed to sync NFL data",
+  );
+  return (await res.json()) as SyncReportDto;
+}

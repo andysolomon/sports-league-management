@@ -1,0 +1,42 @@
+{
+  "sports": [
+    {
+      "leagues": [
+        {
+          "teams": [
+            {
+              "team": {
+                "id": "2",
+                "displayName": "Buffalo Bills",
+                "name": "Bills",
+                "location": "Buffalo",
+                "abbreviation": "BUF",
+                "logos": [{ "href": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png" }]
+              }
+            },
+            {
+              "team": {
+                "id": "15",
+                "displayName": "Miami Dolphins",
+                "name": "Dolphins",
+                "location": "Miami",
+                "abbreviation": "MIA",
+                "logos": [{ "href": "https://a.espncdn.com/i/teamlogos/nfl/500/mia.png" }]
+              }
+            },
+            {
+              "team": {
+                "id": "25",
+                "displayName": "San Francisco 49ers",
+                "name": "49ers",
+                "location": "San Francisco",
+                "abbreviation": "SF",
+                "logos": [{ "href": "https://a.espncdn.com/i/teamlogos/nfl/500/sf.png" }]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

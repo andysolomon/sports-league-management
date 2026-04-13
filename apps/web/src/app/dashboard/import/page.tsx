@@ -1,4 +1,5 @@
 import { ImportForm } from "./_components/import-form";
+import { NflSyncCard } from "./_components/nfl-sync-card";
 
 export default function ImportPage() {
   return (
@@ -6,7 +7,10 @@ export default function ImportPage() {
       <h2 className="mb-6 text-lg font-semibold text-gray-900">
         Import Data
       </h2>
-      <ImportForm />
+      <div className="space-y-8">
+        <NflSyncCard />
+        <ImportForm />
+      </div>
     </div>
   );
 }

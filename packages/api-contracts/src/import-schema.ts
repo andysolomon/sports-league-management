@@ -6,12 +6,14 @@ const PlayerImportSchema = z.object({
   jerseyNumber: z.number().nullable().optional(),
   dateOfBirth: z.string().nullable().optional(),
   status: z.string().min(1).optional().default("Active"),
+  headshotUrl: z.string().url().nullable().optional(),
 });
 
 const TeamImportSchema = z.object({
   name: z.string().min(1),
   city: z.string().min(1),
   stadium: z.string().min(1),
+  logoUrl: z.string().url().nullable().optional(),
   players: z.array(PlayerImportSchema).optional().default([]),
 });
 

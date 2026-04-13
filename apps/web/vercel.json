@@ -1,3 +1,9 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/nfl-sync",
+      "schedule": "0 4 * * *"
+    }
+  ]
 }

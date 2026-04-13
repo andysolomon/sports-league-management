@@ -25,6 +25,7 @@ export interface TeamDto {
   foundedYear: number | null;
   location: string;
   divisionId: string;
+  logoUrl: string | null;
 }
 
 export interface PlayerDto {
@@ -35,6 +36,7 @@ export interface PlayerDto {
   jerseyNumber: number | null;
   dateOfBirth: string | null;
   status: string;
+  headshotUrl: string | null;
 }
 
 export interface SeasonDto {
@@ -111,6 +113,21 @@ export interface ImportResult {
   created: ImportResultCounts;
   updated: ImportResultCounts;
   errors: ImportError[];
+}
+
+// --- Sync types ---
+
+export interface SyncReport {
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  importResult: ImportResult | null;
+  adapterErrors: string[];
+}
+
+export interface SyncConfig {
+  syncEnabled: boolean;
+  lastSyncReport: SyncReport | null;
 }
 
 // --- Subscription tier types ---

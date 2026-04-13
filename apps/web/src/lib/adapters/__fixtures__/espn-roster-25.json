@@ -1,0 +1,17 @@
+{
+  "athletes": [
+    {
+      "position": "offense",
+      "items": [
+        {
+          "fullName": "Brock Purdy",
+          "jersey": "13",
+          "dateOfBirth": "1999-12-09T07:00Z",
+          "position": { "abbreviation": "QB" },
+          "status": { "name": "Active" },
+          "headshot": { "href": "https://a.espncdn.com/i/headshots/nfl/players/full/4432577.png" }
+        }
+      ]
+    }
+  ]
+}

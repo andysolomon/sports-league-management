@@ -1,0 +1,15 @@
+{
+  "team": {
+    "id": "2",
+    "displayName": "Buffalo Bills",
+    "name": "Bills",
+    "location": "Buffalo",
+    "abbreviation": "BUF",
+    "logos": [{ "href": "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png" }],
+    "franchise": {
+      "venue": {
+        "fullName": "Highmark Stadium"
+      }
+    }
+  }
+}

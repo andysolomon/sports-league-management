@@ -1,0 +1,38 @@
+{
+  "athletes": [
+    {
+      "position": "offense",
+      "items": [
+        {
+          "fullName": "Josh Allen",
+          "jersey": "17",
+          "dateOfBirth": "1996-05-21T07:00Z",
+          "position": { "abbreviation": "QB" },
+          "status": { "name": "Active" },
+          "headshot": { "href": "https://a.espncdn.com/i/headshots/nfl/players/full/3918298.png" }
+        },
+        {
+          "fullName": "James Cook",
+          "jersey": "4",
+          "dateOfBirth": "1999-09-25T07:00Z",
+          "position": { "abbreviation": "RB" },
+          "status": { "name": "Active" },
+          "headshot": { "href": "https://a.espncdn.com/i/headshots/nfl/players/full/4362628.png" }
+        }
+      ]
+    },
+    {
+      "position": "defense",
+      "items": [
+        {
+          "fullName": "Ed Oliver",
+          "jersey": "91",
+          "dateOfBirth": "1997-12-12T07:00Z",
+          "position": { "abbreviation": "DT" },
+          "status": { "name": "Active" },
+          "headshot": { "href": "https://a.espncdn.com/i/headshots/nfl/players/full/3917315.png" }
+        }
+      ]
+    }
+  ]
+}
