@@ -1,4 +1,6 @@
+import { clerkClient } from "@clerk/nextjs/server";
 import { getSalesforceConnection } from "./salesforce";
+import { requireOrgAdmin } from "./org-context";
 import type {
   ApiResponse,
   LeagueDto,
@@ -129,7 +131,10 @@ export function updateTeam(
 
 // --- Upsert functions (direct sObject operations for import) ---
 
-export async function upsertLeague(name: string): Promise<{ dto: LeagueDto; created: boolean }> {
+export async function upsertLeague(
+  name: string,
+  createdByUserId?: string,
+): Promise<{ dto: LeagueDto; created: boolean }> {
   const conn = await getSalesforceConnection();
   const existing = await conn.query<{ Id: string; Name: string; Clerk_Org_Id__c: string | null }>(
     `SELECT Id, Name, Clerk_Org_Id__c FROM League__c WHERE Name = '${name.replace(/'/g, "\\'")}'  LIMIT 1`,
@@ -137,14 +142,32 @@ export async function upsertLeague(name: string): Promise<{ dto: LeagueDto; crea
 
   if (existing.totalSize > 0) {
     const rec = existing.records[0];
+    // If league exists and has an org, verify user is admin of that org
+    if (rec.Clerk_Org_Id__c && createdByUserId) {
+      await requireOrgAdmin(rec.Clerk_Org_Id__c, createdByUserId);
+    }
     return { dto: { id: rec.Id, name: rec.Name, orgId: rec.Clerk_Org_Id__c ?? null }, created: false };
   }
 
-  const result = await conn.sobject("League__c").create({ Name: name });
+  // Create Clerk Organization if we have a user context
+  let orgId: string | null = null;
+  if (createdByUserId) {
+    const client = await clerkClient();
+    const org = await client.organizations.createOrganization({
+      name,
+      createdBy: createdByUserId,
+    });
+    orgId = org.id;
+  }
+
+  const result = await conn.sobject("League__c").create({
+    Name: name,
+    Clerk_Org_Id__c: orgId,
+  });
   if (!result.success) {
     throw new Error(`Failed to create league: ${result.errors?.map((e) => e.message).join(", ") ?? "unknown error"}`);
   }
-  return { dto: { id: result.id, name, orgId: null }, created: true };
+  return { dto: { id: result.id, name, orgId }, created: true };
 }
 
 export async function upsertDivision(
@@ -316,6 +339,7 @@ export async function upsertPlayer(input: {
 
 export async function bulkImportLeague(
   payload: LeagueImportPayload,
+  createdByUserId?: string,
 ): Promise<ImportResult> {
   const errors: ImportError[] = [];
   const created = { leagues: 0, divisions: 0, teams: 0, players: 0 };
@@ -324,7 +348,7 @@ export async function bulkImportLeague(
   // 1. Upsert league
   let leagueId: string;
   try {
-    const leagueResult = await upsertLeague(payload.league.name);
+    const leagueResult = await upsertLeague(payload.league.name, createdByUserId);
     leagueId = leagueResult.dto.id;
     if (leagueResult.created) created.leagues++; else updated.leagues++;
   } catch (err) {
