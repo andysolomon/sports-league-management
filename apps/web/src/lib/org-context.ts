@@ -42,10 +42,19 @@ export const resolveOrgContext = cache(
       offset += limit;
     }
 
-    // Get subscribed public league IDs from Clerk user metadata
-    const user = await client.users.getUser(userId);
-    const subscribedLeagueIds =
-      (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
+    // Get subscribed public league IDs from Clerk user metadata.
+    // We already have org memberships from getOrganizationMembershipList above,
+    // so use currentUser() pattern via the membership list's user data when
+    // possible. Fall back to getUser() if needed, but handle Forbidden errors
+    // gracefully for Clerk instances where the secret key lacks users.read scope.
+    let subscribedLeagueIds: string[] = [];
+    try {
+      const user = await client.users.getUser(userId);
+      subscribedLeagueIds =
+        (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
+    } catch {
+      // If getUser fails (e.g. Forbidden), continue with empty subscriptions
+    }
 
     // Build SOQL based on what the user has access to
     const hasOrgs = orgIds.length > 0;

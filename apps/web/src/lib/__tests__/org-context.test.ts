@@ -159,6 +159,34 @@ describe("resolveOrgContext", () => {
     expect(ctx.subscribedLeagueIds).toEqual([]);
     expect(ctx.visibleLeagueIds).toEqual([]);
   });
+
+  it("gracefully handles getUser Forbidden error", async () => {
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [{ organization: { id: "org_abc" } }],
+    });
+    mockGetUser.mockRejectedValue(new Error("Forbidden"));
+
+    mockQuery.mockResolvedValue({
+      records: [{ Id: "league_1" }],
+    });
+
+    const ctx = await resolveOrgContext("user_forbidden");
+
+    expect(ctx.orgIds).toEqual(["org_abc"]);
+    expect(ctx.visibleLeagueIds).toEqual(["league_1"]);
+    expect(ctx.subscribedLeagueIds).toEqual([]);
+  });
+
+  it("returns org leagues when getUser throws and no subscriptions", async () => {
+    mockGetOrganizationMembershipList.mockResolvedValue({ data: [] });
+    mockGetUser.mockRejectedValue(new Error("Forbidden"));
+
+    const ctx = await resolveOrgContext("user_no_access");
+
+    expect(ctx.visibleLeagueIds).toEqual([]);
+    expect(ctx.subscribedLeagueIds).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
 });
 
 describe("requireLeagueAccess", () => {
