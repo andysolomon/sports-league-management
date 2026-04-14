@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const authorization = await authorizeTeamMutation(parsed.data.teamId);
+  const authorization = await authorizeTeamMutation(parsed.data.teamId, userId);
   if (!authorization.isAuthorized) {
     return NextResponse.json(
       { error: "You are not authorized to manage this team" },

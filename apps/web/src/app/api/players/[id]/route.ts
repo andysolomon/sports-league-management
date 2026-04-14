@@ -39,7 +39,7 @@ export async function PUT(
     const orgContext = await resolveOrgContext(userId);
     const existing = await getPlayer(id, orgContext);
 
-    const authorization = await authorizeTeamMutation(existing.teamId);
+    const authorization = await authorizeTeamMutation(existing.teamId, userId);
     if (!authorization.isAuthorized) {
       return NextResponse.json(
         { error: "You are not authorized to manage this team" },
@@ -78,7 +78,7 @@ export async function DELETE(
     const orgContext = await resolveOrgContext(userId);
     const existing = await getPlayer(id, orgContext);
 
-    const authorization = await authorizeTeamMutation(existing.teamId);
+    const authorization = await authorizeTeamMutation(existing.teamId, userId);
     if (!authorization.isAuthorized) {
       return NextResponse.json(
         { error: "You are not authorized to manage this team" },
