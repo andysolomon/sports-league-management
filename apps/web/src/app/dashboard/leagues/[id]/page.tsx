@@ -60,6 +60,12 @@ export default async function LeagueDetailPage({
               <InviteForm orgId={league.orgId} />
               <InvitationList orgId={league.orgId} />
               <InviteLinkSection orgId={league.orgId} />
+              <Link
+                href={`/dashboard/leagues/${id}/members`}
+                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+              >
+                Manage Members &rarr;
+              </Link>
             </div>
           )}
           {!isAdmin && (
