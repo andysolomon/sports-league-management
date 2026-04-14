@@ -20,7 +20,7 @@ export default async function TeamDetailPage({
   const [team, players, canManage] = await Promise.all([
     getTeam(id, orgContext),
     getPlayersByTeam(id, orgContext),
-    canManageTeam(id),
+    canManageTeam(id, userId),
   ]);
 
   return (

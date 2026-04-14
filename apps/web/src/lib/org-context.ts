@@ -117,6 +117,25 @@ export async function requireOrgAdmin(
 }
 
 /**
+ * Returns the user's role within a specific Clerk Organization,
+ * or null if they are not a member.
+ */
+export async function getUserRoleInOrg(
+  orgId: string,
+  userId: string,
+): Promise<"org:admin" | "org:member" | null> {
+  const client = await clerkClient();
+  const memberships = await client.users.getOrganizationMembershipList({
+    userId,
+  });
+  const membership = memberships.data.find(
+    (m) => m.organization.id === orgId,
+  );
+  if (!membership) return null;
+  return membership.role as "org:admin" | "org:member";
+}
+
+/**
  * Find the Clerk Org ID that owns a given league.
  * Returns null for public leagues.
  */
