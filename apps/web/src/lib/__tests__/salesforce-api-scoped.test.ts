@@ -54,12 +54,14 @@ const visibleCtx: OrgContext = {
   userId: "u1",
   orgIds: ["org_1"],
   visibleLeagueIds: ["lg_1", "lg_public"],
+  subscribedLeagueIds: [],
 };
 
 const restrictedCtx: OrgContext = {
   userId: "u2",
   orgIds: [],
   visibleLeagueIds: ["lg_public"],
+  subscribedLeagueIds: [],
 };
 
 describe("org-scoped reads", () => {

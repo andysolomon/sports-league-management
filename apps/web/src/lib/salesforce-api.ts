@@ -54,6 +54,15 @@ function idList(ids: string[]): string {
   return ids.map((id) => `'${id}'`).join(",");
 }
 
+// Public leagues (no org context required)
+export async function getPublicLeagues(): Promise<LeagueDto[]> {
+  const conn = await getSalesforceConnection();
+  const result = await conn.query<{ Id: string; Name: string; Clerk_Org_Id__c: string | null }>(
+    "SELECT Id, Name, Clerk_Org_Id__c FROM League__c WHERE Clerk_Org_Id__c = null",
+  );
+  return result.records.map((r) => ({ id: r.Id, name: r.Name, orgId: r.Clerk_Org_Id__c ?? null }));
+}
+
 // Leagues
 export async function getLeagues(visibleLeagueIds: string[]): Promise<LeagueDto[]> {
   if (visibleLeagueIds.length === 0) return [];

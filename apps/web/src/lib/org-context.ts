@@ -6,6 +6,7 @@ export interface OrgContext {
   userId: string;
   orgIds: string[];
   visibleLeagueIds: string[];
+  subscribedLeagueIds: string[];
 }
 
 /**
@@ -13,7 +14,9 @@ export interface OrgContext {
  * they are allowed to see. Uses React cache() to deduplicate within a single
  * request/render pass.
  *
- * Visible leagues = leagues owned by user's orgs + public leagues (Clerk_Org_Id__c = null).
+ * Visible leagues = leagues owned by user's orgs + explicitly subscribed public leagues.
+ * Public leagues (Clerk_Org_Id__c = null) are opt-in only via subscribedLeagueIds
+ * stored in Clerk user publicMetadata.
  */
 export const resolveOrgContext = cache(
   async (userId: string): Promise<OrgContext> => {
@@ -39,24 +42,44 @@ export const resolveOrgContext = cache(
       offset += limit;
     }
 
-    // Query Salesforce for leagues the user can see
+    // Get subscribed public league IDs from Clerk user metadata
+    const user = await client.users.getUser(userId);
+    const subscribedLeagueIds =
+      (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
+
+    // Build SOQL based on what the user has access to
+    const hasOrgs = orgIds.length > 0;
+    const hasSubs = subscribedLeagueIds.length > 0;
+
+    if (!hasOrgs && !hasSubs) {
+      return { userId, orgIds, visibleLeagueIds: [], subscribedLeagueIds };
+    }
+
     const conn = await getSalesforceConnection();
     let soql: string;
 
-    if (orgIds.length === 0) {
-      // User has no orgs — can only see public leagues
-      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c = null`;
+    if (hasOrgs && hasSubs) {
+      const orgIdStr = idList(orgIds);
+      const subIdStr = idList(subscribedLeagueIds);
+      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr}) OR Id IN (${subIdStr})`;
+    } else if (hasOrgs) {
+      const orgIdStr = idList(orgIds);
+      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr})`;
     } else {
-      const orgIdList = orgIds.map((id) => `'${id}'`).join(",");
-      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdList}) OR Clerk_Org_Id__c = null`;
+      const subIdStr = idList(subscribedLeagueIds);
+      soql = `SELECT Id FROM League__c WHERE Id IN (${subIdStr})`;
     }
 
     const result = await conn.query<{ Id: string }>(soql);
     const visibleLeagueIds = result.records.map((r) => r.Id);
 
-    return { userId, orgIds, visibleLeagueIds };
+    return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
   },
 );
+
+function idList(ids: string[]): string {
+  return ids.map((id) => `'${id}'`).join(",");
+}
 
 /**
  * Check that a specific league is within the user's visible set.

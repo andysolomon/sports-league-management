@@ -7,6 +7,7 @@ import {
   Calendar,
   Layers,
   Trophy,
+  Compass,
   Upload,
   CreditCard,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import NavLink from "./nav-link";
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/leagues", label: "Leagues", icon: Trophy },
+  { href: "/dashboard/discover", label: "Discover", icon: Compass },
   { href: "/dashboard/teams", label: "Teams", icon: Users },
   { href: "/dashboard/players", label: "Players", icon: UserCircle },
   { href: "/dashboard/seasons", label: "Seasons", icon: Calendar },
