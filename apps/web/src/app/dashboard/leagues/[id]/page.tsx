@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
 import InviteForm from "./invite-form";
 import InvitationList from "./invitation-list";
+import InviteLinkSection from "./invite-link-section";
 
 export default async function LeagueDetailPage({
   params,
@@ -58,6 +59,7 @@ export default async function LeagueDetailPage({
             <div className="space-y-6">
               <InviteForm orgId={league.orgId} />
               <InvitationList orgId={league.orgId} />
+              <InviteLinkSection orgId={league.orgId} />
             </div>
           )}
           {!isAdmin && (

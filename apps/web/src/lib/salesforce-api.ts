@@ -63,6 +63,30 @@ export async function getPublicLeagues(): Promise<LeagueDto[]> {
   return result.records.map((r) => ({ id: r.Id, name: r.Name, orgId: r.Clerk_Org_Id__c ?? null }));
 }
 
+// Invite token helpers
+export async function getLeagueByInviteToken(
+  token: string,
+): Promise<{ leagueId: string; orgId: string | null; name: string } | null> {
+  const conn = await getSalesforceConnection();
+  const result = await conn.query<{ Id: string; Name: string; Clerk_Org_Id__c: string | null }>(
+    `SELECT Id, Name, Clerk_Org_Id__c FROM League__c WHERE Invite_Token__c = '${token.replace(/'/g, "\\'")}' LIMIT 1`,
+  );
+  if (result.totalSize === 0) return null;
+  const r = result.records[0];
+  return { leagueId: r.Id, orgId: r.Clerk_Org_Id__c ?? null, name: r.Name };
+}
+
+export async function setLeagueInviteToken(
+  leagueId: string,
+  token: string | null,
+): Promise<void> {
+  const conn = await getSalesforceConnection();
+  await conn.sobject("League__c").update({
+    Id: leagueId,
+    Invite_Token__c: token,
+  });
+}
+
 // Leagues
 export async function getLeagues(visibleLeagueIds: string[]): Promise<LeagueDto[]> {
   if (visibleLeagueIds.length === 0) return [];
