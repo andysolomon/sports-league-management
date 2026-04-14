@@ -38,6 +38,14 @@ async function authorize(): Promise<Connection> {
   const privateKey = process.env.SF_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
   if (!clientId || !username || !privateKey) {
+    console.error("[SF Auth] Missing env vars:", {
+      hasClientId: !!clientId,
+      hasUsername: !!username,
+      hasPrivateKey: !!privateKey,
+      clientIdLen: clientId?.length,
+      usernameLen: username?.length,
+      privateKeyLen: privateKey?.length,
+    });
     throw new Error(
       "Missing Salesforce JWT config. Set SF_CLIENT_ID, SF_USERNAME, and SF_PRIVATE_KEY env vars."
     );
@@ -59,6 +67,7 @@ async function authorize(): Promise<Connection> {
 
   if (!resp.ok) {
     const error = await resp.text();
+    console.error("[SF Auth] JWT auth failed:", resp.status, error);
     throw new Error(`Salesforce JWT auth failed: ${error}`);
   }
 

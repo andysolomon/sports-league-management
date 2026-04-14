@@ -64,7 +64,13 @@ export const resolveOrgContext = cache(
       return { userId, orgIds, visibleLeagueIds: [], subscribedLeagueIds };
     }
 
-    const conn = await getSalesforceConnection();
+    let conn;
+    try {
+      conn = await getSalesforceConnection();
+    } catch (e) {
+      console.error("[OrgContext] SF connection failed:", e);
+      throw e;
+    }
     let soql: string;
 
     if (hasOrgs && hasSubs) {
