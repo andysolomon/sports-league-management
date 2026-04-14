@@ -55,7 +55,11 @@ export default async function LeaguesPage() {
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <Trophy className="h-5 w-5 text-primary" />
-                    <CardTitle>{league.name}</CardTitle>
+                    <CardTitle>
+                      <Link href={`/dashboard/leagues/${league.id}`} className="hover:underline">
+                        {league.name}
+                      </Link>
+                    </CardTitle>
                     <Badge variant="secondary">
                       {leagueDivisions.length} division
                       {leagueDivisions.length !== 1 ? "s" : ""}
