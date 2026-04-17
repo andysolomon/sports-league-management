@@ -1,14 +1,17 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getPublicLeagues } from "@/lib/salesforce-api";
-import { resolveOrgContext } from "@/lib/org-context";
 import DiscoverLeagues from "./discover-leagues";
 
 export default async function DiscoverPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const orgContext = await resolveOrgContext(userId);
+  const client = await clerkClient();
+  const user = await client.users.getUser(userId);
+  const subscribedLeagueIds =
+    (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
+
   const publicLeagues = await getPublicLeagues();
 
   return (
@@ -21,7 +24,7 @@ export default async function DiscoverPage() {
       </p>
       <DiscoverLeagues
         leagues={publicLeagues}
-        subscribedIds={orgContext.subscribedLeagueIds}
+        subscribedIds={subscribedLeagueIds}
       />
     </div>
   );

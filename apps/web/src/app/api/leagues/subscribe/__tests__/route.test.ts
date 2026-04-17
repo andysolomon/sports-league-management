@@ -1,27 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const {
-  mockAuth,
-  mockGetPublicLeagues,
-  mockSubscribeToLeague,
-  mockUnsubscribeFromLeague,
-} = vi.hoisted(
+const { mockAuth, mockQuery, mockGetUser, mockUpdateUser } = vi.hoisted(
   () => ({
     mockAuth: vi.fn(),
-    mockGetPublicLeagues: vi.fn(),
-    mockSubscribeToLeague: vi.fn(),
-    mockUnsubscribeFromLeague: vi.fn(),
+    mockQuery: vi.fn(),
+    mockGetUser: vi.fn(),
+    mockUpdateUser: vi.fn(),
   }),
 );
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: mockAuth,
+  clerkClient: vi.fn().mockResolvedValue({
+    users: {
+      getUser: mockGetUser,
+      updateUser: mockUpdateUser,
+    },
+  }),
 }));
 
-vi.mock("@/lib/data-api", () => ({
-  getPublicLeagues: mockGetPublicLeagues,
-  subscribeToLeague: mockSubscribeToLeague,
-  unsubscribeFromLeague: mockUnsubscribeFromLeague,
+vi.mock("@/lib/salesforce", () => ({
+  getSalesforceConnection: vi.fn().mockResolvedValue({
+    query: mockQuery,
+  }),
 }));
 
 vi.mock("@/lib/api-error", () => ({
@@ -61,7 +62,7 @@ describe("POST /api/leagues/subscribe", () => {
 
   it("returns 404 when league is not public", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockGetPublicLeagues.mockResolvedValue([]);
+    mockQuery.mockResolvedValue({ totalSize: 0, records: [] });
 
     const res = await POST(makeRequest({ leagueId: "lg_private" }));
     expect(res.status).toBe(404);
@@ -69,29 +70,41 @@ describe("POST /api/leagues/subscribe", () => {
 
   it("returns 200 and subscribes successfully", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockGetPublicLeagues.mockResolvedValue([
-      { id: "lg_pub", name: "NFL", orgId: null },
-    ]);
+    mockQuery.mockResolvedValue({
+      totalSize: 1,
+      records: [{ Id: "lg_pub" }],
+    });
+    mockGetUser.mockResolvedValue({
+      publicMetadata: { subscribedLeagueIds: [] },
+    });
+    mockUpdateUser.mockResolvedValue({});
 
     const res = await POST(makeRequest({ leagueId: "lg_pub" }));
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.message).toBe("Subscribed");
-    expect(mockSubscribeToLeague).toHaveBeenCalledWith("user_1", "lg_pub");
+    expect(mockUpdateUser).toHaveBeenCalledWith("user_1", {
+      publicMetadata: { subscribedLeagueIds: ["lg_pub"] },
+    });
   });
 
-  it("returns 200 when subscribe is repeated", async () => {
+  it("returns 200 when already subscribed (idempotent)", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockGetPublicLeagues.mockResolvedValue([
-      { id: "lg_pub", name: "NFL", orgId: null },
-    ]);
+    mockQuery.mockResolvedValue({
+      totalSize: 1,
+      records: [{ Id: "lg_pub" }],
+    });
+    mockGetUser.mockResolvedValue({
+      publicMetadata: { subscribedLeagueIds: ["lg_pub"] },
+    });
 
     const res = await POST(makeRequest({ leagueId: "lg_pub" }));
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.message).toBe("Subscribed");
+    expect(body.message).toBe("Already subscribed");
+    expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 });
 
@@ -107,12 +120,18 @@ describe("DELETE /api/leagues/subscribe", () => {
 
   it("returns 200 and unsubscribes successfully", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
+    mockGetUser.mockResolvedValue({
+      publicMetadata: { subscribedLeagueIds: ["lg_pub", "lg_other"] },
+    });
+    mockUpdateUser.mockResolvedValue({});
 
     const res = await DELETE(makeRequest({ leagueId: "lg_pub" }, "DELETE"));
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.message).toBe("Unsubscribed");
-    expect(mockUnsubscribeFromLeague).toHaveBeenCalledWith("user_1", "lg_pub");
+    expect(mockUpdateUser).toHaveBeenCalledWith("user_1", {
+      publicMetadata: { subscribedLeagueIds: ["lg_other"] },
+    });
   });
 });

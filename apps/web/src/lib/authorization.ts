@@ -1,7 +1,7 @@
 import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import type { Tier } from "./tiers";
 import { getLeagueOrgId } from "./org-context";
-import { getTeamLeagueId } from "./data-api";
+import { getSalesforceConnection } from "./salesforce";
 
 export interface AuthorizationResult {
   userId: string;
@@ -20,7 +20,16 @@ export async function authorizeTeamMutation(
   userId: string,
 ): Promise<AuthorizationResult> {
   try {
-    const leagueId = await getTeamLeagueId(teamId);
+    // Get team's league
+    const conn = await getSalesforceConnection();
+    const result = await conn.query<{ League__c: string }>(
+      `SELECT League__c FROM Team__c WHERE Id = '${teamId}' LIMIT 1`,
+    );
+    if (result.totalSize === 0) {
+      return { userId, isAuthorized: false };
+    }
+
+    const leagueId = result.records[0].League__c;
     const orgId = await getLeagueOrgId(leagueId);
 
     // Public leagues are read-only

@@ -1,16 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockAuth, mockGetPublicLeagues } = vi.hoisted(() => ({
+const { mockAuth, mockQuery } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
-  mockGetPublicLeagues: vi.fn(),
+  mockQuery: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: mockAuth,
 }));
 
-vi.mock("@/lib/salesforce-api", () => ({
-  getPublicLeagues: mockGetPublicLeagues,
+vi.mock("@/lib/salesforce", () => ({
+  getSalesforceConnection: vi.fn().mockResolvedValue({
+    query: mockQuery,
+  }),
 }));
 
 vi.mock("@/lib/api-error", () => ({
@@ -34,10 +36,12 @@ describe("GET /api/leagues/public", () => {
 
   it("returns 200 with public leagues", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockGetPublicLeagues.mockResolvedValue([
-      { id: "lg_1", name: "NFL", orgId: null },
-      { id: "lg_2", name: "NBA", orgId: null },
-    ]);
+    mockQuery.mockResolvedValue({
+      records: [
+        { Id: "lg_1", Name: "NFL", Clerk_Org_Id__c: null },
+        { Id: "lg_2", Name: "NBA", Clerk_Org_Id__c: null },
+      ],
+    });
 
     const res = await GET();
     expect(res.status).toBe(200);

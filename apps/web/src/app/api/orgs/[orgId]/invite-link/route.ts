@@ -1,9 +1,20 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgAdmin } from "@/lib/org-context";
-import { getLeagueForOrg, setLeagueInviteToken } from "@/lib/data-api";
+import { setLeagueInviteToken } from "@/lib/salesforce-api";
+import { getSalesforceConnection } from "@/lib/salesforce";
 import { handleApiError } from "@/lib/api-error";
 import crypto from "crypto";
+
+// Find the league that belongs to this org
+async function getLeagueForOrg(orgId: string): Promise<{ id: string; token: string | null }> {
+  const conn = await getSalesforceConnection();
+  const result = await conn.query<{ Id: string; Invite_Token__c: string | null }>(
+    `SELECT Id, Invite_Token__c FROM League__c WHERE Clerk_Org_Id__c = '${orgId}' LIMIT 1`,
+  );
+  if (result.totalSize === 0) throw new Error("League not found for this organization");
+  return { id: result.records[0].Id, token: result.records[0].Invite_Token__c ?? null };
+}
 
 export async function GET(
   _request: NextRequest,
@@ -19,7 +30,6 @@ export async function GET(
   try {
     await requireOrgAdmin(orgId, userId);
     const league = await getLeagueForOrg(orgId);
-    if (!league) throw new Error("League not found for this organization");
 
     if (!league.token) {
       return NextResponse.json({ url: null, token: null });
@@ -52,7 +62,6 @@ export async function POST(
   try {
     await requireOrgAdmin(orgId, userId);
     const league = await getLeagueForOrg(orgId);
-    if (!league) throw new Error("League not found for this organization");
 
     const token = crypto.randomUUID();
     await setLeagueInviteToken(league.id, token);
@@ -84,7 +93,6 @@ export async function DELETE(
   try {
     await requireOrgAdmin(orgId, userId);
     const league = await getLeagueForOrg(orgId);
-    if (!league) throw new Error("League not found for this organization");
 
     await setLeagueInviteToken(league.id, null);
 

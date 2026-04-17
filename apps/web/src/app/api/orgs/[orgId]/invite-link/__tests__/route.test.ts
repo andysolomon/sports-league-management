@@ -1,15 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mocks = vi.hoisted(() => {
+  const mockQuery = vi.fn();
+  const mockUpdate = vi.fn();
   return {
     mockAuth: vi.fn(),
     mockRequireOrgAdmin: vi.fn(),
+    mockGetSalesforceConnection: vi.fn(() => ({
+      query: mockQuery,
+      sobject: vi.fn(() => ({ update: mockUpdate })),
+    })),
     mockHandleApiError: vi.fn((_err: unknown, _route?: string) => {
       const { NextResponse } = require("next/server");
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }),
-    mockGetLeagueForOrg: vi.fn(),
     mockSetLeagueInviteToken: vi.fn(),
+    mockQuery,
+    mockUpdate,
     mockRandomUUID: vi.fn(() => "test-uuid-1234"),
   };
 });
@@ -22,8 +29,11 @@ vi.mock("@/lib/org-context", () => ({
   requireOrgAdmin: mocks.mockRequireOrgAdmin,
 }));
 
-vi.mock("@/lib/data-api", () => ({
-  getLeagueForOrg: mocks.mockGetLeagueForOrg,
+vi.mock("@/lib/salesforce", () => ({
+  getSalesforceConnection: mocks.mockGetSalesforceConnection,
+}));
+
+vi.mock("@/lib/salesforce-api", () => ({
   setLeagueInviteToken: mocks.mockSetLeagueInviteToken,
 }));
 
@@ -73,9 +83,9 @@ describe("invite-link API", () => {
     it("returns null when no invite link exists", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({
-        id: "league_1",
-        token: null,
+      mocks.mockQuery.mockResolvedValue({
+        totalSize: 1,
+        records: [{ Id: "league_1", Invite_Token__c: null }],
       });
 
       const res = await GET(makeRequest("GET"), { params });
@@ -88,9 +98,9 @@ describe("invite-link API", () => {
     it("returns invite link URL when token exists", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({
-        id: "league_1",
-        token: "abc-123",
+      mocks.mockQuery.mockResolvedValue({
+        totalSize: 1,
+        records: [{ Id: "league_1", Invite_Token__c: "abc-123" }],
       });
 
       const res = await GET(makeRequest("GET"), { params });
@@ -105,9 +115,9 @@ describe("invite-link API", () => {
     it("generates a new token and returns 201", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({
-        id: "league_1",
-        token: null,
+      mocks.mockQuery.mockResolvedValue({
+        totalSize: 1,
+        records: [{ Id: "league_1", Invite_Token__c: null }],
       });
       mocks.mockSetLeagueInviteToken.mockResolvedValue(undefined);
 
@@ -124,9 +134,9 @@ describe("invite-link API", () => {
     it("revokes the token", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({
-        id: "league_1",
-        token: "abc-123",
+      mocks.mockQuery.mockResolvedValue({
+        totalSize: 1,
+        records: [{ Id: "league_1", Invite_Token__c: "abc-123" }],
       });
       mocks.mockSetLeagueInviteToken.mockResolvedValue(undefined);
 

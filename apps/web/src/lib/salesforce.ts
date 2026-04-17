@@ -1,16 +1,10 @@
 import { createSign } from "crypto";
-import ConnectionImport from "jsforce/lib/connection";
+import Connection from "jsforce/lib/connection";
+import OAuth2 from "jsforce/lib/oauth2";
 
-// jsforce is CJS; default export shape differs between Webpack (Next) and tsx/Node ESM.
-const Connection =
-  (ConnectionImport as { default?: typeof ConnectionImport }).default ??
-  ConnectionImport;
-
-type SfConnection = InstanceType<typeof Connection>;
-
-let cachedConnection: SfConnection | null = null;
+let cachedConnection: Connection | null = null;
 let tokenExpiresAt = 0;
-let pendingConnection: Promise<SfConnection> | null = null;
+let pendingConnection: Promise<Connection> | null = null;
 
 const TOKEN_LIFETIME_MS = 2 * 60 * 60 * 1000; // 2 hours
 const REFRESH_BUFFER_MS = 5 * 60 * 1000; // 5 minutes
@@ -19,7 +13,7 @@ function isTokenValid(): boolean {
   return cachedConnection !== null && Date.now() < tokenExpiresAt - REFRESH_BUFFER_MS;
 }
 
-export async function getSalesforceConnection(): Promise<SfConnection> {
+export async function getSalesforceConnection(): Promise<Connection> {
   if (isTokenValid() && cachedConnection) {
     return cachedConnection;
   }
@@ -37,11 +31,11 @@ export async function getSalesforceConnection(): Promise<SfConnection> {
   }
 }
 
-async function authorize(): Promise<SfConnection> {
-  const loginUrl = (process.env.SF_LOGIN_URL ?? "https://login.salesforce.com").trim();
-  const clientId = process.env.SF_CLIENT_ID?.trim();
-  const username = process.env.SF_USERNAME?.trim();
-  const privateKey = process.env.SF_PRIVATE_KEY?.replace(/\\n/g, "\n").trim();
+async function authorize(): Promise<Connection> {
+  const loginUrl = process.env.SF_LOGIN_URL ?? "https://login.salesforce.com";
+  const clientId = process.env.SF_CLIENT_ID;
+  const username = process.env.SF_USERNAME;
+  const privateKey = process.env.SF_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
   if (!clientId || !username || !privateKey) {
     console.error("[SF Auth] Missing env vars:", {

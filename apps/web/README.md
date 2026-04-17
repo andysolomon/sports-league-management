@@ -1,13 +1,13 @@
 # Sports League Management — Web App
 
-External-facing Next.js application for sports league management, backed by Convex for runtime app data.
+External-facing Next.js application for sports league management, backed by Salesforce via JWT bearer flow.
 
 ## Tech Stack
 
 - **Next.js 15** (App Router) with React 19
 - **TypeScript** with strict mode
 - **Clerk** for authentication and authorization
-- **Convex** for application data, sync state, and invite/subscription storage
+- **jsforce** for Salesforce JWT bearer auth
 - **Tailwind CSS 4** + **shadcn/ui** (Radix primitives) for the component library
 - **Lucide React** for icons
 - **Sonner** for toast notifications
@@ -20,7 +20,7 @@ External-facing Next.js application for sports league management, backed by Conv
 
 - Node.js 18+
 - pnpm (managed via Corepack)
-- A Convex deployment URL and admin key
+- A Salesforce org with the `sportsmgmt` package deployed and a Connected App configured for JWT bearer flow
 - A Clerk application
 
 ### Environment Variables
@@ -31,39 +31,10 @@ Copy `.env.local.example` to `.env.local` and fill in:
 |---|---|
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk public key (client-side) |
 | `CLERK_SECRET_KEY` | Clerk secret key (server-side) |
-| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL |
-| `CONVEX_ADMIN_KEY` | Server-only Convex admin key used by Next.js server code |
-| `SF_LOGIN_URL` / `SF_CLIENT_ID` / `SF_USERNAME` / `SF_PRIVATE_KEY` | Legacy migration-only Salesforce envs for backfill scripts |
-
-### Vercel parity
-
-For protected dashboard routes to behave the same locally and in production,
-keep the following values aligned between `apps/web/.env.local` and Vercel
-Production:
-
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `NEXT_PUBLIC_CLERK_SIGN_IN_URL`
-- `NEXT_PUBLIC_CLERK_SIGN_UP_URL`
-- `NEXT_PUBLIC_CONVEX_URL`
-- `CONVEX_ADMIN_KEY`
-
-`NEXT_PUBLIC_APP_URL` should intentionally differ by environment.
-
-From the repo root, you can audit local versus Vercel Production without
-printing secrets:
-
-```bash
-pnpm check:web-env-parity
-```
-
-The public health endpoint also exposes non-secret identity markers that make
-drift easier to spot during debugging:
-
-```bash
-curl -s http://localhost:3000/api/health | python3 -m json.tool
-curl -s https://sprtsmng.vercel.app/api/health | python3 -m json.tool
-```
+| `SF_LOGIN_URL` | Salesforce login endpoint (e.g., `https://login.salesforce.com`) |
+| `SF_CLIENT_ID` | OAuth Connected App client ID |
+| `SF_USERNAME` | Integration user email |
+| `SF_PRIVATE_KEY` | RSA private key (PEM) for JWT signing |
 
 ### Running Locally
 
@@ -121,20 +92,18 @@ src/app/
 - **API routes** verify `userId` from Clerk session before processing requests
 - **Team mutations** check `managedTeamIds` in Clerk user `publicMetadata` via `authorizeTeamMutation()`
 
-### Convex Integration
+### Salesforce Integration
 
-The app uses Convex as its runtime backend:
+The app connects to Salesforce via JWT bearer flow through jsforce:
 
-1. `convex/schema.ts` — Canonical schema for leagues, divisions, teams, players, seasons, subscriptions, and sync config
-2. `convex/sports.ts` — Query and mutation functions for the sports domain
-3. `lib/data-api.ts` — Server-side adapter that keeps the Next.js route/page surface stable while calling Convex over `ConvexHttpClient`
-4. `lib/org-context.ts` — Clerk org memberships plus Convex-backed public-league subscriptions
-5. `lib/salesforce.ts` — Legacy migration-only helper used by backfill scripts while moving data off Salesforce
+1. `lib/salesforce.ts` — Manages OAuth2 JWT auth with 2-hour token caching
+2. `lib/salesforce-api.ts` — Typed client calling Apex REST endpoints at `/services/apexrest/sportsmgmt/v1/*`
+3. API routes act as a BFF layer, adding auth checks and Zod validation before forwarding to Salesforce
 
 ### Data Flow
 
 ```
-Browser → Next.js Page/API Route → Clerk Auth Check → Convex Data Adapter → Convex Queries/Mutations
+Browser → Next.js API Route → Clerk Auth Check → Salesforce API Client → Apex REST → Salesforce
 ```
 
 ### Shared Packages

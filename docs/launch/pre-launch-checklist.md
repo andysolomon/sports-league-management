@@ -36,9 +36,6 @@ This is the canonical readiness gate for the v0.3.0-launch milestone. Every box 
 ## Security
 
 - [ ] **Clerk production keys in production scope** — `vercel env ls | grep CLERK` → `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` should be `pk_live_*` / `sk_live_*` in Production. (Currently `pk_test_*` per the SSL workaround from earlier — see "Known deferrals" below.)
-- [ ] **Vercel/local auth parity check passes** — From repo root run `pnpm check:web-env-parity`. `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL`, `SF_LOGIN_URL`, `SF_CLIENT_ID`, `SF_USERNAME`, and `SF_PRIVATE_KEY` should match between `apps/web/.env.local` and Vercel Production. `NEXT_PUBLIC_APP_URL` is expected to differ.
-- [ ] **Clerk instance and scopes are intentional** — The Clerk publishable/secret keys in Vercel Production must point at the same Clerk instance used locally for the soft-launch path, and that secret key must be allowed to read org memberships and user metadata used by `resolveOrgContext()`.
-- [ ] **Salesforce org parity is intentional** — The Vercel Production `SF_*` values should point at the same Salesforce org as local unless a different production org is explicitly documented here and has all required metadata deployed.
 - [ ] **Stripe test keys in production scope (intentional for v1)** — `sk_test_*` is correct for soft launch. We'll flip to `sk_live_*` after the soft launch retrospective in a separate story.
 - [ ] **Resend domain verified** — `welcome@sprtsmng.andrewsolomon.dev` shows green in https://resend.com/domains and a test send returns 200, not 403.
 - [ ] **Clerk webhook signing secret set** — `vercel env ls | grep CLERK_WEBHOOK` returns the var in both Production and Preview scopes.
@@ -107,7 +104,6 @@ curl -s https://sprtsmng.andrewsolomon.dev/robots.txt
 
 # Vercel env audit
 vercel env ls | grep -E "CLERK|STRIPE|RESEND|SF_"
-pnpm check:web-env-parity
 
 # Run E2E suite
 cd apps/web && pnpm run test:e2e
