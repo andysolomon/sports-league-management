@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockGetOrganizationMembershipList, mockQuery, mockGetUser } =
+const {
+  mockGetOrganizationMembershipList,
+  mockGetUser,
+  mockGetVisibleLeagueContext,
+  mockSubscribeToLeague,
+  mockGetLeagueOrgId,
+} =
   vi.hoisted(() => ({
     mockGetOrganizationMembershipList: vi.fn(),
-    mockQuery: vi.fn(),
     mockGetUser: vi.fn(),
+    mockGetVisibleLeagueContext: vi.fn(),
+    mockSubscribeToLeague: vi.fn(),
+    mockGetLeagueOrgId: vi.fn(),
   }));
 
 vi.mock("@clerk/nextjs/server", () => ({
@@ -16,10 +24,10 @@ vi.mock("@clerk/nextjs/server", () => ({
   }),
 }));
 
-vi.mock("../salesforce", () => ({
-  getSalesforceConnection: vi.fn().mockResolvedValue({
-    query: mockQuery,
-  }),
+vi.mock("../data-api", () => ({
+  getVisibleLeagueContext: mockGetVisibleLeagueContext,
+  subscribeToLeague: mockSubscribeToLeague,
+  getLeagueOrgId: mockGetLeagueOrgId,
 }));
 
 vi.mock("react", () => ({
@@ -34,7 +42,14 @@ import {
 } from "../org-context";
 
 describe("resolveOrgContext", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetVisibleLeagueContext.mockReset();
+    mockSubscribeToLeague.mockReset();
+    mockGetLeagueOrgId.mockReset();
+    mockGetOrganizationMembershipList.mockReset();
+    mockGetUser.mockReset();
+  });
 
   it("returns visible league IDs for user with org memberships", async () => {
     mockGetOrganizationMembershipList.mockResolvedValue({
@@ -45,11 +60,11 @@ describe("resolveOrgContext", () => {
     });
 
     mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: [] },
+      publicMetadata: {},
     });
-
-    mockQuery.mockResolvedValue({
-      records: [{ Id: "league_1" }, { Id: "league_2" }],
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: ["league_1", "league_2"],
+      subscribedLeagueIds: [],
     });
 
     const ctx = await resolveOrgContext("user_123");
@@ -58,18 +73,17 @@ describe("resolveOrgContext", () => {
     expect(ctx.orgIds).toEqual(["org_abc", "org_def"]);
     expect(ctx.visibleLeagueIds).toEqual(["league_1", "league_2"]);
     expect(ctx.subscribedLeagueIds).toEqual([]);
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining("org_abc"),
-    );
-    expect(mockQuery).not.toHaveBeenCalledWith(
-      expect.stringContaining("Clerk_Org_Id__c = null"),
-    );
+    expect(mockGetVisibleLeagueContext).toHaveBeenCalledWith("user_123", [
+      "org_abc",
+      "org_def",
+    ]);
   });
 
   it("returns empty visibleLeagueIds when no orgs and no subscriptions", async () => {
     mockGetOrganizationMembershipList.mockResolvedValue({ data: [] });
-    mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: [] },
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: [],
+      subscribedLeagueIds: [],
     });
 
     const ctx = await resolveOrgContext("user_no_orgs");
@@ -77,17 +91,28 @@ describe("resolveOrgContext", () => {
     expect(ctx.orgIds).toEqual([]);
     expect(ctx.visibleLeagueIds).toEqual([]);
     expect(ctx.subscribedLeagueIds).toEqual([]);
-    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("treats Clerk Forbidden on membership list as no orgs", async () => {
+    mockGetOrganizationMembershipList.mockRejectedValue(
+      new Error("Forbidden"),
+    );
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: [],
+      subscribedLeagueIds: [],
+    });
+
+    const ctx = await resolveOrgContext("user_forbidden_orgs");
+
+    expect(ctx.orgIds).toEqual([]);
+    expect(ctx.visibleLeagueIds).toEqual([]);
   });
 
   it("includes subscribed public league IDs in visible set", async () => {
     mockGetOrganizationMembershipList.mockResolvedValue({ data: [] });
-    mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: ["league_pub_1", "league_pub_2"] },
-    });
-
-    mockQuery.mockResolvedValue({
-      records: [{ Id: "league_pub_1" }, { Id: "league_pub_2" }],
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: ["league_pub_1", "league_pub_2"],
+      subscribedLeagueIds: ["league_pub_1", "league_pub_2"],
     });
 
     const ctx = await resolveOrgContext("user_with_subs");
@@ -98,21 +123,15 @@ describe("resolveOrgContext", () => {
       "league_pub_1",
       "league_pub_2",
     ]);
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining("Id IN"),
-    );
   });
 
   it("combines org leagues and subscribed leagues", async () => {
     mockGetOrganizationMembershipList.mockResolvedValue({
       data: [{ organization: { id: "org_abc" } }],
     });
-    mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: ["league_pub_1"] },
-    });
-
-    mockQuery.mockResolvedValue({
-      records: [{ Id: "league_1" }, { Id: "league_pub_1" }],
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: ["league_1", "league_pub_1"],
+      subscribedLeagueIds: ["league_pub_1"],
     });
 
     const ctx = await resolveOrgContext("user_both");
@@ -120,12 +139,6 @@ describe("resolveOrgContext", () => {
     expect(ctx.orgIds).toEqual(["org_abc"]);
     expect(ctx.visibleLeagueIds).toEqual(["league_1", "league_pub_1"]);
     expect(ctx.subscribedLeagueIds).toEqual(["league_pub_1"]);
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining("Clerk_Org_Id__c IN"),
-    );
-    expect(mockQuery).toHaveBeenCalledWith(
-      expect.stringContaining("Id IN"),
-    );
   });
 
   it("handles pagination of org memberships", async () => {
@@ -138,37 +151,56 @@ describe("resolveOrgContext", () => {
       .mockResolvedValueOnce({ data: firstPage })
       .mockResolvedValueOnce({ data: secondPage });
 
-    mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: [] },
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: [],
+      subscribedLeagueIds: [],
     });
-
-    mockQuery.mockResolvedValue({ records: [] });
 
     const ctx = await resolveOrgContext("user_many_orgs");
 
     expect(ctx.orgIds).toHaveLength(101);
     expect(mockGetOrganizationMembershipList).toHaveBeenCalledTimes(2);
+    expect(mockGetVisibleLeagueContext).toHaveBeenCalledWith(
+      "user_many_orgs",
+      expect.arrayContaining(["org_0", "org_100"]),
+    );
   });
 
-  it("handles missing publicMetadata gracefully", async () => {
+  it("migrates legacy Clerk subscriptions into Convex on first read", async () => {
     mockGetOrganizationMembershipList.mockResolvedValue({ data: [] });
-    mockGetUser.mockResolvedValue({ publicMetadata: {} });
+    mockGetVisibleLeagueContext
+      .mockResolvedValueOnce({
+        visibleLeagueIds: [],
+        subscribedLeagueIds: [],
+      })
+      .mockResolvedValueOnce({
+        visibleLeagueIds: ["league_pub_1"],
+        subscribedLeagueIds: ["league_pub_1"],
+      });
+    mockGetUser.mockResolvedValue({
+      publicMetadata: { subscribedLeagueIds: ["league_pub_1"] },
+    });
+    mockSubscribeToLeague.mockResolvedValue(undefined);
 
-    const ctx = await resolveOrgContext("user_no_metadata");
+    const ctx = await resolveOrgContext("user_legacy");
 
-    expect(ctx.subscribedLeagueIds).toEqual([]);
-    expect(ctx.visibleLeagueIds).toEqual([]);
+    expect(mockSubscribeToLeague).toHaveBeenCalledWith(
+      "user_legacy",
+      "league_pub_1",
+    );
+    expect(ctx.subscribedLeagueIds).toEqual(["league_pub_1"]);
+    expect(ctx.visibleLeagueIds).toEqual(["league_pub_1"]);
   });
 
   it("gracefully handles getUser Forbidden error", async () => {
     mockGetOrganizationMembershipList.mockResolvedValue({
       data: [{ organization: { id: "org_abc" } }],
     });
-    mockGetUser.mockRejectedValue(new Error("Forbidden"));
-
-    mockQuery.mockResolvedValue({
-      records: [{ Id: "league_1" }],
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: ["league_1"],
+      subscribedLeagueIds: [],
     });
+    mockGetUser.mockRejectedValue(new Error("Forbidden"));
 
     const ctx = await resolveOrgContext("user_forbidden");
 
@@ -179,13 +211,16 @@ describe("resolveOrgContext", () => {
 
   it("returns org leagues when getUser throws and no subscriptions", async () => {
     mockGetOrganizationMembershipList.mockResolvedValue({ data: [] });
+    mockGetVisibleLeagueContext.mockResolvedValue({
+      visibleLeagueIds: [],
+      subscribedLeagueIds: [],
+    });
     mockGetUser.mockRejectedValue(new Error("Forbidden"));
 
     const ctx = await resolveOrgContext("user_no_access");
 
     expect(ctx.visibleLeagueIds).toEqual([]);
     expect(ctx.subscribedLeagueIds).toEqual([]);
-    expect(mockQuery).not.toHaveBeenCalled();
   });
 });
 
@@ -251,27 +286,21 @@ describe("getLeagueOrgId", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("returns org ID for a league with an org", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ Clerk_Org_Id__c: "org_abc" }],
-    });
+    mockGetLeagueOrgId.mockResolvedValue("org_abc");
 
     const orgId = await getLeagueOrgId("league_1");
     expect(orgId).toBe("org_abc");
   });
 
   it("returns null for a public league", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ Clerk_Org_Id__c: null }],
-    });
+    mockGetLeagueOrgId.mockResolvedValue(null);
 
     const orgId = await getLeagueOrgId("league_public");
     expect(orgId).toBeNull();
   });
 
   it("throws when league not found", async () => {
-    mockQuery.mockResolvedValue({ totalSize: 0, records: [] });
+    mockGetLeagueOrgId.mockRejectedValue(new Error("League not found"));
 
     await expect(getLeagueOrgId("nonexistent")).rejects.toThrow(
       "League not found",

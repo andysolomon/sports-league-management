@@ -8,6 +8,7 @@
     "setup-users": "node scripts/setup-users.js",
     "create-scratch-org": "node scripts/create-scratch-org.js",
     "seed-data": "node scripts/seed-data.js",
+    "check:web-env-parity": "node scripts/check-web-env-parity.js",
     "tui": "pnpm --filter @sports-management/tui dev",
     "test": "pnpm run test:unit",
     "test:unit": "sf force lightning lwc test run",

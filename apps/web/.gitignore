@@ -1,3 +1,5 @@
 .vercel
 playwright-report/
 test-results/
+
+.env.local

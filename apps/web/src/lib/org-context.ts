@@ -1,6 +1,10 @@
 import { cache } from "react";
 import { clerkClient } from "@clerk/nextjs/server";
-import { getSalesforceConnection } from "./salesforce";
+import {
+  getLeagueOrgId as getLeagueOrgIdFromData,
+  subscribeToLeague,
+  getVisibleLeagueContext,
+} from "./data-api";
 
 export interface OrgContext {
   userId: string;
@@ -10,13 +14,11 @@ export interface OrgContext {
 }
 
 /**
- * Resolves the authenticated user's org memberships and the Salesforce league IDs
+ * Resolves the authenticated user's org memberships and the Convex league IDs
  * they are allowed to see. Uses React cache() to deduplicate within a single
  * request/render pass.
  *
  * Visible leagues = leagues owned by user's orgs + explicitly subscribed public leagues.
- * Public leagues (Clerk_Org_Id__c = null) are opt-in only via subscribedLeagueIds
- * stored in Clerk user publicMetadata.
  */
 export const resolveOrgContext = cache(
   async (userId: string): Promise<OrgContext> => {
@@ -28,73 +30,59 @@ export const resolveOrgContext = cache(
     const limit = 100;
     let hasMore = true;
 
-    while (hasMore) {
-      const memberships =
-        await client.users.getOrganizationMembershipList({
-          userId,
-          limit,
-          offset,
-        });
-      for (const m of memberships.data) {
-        orgIds.push(m.organization.id);
+    try {
+      while (hasMore) {
+        const memberships =
+          await client.users.getOrganizationMembershipList({
+            userId,
+            limit,
+            offset,
+          });
+        for (const m of memberships.data) {
+          orgIds.push(m.organization.id);
+        }
+        hasMore = memberships.data.length === limit;
+        offset += limit;
       }
-      hasMore = memberships.data.length === limit;
-      offset += limit;
-    }
-
-    // Get subscribed public league IDs from Clerk user metadata.
-    // We already have org memberships from getOrganizationMembershipList above,
-    // so use currentUser() pattern via the membership list's user data when
-    // possible. Fall back to getUser() if needed, but handle Forbidden errors
-    // gracefully for Clerk instances where the secret key lacks users.read scope.
-    let subscribedLeagueIds: string[] = [];
-    try {
-      const user = await client.users.getUser(userId);
-      subscribedLeagueIds =
-        (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
-    } catch {
-      // If getUser fails (e.g. Forbidden), continue with empty subscriptions
-    }
-
-    // Build SOQL based on what the user has access to
-    const hasOrgs = orgIds.length > 0;
-    const hasSubs = subscribedLeagueIds.length > 0;
-
-    if (!hasOrgs && !hasSubs) {
-      return { userId, orgIds, visibleLeagueIds: [], subscribedLeagueIds };
-    }
-
-    let conn;
-    try {
-      conn = await getSalesforceConnection();
     } catch (e) {
-      console.error("[OrgContext] SF connection failed:", e);
-      throw e;
-    }
-    let soql: string;
-
-    if (hasOrgs && hasSubs) {
-      const orgIdStr = idList(orgIds);
-      const subIdStr = idList(subscribedLeagueIds);
-      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr}) OR Id IN (${subIdStr})`;
-    } else if (hasOrgs) {
-      const orgIdStr = idList(orgIds);
-      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr})`;
-    } else {
-      const subIdStr = idList(subscribedLeagueIds);
-      soql = `SELECT Id FROM League__c WHERE Id IN (${subIdStr})`;
+      console.error(
+        "[OrgContext] Clerk getOrganizationMembershipList failed:",
+        e,
+      );
+      // e.g. 403 when the secret key lacks Users:Read — continue with no org IDs
     }
 
-    const result = await conn.query<{ Id: string }>(soql);
-    const visibleLeagueIds = result.records.map((r) => r.Id);
+    let { visibleLeagueIds, subscribedLeagueIds } =
+      await getVisibleLeagueContext(userId, orgIds);
+
+    // One-time bridge: migrate any legacy Clerk metadata subscriptions into Convex
+    // so existing public-league access survives the backend cutover.
+    if (subscribedLeagueIds.length === 0) {
+      try {
+        const user = await client.users.getUser(userId);
+        const legacySubscribedLeagueIds =
+          (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
+
+        if (legacySubscribedLeagueIds.length > 0) {
+          await Promise.all(
+            legacySubscribedLeagueIds.map((leagueId) =>
+              subscribeToLeague(userId, leagueId).catch(() => undefined),
+            ),
+          );
+
+          const refreshedContext = await getVisibleLeagueContext(userId, orgIds);
+          visibleLeagueIds = refreshedContext.visibleLeagueIds;
+          subscribedLeagueIds = refreshedContext.subscribedLeagueIds;
+        }
+      } catch {
+        // Ignore legacy subscription migration failures; access will still be based
+        // on Clerk org membership plus any Convex subscriptions already present.
+      }
+    }
 
     return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
   },
 );
-
-function idList(ids: string[]): string {
-  return ids.map((id) => `'${id}'`).join(",");
-}
 
 /**
  * Check that a specific league is within the user's visible set.
@@ -157,12 +145,5 @@ export async function getUserRoleInOrg(
 export async function getLeagueOrgId(
   leagueId: string,
 ): Promise<string | null> {
-  const conn = await getSalesforceConnection();
-  const result = await conn.query<{ Clerk_Org_Id__c: string | null }>(
-    `SELECT Clerk_Org_Id__c FROM League__c WHERE Id = '${leagueId}' LIMIT 1`,
-  );
-  if (result.totalSize === 0) {
-    throw new Error("League not found");
-  }
-  return result.records[0].Clerk_Org_Id__c ?? null;
+  return getLeagueOrgIdFromData(leagueId);
 }

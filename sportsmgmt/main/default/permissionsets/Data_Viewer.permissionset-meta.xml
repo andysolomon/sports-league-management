@@ -58,6 +58,18 @@
         <viewAllRecords>true</viewAllRecords>
     </objectPermissions>
 
+    <!-- League__c Fields -->
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>League__c.Clerk_Org_Id__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>League__c.Invite_Token__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+
     <!-- Team__c Fields (Read Only, excluding required: League__c, Location__c) -->
     <fieldPermissions>
         <editable>false</editable>
@@ -77,6 +89,11 @@
     <fieldPermissions>
         <editable>false</editable>
         <field>Team__c.Division__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Team__c.Logo_URL__c</field>
         <readable>true</readable>
     </fieldPermissions>
 
@@ -106,6 +123,11 @@
     <fieldPermissions>
         <editable>false</editable>
         <field>Player__c.Status__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Player__c.Headshot_URL__c</field>
         <readable>true</readable>
     </fieldPermissions>
 

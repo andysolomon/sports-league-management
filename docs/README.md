@@ -27,6 +27,12 @@
 | [external-frontend/EXTERNAL_FRONTEND_CURRENT_STATE.md](external-frontend/EXTERNAL_FRONTEND_CURRENT_STATE.md) | Current state of the external frontend |
 | [external-frontend/MONOREPO_MIGRATION_PLAN.md](external-frontend/MONOREPO_MIGRATION_PLAN.md) | Migration to pnpm workspace monorepo |
 
+## Product
+
+| Document | Description |
+|---|---|
+| [roster-management.md](roster-management.md) | Roster management design: research, grill-me resolutions, data model, features, flags, rollout |
+
 ## Work Items
 
 | Document | Description |

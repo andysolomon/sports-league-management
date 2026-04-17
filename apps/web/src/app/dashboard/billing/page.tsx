@@ -25,14 +25,14 @@ export default async function BillingPage({
   const stripeCustomerId = await getStripeCustomerId();
   const config = TIER_CONFIGS[tier];
 
-  // Fetch usage stats from Salesforce
+  // Fetch usage stats from the app data store (Convex).
   let teamCount = 0;
   try {
     const orgContext = await resolveOrgContext(userId);
     const teams = await getTeams(orgContext.visibleLeagueIds);
     teamCount = teams.length;
   } catch {
-    // Salesforce errors should not break the billing page
+    // Data-store errors should not break the billing page
     teamCount = 0;
   }
 
