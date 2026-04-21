@@ -6,6 +6,8 @@ import type {
   TeamDto,
   PlayerDto,
   SeasonDto,
+  RosterAssignmentDto,
+  RosterAuditLogDto,
   CreateLeagueInput,
   CreateDivisionInput,
   CreateTeamInput,
@@ -38,6 +40,7 @@ export const TeamDtoSchema = z.object({
   location: z.string(),
   divisionId: z.string(),
   logoUrl: z.string().nullable(),
+  rosterLimit: z.number().nullable(),
 }) satisfies z.ZodType<TeamDto>;
 
 export const PlayerDtoSchema = z.object({
@@ -45,11 +48,44 @@ export const PlayerDtoSchema = z.object({
   name: z.string(),
   teamId: z.string(),
   position: z.string(),
+  positionGroup: z.string().nullable(),
   jerseyNumber: z.number().nullable(),
   dateOfBirth: z.string().nullable(),
   status: z.string(),
   headshotUrl: z.string().nullable(),
 }) satisfies z.ZodType<PlayerDto>;
+
+export const RosterAssignmentDtoSchema = z.object({
+  id: z.string(),
+  seasonId: z.string(),
+  teamId: z.string(),
+  playerId: z.string(),
+  leagueId: z.string(),
+  depthRank: z.number(),
+  positionSlot: z.string(),
+  status: z.string(),
+  assignedAt: z.string(),
+  assignedBy: z.string(),
+}) satisfies z.ZodType<RosterAssignmentDto>;
+
+export const RosterAuditActionSchema = z.enum([
+  "assign",
+  "remove",
+  "status_change",
+  "depth_reorder",
+]);
+
+export const RosterAuditLogDtoSchema = z.object({
+  id: z.string(),
+  leagueId: z.string(),
+  teamId: z.string(),
+  seasonId: z.string(),
+  actorUserId: z.string(),
+  action: RosterAuditActionSchema,
+  beforeJson: z.string().nullable(),
+  afterJson: z.string().nullable(),
+  createdAt: z.string(),
+}) satisfies z.ZodType<RosterAuditLogDto>;
 
 export const SeasonDtoSchema = z.object({
   id: z.string(),

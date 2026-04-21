@@ -144,6 +144,7 @@ function teamRecToDto(r: TeamRec): TeamDto {
     stadium: r.Stadium__c ?? "", foundedYear: r.Founded_Year__c ?? null,
     location: r.Location__c ?? "", divisionId: r.Division__c ?? "",
     logoUrl: r.Logo_URL__c ?? null,
+    rosterLimit: null,
   };
 }
 
@@ -188,6 +189,7 @@ const PLAYER_FIELDS = "Id, Name, Team__c, Position__c, Jersey_Number__c, Date_of
 function playerRecToDto(r: PlayerRec): PlayerDto {
   return {
     id: r.Id, name: r.Name, teamId: r.Team__c, position: r.Position__c ?? "",
+    positionGroup: null,
     jerseyNumber: r.Jersey_Number__c ?? null, dateOfBirth: r.Date_of_Birth__c ?? null,
     status: r.Status__c ?? "", headshotUrl: r.Headshot_URL__c ?? null,
   };
