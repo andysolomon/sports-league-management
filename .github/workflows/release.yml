@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,8 +13,11 @@ jobs:
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
-    # Skip release on commits made by semantic-release itself (version bumps)
-    if: "!contains(github.event.head_commit.message, 'chore(release):')"
+    # Skip when the triggering commit IS a release bump (matches first line only).
+    # Using startsWith avoids false matches from commit bodies that mention the
+    # phrase as context. workflow_dispatch has no head_commit, so the guard
+    # short-circuits to true (no skip) for manual runs.
+    if: ${{ github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'chore(release):') }}
 
     steps:
       - name: Checkout
