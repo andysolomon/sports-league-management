@@ -19,6 +19,21 @@ export const depthChartV1 = flag<boolean>({
   },
 });
 
+export const rosterSnapshotsV1 = flag<boolean>({
+  key: "roster_snapshots_v1",
+  description:
+    "Phase 1 roster management: season rosters, assignment audit log, depth chart v2",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    void trackFlagExposure("roster_snapshots_v1", defaultOn);
+    return defaultOn;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {
