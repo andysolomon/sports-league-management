@@ -15,6 +15,22 @@ We are adding **roster management** on top of the existing League / Division / T
 
 ## 1. Overview
 
+### Phase 0 — LIVE (2026-04-22)
+
+Phase 0 (per-team, per-season depth chart + season-level edit lock) is merged to `main` behind the `depth_chart_v1` Vercel flag. Production default is `off`; dev default is `on`. Shipped via Sprint 1 across eight PRs, one per story:
+
+| Story | PR | What shipped |
+|-------|----|--------------|
+| WSM-000003 | `feat/WSM-000003-depth-chart-flag` | `apps/web/src/lib/flags.ts` + `.well-known/vercel/flags` discovery endpoint; `pageGuard` + `apiGuard` |
+| WSM-000004 | `feat/WSM-000004-depth-chart-schema` | `seasons.rosterLocked: v.boolean()` + `depthChartEntries` table with two indexes; one-shot backfill migration |
+| WSM-000005 | `feat/WSM-000005-depth-chart-mutations` | `reorderDepthChart` + `setRosterLocked` Convex mutations with lock enforcement + cross-team rejection + convex-test suite |
+| WSM-000006 | `feat/WSM-000006-depth-chart-ui` | `/dashboard/teams/[id]/depth-chart` page + `DepthChartBoard`/`PositionColumn`/`LockBanner` components + server actions |
+| WSM-000007 | `feat/WSM-000007-depth-chart-e2e` | Playwright flag-gate smoke; three seed-dependent scenarios parked as `test.fixme` until a Convex seeding harness lands |
+| WSM-000008 | `feat/WSM-000008-depth-chart-analytics` | `apps/web/src/lib/analytics.ts` wrapper; emits `flag_exposure`, `depth_chart_reorder`, `season_lock_toggle` |
+| WSM-000009 | `feat/WSM-000009-phase-0-docs` | This update + §11.1 close-out rows |
+
+**Flag flip pending:** prod flip to `on` is gated on a preview-deploy manual QA pass. Until flipped, end users cannot reach `/dashboard/teams/[id]/depth-chart` in production.
+
 ### Problem
 Players in the current schema (`apps/web/convex/schema.ts:37`) attach directly to a single `teamId` with no season context. There is no concept of a depth chart, no player attributes/ratings, no schedule, no standings, and no audit trail for roster changes. This blocks real-world usage by NFL-style leagues where rosters evolve week-to-week and historical season data matters.
 
@@ -488,6 +504,11 @@ Append a row any time a §2.1 working assumption or §11 default is overridden. 
 | initial | Open Q5 Per-team Coach | Deferred to v2 | (unassigned) |
 | 2026-04-16 | Sprint plan | Sprint plan created in Linear team ARC, project "Sprtsmng Roster Management": WSM-000001–WSM-000046 (ARC-102 through ARC-147). 4 parent epics, 42 child stories, 41 Blocked-by relations. | Andrew Solomon |
 | 2026-04-17 | Sprint 0 (pre-roster) | Platform-foundation sprint added in new Linear project "Sprtsmng Infrastructure": WSM-000047–WSM-000056 (ARC-148–ARC-157). 1 epic + 9 children. Closes release automation + commit enforcement + branching gaps BEFORE WSM-000002 (Phase 0) execution begins. | Andrew Solomon |
+| 2026-04-22 | Vercel Flags package (WSM-000003) | Used `flags` v4 (renamed from `@vercel/flags`) with the `flags/next` subpath. Static `decide()` driven by `NODE_ENV` so runtime flips via the Vercel Toolbar work without a provider adapter for now. Adapter will land when production `FLAGS` env var is provisioned. | Andrew Solomon |
+| 2026-04-22 | Dnd-kit spike close-out (WSM-000002) | Chose `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities`. Vertical sortable list per `positionSlot`; pointer + keyboard sensors; optimistic update shape is `{ items, mutation, onMutate, onError }` — on drop we arrayMove locally, then call the server action inside a `useTransition`; on rejection we snap back and surface the error via `sonner`. No scratch page was created — the decisions fed straight into WSM-000006. | Andrew Solomon |
+| 2026-04-22 | Forward-compat invariant (Phase 0 → Phase 1) | `depthChartEntries.sortOrder` is dense, zero-indexed within `(teamId, seasonId, positionSlot)`. Phase 1's WSM-000019 can rename to `rosterAssignments.depthRank` as a pure column rename — no data reshape. | Andrew Solomon |
+| 2026-04-22 | E2E scope narrowed | `coach-depth-chart.spec.ts` ships with one active smoke (flag-gated route reachable) and three `test.fixme` scenarios. A Convex seeding harness + a second Clerk test user are prerequisites and are not in Phase 0 scope. | Andrew Solomon |
+| 2026-04-22 | Analytics surface | Three events — `flag_exposure`, `depth_chart_reorder`, `season_lock_toggle` — fired via `@vercel/analytics/server` through `apps/web/src/lib/analytics.ts`. No PII. Errors swallowed so telemetry never blocks user flows. | Andrew Solomon |
 
 ---
 
