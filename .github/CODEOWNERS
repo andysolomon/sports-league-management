@@ -1,0 +1,39 @@
+# CODEOWNERS — sprtsmng
+#
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositories-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Rules are matched top-to-bottom; the LAST match wins. The default rule at
+# the top catches anything not claimed by a more specific rule below.
+#
+# Keep this file short. Every rule should answer: "who should be pinged when
+# this area changes?" — not "who wrote this." Ownership routes reviews; it
+# does not gatekeep contribution.
+
+# Default — everything without a more specific owner
+*                                           @andysolomon
+
+# --- Release / CI plumbing -------------------------------------------------
+# These paths block every release on every push. Ping the maintainer.
+/.github/                                   @andysolomon
+/.husky/                                    @andysolomon
+/.releaserc.json                            @andysolomon
+/commitlint.config.cjs                      @andysolomon
+/package.json                               @andysolomon
+/pnpm-lock.yaml                             @andysolomon
+/pnpm-workspace.yaml                        @andysolomon
+/turbo.json                                 @andysolomon
+
+# --- Documentation ---------------------------------------------------------
+/CONTRIBUTING.md                            @andysolomon
+/docs/development/                          @andysolomon
+
+# --- Salesforce source -----------------------------------------------------
+/sportsmgmt/                                @andysolomon
+/sportsmgmt-football/                       @andysolomon
+/sfdx-project.json                          @andysolomon
+
+# --- Workspace apps --------------------------------------------------------
+/apps/web/                                  @andysolomon
+/apps/tui/                                  @andysolomon
+/packages/api-contracts/                    @andysolomon
+/packages/shared-types/                     @andysolomon
