@@ -1,6 +1,6 @@
 {
   "name": "sports-management",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packageManager": "pnpm@9.15.4",
   "description": "Sports League Management application for Salesforce",
   "type": "module",
