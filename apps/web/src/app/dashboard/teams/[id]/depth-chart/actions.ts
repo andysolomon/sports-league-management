@@ -7,6 +7,10 @@ import {
   setRosterLocked as setRosterLockedMutation,
 } from "@/lib/data-api";
 import { getLeagueOrgId, getUserRoleInOrg } from "@/lib/org-context";
+import {
+  trackDepthChartReorder,
+  trackSeasonLockToggle,
+} from "@/lib/analytics";
 import type { DepthChartEntryDto } from "@sports-management/shared-types";
 
 async function requireFlag() {
@@ -39,12 +43,19 @@ export async function reorderDepthChartAction(input: {
   if (!orgId) throw new Error("not_authorized");
   await requireOrgMembership(orgId, userId);
 
-  return reorderDepthChartMutation({
+  const result = await reorderDepthChartMutation({
     teamId: input.teamId,
     seasonId: input.seasonId,
     positionSlot: input.positionSlot,
     playerIds: input.playerIds,
   });
+  void trackDepthChartReorder({
+    teamId: input.teamId,
+    seasonId: input.seasonId,
+    positionSlot: input.positionSlot,
+    playerCount: input.playerIds.length,
+  });
+  return result;
 }
 
 export async function setRosterLockedAction(input: {
@@ -61,5 +72,10 @@ export async function setRosterLockedAction(input: {
   const role = await requireOrgMembership(orgId, userId);
   if (role !== "org:admin") throw new Error("not_authorized");
 
-  return setRosterLockedMutation(input.seasonId, input.locked);
+  const result = await setRosterLockedMutation(input.seasonId, input.locked);
+  void trackSeasonLockToggle({
+    seasonId: input.seasonId,
+    locked: result.rosterLocked,
+  });
+  return result;
 }
