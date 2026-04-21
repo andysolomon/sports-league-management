@@ -8,6 +8,8 @@ import type {
   ImportResult,
   LeagueDto,
   PlayerDto,
+  RosterAssignmentDto,
+  RosterAuditLogDto,
   SeasonDto,
   SyncConfig,
   SyncReport,
@@ -202,6 +204,49 @@ const refs = {
     { seasonId: string; locked: boolean },
     { seasonId: string; rosterLocked: boolean }
   >("sports:setRosterLocked"),
+  getRosterBySeasonTeam: queryRef<
+    { seasonId: string; teamId: string },
+    RosterAssignmentDto[]
+  >("sports:getRosterBySeasonTeam"),
+  getTeamRosterLimitStatus: queryRef<
+    { seasonId: string; teamId: string },
+    {
+      activeCount: number;
+      rosterLimit: number | null;
+      remaining: number | null;
+    }
+  >("sports:getTeamRosterLimitStatus"),
+  getRosterAssignmentHistory: queryRef<
+    {
+      teamId: string;
+      seasonId: string;
+      playerId: string | null;
+      limit: number | null;
+    },
+    RosterAuditLogDto[]
+  >("sports:getRosterAssignmentHistory"),
+  assignPlayerToRoster: mutationRef<
+    {
+      seasonId: string;
+      teamId: string;
+      playerId: string;
+      positionSlot: string;
+      actorUserId: string;
+    },
+    RosterAssignmentDto
+  >("sports:assignPlayerToRoster"),
+  removePlayerFromRoster: mutationRef<
+    { assignmentId: string; actorUserId: string },
+    null
+  >("sports:removePlayerFromRoster"),
+  updateRosterStatus: mutationRef<
+    {
+      assignmentId: string;
+      newStatus: string;
+      actorUserId: string;
+    },
+    RosterAssignmentDto
+  >("sports:updateRosterStatus"),
 };
 
 function requireLeagueAccessLocal(leagueId: string, orgContext: OrgContext): void {
@@ -609,4 +654,61 @@ export async function setRosterLocked(
   locked: boolean,
 ): Promise<{ seasonId: string; rosterLocked: boolean }> {
   return mutateConvex(refs.setRosterLocked, { seasonId, locked });
+}
+
+export async function getRosterBySeasonTeam(
+  seasonId: string,
+  teamId: string,
+): Promise<RosterAssignmentDto[]> {
+  return queryConvex(refs.getRosterBySeasonTeam, { seasonId, teamId });
+}
+
+export async function getTeamRosterLimitStatus(
+  seasonId: string,
+  teamId: string,
+): Promise<{
+  activeCount: number;
+  rosterLimit: number | null;
+  remaining: number | null;
+}> {
+  return queryConvex(refs.getTeamRosterLimitStatus, { seasonId, teamId });
+}
+
+export async function getRosterAssignmentHistory(input: {
+  teamId: string;
+  seasonId: string;
+  playerId?: string | null;
+  limit?: number | null;
+}): Promise<RosterAuditLogDto[]> {
+  return queryConvex(refs.getRosterAssignmentHistory, {
+    teamId: input.teamId,
+    seasonId: input.seasonId,
+    playerId: input.playerId ?? null,
+    limit: input.limit ?? null,
+  });
+}
+
+export async function assignPlayerToRoster(input: {
+  seasonId: string;
+  teamId: string;
+  playerId: string;
+  positionSlot: string;
+  actorUserId: string;
+}): Promise<RosterAssignmentDto> {
+  return mutateConvex(refs.assignPlayerToRoster, input);
+}
+
+export async function removePlayerFromRoster(input: {
+  assignmentId: string;
+  actorUserId: string;
+}): Promise<null> {
+  return mutateConvex(refs.removePlayerFromRoster, input);
+}
+
+export async function updateRosterStatus(input: {
+  assignmentId: string;
+  newStatus: string;
+  actorUserId: string;
+}): Promise<RosterAssignmentDto> {
+  return mutateConvex(refs.updateRosterStatus, input);
 }

@@ -43,3 +43,51 @@ export function trackSeasonLockToggle(props: {
     locked: props.locked,
   });
 }
+
+export function trackRosterAssign(props: {
+  seasonId: string;
+  teamId: string;
+  positionSlot: string;
+}): Promise<void> {
+  return safeTrack("roster_assign", {
+    seasonId: props.seasonId,
+    teamId: props.teamId,
+    positionSlot: props.positionSlot,
+  });
+}
+
+export function trackRosterRemove(props: {
+  seasonId: string;
+  teamId: string;
+  positionSlot: string;
+}): Promise<void> {
+  return safeTrack("roster_remove", {
+    seasonId: props.seasonId,
+    teamId: props.teamId,
+    positionSlot: props.positionSlot,
+  });
+}
+
+export function trackRosterStatusChange(props: {
+  seasonId: string;
+  teamId: string;
+  fromStatus: string;
+  toStatus: string;
+}): Promise<void> {
+  return safeTrack("roster_status_change", {
+    seasonId: props.seasonId,
+    teamId: props.teamId,
+    fromStatus: props.fromStatus,
+    toStatus: props.toStatus,
+  });
+}
+
+export function trackRosterLimitBlocked(props: {
+  seasonId: string;
+  teamId: string;
+}): Promise<void> {
+  return safeTrack("roster_limit_blocked", {
+    seasonId: props.seasonId,
+    teamId: props.teamId,
+  });
+}
