@@ -153,6 +153,42 @@ const rosterAssignmentDtoValidator = v.object({
   assignedBy: v.string(),
 });
 
+function toRosterAuditLogDto(doc: {
+  _id: string;
+  leagueId: string;
+  teamId: string;
+  seasonId: string;
+  actorUserId: string;
+  action: string;
+  beforeJson: string | null;
+  afterJson: string | null;
+  createdAt: string;
+}) {
+  return {
+    id: doc._id,
+    leagueId: doc.leagueId,
+    teamId: doc.teamId,
+    seasonId: doc.seasonId,
+    actorUserId: doc.actorUserId,
+    action: doc.action,
+    beforeJson: doc.beforeJson ?? null,
+    afterJson: doc.afterJson ?? null,
+    createdAt: doc.createdAt,
+  };
+}
+
+const rosterAuditLogDtoValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  teamId: v.string(),
+  seasonId: v.string(),
+  actorUserId: v.string(),
+  action: v.string(),
+  beforeJson: v.union(v.string(), v.null()),
+  afterJson: v.union(v.string(), v.null()),
+  createdAt: v.string(),
+});
+
 const ROSTER_STATUSES = ["active", "ir", "suspended", "released"] as const;
 
 function assertValidRosterStatus(status: string): void {
@@ -1611,5 +1647,104 @@ export const updateRosterStatus = mutation({
     });
 
     return after;
+  },
+});
+
+export const getRosterBySeasonTeam = query({
+  args: {
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+  },
+  returns: v.array(rosterAssignmentDtoValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .collect();
+
+    const sorted = [...rows].sort((a, b) => {
+      if (a.positionSlot !== b.positionSlot) {
+        return a.positionSlot.localeCompare(b.positionSlot);
+      }
+      const aActive = a.status === "active" ? 0 : 1;
+      const bActive = b.status === "active" ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+      if (a.status === "active" && b.status === "active") {
+        return a.depthRank - b.depthRank;
+      }
+      return a.assignedAt.localeCompare(b.assignedAt);
+    });
+
+    return sorted.map(toRosterAssignmentDto);
+  },
+});
+
+export const getTeamRosterLimitStatus = query({
+  args: {
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+  },
+  returns: v.object({
+    activeCount: v.number(),
+    rosterLimit: v.union(v.number(), v.null()),
+    remaining: v.union(v.number(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("team_not_found");
+
+    const rows = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .collect();
+
+    const activeCount = rows.filter((row) => row.status === "active").length;
+    const rosterLimit = team.rosterLimit ?? null;
+    const remaining =
+      rosterLimit === null ? null : Math.max(0, rosterLimit - activeCount);
+
+    return { activeCount, rosterLimit, remaining };
+  },
+});
+
+export const getRosterAssignmentHistory = query({
+  args: {
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    playerId: v.union(v.id("players"), v.null()),
+    limit: v.union(v.number(), v.null()),
+  },
+  returns: v.array(rosterAuditLogDtoValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("rosterAuditLog")
+      .withIndex("by_teamId_createdAt", (q) => q.eq("teamId", args.teamId))
+      .order("desc")
+      .collect();
+
+    const matchesSeason = (row: (typeof rows)[number]) =>
+      row.seasonId === args.seasonId;
+
+    const matchesPlayer = (row: (typeof rows)[number]) => {
+      if (!args.playerId) return true;
+      const needle = `"playerId":"${args.playerId}"`;
+      return (
+        (row.beforeJson ?? "").includes(needle) ||
+        (row.afterJson ?? "").includes(needle)
+      );
+    };
+
+    const filtered = rows.filter(
+      (row) => matchesSeason(row) && matchesPlayer(row),
+    );
+
+    const limited =
+      args.limit === null ? filtered : filtered.slice(0, args.limit);
+
+    return limited.map(toRosterAuditLogDto);
   },
 });
