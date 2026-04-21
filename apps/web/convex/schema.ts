@@ -29,6 +29,7 @@ export default defineSchema({
     foundedYear: v.union(v.number(), v.null()),
     location: v.string(),
     logoUrl: v.union(v.string(), v.null()),
+    rosterLimit: v.union(v.number(), v.null()),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_divisionId", ["divisionId"])
@@ -39,6 +40,7 @@ export default defineSchema({
     leagueId: v.id("leagues"),
     teamId: v.id("teams"),
     position: v.string(),
+    positionGroup: v.union(v.string(), v.null()),
     jerseyNumber: v.union(v.number(), v.null()),
     dateOfBirth: v.union(v.string(), v.null()),
     status: v.string(),
@@ -69,6 +71,39 @@ export default defineSchema({
   })
     .index("by_team_season", ["teamId", "seasonId"])
     .index("by_team_season_position", ["teamId", "seasonId", "positionSlot"]),
+
+  rosterAssignments: defineTable({
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    playerId: v.id("players"),
+    leagueId: v.id("leagues"),
+    depthRank: v.number(),
+    positionSlot: v.string(),
+    status: v.string(),
+    assignedAt: v.string(),
+    assignedBy: v.string(),
+  })
+    .index("by_seasonId_teamId", ["seasonId", "teamId"])
+    .index("by_seasonId_teamId_position", [
+      "seasonId",
+      "teamId",
+      "positionSlot",
+    ])
+    .index("by_playerId", ["playerId"])
+    .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
+
+  rosterAuditLog: defineTable({
+    leagueId: v.id("leagues"),
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    actorUserId: v.string(),
+    action: v.string(),
+    beforeJson: v.union(v.string(), v.null()),
+    afterJson: v.union(v.string(), v.null()),
+    createdAt: v.string(),
+  })
+    .index("by_leagueId_createdAt", ["leagueId", "createdAt"])
+    .index("by_teamId_createdAt", ["teamId", "createdAt"]),
 
   leagueSubscriptions: defineTable({
     userId: v.string(),

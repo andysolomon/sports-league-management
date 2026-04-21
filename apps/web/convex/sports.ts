@@ -51,6 +51,7 @@ function toTeamDto(doc: {
   location: string;
   divisionId: string | null;
   logoUrl: string | null;
+  rosterLimit?: number | null;
 }) {
   return {
     id: doc._id,
@@ -62,6 +63,7 @@ function toTeamDto(doc: {
     location: doc.location,
     divisionId: doc.divisionId ?? "",
     logoUrl: doc.logoUrl ?? null,
+    rosterLimit: doc.rosterLimit ?? null,
   };
 }
 
@@ -70,6 +72,7 @@ function toPlayerDto(doc: {
   name: string;
   teamId: string;
   position: string;
+  positionGroup?: string | null;
   jerseyNumber: number | null;
   dateOfBirth: string | null;
   status: string;
@@ -80,6 +83,7 @@ function toPlayerDto(doc: {
     name: doc.name,
     teamId: doc.teamId,
     position: doc.position,
+    positionGroup: doc.positionGroup ?? null,
     jerseyNumber: doc.jerseyNumber ?? null,
     dateOfBirth: doc.dateOfBirth ?? null,
     status: doc.status,
@@ -321,6 +325,7 @@ export const listTeams = queryGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -349,6 +354,7 @@ export const listTeamsByLeague = queryGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -373,6 +379,7 @@ export const getTeam = queryGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
   ),
@@ -399,6 +406,7 @@ export const listPlayers = queryGeneric({
       name: v.string(),
       teamId: v.string(),
       position: v.string(),
+      positionGroup: v.union(v.string(), v.null()),
       jerseyNumber: v.union(v.number(), v.null()),
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
@@ -426,6 +434,7 @@ export const listPlayersByTeam = queryGeneric({
       name: v.string(),
       teamId: v.string(),
       position: v.string(),
+      positionGroup: v.union(v.string(), v.null()),
       jerseyNumber: v.union(v.number(), v.null()),
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
@@ -449,6 +458,7 @@ export const getPlayer = queryGeneric({
       name: v.string(),
       teamId: v.string(),
       position: v.string(),
+      positionGroup: v.union(v.string(), v.null()),
       jerseyNumber: v.union(v.number(), v.null()),
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
@@ -649,6 +659,7 @@ export const upsertTeam = mutationGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      rosterLimit: v.union(v.number(), v.null()),
     }),
     created: v.boolean(),
   }),
@@ -691,6 +702,7 @@ export const upsertTeam = mutationGeneric({
       foundedYear: null,
       location: args.city,
       logoUrl: args.logoUrl,
+      rosterLimit: 53,
     });
 
     return {
@@ -704,6 +716,7 @@ export const upsertTeam = mutationGeneric({
         location: args.city,
         divisionId: args.divisionId ?? "",
         logoUrl: args.logoUrl,
+        rosterLimit: 53,
       },
       created: true,
     };
@@ -727,6 +740,7 @@ export const upsertPlayer = mutationGeneric({
       name: v.string(),
       teamId: v.string(),
       position: v.string(),
+      positionGroup: v.union(v.string(), v.null()),
       jerseyNumber: v.union(v.number(), v.null()),
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
@@ -766,13 +780,17 @@ export const upsertPlayer = mutationGeneric({
       };
     }
 
-    const playerId = await ctx.db.insert("players", args);
+    const playerId = await ctx.db.insert("players", {
+      ...args,
+      positionGroup: null,
+    });
     return {
       dto: {
         id: playerId,
         name: args.name,
         teamId: args.teamId,
         position: args.position,
+        positionGroup: null,
         jerseyNumber: args.jerseyNumber,
         dateOfBirth: args.dateOfBirth,
         status: args.status,
@@ -800,6 +818,7 @@ export const createTeam = mutationGeneric({
     location: v.string(),
     divisionId: v.string(),
     logoUrl: v.union(v.string(), v.null()),
+    rosterLimit: v.union(v.number(), v.null()),
   }),
   handler: async (ctx, args) => {
     const teamId = await ctx.db.insert("teams", {
@@ -811,6 +830,7 @@ export const createTeam = mutationGeneric({
       foundedYear: null,
       location: args.city,
       logoUrl: null,
+      rosterLimit: 53,
     });
     return {
       id: teamId,
@@ -822,6 +842,7 @@ export const createTeam = mutationGeneric({
       location: args.city,
       divisionId: "",
       logoUrl: null,
+      rosterLimit: 53,
     };
   },
 });
@@ -847,6 +868,7 @@ export const updateTeam = mutationGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
   ),
@@ -885,6 +907,7 @@ export const createPlayer = mutationGeneric({
     name: v.string(),
     teamId: v.string(),
     position: v.string(),
+    positionGroup: v.union(v.string(), v.null()),
     jerseyNumber: v.union(v.number(), v.null()),
     dateOfBirth: v.union(v.string(), v.null()),
     status: v.string(),
@@ -900,6 +923,7 @@ export const createPlayer = mutationGeneric({
       ...args,
       leagueId: team.leagueId,
       headshotUrl: null,
+      positionGroup: null,
     });
 
     return {
@@ -907,6 +931,7 @@ export const createPlayer = mutationGeneric({
       name: args.name,
       teamId: args.teamId,
       position: args.position,
+      positionGroup: null,
       jerseyNumber: args.jerseyNumber,
       dateOfBirth: args.dateOfBirth,
       status: args.status,
@@ -931,6 +956,7 @@ export const updatePlayer = mutationGeneric({
       name: v.string(),
       teamId: v.string(),
       position: v.string(),
+      positionGroup: v.union(v.string(), v.null()),
       jerseyNumber: v.union(v.number(), v.null()),
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),

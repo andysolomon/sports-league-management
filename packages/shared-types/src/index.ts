@@ -27,6 +27,7 @@ export interface TeamDto {
   location: string;
   divisionId: string;
   logoUrl: string | null;
+  rosterLimit: number | null;
 }
 
 export interface PlayerDto {
@@ -34,6 +35,7 @@ export interface PlayerDto {
   name: string;
   teamId: string;
   position: string;
+  positionGroup: string | null;
   jerseyNumber: number | null;
   dateOfBirth: string | null;
   status: string;
@@ -58,6 +60,37 @@ export interface DepthChartEntryDto {
   positionSlot: string;
   sortOrder: number;
   updatedAt: string;
+}
+
+export interface RosterAssignmentDto {
+  id: string;
+  seasonId: string;
+  teamId: string;
+  playerId: string;
+  leagueId: string;
+  depthRank: number;
+  positionSlot: string;
+  status: string;
+  assignedAt: string;
+  assignedBy: string;
+}
+
+export type RosterAuditAction =
+  | "assign"
+  | "remove"
+  | "status_change"
+  | "depth_reorder";
+
+export interface RosterAuditLogDto {
+  id: string;
+  leagueId: string;
+  teamId: string;
+  seasonId: string;
+  actorUserId: string;
+  action: RosterAuditAction;
+  beforeJson: string | null;
+  afterJson: string | null;
+  createdAt: string;
 }
 
 // --- Mutation input types ---

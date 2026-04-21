@@ -23,6 +23,7 @@ async function seedBaseline(t: ReturnType<typeof convexTest>) {
       foundedYear: null,
       location: "A",
       logoUrl: null,
+      rosterLimit: 53,
     });
     const teamB = await ctx.db.insert("teams", {
       name: "Beta",
@@ -33,6 +34,7 @@ async function seedBaseline(t: ReturnType<typeof convexTest>) {
       foundedYear: null,
       location: "B",
       logoUrl: null,
+      rosterLimit: 53,
     });
     const season = await ctx.db.insert("seasons", {
       name: "2026",
@@ -47,6 +49,7 @@ async function seedBaseline(t: ReturnType<typeof convexTest>) {
       leagueId,
       teamId: teamA,
       position: "QB",
+      positionGroup: null,
       jerseyNumber: 1,
       dateOfBirth: null,
       status: "active",
@@ -57,6 +60,7 @@ async function seedBaseline(t: ReturnType<typeof convexTest>) {
       leagueId,
       teamId: teamA,
       position: "QB",
+      positionGroup: null,
       jerseyNumber: 2,
       dateOfBirth: null,
       status: "active",
@@ -67,6 +71,7 @@ async function seedBaseline(t: ReturnType<typeof convexTest>) {
       leagueId,
       teamId: teamA,
       position: "QB",
+      positionGroup: null,
       jerseyNumber: 3,
       dateOfBirth: null,
       status: "active",
@@ -77,6 +82,7 @@ async function seedBaseline(t: ReturnType<typeof convexTest>) {
       leagueId,
       teamId: teamB,
       position: "QB",
+      positionGroup: null,
       jerseyNumber: 9,
       dateOfBirth: null,
       status: "active",
