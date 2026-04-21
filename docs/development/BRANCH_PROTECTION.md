@@ -78,36 +78,35 @@ generates from the PR title. Rebase-merge would spray N feature-branch
 commits onto main; merge-commits would add a second commit per merge that
 could be parsed as a no-op. Neither is desired.
 
-## 3. The Semantic-Release Bypass
+## 3. Semantic-Release and Branch Protection
 
-`release.yml` runs on push to `main`, computes the next version, and pushes
-a `chore(release): vX.Y.Z` commit **back to `main`**. That push has to
-succeed even while branch protection is on.
+`release.yml` runs on push to `main` and computes the next version.
+Historically it also pushed a `chore(release): vX.Y.Z` commit **back to
+`main`** (via `@semantic-release/git`), which required a bypass because
+every branch-protection rule that mandates a PR rejects direct pushes —
+including from `github-actions[bot]`.
 
-Two options:
+**Current approach (post-Sprint 1):** drop the back-push entirely.
+`.releaserc.json` no longer includes `@semantic-release/git` or
+`@semantic-release/exec`. Release responsibilities are now split:
 
-### Option A — `gh-pages`-style GitHub App (recommended long-term)
+- `@semantic-release/commit-analyzer` + `@semantic-release/release-notes-generator` — compute version and render notes
+- `@semantic-release/npm` (with `npmPublish: false`) — reads `package.json` version only
+- `@semantic-release/github` — creates the git tag and GitHub Release via the **REST API**, which bypasses branch protection because it never runs `git push`
+
+Trade-off: `package.json` `version` fields stay frozen (they are not source
+of truth; the git tag is). That is acceptable for a repo with
+`npmPublish: false` and no downstream consumers reading version from
+`package.json`. If we ever need package.json to track the tag, revisit by
+installing a GitHub App (see "Historical Option A" below) instead of
+re-adding `@semantic-release/git`.
+
+### Historical Option A — GitHub App with bypass (deferred)
 
 Install a GitHub App (e.g. [Release Please Bot] or a custom-scoped App)
-with explicit `contents:write` on the repo, add it to the allowed-actors
-list, and have `release.yml` authenticate as the App instead of using the
-default `GITHUB_TOKEN`. This is the textbook solution — no per-repo secret
-sprawl, and the audit trail shows the App as the committer.
-
-### Option B — disable the `Required status checks` guard only (temporary)
-
-What we did during Sprint 0 bootstrapping: leave every other protection on,
-but remove the `Required status checks` requirement. This lets the default
-`GITHUB_TOKEN` push back to `main` because the `chore(release): vX.Y.Z`
-commit itself bypasses the status-check gate. Force-push and direct-push
-guards stay on.
-
-Decision for Sprint 0: **Option B**. Option A is tracked as a follow-up
-(post-launch) because installing a GitHub App is a one-shot admin action
-that is disproportionate to the current contributor count (1).
-
-The `release.yml` workflow already has the right `permissions:` block
-(`contents: write`, `issues: write`) for Option B.
+with explicit `contents:write` on the repo, add it to the branch-protection
+bypass list, and have `release.yml` authenticate as the App. Not needed
+while the REST-API-only release flow above covers our needs.
 
 ## 4. The `chore(release):` Loop Guard
 
@@ -117,16 +116,11 @@ The `release.yml` workflow already has the right `permissions:` block
 if: "!contains(github.event.head_commit.message, 'chore(release):')"
 ```
 
-That line is load-bearing. Without it, every semantic-release push would
-retrigger the workflow, which would compute "no bump since last tag" and
-exit cleanly — a small waste, but also a race against any feature push
-that arrived in the meantime.
-
-**Known quirk:** the `contains(...)` check also matches any revert commit
-whose default message is `Revert "chore(release): …"`. If you ever revert
-a release commit manually, the follow-up `release.yml` run is silently
-skipped, which is usually what you want (the tag was rolled back; don't
-cut a new one).
+Historically load-bearing when `@semantic-release/git` pushed a
+`chore(release):` commit back to `main`. With the REST-API-only flow
+(§3), semantic-release no longer pushes commits to `main`, so the guard
+is defensive — it still correctly skips any manual `chore(release):`
+commit and any `Revert "chore(release): …"` follow-up. Keep it.
 
 ## 5. Applying the Rules (WSM-000055)
 
@@ -173,7 +167,7 @@ Notes:
 | 2 | Open a PR, CI `Commitlint` red | Merge button disabled |
 | 3 | `git push origin main` from a local branch | GitHub rejects with `protected branch` error |
 | 4 | `git push --force origin main` (after admin override) | Still rejected (force-push blocked for everyone) |
-| 5 | `release.yml` pushes `chore(release): vX.Y.Z` to `main` | Push succeeds; new tag created |
+| 5 | `release.yml` runs after a `feat:` merge | `@semantic-release/github` creates tag + Release via REST API; no direct push to `main` |
 
 ## 7. Change History
 
@@ -181,6 +175,7 @@ Notes:
 | --- | --- | --- |
 | 2026-04-21 | Initial spec authored | WSM-000054 |
 | 2026-04-21 | Option B minimal-rules variant applied: force-push blocked, deletion blocked, CODEOWNERS enforced with `required_approving_review_count: 0` (solo-maintainer reality), conversation-resolution required. `required_status_checks` left null so `release.yml` can push back to `main`. Tighten to full spec once a second maintainer is added. | WSM-000055 |
+| 2026-04-21 | Dropped `@semantic-release/git` + `@semantic-release/exec` from `.releaserc.json`; Release workflow now uses `@semantic-release/github` only, which creates tags + Releases via REST API and never pushes to `main`. Fixes GH006 rejections that blocked every `feat:` merge during Sprint 1. | fix/release-workflow-branch-protection |
 
 ## 8. Applied Configuration (as of 2026-04-21)
 
