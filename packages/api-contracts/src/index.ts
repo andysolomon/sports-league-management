@@ -58,6 +58,7 @@ export const SeasonDtoSchema = z.object({
   startDate: z.string().nullable(),
   endDate: z.string().nullable(),
   status: z.string(),
+  rosterLocked: z.boolean(),
 }) satisfies z.ZodType<SeasonDto>;
 
 // --- Mutation input schemas ---
