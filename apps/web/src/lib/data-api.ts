@@ -2,6 +2,7 @@ import { makeFunctionReference } from "convex/server";
 import type {
   CreatePlayerInput,
   CreateTeamInput,
+  DepthChartEntryDto,
   DivisionDto,
   ImportError,
   ImportResult,
@@ -184,6 +185,23 @@ const refs = {
   writeSyncReport: mutationRef<{ reportJson: string }, null>(
     "sports:writeSyncReport",
   ),
+  getDepthChartByTeamSeason: queryRef<
+    { teamId: string; seasonId: string },
+    DepthChartEntryDto[]
+  >("sports:getDepthChartByTeamSeason"),
+  reorderDepthChart: mutationRef<
+    {
+      teamId: string;
+      seasonId: string;
+      positionSlot: string;
+      playerIds: string[];
+    },
+    DepthChartEntryDto[]
+  >("sports:reorderDepthChart"),
+  setRosterLocked: mutationRef<
+    { seasonId: string; locked: boolean },
+    { seasonId: string; rosterLocked: boolean }
+  >("sports:setRosterLocked"),
 };
 
 function requireLeagueAccessLocal(leagueId: string, orgContext: OrgContext): void {
@@ -568,4 +586,27 @@ export async function bulkImportLeague(
   }
 
   return { leagueId, created, updated, errors };
+}
+
+export async function getDepthChartByTeamSeason(
+  teamId: string,
+  seasonId: string,
+): Promise<DepthChartEntryDto[]> {
+  return queryConvex(refs.getDepthChartByTeamSeason, { teamId, seasonId });
+}
+
+export async function reorderDepthChart(input: {
+  teamId: string;
+  seasonId: string;
+  positionSlot: string;
+  playerIds: string[];
+}): Promise<DepthChartEntryDto[]> {
+  return mutateConvex(refs.reorderDepthChart, input);
+}
+
+export async function setRosterLocked(
+  seasonId: string,
+  locked: boolean,
+): Promise<{ seasonId: string; rosterLocked: boolean }> {
+  return mutateConvex(refs.setRosterLocked, { seasonId, locked });
 }
