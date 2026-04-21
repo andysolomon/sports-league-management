@@ -180,6 +180,35 @@ Notes:
 | Date | Change | Story |
 | --- | --- | --- |
 | 2026-04-21 | Initial spec authored | WSM-000054 |
-| _TBD by HITL_ | Applied via `gh api`; Option B bypass configured | WSM-000055 |
+| 2026-04-21 | Option B minimal-rules variant applied: force-push blocked, deletion blocked, CODEOWNERS enforced with `required_approving_review_count: 0` (solo-maintainer reality), conversation-resolution required. `required_status_checks` left null so `release.yml` can push back to `main`. Tighten to full spec once a second maintainer is added. | WSM-000055 |
+
+## 8. Applied Configuration (as of 2026-04-21)
+
+Output of `gh api repos/andysolomon/sports-league-management/branches/main/protection`:
+
+```json
+{
+  "required_status_checks": null,
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": true,
+    "require_code_owner_reviews": true,
+    "require_last_push_approval": false,
+    "required_approving_review_count": 0
+  },
+  "restrictions": null,
+  "required_linear_history": false,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_conversation_resolution": true
+}
+```
+
+Differences vs §2 spec, tracked for a future tightening pass:
+
+- `required_status_checks` is `null` (spec wants `Commitlint` + main CI required) —
+  pending GitHub App bypass (§3 Option A).
+- `required_approving_review_count` is `0` (spec wants `1`) — pending second
+  maintainer.
 
 [Release Please Bot]: https://github.com/apps/release-please
