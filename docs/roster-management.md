@@ -15,6 +15,26 @@ We are adding **roster management** on top of the existing League / Division / T
 
 ## 1. Overview
 
+### Phase 1 — LIVE (2026-04-22)
+
+Phase 1 (season rosters + depth-chart migration + audit log) is merged to `main` behind the `roster_snapshots_v1` Vercel flag. Production default is `off`; dev default is `on`. Shipped via Sprint 2 across eleven PRs, one per story:
+
+| Story | PR | What shipped |
+|-------|----|--------------|
+| WSM-000010 | #115 | `rosterAssignments` + `rosterAuditLog` tables + DTO extensions |
+| WSM-000011 | #116 | `roster_snapshots_v1` feature flag |
+| WSM-000012 | #117 | Position-group util + `players.positionGroup` backfill |
+| WSM-000013 | #118 | `writeAuditLog` transactional helper |
+| WSM-000014 | #119 | `assignPlayerToRoster` / `removePlayerFromRoster` / `updateRosterStatus` mutations with audit log |
+| WSM-000015 | #120 | `getRosterBySeasonTeam`, `getTeamRosterLimitStatus`, `getRosterAssignmentHistory` queries |
+| WSM-000016 | #121 | `depthChartEntries → rosterAssignments` migration (1-indexed `depthRank`) |
+| WSM-000017 | #122 | `/dashboard/teams/[id]/roster` UI: active + IR/suspended/released + limit badge + assign dialog |
+| WSM-000018 | #123 | `/dashboard/teams/[id]/roster/audit` timeline with action + player filters |
+| WSM-000019 | #124 | Playwright roster + audit smoke + fixme scaffolding |
+| WSM-000020 | this PR | Phase 1 close-out docs + §11.1 decision rows |
+
+**Flag flip pending:** prod flip to `on` is gated on a preview-deploy manual QA pass and on the depth-chart migration (WSM-000016) being invoked against production data.
+
 ### Phase 0 — LIVE (2026-04-22)
 
 Phase 0 (per-team, per-season depth chart + season-level edit lock) is merged to `main` behind the `depth_chart_v1` Vercel flag. Production default is `off`; dev default is `on`. Shipped via Sprint 1 across eight PRs, one per story:
@@ -509,6 +529,13 @@ Append a row any time a §2.1 working assumption or §11 default is overridden. 
 | 2026-04-22 | Forward-compat invariant (Phase 0 → Phase 1) | `depthChartEntries.sortOrder` is dense, zero-indexed within `(teamId, seasonId, positionSlot)`. Phase 1's WSM-000019 can rename to `rosterAssignments.depthRank` as a pure column rename — no data reshape. | Andrew Solomon |
 | 2026-04-22 | E2E scope narrowed | `coach-depth-chart.spec.ts` ships with one active smoke (flag-gated route reachable) and three `test.fixme` scenarios. A Convex seeding harness + a second Clerk test user are prerequisites and are not in Phase 0 scope. | Andrew Solomon |
 | 2026-04-22 | Analytics surface | Three events — `flag_exposure`, `depth_chart_reorder`, `season_lock_toggle` — fired via `@vercel/analytics/server` through `apps/web/src/lib/analytics.ts`. No PII. Errors swallowed so telemetry never blocks user flows. | Andrew Solomon |
+| 2026-04-22 | Phase 1 flag name (WSM-000011) | `roster_snapshots_v1` controls the full Phase 1 surface (mutations, queries, page, audit log). Separate from `depth_chart_v1` so Phase 0 can stay live in production while Phase 1 is still under flag. | Andrew Solomon |
+| 2026-04-22 | `depthRank` sentinel (WSM-000014) | Schema uses `v.number()`, not nullable. Non-active rows (`ir`, `suspended`, `released`) carry `depthRank: 0` as a sentinel meaning "not on the active chart." Active rows are 1-indexed (`depthRank >= 1`). Chose this over a nullable column so the Convex index on `(seasonId, teamId, positionSlot, depthRank)` stays totally-ordered. | Andrew Solomon |
+| 2026-04-22 | Migration mapping (WSM-000016) | `depthChartEntries.sortOrder + 1 → rosterAssignments.depthRank`. All migrated rows land as `status: "active"`. The migration is idempotent — re-running skips `(teamId, seasonId, positionSlot, playerId)` that already exist. | Andrew Solomon |
+| 2026-04-22 | Audit log for depth reorders (WSM-000014) | Bulk `reorderDepthChart` in Phase 0 emits one `depth_reorder` audit row per position-slot reorder. Individual row insert/delete during reorder do **not** emit separate `assign`/`remove` rows — that would flood the timeline. Phase 1's `assignPlayerToRoster` / `removePlayerFromRoster` are the only paths that emit `assign` / `remove`. | Andrew Solomon |
+| 2026-04-22 | Roster mutation auth (WSM-000014) | Convex mutations take `actorUserId: v.string()` as an explicit argument. Auth (Clerk `auth()` + `getUserRoleInOrg`) happens at the Next.js server-action layer, not inside Convex. This keeps the mutations reusable from scripts/migrations (e.g., WSM-000016) without a Clerk context. | Andrew Solomon |
+| 2026-04-22 | Phase 1 analytics surface (WSM-000017) | Four new events — `roster_assign`, `roster_remove`, `roster_status_change`, `roster_limit_blocked` — emitted from server actions via `@vercel/analytics/server`. `roster_limit_blocked` carries only `{seasonId, teamId}` because the thrown mutation error (`roster_limit_exceeded`) doesn't include the limit value. | Andrew Solomon |
+| 2026-04-22 | Audit log filtering via JSON substring (WSM-000015) | `getRosterAssignmentHistory` filters by `playerId` using a substring match (`"playerId":"${id}"`) against `beforeJson` / `afterJson`. Acceptable for Phase 1 since audit-log volume per team is bounded (dozens per season), and it avoids a dedicated `playerId` column on the audit table. If volume grows, revisit with a denormalized column + index. | Andrew Solomon |
 
 ---
 
