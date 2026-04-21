@@ -30,19 +30,6 @@
     ["@semantic-release/npm", {
       "npmPublish": false
     }],
-    ["@semantic-release/exec", {
-      "prepareCmd": "for f in apps/web/package.json apps/tui/package.json packages/api-contracts/package.json packages/shared-types/package.json; do jq --arg v \"${nextRelease.version}\" '.version = $v' \"$f\" > \"$f.tmp\" && mv \"$f.tmp\" \"$f\"; done"
-    }],
-    ["@semantic-release/git", {
-      "assets": [
-        "package.json",
-        "apps/web/package.json",
-        "apps/tui/package.json",
-        "packages/api-contracts/package.json",
-        "packages/shared-types/package.json"
-      ],
-      "message": "chore(release): v${nextRelease.version}\n\n${nextRelease.notes}"
-    }],
     "@semantic-release/github"
   ]
 }
