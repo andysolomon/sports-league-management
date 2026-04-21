@@ -1,7 +1,7 @@
 # Release Strategy
 
-> **Status:** Spike outline (WSM-000048). Fleshed out in WSM-000053.
-> **Last updated:** 2026-04-17
+> **Status:** Canonical. Originated as a WSM-000048 spike; ratified in WSM-000053.
+> **Last updated:** 2026-04-21
 
 This document is the canonical reference for how sprtsmng cuts releases: which
 packages get versioned, what model drives the bump, what triggers a tag, and
@@ -136,3 +136,5 @@ Summary:
 | 2026-04-17 | Include `apps/tui` in lockstep (historical `v0.4.0-tui` tag stays as-is) | WSM-000049 |
 | 2026-04-17 | Commit `scope` is free-form in Sprint 0; revisit if drift appears | WSM-000051 |
 | 2026-04-17 | Husky upgrade v7 → v9 in scope of Sprint 0 | WSM-000050 |
+| 2026-04-21 | v0.1.0 annotated baseline tag set by hand after an accidental `v1.0.0` from first-release defaults; subsequent releases compute from this baseline | WSM-000049 |
+| 2026-04-21 | `Commitlint` job runs on `pull_request`, gating merges; `--no-verify` cannot bypass it | WSM-000052 |
