@@ -1,6 +1,9 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { writeAuditLog } from "./lib/auditLog";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -109,6 +112,53 @@ function toSeasonDto(doc: {
     status: doc.status,
     rosterLocked: doc.rosterLocked ?? false,
   };
+}
+
+function toRosterAssignmentDto(doc: {
+  _id: string;
+  seasonId: string;
+  teamId: string;
+  playerId: string;
+  leagueId: string;
+  depthRank: number;
+  positionSlot: string;
+  status: string;
+  assignedAt: string;
+  assignedBy: string;
+}) {
+  return {
+    id: doc._id,
+    seasonId: doc.seasonId,
+    teamId: doc.teamId,
+    playerId: doc.playerId,
+    leagueId: doc.leagueId,
+    depthRank: doc.depthRank,
+    positionSlot: doc.positionSlot,
+    status: doc.status,
+    assignedAt: doc.assignedAt,
+    assignedBy: doc.assignedBy,
+  };
+}
+
+const rosterAssignmentDtoValidator = v.object({
+  id: v.string(),
+  seasonId: v.string(),
+  teamId: v.string(),
+  playerId: v.string(),
+  leagueId: v.string(),
+  depthRank: v.number(),
+  positionSlot: v.string(),
+  status: v.string(),
+  assignedAt: v.string(),
+  assignedBy: v.string(),
+});
+
+const ROSTER_STATUSES = ["active", "ir", "suspended", "released"] as const;
+
+function assertValidRosterStatus(status: string): void {
+  if (!ROSTER_STATUSES.includes(status as (typeof ROSTER_STATUSES)[number])) {
+    throw new Error(`invalid_status:${status}`);
+  }
 }
 
 export const getVisibleLeagueContext = queryGeneric({
@@ -1306,5 +1356,260 @@ export const setRosterLocked = mutation({
     }
     await ctx.db.patch(args.seasonId, { rosterLocked: args.locked });
     return { seasonId: args.seasonId, rosterLocked: args.locked };
+  },
+});
+
+export const assignPlayerToRoster = mutation({
+  args: {
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    playerId: v.id("players"),
+    positionSlot: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: rosterAssignmentDtoValidator,
+  handler: async (ctx, args) => {
+    const [season, team, player] = await Promise.all([
+      ctx.db.get(args.seasonId),
+      ctx.db.get(args.teamId),
+      ctx.db.get(args.playerId),
+    ]);
+    if (!season) throw new Error("season_not_found");
+    if (!team) throw new Error("team_not_found");
+    if (!player) throw new Error("player_not_found");
+    if (season.rosterLocked === true) throw new Error("season_locked");
+    if (team.leagueId !== season.leagueId) {
+      throw new Error("team_season_league_mismatch");
+    }
+    if (player.teamId !== args.teamId) {
+      throw new Error("player_not_on_team");
+    }
+
+    const teamAssignments = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .collect();
+
+    const activeForPlayer = teamAssignments.find(
+      (row) => row.playerId === args.playerId && row.status === "active",
+    );
+    if (activeForPlayer) {
+      throw new Error("player_already_on_roster");
+    }
+
+    const activeCount = teamAssignments.filter(
+      (row) => row.status === "active",
+    ).length;
+    if (team.rosterLimit !== null && activeCount >= team.rosterLimit) {
+      throw new Error("roster_limit_exceeded");
+    }
+
+    const slotActive = teamAssignments.filter(
+      (row) =>
+        row.status === "active" && row.positionSlot === args.positionSlot,
+    );
+    const nextDepthRank =
+      slotActive.reduce((max, row) => Math.max(max, row.depthRank), 0) + 1;
+
+    const assignedAt = new Date().toISOString();
+    const insertedId = await ctx.db.insert("rosterAssignments", {
+      seasonId: args.seasonId,
+      teamId: args.teamId,
+      playerId: args.playerId,
+      leagueId: team.leagueId,
+      depthRank: nextDepthRank,
+      positionSlot: args.positionSlot,
+      status: "active",
+      assignedAt,
+      assignedBy: args.actorUserId,
+    });
+
+    const after = {
+      id: insertedId,
+      seasonId: args.seasonId,
+      teamId: args.teamId,
+      playerId: args.playerId,
+      leagueId: team.leagueId,
+      depthRank: nextDepthRank,
+      positionSlot: args.positionSlot,
+      status: "active",
+      assignedAt,
+      assignedBy: args.actorUserId,
+    };
+
+    await writeAuditLog(ctx, {
+      leagueId: team.leagueId,
+      teamId: args.teamId,
+      seasonId: args.seasonId,
+      actorUserId: args.actorUserId,
+      action: "assign",
+      before: null,
+      after,
+    });
+
+    return toRosterAssignmentDto({ _id: insertedId, ...after });
+  },
+});
+
+async function compactSlotRanks(
+  ctx: MutationCtx,
+  seasonId: Id<"seasons">,
+  teamId: Id<"teams">,
+  positionSlot: string,
+): Promise<void> {
+  const slotRows = await ctx.db
+    .query("rosterAssignments")
+    .withIndex("by_seasonId_teamId_position", (q) =>
+      q
+        .eq("seasonId", seasonId)
+        .eq("teamId", teamId)
+        .eq("positionSlot", positionSlot),
+    )
+    .collect();
+
+  const active = slotRows
+    .filter((row) => row.status === "active")
+    .sort((a, b) => a.depthRank - b.depthRank);
+
+  await Promise.all(
+    active.map((row, index) => {
+      const desired = index + 1;
+      if (row.depthRank === desired) return Promise.resolve();
+      return ctx.db.patch(row._id, { depthRank: desired });
+    }),
+  );
+}
+
+export const removePlayerFromRoster = mutation({
+  args: {
+    assignmentId: v.id("rosterAssignments"),
+    actorUserId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const assignment = await ctx.db.get(args.assignmentId);
+    if (!assignment) throw new Error("assignment_not_found");
+
+    const season = await ctx.db.get(assignment.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (season.rosterLocked === true) throw new Error("season_locked");
+
+    if (assignment.status !== "active") {
+      throw new Error("cannot_remove_non_active");
+    }
+
+    const before = toRosterAssignmentDto(assignment);
+
+    await ctx.db.delete(args.assignmentId);
+    await compactSlotRanks(
+      ctx,
+      assignment.seasonId,
+      assignment.teamId,
+      assignment.positionSlot,
+    );
+
+    await writeAuditLog(ctx, {
+      leagueId: assignment.leagueId,
+      teamId: assignment.teamId,
+      seasonId: assignment.seasonId,
+      actorUserId: args.actorUserId,
+      action: "remove",
+      before,
+      after: null,
+    });
+
+    return null;
+  },
+});
+
+export const updateRosterStatus = mutation({
+  args: {
+    assignmentId: v.id("rosterAssignments"),
+    newStatus: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: rosterAssignmentDtoValidator,
+  handler: async (ctx, args) => {
+    assertValidRosterStatus(args.newStatus);
+
+    const assignment = await ctx.db.get(args.assignmentId);
+    if (!assignment) throw new Error("assignment_not_found");
+
+    const season = await ctx.db.get(assignment.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (season.rosterLocked === true) throw new Error("season_locked");
+
+    if (assignment.status === args.newStatus) {
+      return toRosterAssignmentDto(assignment);
+    }
+
+    const before = toRosterAssignmentDto(assignment);
+
+    const wasActive = assignment.status === "active";
+    const willBeActive = args.newStatus === "active";
+
+    let nextDepthRank = assignment.depthRank;
+
+    if (!wasActive && willBeActive) {
+      const team = await ctx.db.get(assignment.teamId);
+      if (!team) throw new Error("team_not_found");
+
+      const teamAssignments = await ctx.db
+        .query("rosterAssignments")
+        .withIndex("by_seasonId_teamId", (q) =>
+          q.eq("seasonId", assignment.seasonId).eq("teamId", assignment.teamId),
+        )
+        .collect();
+
+      const activeCount = teamAssignments.filter(
+        (row) => row.status === "active" && row._id !== assignment._id,
+      ).length;
+      if (team.rosterLimit !== null && activeCount >= team.rosterLimit) {
+        throw new Error("roster_limit_exceeded");
+      }
+
+      const slotActive = teamAssignments.filter(
+        (row) =>
+          row.status === "active" &&
+          row.positionSlot === assignment.positionSlot &&
+          row._id !== assignment._id,
+      );
+      nextDepthRank =
+        slotActive.reduce((max, row) => Math.max(max, row.depthRank), 0) + 1;
+    } else if (wasActive && !willBeActive) {
+      nextDepthRank = 0;
+    }
+
+    await ctx.db.patch(args.assignmentId, {
+      status: args.newStatus,
+      depthRank: nextDepthRank,
+    });
+
+    if (wasActive && !willBeActive) {
+      await compactSlotRanks(
+        ctx,
+        assignment.seasonId,
+        assignment.teamId,
+        assignment.positionSlot,
+      );
+    }
+
+    const updated = await ctx.db.get(args.assignmentId);
+    if (!updated) throw new Error("assignment_not_found");
+    const after = toRosterAssignmentDto(updated);
+
+    await writeAuditLog(ctx, {
+      leagueId: assignment.leagueId,
+      teamId: assignment.teamId,
+      seasonId: assignment.seasonId,
+      actorUserId: args.actorUserId,
+      action: "status_change",
+      before,
+      after,
+    });
+
+    return after;
   },
 });
