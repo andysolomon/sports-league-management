@@ -25,6 +25,7 @@
 | [sprints/SPRINT_2025_09_PLAN.md](sprints/SPRINT_2025_09_PLAN.md) | External frontend and monorepo |
 | [sprints/SPRINT_2025_10_PLAN.md](sprints/SPRINT_2025_10_PLAN.md) | Frontend enhancement with shadcn/ui (W-000034 through W-000040) |
 | [sprints/SPRINT_2025_10_E2E_PLAN.md](sprints/SPRINT_2025_10_E2E_PLAN.md) | E2E test coverage for Sprint 2025.10 stories |
+| [sprints/SPRINT_0_VERIFICATION.md](sprints/SPRINT_0_VERIFICATION.md) | Sprint 0 platform-foundation close-out: release automation, commit enforcement, branching (WSM-000047..WSM-000056) |
 
 ## Architecture and Decisions
 
