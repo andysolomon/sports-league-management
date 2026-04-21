@@ -94,6 +94,7 @@ function toSeasonDto(doc: {
   startDate: string | null;
   endDate: string | null;
   status: string;
+  rosterLocked?: boolean;
 }) {
   return {
     id: doc._id,
@@ -102,6 +103,7 @@ function toSeasonDto(doc: {
     startDate: doc.startDate ?? null,
     endDate: doc.endDate ?? null,
     status: doc.status,
+    rosterLocked: doc.rosterLocked ?? false,
   };
 }
 
@@ -470,6 +472,7 @@ export const listSeasons = queryGeneric({
       startDate: v.union(v.string(), v.null()),
       endDate: v.union(v.string(), v.null()),
       status: v.string(),
+      rosterLocked: v.boolean(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -495,6 +498,7 @@ export const getSeason = queryGeneric({
       startDate: v.union(v.string(), v.null()),
       endDate: v.union(v.string(), v.null()),
       status: v.string(),
+      rosterLocked: v.boolean(),
     }),
     v.null(),
   ),
@@ -990,6 +994,7 @@ export const upsertSeason = mutationGeneric({
       startDate: v.union(v.string(), v.null()),
       endDate: v.union(v.string(), v.null()),
       status: v.string(),
+      rosterLocked: v.boolean(),
     }),
     created: v.boolean(),
   }),
@@ -1031,6 +1036,7 @@ export const upsertSeason = mutationGeneric({
         startDate: args.startDate,
         endDate: args.endDate,
         status: args.status,
+        rosterLocked: false,
       },
       created: true,
     };

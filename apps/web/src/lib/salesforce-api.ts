@@ -242,6 +242,7 @@ export async function getSeasons(visibleLeagueIds: string[]): Promise<SeasonDto[
     id: r.Id, name: r.Name, leagueId: r.League__c,
     startDate: r.Start_Date__c ?? null, endDate: r.End_Date__c ?? null,
     status: r.Status__c ?? "",
+    rosterLocked: false,
   }));
 }
 
@@ -260,6 +261,7 @@ export async function getSeason(id: string, orgContext: OrgContext): Promise<Sea
     id: r.Id, name: r.Name, leagueId: r.League__c,
     startDate: r.Start_Date__c ?? null, endDate: r.End_Date__c ?? null,
     status: r.Status__c ?? "",
+    rosterLocked: false,
   };
 }
 

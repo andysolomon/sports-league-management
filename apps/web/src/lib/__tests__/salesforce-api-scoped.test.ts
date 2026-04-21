@@ -273,6 +273,7 @@ describe("org-scoped reads", () => {
     expect(result[0]).toEqual({
       id: "s1", name: "2025-26", leagueId: "lg_1",
       startDate: "2025-08-01", endDate: "2026-05-31", status: "Active",
+      rosterLocked: false,
     });
   });
 

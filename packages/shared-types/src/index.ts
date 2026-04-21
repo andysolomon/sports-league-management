@@ -47,6 +47,17 @@ export interface SeasonDto {
   startDate: string | null;
   endDate: string | null;
   status: string;
+  rosterLocked: boolean;
+}
+
+export interface DepthChartEntryDto {
+  id: string;
+  teamId: string;
+  seasonId: string;
+  playerId: string;
+  positionSlot: string;
+  sortOrder: number;
+  updatedAt: string;
 }
 
 // --- Mutation input types ---
