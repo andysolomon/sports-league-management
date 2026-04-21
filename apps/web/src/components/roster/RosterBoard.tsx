@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
   PlayerDto,
@@ -107,6 +108,12 @@ export default function RosterBoard({
             activeCount={limitStatus.activeCount}
             rosterLimit={limitStatus.rosterLimit}
           />
+          <Link
+            href={`/dashboard/teams/${team.id}/roster/audit`}
+            className="text-sm text-primary hover:underline"
+          >
+            Audit log
+          </Link>
           <AssignPlayerDialog
             teamId={team.id}
             seasonId={season.id}
