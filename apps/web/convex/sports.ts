@@ -1,5 +1,6 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -1146,5 +1147,132 @@ export const writeSyncReport = mutationGeneric({
       });
     }
     return null;
+  },
+});
+
+const depthChartEntryDto = v.object({
+  id: v.string(),
+  teamId: v.string(),
+  seasonId: v.string(),
+  playerId: v.string(),
+  positionSlot: v.string(),
+  sortOrder: v.number(),
+  updatedAt: v.string(),
+});
+
+export const getDepthChartByTeamSeason = query({
+  args: {
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+  },
+  returns: v.array(depthChartEntryDto),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("depthChartEntries")
+      .withIndex("by_team_season", (q) =>
+        q.eq("teamId", args.teamId).eq("seasonId", args.seasonId),
+      )
+      .collect();
+    return rows
+      .sort((a, b) => {
+        if (a.positionSlot !== b.positionSlot) {
+          return a.positionSlot.localeCompare(b.positionSlot);
+        }
+        return a.sortOrder - b.sortOrder;
+      })
+      .map((row) => ({
+        id: row._id,
+        teamId: row.teamId,
+        seasonId: row.seasonId,
+        playerId: row.playerId,
+        positionSlot: row.positionSlot,
+        sortOrder: row.sortOrder,
+        updatedAt: row.updatedAt,
+      }));
+  },
+});
+
+export const reorderDepthChart = mutation({
+  args: {
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    positionSlot: v.string(),
+    playerIds: v.array(v.id("players")),
+  },
+  returns: v.array(depthChartEntryDto),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) {
+      throw new Error("season_not_found");
+    }
+    if (season.rosterLocked === true) {
+      throw new Error("season_locked");
+    }
+
+    const players = await Promise.all(
+      args.playerIds.map((id) => ctx.db.get(id)),
+    );
+    for (const [index, player] of players.entries()) {
+      if (!player) {
+        throw new Error(`invalid_player:${args.playerIds[index]}`);
+      }
+      if (player.teamId !== args.teamId) {
+        throw new Error(`player_not_on_team:${args.playerIds[index]}`);
+      }
+    }
+
+    const existing = await ctx.db
+      .query("depthChartEntries")
+      .withIndex("by_team_season_position", (q) =>
+        q
+          .eq("teamId", args.teamId)
+          .eq("seasonId", args.seasonId)
+          .eq("positionSlot", args.positionSlot),
+      )
+      .collect();
+    await Promise.all(existing.map((row) => ctx.db.delete(row._id)));
+
+    const updatedAt = new Date().toISOString();
+    const insertedIds = await Promise.all(
+      args.playerIds.map((playerId, index) =>
+        ctx.db.insert("depthChartEntries", {
+          teamId: args.teamId,
+          seasonId: args.seasonId,
+          playerId,
+          positionSlot: args.positionSlot,
+          sortOrder: index,
+          updatedAt,
+        }),
+      ),
+    );
+
+    return insertedIds.map((id, index) => ({
+      id,
+      teamId: args.teamId,
+      seasonId: args.seasonId,
+      playerId: args.playerIds[index],
+      positionSlot: args.positionSlot,
+      sortOrder: index,
+      updatedAt,
+    }));
+  },
+});
+
+export const setRosterLocked = mutation({
+  args: {
+    seasonId: v.id("seasons"),
+    locked: v.boolean(),
+  },
+  returns: v.object({
+    seasonId: v.string(),
+    rosterLocked: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) {
+      throw new Error("season_not_found");
+    }
+    await ctx.db.patch(args.seasonId, { rosterLocked: args.locked });
+    return { seasonId: args.seasonId, rosterLocked: args.locked };
   },
 });
