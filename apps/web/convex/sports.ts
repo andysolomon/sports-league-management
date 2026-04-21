@@ -1018,7 +1018,10 @@ export const upsertSeason = mutationGeneric({
       };
     }
 
-    const seasonId = await ctx.db.insert("seasons", args);
+    const seasonId = await ctx.db.insert("seasons", {
+      ...args,
+      rosterLocked: false,
+    });
     return {
       dto: {
         id: seasonId,

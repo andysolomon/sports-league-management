@@ -54,9 +54,21 @@ export default defineSchema({
     startDate: v.union(v.string(), v.null()),
     endDate: v.union(v.string(), v.null()),
     status: v.string(),
+    rosterLocked: v.boolean(),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_leagueId_name", ["leagueId", "name"]),
+
+  depthChartEntries: defineTable({
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    playerId: v.id("players"),
+    positionSlot: v.string(),
+    sortOrder: v.number(),
+    updatedAt: v.string(),
+  })
+    .index("by_team_season", ["teamId", "seasonId"])
+    .index("by_team_season_position", ["teamId", "seasonId", "positionSlot"]),
 
   leagueSubscriptions: defineTable({
     userId: v.string(),
