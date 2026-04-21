@@ -1,5 +1,6 @@
 import { flag } from "flags/next";
 import { notFound } from "next/navigation";
+import { trackFlagExposure } from "./analytics";
 
 const defaultOn = process.env.NODE_ENV !== "production";
 
@@ -12,7 +13,10 @@ export const depthChartV1 = flag<boolean>({
     { label: "Off", value: false },
     { label: "On", value: true },
   ],
-  decide: () => defaultOn,
+  decide: () => {
+    void trackFlagExposure("depth_chart_v1", defaultOn);
+    return defaultOn;
+  },
 });
 
 export type FeatureFlag = () => Promise<boolean>;
