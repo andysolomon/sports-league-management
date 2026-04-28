@@ -64,31 +64,46 @@ export const resolveOrgContext = cache(
       return { userId, orgIds, visibleLeagueIds: [], subscribedLeagueIds };
     }
 
-    let conn;
+    // Salesforce read path. If SF auth or the SOQL query fails (e.g.
+    // rotated Connected App credentials, transient Salesforce outage),
+    // degrade to an empty visibleLeagueIds set rather than throwing.
+    // Every downstream list query in salesforce-api.ts already
+    // short-circuits to [] when visibleLeagueIds.length === 0, so this
+    // single chokepoint propagates graceful empty state to every
+    // dashboard list page without per-page try/catch. Sprint 5
+    // (Salesforce decoupling) replaces this path with Convex entirely.
     try {
-      conn = await getSalesforceConnection();
-    } catch (e) {
-      console.error("[OrgContext] SF connection failed:", e);
-      throw e;
+      const conn = await getSalesforceConnection();
+      let soql: string;
+
+      if (hasOrgs && hasSubs) {
+        const orgIdStr = idList(orgIds);
+        const subIdStr = idList(subscribedLeagueIds);
+        soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr}) OR Id IN (${subIdStr})`;
+      } else if (hasOrgs) {
+        const orgIdStr = idList(orgIds);
+        soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr})`;
+      } else {
+        const subIdStr = idList(subscribedLeagueIds);
+        soql = `SELECT Id FROM League__c WHERE Id IN (${subIdStr})`;
+      }
+
+      const result = await conn.query<{ Id: string }>(soql);
+      const visibleLeagueIds = result.records.map((r) => r.Id);
+      return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          level: "error",
+          msg: "org_context_sf_degraded",
+          userId,
+          orgIdCount: orgIds.length,
+          subscribedCount: subscribedLeagueIds.length,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+      return { userId, orgIds, visibleLeagueIds: [], subscribedLeagueIds };
     }
-    let soql: string;
-
-    if (hasOrgs && hasSubs) {
-      const orgIdStr = idList(orgIds);
-      const subIdStr = idList(subscribedLeagueIds);
-      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr}) OR Id IN (${subIdStr})`;
-    } else if (hasOrgs) {
-      const orgIdStr = idList(orgIds);
-      soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr})`;
-    } else {
-      const subIdStr = idList(subscribedLeagueIds);
-      soql = `SELECT Id FROM League__c WHERE Id IN (${subIdStr})`;
-    }
-
-    const result = await conn.query<{ Id: string }>(soql);
-    const visibleLeagueIds = result.records.map((r) => r.Id);
-
-    return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
   },
 );
 
