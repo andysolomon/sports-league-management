@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Pixelify_Sans } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -8,10 +10,12 @@ import "./globals.css";
 
 export const dynamic = "force-dynamic";
 
-const inter = Inter({
+// Display font for headings + 8-bit retro accents.
+const pixelifySans = Pixelify_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-pixelify-sans",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -57,7 +61,10 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en" className={inter.variable}>
+      <html
+        lang="en"
+        className={`${GeistSans.variable} ${GeistMono.variable} ${pixelifySans.variable}`}
+      >
         <body className="font-sans antialiased">
           <script
             type="application/ld+json"

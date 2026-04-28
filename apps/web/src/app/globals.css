@@ -11,6 +11,23 @@
  * Pixel font registration lives in WSM-000028.
  */
 @theme {
+  /* Typography (WSM-000028)
+   *
+   * Three font roles registered via next/font in layout.tsx:
+   *   --font-geist-sans     body sans, default
+   *   --font-geist-mono     monospace (code, IDs, metrics, timestamps)
+   *   --font-pixelify-sans  display / heading / 8-bit accents
+   *
+   * `--font-sans` and `--font-mono` are the Tailwind v4 names that power
+   * `font-sans` / `font-mono` utility classes; we point them at Geist.
+   * `--font-display` is a sprtsmng-specific role mapped to the pixel font
+   * and applied to h1-h6 below + the .retro class override.
+   */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-display:
+    var(--font-pixelify-sans), "Press Start 2P", ui-monospace, monospace;
+
   /* Surfaces */
   --color-background: #f5e6d3;       /* warm cream paper */
   --color-foreground: #2a2438;       /* deep purple-black */
@@ -89,6 +106,29 @@
   --color-border: #e6dcc6;
   --color-input: #2e2e4f;
   --color-ring: #ff6b35;
+}
+
+/*
+ * Headings — Pixel display font.
+ *
+ * Maps every h1-h6 to --font-display so any page-level heading picks up
+ * the 8-bit aesthetic without per-component opt-in. Tracking is loosened
+ * slightly because Pixelify Sans renders chunky at default tracking.
+ */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/*
+ * `.retro` is shipped by 8bitcn/ui in src/components/ui/8bit/retro.css
+ * with `font-family: "Press Start 2P", ...`. Override it here so 8bit
+ * components inherit Pixelify Sans (loaded via next/font) instead of
+ * pulling Press Start 2P off Google Fonts via @import. Keeps payload
+ * out of the critical path and matches the chosen heading font.
+ */
+.retro {
+  font-family: var(--font-display) !important;
 }
 
 /*
