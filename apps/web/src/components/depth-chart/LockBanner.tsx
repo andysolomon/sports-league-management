@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/8bit/button";
 import { setRosterLockedAction } from "@/app/dashboard/teams/[id]/depth-chart/actions";
 
 interface LockBannerProps {
