@@ -1,10 +1,48 @@
 @import "tailwindcss";
 
+/*
+ * Sprint 3 — 8-bit re-skin (WSM-000027 design tokens).
+ *
+ * Modern indie pixel-art palette (Stardew/Celeste-leaning, modern colors,
+ * high-contrast borders for crisp pixel edges). Replaces the previous
+ * minimal token set so 8bitcn/ui components inherit the new aesthetic
+ * via the standard shadcn token names (--primary, --background, etc.).
+ *
+ * Pixel font registration lives in WSM-000028.
+ */
 @theme {
-  --color-primary: #2563eb;
-  --color-primary-foreground: #ffffff;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Surfaces */
+  --color-background: #f5e6d3;       /* warm cream paper */
+  --color-foreground: #2a2438;       /* deep purple-black */
+  --color-card: #fff8e7;             /* lighter paper for cards */
+  --color-card-foreground: #2a2438;
+  --color-popover: #fff8e7;
+  --color-popover-foreground: #2a2438;
 
+  /* Brand + semantic */
+  --color-primary: #d97757;          /* warm sport orange */
+  --color-primary-foreground: #fff8e7;
+  --color-secondary: #5b6c8c;        /* dusky blue-grey */
+  --color-secondary-foreground: #fff8e7;
+  --color-muted: #d6c4ad;            /* warm tan */
+  --color-muted-foreground: #6b5e54;
+  --color-accent: #84a07c;           /* sage green for positive states */
+  --color-accent-foreground: #2a2438;
+  --color-destructive: #c04040;      /* pixel red */
+  --color-destructive-foreground: #fff8e7;
+
+  /* Structure */
+  --color-border: #2a2438;           /* high-contrast crisp pixel borders */
+  --color-input: #d6c4ad;
+  --color-ring: #d97757;
+
+  /* Radii — chunky 8-bit means crisp corners. 0 everywhere except sm. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 4px;
+
+  /* Existing animation tokens preserved */
   --animate-in: enter 0.2s ease-out;
   --animate-out: exit 0.2s ease-in;
 
@@ -23,7 +61,60 @@
   }
 }
 
-/* Skip to content link for accessibility */
+/*
+ * Dark mode — deep night purple-blue, warm cream foreground. Triggered
+ * by the standard shadcn .dark class on <html> or <body>. Tokens mirror
+ * the light set so consumers using bg-primary / text-foreground / etc.
+ * automatically swap.
+ */
+.dark {
+  --color-background: #1a1a2e;
+  --color-foreground: #e6dcc6;
+  --color-card: #232342;
+  --color-card-foreground: #e6dcc6;
+  --color-popover: #232342;
+  --color-popover-foreground: #e6dcc6;
+
+  --color-primary: #ff6b35;
+  --color-primary-foreground: #1a1a2e;
+  --color-secondary: #5b6c8c;
+  --color-secondary-foreground: #e6dcc6;
+  --color-muted: #2e2e4f;
+  --color-muted-foreground: #9b9bb1;
+  --color-accent: #6dad6d;
+  --color-accent-foreground: #1a1a2e;
+  --color-destructive: #ff5252;
+  --color-destructive-foreground: #1a1a2e;
+
+  --color-border: #e6dcc6;
+  --color-input: #2e2e4f;
+  --color-ring: #ff6b35;
+}
+
+/*
+ * Optional scanline overlay — apply to any element to get a subtle CRT
+ * scanline texture. Off by default; opt-in per surface.
+ */
+.scanlines {
+  position: relative;
+}
+
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.06) 0px,
+    rgba(0, 0, 0, 0.06) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 1;
+}
+
+/* Skip to content link for accessibility (preserved from prior tokens) */
 .skip-to-content {
   position: absolute;
   top: -100%;
@@ -35,7 +126,8 @@
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
-  border-radius: 0 0 0.375rem 0;
+  border-radius: 0;
+  border: 2px solid var(--color-foreground);
 }
 
 .skip-to-content:focus {
