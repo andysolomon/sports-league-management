@@ -125,54 +125,309 @@ test.describe.serial("Roster management — assign flow (WSM-000022)", () => {
   });
 });
 
+test.describe.serial(
+  "Roster management — limit-blocked (WSM-000023)",
+  () => {
+    let fixture: RosterFixtureResult | null = null;
+    let teardown: (() => Promise<void>) | null = null;
+
+    test.beforeAll(async () => {
+      const orgId = getTestOrgId();
+      test.skip(!orgId, "E2E_CLERK_ORG_ID not set");
+      const handle = await withRosterFixture({
+        fixtureKey: "coach-roster-limit",
+        clerkOrgId: orgId,
+        teamName: "E2E Limit Test Team",
+        rosterLimit: 2,
+        seedActivePlayers: 2,
+        extraBenchPlayers: 1,
+        positionSlot: "QB",
+      });
+      fixture = handle.fixture;
+      teardown = handle.teardown;
+    });
+
+    test.afterAll(async () => {
+      if (teardown) await teardown();
+    });
+
+    test.beforeEach(async ({ page }) => {
+      await setupClerkTestingToken({ page });
+      await signInTestUser(page);
+    });
+
+    test("Add to Roster is disabled when active count meets limit", async ({
+      page,
+    }) => {
+      if (!fixture) test.skip();
+      await page.goto(`/dashboard/teams/${fixture!.teamId}/roster`);
+
+      await expect(
+        page.getByLabel("2 of 2 roster slots used"),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Add to Roster" }),
+      ).toBeDisabled();
+    });
+  },
+);
+
+test.describe.serial("Roster management — IR cycle (WSM-000023)", () => {
+  let fixture: RosterFixtureResult | null = null;
+  let teardown: (() => Promise<void>) | null = null;
+
+  test.beforeAll(async () => {
+    const orgId = getTestOrgId();
+    test.skip(!orgId, "E2E_CLERK_ORG_ID not set");
+    const handle = await withRosterFixture({
+      fixtureKey: "coach-roster-ir",
+      clerkOrgId: orgId,
+      teamName: "E2E IR Test Team",
+      rosterLimit: 53,
+      seedActivePlayers: 2,
+      extraBenchPlayers: 0,
+      positionSlot: "QB",
+    });
+    fixture = handle.fixture;
+    teardown = handle.teardown;
+  });
+
+  test.afterAll(async () => {
+    if (teardown) await teardown();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await setupClerkTestingToken({ page });
+    await signInTestUser(page);
+  });
+
+  test("moving an active player to IR moves them under the IR tab", async ({
+    page,
+  }) => {
+    if (!fixture) test.skip();
+    await page.goto(`/dashboard/teams/${fixture!.teamId}/roster`);
+
+    await expect(
+      page.getByLabel("2 of 53 roster slots used"),
+    ).toBeVisible();
+
+    // Open the per-row dropdown for E2E Player 1 and pick Move to IR.
+    await page
+      .getByRole("button", { name: /Actions for E2E Player 1/ })
+      .click();
+    await page.getByRole("menuitem", { name: "Move to IR" }).click();
+
+    // Active count drops, IR tab now reports 1 entry.
+    await expect(
+      page.getByLabel("1 of 53 roster slots used"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^IR \(1\)$/ }),
+    ).toBeVisible();
+
+    // Active list no longer shows Player 1 (under the active section).
+    const activeSection = page.getByRole("region", { name: "Active roster" });
+    await expect(
+      activeSection.getByText(/E2E Player 1/),
+    ).toHaveCount(0);
+
+    // Click the IR filter chip; the moved player surfaces in the non-active list.
+    await page.getByRole("button", { name: /^IR \(1\)$/ }).click();
+    const nonActiveSection = page.getByRole("region", {
+      name: "Non-active roster",
+    });
+    await expect(nonActiveSection.getByText(/E2E Player 1/)).toBeVisible();
+  });
+});
+
+test.describe.serial(
+  "Roster management — reactivate respects limit (WSM-000023)",
+  () => {
+    let fixture: RosterFixtureResult | null = null;
+    let teardown: (() => Promise<void>) | null = null;
+
+    test.beforeAll(async () => {
+      const orgId = getTestOrgId();
+      test.skip(!orgId, "E2E_CLERK_ORG_ID not set");
+      // 1 active + 1 bench, limit = 1. After moving the active to IR and
+      // adding the bench, we'll be at the limit again — perfect setup for
+      // testing roster_limit_exceeded on reactivate.
+      const handle = await withRosterFixture({
+        fixtureKey: "coach-roster-reactivate",
+        clerkOrgId: orgId,
+        teamName: "E2E Reactivate Test Team",
+        rosterLimit: 1,
+        seedActivePlayers: 1,
+        extraBenchPlayers: 1,
+        positionSlot: "QB",
+      });
+      fixture = handle.fixture;
+      teardown = handle.teardown;
+    });
+
+    test.afterAll(async () => {
+      if (teardown) await teardown();
+    });
+
+    test.beforeEach(async ({ page }) => {
+      await setupClerkTestingToken({ page });
+      await signInTestUser(page);
+    });
+
+    test("reactivate is rejected at limit, then succeeds after a release", async ({
+      page,
+    }) => {
+      if (!fixture) test.skip();
+      await page.goto(`/dashboard/teams/${fixture!.teamId}/roster`);
+
+      // Step 1 — move the only active to IR (now 0/1 active, 1 IR, 1 bench).
+      await page
+        .getByRole("button", { name: /Actions for E2E Player 1/ })
+        .click();
+      await page.getByRole("menuitem", { name: "Move to IR" }).click();
+      await expect(
+        page.getByLabel("0 of 1 roster slots used"),
+      ).toBeVisible();
+
+      // Step 2 — fill the active slot with the bench player.
+      await page.getByRole("button", { name: "Add to Roster" }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel("Player").click();
+      await page.getByRole("option", { name: /E2E Player 2/ }).click();
+      await dialog.getByRole("button", { name: "Add to roster" }).click();
+      await expect(dialog).toBeHidden();
+      await expect(
+        page.getByLabel("1 of 1 roster slots used"),
+      ).toBeVisible();
+
+      // Step 3 — try to reactivate the IR row. UI disables Reactivate at
+      // limit (atLimit prop on RosterStatusList), so the button is the
+      // user-visible enforcement of roster_limit_exceeded.
+      await page.getByRole("button", { name: /^IR \(1\)$/ }).click();
+      const nonActive = page.getByRole("region", {
+        name: "Non-active roster",
+      });
+      const reactivate = nonActive.getByRole("button", {
+        name: "Reactivate",
+      });
+      await expect(reactivate).toBeDisabled();
+
+      // Step 4 — release the active row to free a slot.
+      const activeSection = page.getByRole("region", {
+        name: "Active roster",
+      });
+      await activeSection
+        .getByRole("button", { name: /Actions for E2E Player 2/ })
+        .click();
+      await page.getByRole("menuitem", { name: "Release" }).click();
+      await expect(
+        page.getByLabel("0 of 1 roster slots used"),
+      ).toBeVisible();
+
+      // Step 5 — reactivate now succeeds.
+      await page.getByRole("button", { name: /^IR \(1\)$/ }).click();
+      await nonActive
+        .getByRole("button", { name: "Reactivate" })
+        .first()
+        .click();
+      await expect(
+        page.getByLabel("1 of 1 roster slots used"),
+      ).toBeVisible();
+    });
+  },
+);
+
+test.describe.serial(
+  "Roster management — audit timeline reflects mutations (WSM-000023)",
+  () => {
+    let fixture: RosterFixtureResult | null = null;
+    let teardown: (() => Promise<void>) | null = null;
+
+    test.beforeAll(async () => {
+      const orgId = getTestOrgId();
+      test.skip(!orgId, "E2E_CLERK_ORG_ID not set");
+      const handle = await withRosterFixture({
+        fixtureKey: "coach-roster-audit",
+        clerkOrgId: orgId,
+        teamName: "E2E Audit Test Team",
+        rosterLimit: 53,
+        seedActivePlayers: 0,
+        extraBenchPlayers: 1,
+        positionSlot: "QB",
+      });
+      fixture = handle.fixture;
+      teardown = handle.teardown;
+    });
+
+    test.afterAll(async () => {
+      if (teardown) await teardown();
+    });
+
+    test.beforeEach(async ({ page }) => {
+      await setupClerkTestingToken({ page });
+      await signInTestUser(page);
+    });
+
+    test("assign → IR → reactivate produces three audit rows", async ({
+      page,
+    }) => {
+      if (!fixture) test.skip();
+      await page.goto(`/dashboard/teams/${fixture!.teamId}/roster`);
+
+      // Drive the cycle: assign, then IR, then reactivate.
+      await page.getByRole("button", { name: "Add to Roster" }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel("Player").click();
+      await page.getByRole("option", { name: /E2E Player 1/ }).click();
+      await dialog.getByRole("button", { name: "Add to roster" }).click();
+      await expect(dialog).toBeHidden();
+      await expect(
+        page.getByLabel("1 of 53 roster slots used"),
+      ).toBeVisible();
+
+      await page
+        .getByRole("button", { name: /Actions for E2E Player 1/ })
+        .click();
+      await page.getByRole("menuitem", { name: "Move to IR" }).click();
+      await expect(
+        page.getByLabel("0 of 53 roster slots used"),
+      ).toBeVisible();
+
+      await page.getByRole("button", { name: /^IR \(1\)$/ }).click();
+      const nonActive = page.getByRole("region", {
+        name: "Non-active roster",
+      });
+      await nonActive.getByRole("button", { name: "Reactivate" }).click();
+      await expect(
+        page.getByLabel("1 of 53 roster slots used"),
+      ).toBeVisible();
+
+      // Visit the audit timeline and assert three rows for our cycle.
+      await page.goto(
+        `/dashboard/teams/${fixture!.teamId}/roster/audit`,
+      );
+      await expect(
+        page.getByRole("heading", { name: /Roster Audit Log/ }),
+      ).toBeVisible();
+
+      // Audit chips render the action label with underscores replaced by
+      // spaces, so we expect: one "assign" + two "status change" rows.
+      await expect(page.getByText("assign", { exact: true })).toHaveCount(1);
+      await expect(
+        page.getByText("status change", { exact: true }),
+      ).toHaveCount(2);
+    });
+  },
+);
+
 test.describe("Roster management — parked scenarios (WSM-000019)", () => {
-
-  test.fixme(
-    "roster limit blocks a new assignment",
-    async () => {
-      // Requires Convex seed harness seeded to team.rosterLimit exactly.
-      // Attempt to assign another eligible player and expect the mutation
-      // to reject with roster_limit_exceeded + toast message + disabled
-      // Add to Roster button after reload.
-    },
-  );
-
-  test.fixme(
-    "move active player to IR removes from active and appears in IR tab",
-    async () => {
-      // Requires Convex seed harness with an active assignment. Use the row
-      // dropdown "Move to IR" action; confirm the row disappears from the
-      // active list and appears in the IR filter with depthRank=0.
-    },
-  );
-
-  test.fixme(
-    "reactivate from IR respects roster limit",
-    async () => {
-      // Requires Convex seed harness with one IR assignment and active roster
-      // already at team.rosterLimit. Press Reactivate and expect
-      // roster_limit_exceeded + toast. Free a slot (release another player)
-      // and retry; expect the reactivate to succeed and the row to rejoin
-      // the active list with depthRank=highestSlotRank+1.
-    },
-  );
-
-  test.fixme(
-    "audit log timeline reflects assign → IR → reactivate cycle",
-    async () => {
-      // Requires Convex seed harness. Perform the cycle above, then navigate
-      // to /roster/audit and expect three rows in order: status_change
-      // (active → ir), status_change (ir → active), plus the original
-      // assign. Filter by player and assert the same three rows remain.
-    },
-  );
-
   test.fixme(
     "coach of team A cannot mutate team B roster",
     async () => {
       // Requires two teams in different orgs. Invoke
       // assignPlayerToRosterAction for team B while authenticated as coach
       // of team A; expect the server action to throw `not_authorized`.
+      // Blocked on provisioning a second Clerk test user in a second org.
     },
   );
 });
