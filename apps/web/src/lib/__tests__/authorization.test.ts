@@ -1,22 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const {
-  mockQuery,
+  mockGetTeamLeagueId,
   mockGetLeagueOrgId,
   mockGetOrganizationMembershipList,
 } = vi.hoisted(() => ({
-  mockQuery: vi.fn(),
+  mockGetTeamLeagueId: vi.fn(),
   mockGetLeagueOrgId: vi.fn(),
   mockGetOrganizationMembershipList: vi.fn(),
 }));
 
-vi.mock("../salesforce", () => ({
-  getSalesforceConnection: vi.fn().mockResolvedValue({
-    query: mockQuery,
-  }),
-}));
-
-vi.mock("../org-context", () => ({
+vi.mock("../data-api", () => ({
+  getTeamLeagueId: mockGetTeamLeagueId,
   getLeagueOrgId: mockGetLeagueOrgId,
 }));
 
@@ -39,7 +34,7 @@ describe("authorizeTeamMutation", () => {
   });
 
   it("returns not authorized when team is not found", async () => {
-    mockQuery.mockResolvedValue({ totalSize: 0, records: [] });
+    mockGetTeamLeagueId.mockRejectedValue(new Error("Team not found"));
 
     const result = await authorizeTeamMutation("team_missing", "user_1");
 
@@ -47,10 +42,7 @@ describe("authorizeTeamMutation", () => {
   });
 
   it("returns not authorized for public league (null orgId)", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ League__c: "league_1" }],
-    });
+    mockGetTeamLeagueId.mockResolvedValue("league_1");
     mockGetLeagueOrgId.mockResolvedValue(null);
 
     const result = await authorizeTeamMutation("team_1", "user_1");
@@ -59,10 +51,7 @@ describe("authorizeTeamMutation", () => {
   });
 
   it("returns authorized for org admin", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ League__c: "league_1" }],
-    });
+    mockGetTeamLeagueId.mockResolvedValue("league_1");
     mockGetLeagueOrgId.mockResolvedValue("org_1");
     mockGetOrganizationMembershipList.mockResolvedValue({
       data: [{ organization: { id: "org_1" }, role: "org:admin" }],
@@ -74,10 +63,7 @@ describe("authorizeTeamMutation", () => {
   });
 
   it("returns not authorized for org member (non-admin)", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ League__c: "league_1" }],
-    });
+    mockGetTeamLeagueId.mockResolvedValue("league_1");
     mockGetLeagueOrgId.mockResolvedValue("org_1");
     mockGetOrganizationMembershipList.mockResolvedValue({
       data: [{ organization: { id: "org_1" }, role: "org:member" }],
@@ -89,10 +75,7 @@ describe("authorizeTeamMutation", () => {
   });
 
   it("returns not authorized for non-member of org", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ League__c: "league_1" }],
-    });
+    mockGetTeamLeagueId.mockResolvedValue("league_1");
     mockGetLeagueOrgId.mockResolvedValue("org_1");
     mockGetOrganizationMembershipList.mockResolvedValue({
       data: [{ organization: { id: "org_other" }, role: "org:admin" }],
@@ -110,10 +93,7 @@ describe("canManageTeam", () => {
   });
 
   it("returns true when user is authorized", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ League__c: "league_1" }],
-    });
+    mockGetTeamLeagueId.mockResolvedValue("league_1");
     mockGetLeagueOrgId.mockResolvedValue("org_1");
     mockGetOrganizationMembershipList.mockResolvedValue({
       data: [{ organization: { id: "org_1" }, role: "org:admin" }],
@@ -125,7 +105,7 @@ describe("canManageTeam", () => {
   });
 
   it("returns false when user is not authorized", async () => {
-    mockQuery.mockResolvedValue({ totalSize: 0, records: [] });
+    mockGetTeamLeagueId.mockRejectedValue(new Error("Team not found"));
 
     const result = await canManageTeam("team_missing", "user_1");
 

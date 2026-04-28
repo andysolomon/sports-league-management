@@ -2,11 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const {
   mockGetOrganizationMembershipList,
-  mockQuery,
   mockGetVisibleLeagueContext,
 } = vi.hoisted(() => ({
   mockGetOrganizationMembershipList: vi.fn(),
-  mockQuery: vi.fn(),
   mockGetVisibleLeagueContext: vi.fn(),
 }));
 
@@ -15,13 +13,6 @@ vi.mock("@clerk/nextjs/server", () => ({
     users: {
       getOrganizationMembershipList: mockGetOrganizationMembershipList,
     },
-  }),
-}));
-
-// `getLeagueOrgId` (still SF-backed) keeps the salesforce mock alive.
-vi.mock("../salesforce", () => ({
-  getSalesforceConnection: vi.fn().mockResolvedValue({
-    query: mockQuery,
   }),
 }));
 
@@ -37,7 +28,6 @@ import {
   resolveOrgContext,
   requireLeagueAccess,
   requireOrgAdmin,
-  getLeagueOrgId,
 } from "../org-context";
 
 describe("resolveOrgContext", () => {
@@ -189,34 +179,3 @@ describe("requireOrgAdmin", () => {
   });
 });
 
-describe("getLeagueOrgId", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("returns org ID for a league with an org", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ Clerk_Org_Id__c: "org_abc" }],
-    });
-
-    const orgId = await getLeagueOrgId("league_1");
-    expect(orgId).toBe("org_abc");
-  });
-
-  it("returns null for a public league", async () => {
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ Clerk_Org_Id__c: null }],
-    });
-
-    const orgId = await getLeagueOrgId("league_public");
-    expect(orgId).toBeNull();
-  });
-
-  it("throws when league not found", async () => {
-    mockQuery.mockResolvedValue({ totalSize: 0, records: [] });
-
-    await expect(getLeagueOrgId("nonexistent")).rejects.toThrow(
-      "League not found",
-    );
-  });
-});

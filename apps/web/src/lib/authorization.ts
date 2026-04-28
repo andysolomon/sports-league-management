@@ -1,7 +1,6 @@
 import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import type { Tier } from "./tiers";
-import { getLeagueOrgId } from "./org-context";
-import { getSalesforceConnection } from "./salesforce";
+import { getTeamLeagueId, getLeagueOrgId } from "./data-api";
 
 export interface AuthorizationResult {
   userId: string;
@@ -10,7 +9,7 @@ export interface AuthorizationResult {
 
 /**
  * Authorize a mutation on a team. The chain is:
- * teamId -> Team__c.League__c -> League__c.Clerk_Org_Id__c -> requireOrgAdmin
+ * teamId -> team.leagueId (Convex) -> league.orgId (Convex) -> requireOrgAdmin
  *
  * Public leagues (null orgId) -> mutations denied (read-only).
  * Org leagues -> only org:admin can mutate.
@@ -20,16 +19,7 @@ export async function authorizeTeamMutation(
   userId: string,
 ): Promise<AuthorizationResult> {
   try {
-    // Get team's league
-    const conn = await getSalesforceConnection();
-    const result = await conn.query<{ League__c: string }>(
-      `SELECT League__c FROM Team__c WHERE Id = '${teamId}' LIMIT 1`,
-    );
-    if (result.totalSize === 0) {
-      return { userId, isAuthorized: false };
-    }
-
-    const leagueId = result.records[0].League__c;
+    const leagueId = await getTeamLeagueId(teamId);
     const orgId = await getLeagueOrgId(leagueId);
 
     // Public leagues are read-only
