@@ -1,6 +1,5 @@
 import { cache } from "react";
 import { clerkClient } from "@clerk/nextjs/server";
-import { getSalesforceConnection } from "./salesforce";
 import { getVisibleLeagueContext as getVisibleLeagueContextFromConvex } from "./data-api";
 
 export interface OrgContext {
@@ -109,19 +108,3 @@ export async function getUserRoleInOrg(
   return membership.role as "org:admin" | "org:member";
 }
 
-/**
- * Find the Clerk Org ID that owns a given league.
- * Returns null for public leagues.
- */
-export async function getLeagueOrgId(
-  leagueId: string,
-): Promise<string | null> {
-  const conn = await getSalesforceConnection();
-  const result = await conn.query<{ Clerk_Org_Id__c: string | null }>(
-    `SELECT Clerk_Org_Id__c FROM League__c WHERE Id = '${leagueId}' LIMIT 1`,
-  );
-  if (result.totalSize === 0) {
-    throw new Error("League not found");
-  }
-  return result.records[0].Clerk_Org_Id__c ?? null;
-}

@@ -5,8 +5,9 @@ import { depthChartV1 } from "@/lib/flags";
 import {
   reorderDepthChart as reorderDepthChartMutation,
   setRosterLocked as setRosterLockedMutation,
+  getLeagueOrgId,
 } from "@/lib/data-api";
-import { getLeagueOrgId, getUserRoleInOrg } from "@/lib/org-context";
+import { getUserRoleInOrg } from "@/lib/org-context";
 import {
   trackDepthChartReorder,
   trackSeasonLockToggle,

@@ -7,8 +7,9 @@ import {
   getPlayersByTeam,
   getSeasons,
   getDepthChartByTeamSeason,
+  getLeagueOrgId,
 } from "@/lib/data-api";
-import { getLeagueOrgId, getUserRoleInOrg } from "@/lib/org-context";
+import { getUserRoleInOrg } from "@/lib/org-context";
 import DepthChartBoard from "@/components/depth-chart/DepthChartBoard";
 
 export default async function DepthChartPage({
