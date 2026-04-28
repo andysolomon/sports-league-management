@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { clerkClient } from "@clerk/nextjs/server";
 import { getSalesforceConnection } from "./salesforce";
+import { getVisibleLeagueContext as getVisibleLeagueContextFromConvex } from "./data-api";
 
 export interface OrgContext {
   userId: string;
@@ -10,19 +11,21 @@ export interface OrgContext {
 }
 
 /**
- * Resolves the authenticated user's org memberships and the Salesforce league IDs
+ * Resolves the authenticated user's org memberships and the Convex league IDs
  * they are allowed to see. Uses React cache() to deduplicate within a single
  * request/render pass.
  *
- * Visible leagues = leagues owned by user's orgs + explicitly subscribed public leagues.
- * Public leagues (Clerk_Org_Id__c = null) are opt-in only via subscribedLeagueIds
- * stored in Clerk user publicMetadata.
+ * Visible leagues = leagues owned by user's orgs + explicitly subscribed public
+ * leagues. The org → league mapping is read from Convex via the `by_orgId`
+ * index on the `leagues` table; the subscriptions list is read from the
+ * Convex `leagueSubscriptions` table indexed by userId. Salesforce is no
+ * longer in this read path (per Sprint 5).
  */
 export const resolveOrgContext = cache(
   async (userId: string): Promise<OrgContext> => {
     const client = await clerkClient();
 
-    // Get all orgs the user belongs to (handle pagination)
+    // Get all orgs the user belongs to (handle pagination).
     const orgIds: string[] = [];
     let offset = 0;
     const limit = 100;
@@ -42,74 +45,15 @@ export const resolveOrgContext = cache(
       offset += limit;
     }
 
-    // Get subscribed public league IDs from Clerk user metadata.
-    // We already have org memberships from getOrganizationMembershipList above,
-    // so use currentUser() pattern via the membership list's user data when
-    // possible. Fall back to getUser() if needed, but handle Forbidden errors
-    // gracefully for Clerk instances where the secret key lacks users.read scope.
-    let subscribedLeagueIds: string[] = [];
-    try {
-      const user = await client.users.getUser(userId);
-      subscribedLeagueIds =
-        (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
-    } catch {
-      // If getUser fails (e.g. Forbidden), continue with empty subscriptions
-    }
+    // Single Convex query resolves both visible-league fan-out (via the
+    // `leagues.by_orgId` index for each org the user belongs to) and the
+    // subscribed-league set (via `leagueSubscriptions.by_userId`).
+    const { visibleLeagueIds, subscribedLeagueIds } =
+      await getVisibleLeagueContextFromConvex(userId, orgIds);
 
-    // Build SOQL based on what the user has access to
-    const hasOrgs = orgIds.length > 0;
-    const hasSubs = subscribedLeagueIds.length > 0;
-
-    if (!hasOrgs && !hasSubs) {
-      return { userId, orgIds, visibleLeagueIds: [], subscribedLeagueIds };
-    }
-
-    // Salesforce read path. If SF auth or the SOQL query fails (e.g.
-    // rotated Connected App credentials, transient Salesforce outage),
-    // degrade to an empty visibleLeagueIds set rather than throwing.
-    // Every downstream list query in salesforce-api.ts already
-    // short-circuits to [] when visibleLeagueIds.length === 0, so this
-    // single chokepoint propagates graceful empty state to every
-    // dashboard list page without per-page try/catch. Sprint 5
-    // (Salesforce decoupling) replaces this path with Convex entirely.
-    try {
-      const conn = await getSalesforceConnection();
-      let soql: string;
-
-      if (hasOrgs && hasSubs) {
-        const orgIdStr = idList(orgIds);
-        const subIdStr = idList(subscribedLeagueIds);
-        soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr}) OR Id IN (${subIdStr})`;
-      } else if (hasOrgs) {
-        const orgIdStr = idList(orgIds);
-        soql = `SELECT Id FROM League__c WHERE Clerk_Org_Id__c IN (${orgIdStr})`;
-      } else {
-        const subIdStr = idList(subscribedLeagueIds);
-        soql = `SELECT Id FROM League__c WHERE Id IN (${subIdStr})`;
-      }
-
-      const result = await conn.query<{ Id: string }>(soql);
-      const visibleLeagueIds = result.records.map((r) => r.Id);
-      return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
-    } catch (err) {
-      console.error(
-        JSON.stringify({
-          level: "error",
-          msg: "org_context_sf_degraded",
-          userId,
-          orgIdCount: orgIds.length,
-          subscribedCount: subscribedLeagueIds.length,
-          error: err instanceof Error ? err.message : String(err),
-        }),
-      );
-      return { userId, orgIds, visibleLeagueIds: [], subscribedLeagueIds };
-    }
+    return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
   },
 );
-
-function idList(ids: string[]): string {
-  return ids.map((id) => `'${id}'`).join(",");
-}
 
 /**
  * Check that a specific league is within the user's visible set.
