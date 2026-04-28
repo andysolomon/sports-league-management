@@ -3,6 +3,7 @@ import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import {
   withRosterFixture,
   getTestOrgId,
+  getTestOrgIdB,
   type RosterFixtureResult,
 } from "../helpers/seed-roster";
 import { signInTestUser } from "../helpers/clerk-signin";
@@ -445,14 +446,74 @@ test.describe.serial(
   },
 );
 
-test.describe("Roster management — parked scenarios (WSM-000019)", () => {
-  test.fixme(
-    "coach of team A cannot mutate team B roster",
-    async () => {
-      // Requires two teams in different orgs. Invoke
-      // assignPlayerToRosterAction for team B while authenticated as coach
-      // of team A; expect the server action to throw `not_authorized`.
-      // Blocked on provisioning a second Clerk test user in a second org.
-    },
-  );
-});
+test.describe.serial(
+  "Roster management — cross-org isolation (WSM-000025)",
+  () => {
+    let fixture: RosterFixtureResult | null = null;
+    let teardown: (() => Promise<void>) | null = null;
+
+    test.beforeAll(async () => {
+      const orgIdA = getTestOrgId();
+      const orgIdB = getTestOrgIdB();
+      test.skip(
+        !orgIdA || !orgIdB,
+        "E2E_CLERK_ORG_ID and E2E_CLERK_ORG_ID_B both required for cross-org spec.",
+      );
+      // Fixture league belongs to Org A. The test signs in as User B
+      // (member of Org B only) and asserts the page rejects them.
+      const handle = await withRosterFixture({
+        fixtureKey: "coach-roster-cross-org",
+        clerkOrgId: orgIdA,
+        teamName: "E2E Cross-Org Test Team",
+        rosterLimit: 53,
+        seedActivePlayers: 0,
+        extraBenchPlayers: 1,
+        positionSlot: "QB",
+      });
+      fixture = handle.fixture;
+      teardown = handle.teardown;
+    });
+
+    test.afterAll(async () => {
+      if (teardown) await teardown();
+    });
+
+    test.beforeEach(async ({ page }) => {
+      await setupClerkTestingToken({ page });
+      await signInTestUser(page, { userVariant: "B" });
+    });
+
+    test("user from Org B cannot reach a roster owned by Org A", async ({
+      page,
+    }) => {
+      if (!fixture) test.skip();
+      await page.goto(`/dashboard/teams/${fixture!.teamId}/roster`);
+
+      // The roster page calls notFound() when getUserRoleInOrg returns null
+      // for the signed-in user against the league's org. User B is admin of
+      // Org B but not a member of Org A — so Next.js renders its 404 page.
+      await expect(
+        page.getByRole("heading", { name: /^404$/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", {
+          name: /E2E Cross-Org Test Team/,
+        }),
+      ).toHaveCount(0);
+    });
+
+    test("user from Org B cannot reach the audit log of an Org A roster", async ({
+      page,
+    }) => {
+      if (!fixture) test.skip();
+      await page.goto(`/dashboard/teams/${fixture!.teamId}/roster/audit`);
+
+      await expect(
+        page.getByRole("heading", { name: /^404$/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /Roster Audit Log/i }),
+      ).toHaveCount(0);
+    });
+  },
+);
