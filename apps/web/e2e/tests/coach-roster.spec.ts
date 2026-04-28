@@ -1,10 +1,17 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { TEAMS } from "../helpers/test-data";
+import {
+  withRosterFixture,
+  getTestOrgId,
+  type RosterFixtureResult,
+} from "../helpers/seed-roster";
+import { signInTestUser } from "../helpers/clerk-signin";
 
 test.describe("Roster management (WSM-000019)", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
   });
 
   test("flag-gated roster route is reachable in dev", async ({ page }) => {
@@ -37,17 +44,88 @@ test.describe("Roster management (WSM-000019)", () => {
       page.getByRole("heading", { name: /Roster Audit Log/i }),
     ).toBeVisible();
   });
+});
 
-  test.fixme(
-    "coach assigns a player; active count increments",
-    async () => {
-      // Requires Convex seed harness (team, active season rosterLocked=false,
-      // one eligible player not yet on the active roster). Open
-      // AssignPlayerDialog, pick the player, submit, expect the active
-      // counter in RosterLimitBadge to increment and a new row to appear
-      // in the positionSlot column.
-    },
-  );
+// Live, seeded scenarios live in their own describe so the fixture lifecycle is
+// scoped to the tests that actually need it. Skips automatically when the
+// runtime prerequisites (CONVEX_ENABLE_E2E_SEED on the deployment, the env
+// vars below) aren't satisfied.
+test.describe.serial("Roster management — assign flow (WSM-000022)", () => {
+  let fixture: RosterFixtureResult | null = null;
+  let teardown: (() => Promise<void>) | null = null;
+
+  test.beforeAll(async () => {
+    const orgId = getTestOrgId();
+    test.skip(
+      !orgId,
+      "E2E_CLERK_ORG_ID not set — skipping seeded roster scenarios.",
+    );
+    const handle = await withRosterFixture({
+      fixtureKey: "coach-roster-assign",
+      clerkOrgId: orgId,
+      teamName: "E2E Assign Test Team",
+      rosterLimit: 53,
+      seedActivePlayers: 0,
+      extraBenchPlayers: 3,
+      positionSlot: "QB",
+    });
+    fixture = handle.fixture;
+    teardown = handle.teardown;
+  });
+
+  test.afterAll(async () => {
+    if (teardown) await teardown();
+  });
+
+  test.beforeEach(async ({ page }) => {
+    await setupClerkTestingToken({ page });
+    await signInTestUser(page);
+  });
+
+  test("coach assigns a bench player; active count goes 0 → 1", async ({
+    page,
+  }) => {
+    if (!fixture) test.skip();
+    const teamId = fixture!.teamId;
+
+    await page.goto(`/dashboard/teams/${teamId}/roster`);
+
+    // Page loaded — header reflects the seeded team.
+    await expect(
+      page.getByRole("heading", { name: /E2E Assign Test Team/ }),
+    ).toBeVisible();
+
+    // Limit badge starts empty.
+    await expect(
+      page.getByLabel("0 of 53 roster slots used"),
+    ).toBeVisible();
+
+    // Open dialog.
+    await page.getByRole("button", { name: "Add to Roster" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    // Pick the first seeded player.
+    await dialog.getByLabel("Player").click();
+    await page
+      .getByRole("option", { name: /E2E Player 1/ })
+      .click();
+
+    // Submit (dialog footer button text is "Add to roster" — lowercase r).
+    await dialog
+      .getByRole("button", { name: "Add to roster" })
+      .click();
+
+    // Dialog closes, badge updates, player appears under the active QB slot.
+    await expect(dialog).toBeHidden();
+    await expect(
+      page.getByLabel("1 of 53 roster slots used"),
+    ).toBeVisible();
+    await expect(page.getByText(/E2E Player 1/).first()).toBeVisible();
+  });
+});
+
+test.describe("Roster management — parked scenarios (WSM-000019)", () => {
 
   test.fixme(
     "roster limit blocks a new assignment",

@@ -4,11 +4,13 @@ import Link from "next/link";
 import { rosterSnapshotsV1 } from "@/lib/flags";
 import {
   getTeam,
+  getTeamLeagueId,
+  getLeagueOrgId,
   getPlayersByTeam,
   getSeasons,
   getRosterAssignmentHistory,
 } from "@/lib/data-api";
-import { getLeagueOrgId, getUserRoleInOrg } from "@/lib/org-context";
+import { getUserRoleInOrg } from "@/lib/org-context";
 import RosterAuditTimeline from "@/components/roster/RosterAuditTimeline";
 
 export default async function RosterAuditPage({
@@ -24,10 +26,12 @@ export default async function RosterAuditPage({
 
   const { id: teamId } = await params;
 
+  const leagueId = await getTeamLeagueId(teamId).catch(() => null);
+  if (!leagueId) notFound();
   const team = await getTeam(teamId, {
     userId,
     orgIds: [],
-    visibleLeagueIds: [],
+    visibleLeagueIds: [leagueId],
     subscribedLeagueIds: [],
   }).catch(() => null);
   if (!team) notFound();
