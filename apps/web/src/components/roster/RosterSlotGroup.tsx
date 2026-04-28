@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/8bit/dropdown-menu";
 import {
   removePlayerFromRosterAction,
   updateRosterStatusAction,

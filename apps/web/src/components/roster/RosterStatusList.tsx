@@ -6,7 +6,7 @@ import type {
   PlayerDto,
   RosterAssignmentDto,
 } from "@sports-management/shared-types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/8bit/button";
 import { updateRosterStatusAction } from "@/app/dashboard/teams/[id]/roster/actions";
 
 export interface RosterStatusListProps {
