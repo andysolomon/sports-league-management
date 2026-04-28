@@ -4,12 +4,14 @@ import Link from "next/link";
 import { rosterSnapshotsV1 } from "@/lib/flags";
 import {
   getTeam,
+  getTeamLeagueId,
+  getLeagueOrgId,
   getPlayersByTeam,
   getSeasons,
   getRosterBySeasonTeam,
   getTeamRosterLimitStatus,
 } from "@/lib/data-api";
-import { getLeagueOrgId, getUserRoleInOrg } from "@/lib/org-context";
+import { getUserRoleInOrg } from "@/lib/org-context";
 import RosterBoard from "@/components/roster/RosterBoard";
 
 export default async function RosterPage({
@@ -25,10 +27,15 @@ export default async function RosterPage({
 
   const { id: teamId } = await params;
 
+  // Resolve leagueId first so the access check inside getTeam has the
+  // correct visibleLeagueIds; real auth runs against the league's Clerk org
+  // a few lines below via getLeagueOrgId + getUserRoleInOrg.
+  const leagueId = await getTeamLeagueId(teamId).catch(() => null);
+  if (!leagueId) notFound();
   const team = await getTeam(teamId, {
     userId,
     orgIds: [],
-    visibleLeagueIds: [],
+    visibleLeagueIds: [leagueId],
     subscribedLeagueIds: [],
   }).catch(() => null);
   if (!team) notFound();

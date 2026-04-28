@@ -6,8 +6,9 @@ import {
   assignPlayerToRoster as assignPlayerToRosterMutation,
   removePlayerFromRoster as removePlayerFromRosterMutation,
   updateRosterStatus as updateRosterStatusMutation,
+  getLeagueOrgId,
 } from "@/lib/data-api";
-import { getLeagueOrgId, getUserRoleInOrg } from "@/lib/org-context";
+import { getUserRoleInOrg } from "@/lib/org-context";
 import {
   trackRosterAssign,
   trackRosterLimitBlocked,
