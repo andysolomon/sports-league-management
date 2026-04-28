@@ -1,6 +1,6 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getPublicLeagues } from "@/lib/salesforce-api";
+import { getPublicLeagues } from "@/lib/data-api";
 import DiscoverLeagues from "./discover-leagues";
 
 export default async function DiscoverPage() {

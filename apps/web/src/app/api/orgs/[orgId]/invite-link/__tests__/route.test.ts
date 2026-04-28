@@ -33,7 +33,7 @@ vi.mock("@/lib/salesforce", () => ({
   getSalesforceConnection: mocks.mockGetSalesforceConnection,
 }));
 
-vi.mock("@/lib/salesforce-api", () => ({
+vi.mock("@/lib/data-api", () => ({
   setLeagueInviteToken: mocks.mockSetLeagueInviteToken,
 }));
 

@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getUserTier, getStripeCustomerId } from "@/lib/authorization";
 import { TIER_CONFIGS } from "@/lib/tiers";
-import { getTeams } from "@/lib/salesforce-api";
+import { getTeams } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/8bit/card";
 import { Badge } from "@/components/ui/badge";

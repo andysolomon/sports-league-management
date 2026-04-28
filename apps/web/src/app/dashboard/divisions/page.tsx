@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getDivisions, getLeagues } from "@/lib/salesforce-api";
+import { getDivisions, getLeagues } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { DivisionsTable } from "./divisions-table";
 

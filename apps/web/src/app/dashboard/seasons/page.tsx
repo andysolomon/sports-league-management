@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getSeasons } from "@/lib/salesforce-api";
+import { getSeasons } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { SeasonsTable } from "./seasons-table";
 

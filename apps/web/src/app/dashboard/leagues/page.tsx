@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getLeagues, getDivisions, getTeams } from "@/lib/salesforce-api";
+import { getLeagues, getDivisions, getTeams } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
 import { Badge } from "@/components/ui/badge";
