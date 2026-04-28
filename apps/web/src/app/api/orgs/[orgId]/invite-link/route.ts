@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgAdmin } from "@/lib/org-context";
-import { setLeagueInviteToken } from "@/lib/salesforce-api";
+import { setLeagueInviteToken } from "@/lib/data-api";
 import { getSalesforceConnection } from "@/lib/salesforce";
 import { handleApiError } from "@/lib/api-error";
 import crypto from "crypto";
