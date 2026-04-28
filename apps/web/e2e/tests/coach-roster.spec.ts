@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
-import { TEAMS } from "../helpers/test-data";
 import {
   withRosterFixture,
   getTestOrgId,
@@ -8,41 +7,67 @@ import {
 } from "../helpers/seed-roster";
 import { signInTestUser } from "../helpers/clerk-signin";
 
-test.describe("Roster management (WSM-000019)", () => {
+// Reachability smoke for the roster + audit routes. Originally these
+// drove the dashboard team list and clicked through to a Salesforce-mirrored
+// Cowboys team — that coupled the spec to whatever local seed state happened
+// to exist in Convex. Now both tests stand up their own org-owned fixture
+// via withRosterFixture, navigate directly via the Convex teamId, and
+// assert the page renders for an authorized user.
+test.describe.serial("Roster management — reachability (WSM-000019)", () => {
+  let fixture: RosterFixtureResult | null = null;
+  let teardown: (() => Promise<void>) | null = null;
+
+  test.beforeAll(async () => {
+    const orgId = getTestOrgId();
+    test.skip(!orgId, "E2E_CLERK_ORG_ID not set");
+    const handle = await withRosterFixture({
+      fixtureKey: "coach-roster-reachability",
+      clerkOrgId: orgId,
+      teamName: "E2E Reachability Test Team",
+      rosterLimit: 53,
+      seedActivePlayers: 0,
+      extraBenchPlayers: 0,
+      positionSlot: "QB",
+    });
+    fixture = handle.fixture;
+    teardown = handle.teardown;
+  });
+
+  test.afterAll(async () => {
+    if (teardown) await teardown();
+  });
+
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
     await signInTestUser(page);
   });
 
-  test("flag-gated roster route is reachable in dev", async ({ page }) => {
-    await page.goto("/dashboard/teams");
-    const teamLink = page.locator("a", { hasText: TEAMS.COWBOYS.name });
-    await teamLink.waitFor({ state: "visible" });
-    const href = await teamLink.getAttribute("href");
-    expect(href).toBeTruthy();
-    await page.goto(`${href}/roster`);
-    const body = page.locator("body");
-    await expect(body).toBeVisible();
-    const notFoundHeading = page.getByRole("heading", {
-      name: /404|Not Found|Page not found/i,
-    });
-    await expect(notFoundHeading).toHaveCount(0);
+  test("flag-gated roster route renders for an org-owned team", async ({
+    page,
+  }) => {
+    if (!fixture) test.skip();
+    await page.goto(`/dashboard/teams/${fixture!.teamId}/roster`);
+    await expect(
+      page.getByRole("heading", { name: /E2E Reachability Test Team/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /404|Not Found|Page not found/i,
+      }),
+    ).toHaveCount(0);
   });
 
   test("audit log route renders for the same team", async ({ page }) => {
-    await page.goto("/dashboard/teams");
-    const teamLink = page.locator("a", { hasText: TEAMS.COWBOYS.name });
-    await teamLink.waitFor({ state: "visible" });
-    const href = await teamLink.getAttribute("href");
-    expect(href).toBeTruthy();
-    await page.goto(`${href}/roster/audit`);
-    const notFoundHeading = page.getByRole("heading", {
-      name: /404|Not Found|Page not found/i,
-    });
-    await expect(notFoundHeading).toHaveCount(0);
+    if (!fixture) test.skip();
+    await page.goto(`/dashboard/teams/${fixture!.teamId}/roster/audit`);
     await expect(
       page.getByRole("heading", { name: /Roster Audit Log/i }),
     ).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: /404|Not Found|Page not found/i,
+      }),
+    ).toHaveCount(0);
   });
 });
 
