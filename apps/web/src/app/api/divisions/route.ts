@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getDivisions } from "@/lib/salesforce-api";
+import { getDivisions } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { handleApiError } from "@/lib/api-error";
 

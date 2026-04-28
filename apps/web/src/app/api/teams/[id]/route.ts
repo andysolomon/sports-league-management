@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getTeam, getPlayersByTeam, updateTeam } from "@/lib/salesforce-api";
+import { getTeam, getPlayersByTeam, updateTeam } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { UpdateTeamInputSchema } from "@sports-management/api-contracts";
 import { authorizeTeamMutation } from "@/lib/authorization";

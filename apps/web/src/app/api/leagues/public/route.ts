@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getPublicLeagues } from "@/lib/salesforce-api";
+import { getPublicLeagues } from "@/lib/data-api";
 import { handleApiError } from "@/lib/api-error";
 
 export async function GET() {
