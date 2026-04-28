@@ -163,7 +163,7 @@ export function ImportForm() {
             onDrop={handleDrop}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => fileInputRef.current?.click()}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-8 transition-colors hover:border-primary hover:bg-gray-50"
+            className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary hover:bg-card"
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
@@ -171,8 +171,8 @@ export function ImportForm() {
             }}
             aria-label="Upload JSON file"
           >
-            <Upload className="mb-3 h-8 w-8 text-gray-400" />
-            <p className="text-sm text-gray-600">
+            <Upload className="mb-3 h-8 w-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
               Drop a <code>.json</code> file here or click to browse
             </p>
             <input
@@ -189,9 +189,9 @@ export function ImportForm() {
 
       {/* Validation Errors */}
       {state.step === "invalid" && (
-        <Card className="border-red-200">
+        <Card className="border-destructive/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-700">
+            <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="h-5 w-5" />
               Validation Failed
             </CardTitle>
@@ -203,14 +203,14 @@ export function ImportForm() {
           <CardContent>
             <div role="alert" className="space-y-2">
               {state.errors.formErrors.map((err, i) => (
-                <p key={i} className="text-sm text-red-600">
+                <p key={i} className="text-sm text-destructive">
                   {err}
                 </p>
               ))}
               {Object.entries(state.errors.fieldErrors).map(([field, errs]) =>
                 errs.map((err, i) => (
-                  <p key={`${field}-${i}`} className="text-sm text-red-600">
-                    <code className="mr-1 rounded bg-red-50 px-1 text-xs">
+                  <p key={`${field}-${i}`} className="text-sm text-destructive">
+                    <code className="mr-1 rounded bg-destructive/10 px-1 text-xs">
                       {field}
                     </code>
                     {err}
@@ -237,21 +237,21 @@ export function ImportForm() {
           </CardHeader>
           <CardContent>
             <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div className="rounded-md bg-gray-50 p-3 text-center">
+              <div className="rounded-md bg-card p-3 text-center">
                 <p className="text-2xl font-bold">{state.preview.leagueName}</p>
-                <p className="text-xs text-gray-500">League</p>
+                <p className="text-xs text-muted-foreground">League</p>
               </div>
-              <div className="rounded-md bg-gray-50 p-3 text-center">
+              <div className="rounded-md bg-card p-3 text-center">
                 <p className="text-2xl font-bold">{state.preview.divisionCount}</p>
-                <p className="text-xs text-gray-500">Divisions</p>
+                <p className="text-xs text-muted-foreground">Divisions</p>
               </div>
-              <div className="rounded-md bg-gray-50 p-3 text-center">
+              <div className="rounded-md bg-card p-3 text-center">
                 <p className="text-2xl font-bold">{state.preview.teamCount}</p>
-                <p className="text-xs text-gray-500">Teams</p>
+                <p className="text-xs text-muted-foreground">Teams</p>
               </div>
-              <div className="rounded-md bg-gray-50 p-3 text-center">
+              <div className="rounded-md bg-card p-3 text-center">
                 <p className="text-2xl font-bold">{state.preview.playerCount}</p>
-                <p className="text-xs text-gray-500">Players</p>
+                <p className="text-xs text-muted-foreground">Players</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -269,7 +269,7 @@ export function ImportForm() {
         <Card>
           <CardContent className="flex items-center gap-3 py-8">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               Importing data from {state.fileName}...
             </p>
           </CardContent>
@@ -278,9 +278,9 @@ export function ImportForm() {
 
       {/* Result */}
       {state.step === "done" && (
-        <Card className="border-green-200">
+        <Card className="border-accent/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-700">
+            <CardTitle className="flex items-center gap-2 text-accent">
               <CheckCircle2 className="h-5 w-5" />
               Import Complete
             </CardTitle>
@@ -289,16 +289,16 @@ export function ImportForm() {
             <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {(["leagues", "divisions", "teams", "players"] as const).map(
                 (entity) => (
-                  <div key={entity} className="rounded-md bg-gray-50 p-3">
-                    <p className="text-xs font-medium capitalize text-gray-500">
+                  <div key={entity} className="rounded-md bg-card p-3">
+                    <p className="text-xs font-medium capitalize text-muted-foreground">
                       {entity}
                     </p>
                     <p className="text-sm">
-                      <span className="font-semibold text-green-700">
+                      <span className="font-semibold text-accent">
                         {state.result.created[entity]} created
                       </span>
                       {", "}
-                      <span className="text-gray-600">
+                      <span className="text-muted-foreground">
                         {state.result.updated[entity]} updated
                       </span>
                     </p>
@@ -308,12 +308,12 @@ export function ImportForm() {
             </div>
 
             {state.result.errors.length > 0 && (
-              <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3">
-                <p className="mb-2 text-sm font-medium text-red-700">
+              <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3">
+                <p className="mb-2 text-sm font-medium text-destructive">
                   {state.result.errors.length} error(s) during import:
                 </p>
                 {state.result.errors.map((err, i) => (
-                  <p key={i} className="text-sm text-red-600">
+                  <p key={i} className="text-sm text-destructive">
                     {err.entity} &quot;{err.name}&quot;: {err.message}
                   </p>
                 ))}

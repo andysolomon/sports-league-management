@@ -13,7 +13,7 @@ export default async function SeasonsPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">Seasons</h2>
+      <h2 className="mb-6 text-lg font-semibold text-foreground">Seasons</h2>
       <SeasonsTable seasons={seasons} />
     </div>
   );

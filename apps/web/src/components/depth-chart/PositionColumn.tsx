@@ -86,13 +86,13 @@ export default function PositionColumn({
       aria-label={`${positionSlot} depth chart`}
     >
       <header className="flex items-center justify-between border-b px-3 py-2">
-        <h3 className="font-mono text-sm font-semibold text-gray-700">
+        <h3 className="font-mono text-sm font-semibold text-foreground">
           {positionSlot}
         </h3>
-        <span className="text-xs text-gray-500">{items.length}</span>
+        <span className="text-xs text-muted-foreground">{items.length}</span>
       </header>
       {items.length === 0 ? (
-        <div className="px-3 py-6 text-center text-xs text-gray-500">
+        <div className="px-3 py-6 text-center text-xs text-muted-foreground">
           No players at this position.
         </div>
       ) : (
@@ -148,7 +148,7 @@ function SortableRow({
     >
       <button
         type="button"
-        className={`text-gray-400 ${disabled ? "cursor-not-allowed opacity-40" : "cursor-grab active:cursor-grabbing hover:text-gray-600"}`}
+        className={`text-muted-foreground ${disabled ? "cursor-not-allowed opacity-40" : "cursor-grab active:cursor-grabbing hover:text-muted-foreground"}`}
         aria-label={`Drag ${player.name}`}
         disabled={disabled}
         {...attributes}
@@ -156,10 +156,10 @@ function SortableRow({
       >
         <GripVertical className="h-4 w-4" />
       </button>
-      <span className="w-6 font-mono text-xs text-gray-500">{rank}</span>
-      <span className="flex-1 text-sm text-gray-900">{player.name}</span>
+      <span className="w-6 font-mono text-xs text-muted-foreground">{rank}</span>
+      <span className="flex-1 text-sm text-foreground">{player.name}</span>
       {player.jerseyNumber !== null && (
-        <span className="font-mono text-xs text-gray-500">
+        <span className="font-mono text-xs text-muted-foreground">
           #{player.jerseyNumber}
         </span>
       )}

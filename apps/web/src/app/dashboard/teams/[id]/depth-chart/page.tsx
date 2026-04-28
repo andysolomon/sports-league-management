@@ -51,7 +51,7 @@ export default async function DepthChartPage({
         >
           &larr; Back to Team
         </Link>
-        <div className="rounded-md border border-dashed p-8 text-center text-sm text-gray-500">
+        <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           No season exists for this league. Create a season before editing the
           depth chart.
         </div>

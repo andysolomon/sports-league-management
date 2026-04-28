@@ -13,7 +13,7 @@ export default async function PlayersPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">Players</h2>
+      <h2 className="mb-6 text-lg font-semibold text-foreground">Players</h2>
       <PlayersTable players={players} />
     </div>
   );

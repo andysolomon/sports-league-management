@@ -14,7 +14,7 @@ export default function DashboardLayout({
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="hidden w-56 border-r border-gray-200 bg-gray-50 lg:block">
+      <aside className="hidden w-56 border-r border-border bg-card lg:block">
         <Sidebar />
       </aside>
 
@@ -23,8 +23,8 @@ export default function DashboardLayout({
         <MobileHeader />
 
         {/* Desktop header */}
-        <header className="hidden items-center justify-between border-b border-gray-200 px-8 py-4 lg:flex">
-          <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+        <header className="hidden items-center justify-between border-b border-border px-8 py-4 lg:flex">
+          <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
           <UserButton />
         </header>
 

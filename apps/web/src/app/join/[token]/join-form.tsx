@@ -48,8 +48,8 @@ export default function JoinForm({
     return (
       <Card className="w-full max-w-md">
         <CardContent className="pt-6 text-center">
-          <h2 className="text-lg font-semibold text-gray-900">Request Submitted</h2>
-          <p className="mt-2 text-sm text-gray-500">
+          <h2 className="text-lg font-semibold text-foreground">Request Submitted</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             Your request to join {leagueName} has been submitted.
             An admin will review your request.
           </p>
@@ -70,10 +70,10 @@ export default function JoinForm({
         </div>
       </CardHeader>
       <CardContent>
-        <p className="mb-4 text-sm text-gray-500">
+        <p className="mb-4 text-sm text-muted-foreground">
           You&apos;ve been invited to join this league. Click below to request access.
         </p>
-        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
         <Button
           className="w-full"
           onClick={handleJoin}

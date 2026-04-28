@@ -45,10 +45,10 @@ function SyncReportDisplay({ report }: { report: SyncReport }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Clock className="h-4 w-4" />
         <span>{formatDate(report.completedAt)}</span>
-        <span className="text-gray-300">|</span>
+        <span className="text-muted-foreground">|</span>
         <span>{formatDuration(report.durationMs)}</span>
       </div>
 
@@ -56,20 +56,20 @@ function SyncReportDisplay({ report }: { report: SyncReport }) {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {(["leagues", "divisions", "teams", "players"] as const).map(
             (entity) => (
-              <div key={entity} className="rounded-md bg-gray-50 p-2 text-center">
-                <p className="text-xs font-medium capitalize text-gray-500">
+              <div key={entity} className="rounded-md bg-card p-2 text-center">
+                <p className="text-xs font-medium capitalize text-muted-foreground">
                   {entity}
                 </p>
                 <p className="text-sm">
-                  <span className="font-semibold text-green-700">
+                  <span className="font-semibold text-accent">
                     {report.importResult!.created[entity]}
                   </span>
                   {" / "}
-                  <span className="text-gray-600">
+                  <span className="text-muted-foreground">
                     {report.importResult!.updated[entity]}
                   </span>
                 </p>
-                <p className="text-[10px] text-gray-400">created / updated</p>
+                <p className="text-[10px] text-muted-foreground">created / updated</p>
               </div>
             ),
           )}
@@ -77,8 +77,8 @@ function SyncReportDisplay({ report }: { report: SyncReport }) {
       )}
 
       {hasErrors && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-2">
-          <p className="text-xs font-medium text-red-700">
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2">
+          <p className="text-xs font-medium text-destructive">
             {report.adapterErrors.length > 0 &&
               report.adapterErrors.map((e, i) => (
                 <span key={i} className="block">
@@ -95,7 +95,7 @@ function SyncReportDisplay({ report }: { report: SyncReport }) {
       )}
 
       {!hasImportResult && report.adapterErrors.length === 0 && (
-        <p className="text-sm text-gray-500">No data returned from sync.</p>
+        <p className="text-sm text-muted-foreground">No data returned from sync.</p>
       )}
     </div>
   );
@@ -188,7 +188,7 @@ export function NflSyncCard() {
       <Card>
         <CardContent className="flex items-center gap-3 py-8">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          <p className="text-sm text-gray-600">Loading sync config...</p>
+          <p className="text-sm text-muted-foreground">Loading sync config...</p>
         </CardContent>
       </Card>
     );
@@ -196,15 +196,15 @@ export function NflSyncCard() {
 
   if (state.phase === "error") {
     return (
-      <Card className="border-red-200">
+      <Card className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-red-700">
+          <CardTitle className="flex items-center gap-2 text-destructive">
             <AlertCircle className="h-5 w-5" />
             NFL Live Data
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-red-600">{state.message}</p>
+          <p className="text-sm text-destructive">{state.message}</p>
           <Button variant="outline" className="mt-3" onClick={loadConfig}>
             Retry
           </Button>
@@ -234,7 +234,7 @@ export function NflSyncCard() {
             onClick={handleToggle}
             disabled={syncing}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-              config.syncEnabled ? "bg-primary" : "bg-gray-200"
+              config.syncEnabled ? "bg-primary" : "bg-muted"
             }`}
           >
             <span
@@ -257,7 +257,7 @@ export function NflSyncCard() {
               "Sync Now"
             )}
           </Button>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-foreground">
             {config.syncEnabled
               ? "Nightly sync enabled (4 AM UTC)"
               : "Nightly sync disabled"}
@@ -266,14 +266,14 @@ export function NflSyncCard() {
 
         {config.lastSyncReport ? (
           <div>
-            <h4 className="mb-2 flex items-center gap-1 text-sm font-medium text-gray-700">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <h4 className="mb-2 flex items-center gap-1 text-sm font-medium text-foreground">
+              <CheckCircle2 className="h-4 w-4 text-accent" />
               Last Sync
             </h4>
             <SyncReportDisplay report={config.lastSyncReport} />
           </div>
         ) : (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground">
             No sync has been run yet. Click &quot;Sync Now&quot; to import NFL data.
           </p>
         )}

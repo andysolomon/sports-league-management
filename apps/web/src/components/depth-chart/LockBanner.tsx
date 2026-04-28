@@ -54,16 +54,16 @@ export default function LockBanner({
       className={`mb-4 flex items-center justify-between rounded-md border p-3 ${
         optimisticLocked
           ? "border-amber-300 bg-amber-50"
-          : "border-gray-200 bg-gray-50"
+          : "border-border bg-card"
       }`}
     >
       <div className="flex items-center gap-2 text-sm">
         {optimisticLocked ? (
           <Lock className="h-4 w-4 text-amber-600" aria-hidden />
         ) : (
-          <Unlock className="h-4 w-4 text-gray-500" aria-hidden />
+          <Unlock className="h-4 w-4 text-muted-foreground" aria-hidden />
         )}
-        <span className={optimisticLocked ? "text-amber-800" : "text-gray-700"}>
+        <span className={optimisticLocked ? "text-amber-800" : "text-foreground"}>
           {optimisticLocked
             ? "Roster locked — drag handles are disabled"
             : "Roster is unlocked"}

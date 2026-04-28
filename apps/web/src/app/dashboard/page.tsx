@@ -51,7 +51,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">Overview</h2>
+      <h2 className="mb-6 text-lg font-semibold text-foreground">Overview</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statCards.map((card) => {
           const Icon = card.icon;
@@ -63,10 +63,10 @@ export default async function DashboardPage() {
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">
+                    <p className="text-sm font-medium text-muted-foreground">
                       {card.label}
                     </p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-2xl font-bold text-foreground">
                       {counts[card.key]}
                     </p>
                   </div>

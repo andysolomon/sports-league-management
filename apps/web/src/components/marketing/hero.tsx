@@ -17,16 +17,16 @@ export function MarketingHero({ isSignedIn }: HeroProps) {
 
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
             Free for one team, forever
           </p>
 
-          <h1 className="text-balance text-4xl font-bold tracking-tight text-zinc-900 sm:text-5xl lg:text-6xl">
+          <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Manage your team without the spreadsheets.
           </h1>
 
-          <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-8 text-zinc-600 sm:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-8 text-muted-foreground sm:text-xl">
             sprtsmng is the simplest way to run your youth sports team. Roster,
             schedule, notifications — all in one place.
           </p>
@@ -52,7 +52,7 @@ export function MarketingHero({ isSignedIn }: HeroProps) {
             </Button>
           </div>
 
-          <p className="mt-6 text-sm text-zinc-500">
+          <p className="mt-6 text-sm text-muted-foreground">
             No credit card required · Sign in with Google
           </p>
         </div>

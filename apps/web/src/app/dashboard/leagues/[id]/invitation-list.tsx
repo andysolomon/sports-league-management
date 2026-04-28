@@ -29,24 +29,24 @@ export default function InvitationList({ orgId }: { orgId: string }) {
     load();
   }, [orgId]);
 
-  if (loading) return <p className="text-sm text-gray-500">Loading invitations...</p>;
+  if (loading) return <p className="text-sm text-muted-foreground">Loading invitations...</p>;
   if (invitations.length === 0) return null;
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">Pending Invitations</h3>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">Pending Invitations</h3>
       <ul className="space-y-2">
         {invitations.map((inv) => (
           <li
             key={inv.id}
-            className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2 text-sm"
+            className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
           >
-            <span className="text-gray-700">{inv.emailAddress}</span>
+            <span className="text-foreground">{inv.emailAddress}</span>
             <div className="flex items-center gap-2">
               <Badge variant={inv.status === "pending" ? "secondary" : "outline"}>
                 {inv.status}
               </Badge>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-muted-foreground">
                 {new Date(inv.createdAt).toLocaleDateString()}
               </span>
             </div>

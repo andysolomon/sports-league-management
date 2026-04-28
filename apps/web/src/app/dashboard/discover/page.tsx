@@ -16,10 +16,10 @@ export default async function DiscoverPage() {
 
   return (
     <div>
-      <h2 className="mb-2 text-lg font-semibold text-gray-900">
+      <h2 className="mb-2 text-lg font-semibold text-foreground">
         Discover Leagues
       </h2>
-      <p className="mb-6 text-sm text-gray-500">
+      <p className="mb-6 text-sm text-muted-foreground">
         Browse public leagues and add them to your dashboard.
       </p>
       <DiscoverLeagues

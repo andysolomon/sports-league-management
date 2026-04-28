@@ -37,7 +37,7 @@ export default async function MembersPage({
         &larr; Back to {league.name}
       </Link>
 
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">
+      <h2 className="mb-6 text-lg font-semibold text-foreground">
         Members — {league.name}
       </h2>
 

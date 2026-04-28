@@ -79,9 +79,9 @@ export default function MemberList({ orgId }: { orgId: string }) {
   }
 
   if (loading)
-    return <p className="text-sm text-gray-500">Loading members...</p>;
+    return <p className="text-sm text-muted-foreground">Loading members...</p>;
   if (members.length === 0)
-    return <p className="text-sm text-gray-500">No members found.</p>;
+    return <p className="text-sm text-muted-foreground">No members found.</p>;
 
   return (
     <div className="space-y-3">
@@ -94,7 +94,7 @@ export default function MemberList({ orgId }: { orgId: string }) {
         return (
           <div
             key={member.userId}
-            className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3"
+            className="flex items-center justify-between rounded-lg border border-border px-4 py-3"
           >
             <div className="flex items-center gap-3">
               {member.imageUrl && (
@@ -105,10 +105,10 @@ export default function MemberList({ orgId }: { orgId: string }) {
                 />
               )}
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-foreground">
                   {displayName}
                 </p>
-                <p className="text-xs text-gray-500">{member.email}</p>
+                <p className="text-xs text-muted-foreground">{member.email}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -137,7 +137,7 @@ export default function MemberList({ orgId }: { orgId: string }) {
                 variant="outline"
                 disabled={isLoading}
                 onClick={() => handleRemove(member.userId)}
-                className="text-red-600 hover:text-red-700"
+                className="text-destructive hover:text-destructive"
               >
                 Remove
               </Button>

@@ -40,7 +40,7 @@ export default function InviteForm({ orgId }: { orgId: string }) {
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">Invite Member</h3>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">Invite Member</h3>
       <form onSubmit={handleSubmit} className="flex items-end gap-3">
         <div className="flex-1">
           <Label htmlFor="invite-email">Email address</Label>
@@ -57,9 +57,9 @@ export default function InviteForm({ orgId }: { orgId: string }) {
           {submitting ? "Sending..." : "Send Invite"}
         </Button>
       </form>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       {success && (
-        <p className="mt-2 text-sm text-green-600">Invitation sent successfully!</p>
+        <p className="mt-2 text-sm text-accent">Invitation sent successfully!</p>
       )}
     </div>
   );

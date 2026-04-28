@@ -36,7 +36,7 @@ export default async function RequestsPage({
         &larr; Back to {league.name}
       </Link>
 
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">
+      <h2 className="mb-6 text-lg font-semibold text-foreground">
         Join Requests — {league.name}
       </h2>
 

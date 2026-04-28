@@ -58,7 +58,7 @@ export function PricingTable({
             "rounded-md px-4 py-2 text-sm font-medium transition-colors",
             interval === "monthly"
               ? "bg-zinc-900 text-white"
-              : "text-zinc-600 hover:text-zinc-900",
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           Monthly
@@ -70,7 +70,7 @@ export function PricingTable({
             "rounded-md px-4 py-2 text-sm font-medium transition-colors",
             interval === "yearly"
               ? "bg-zinc-900 text-white"
-              : "text-zinc-600 hover:text-zinc-900",
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
           Yearly
@@ -110,19 +110,19 @@ export function PricingTable({
                 <div className="mb-4">
                   <span className="text-3xl font-bold">{formatPrice(price)}</span>
                   {!isFree && (
-                    <span className="text-sm text-zinc-500">
+                    <span className="text-sm text-muted-foreground">
                       /{interval === "monthly" ? "mo" : "yr"}
                     </span>
                   )}
                   {!isFree && interval === "yearly" && savings > 0 && (
-                    <p className="mt-1 text-xs text-green-600">Save {savings}% vs monthly</p>
+                    <p className="mt-1 text-xs text-accent">Save {savings}% vs monthly</p>
                   )}
                 </div>
 
                 <ul className="mb-6 space-y-2 text-sm">
                   {config.highlights.map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" />
                       <span>{feature}</span>
                     </li>
                   ))}

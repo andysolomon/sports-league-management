@@ -96,7 +96,7 @@ export function DataTable<T extends Record<string, unknown>>({
   return (
     <div className="space-y-4">
       <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder={searchPlaceholder}
           value={search}
@@ -108,17 +108,17 @@ export function DataTable<T extends Record<string, unknown>>({
         />
       </div>
 
-      <div className="rounded-lg border border-gray-200">
+      <div className="rounded-lg border border-border">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-card hover:bg-card">
               {columns.map((col) => (
                 <TableHead key={col.key}>
                   {col.sortable ? (
                     <button
                       type="button"
                       onClick={() => toggleSort(col.key)}
-                      className="inline-flex items-center gap-1 hover:text-gray-900"
+                      className="inline-flex items-center gap-1 hover:text-foreground"
                     >
                       {col.header}
                       <ArrowUpDown className="h-3 w-3" />
@@ -155,7 +155,7 @@ export function DataTable<T extends Record<string, unknown>>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length + (actions ? 1 : 0)}
-                  className="h-24 text-center text-gray-500"
+                  className="h-24 text-center text-muted-foreground"
                 >
                   {emptyMessage}
                 </TableCell>
@@ -166,7 +166,7 @@ export function DataTable<T extends Record<string, unknown>>({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             Showing {safeCurrentPage * pageSize + 1}\u2013
             {Math.min((safeCurrentPage + 1) * pageSize, sorted.length)} of{" "}

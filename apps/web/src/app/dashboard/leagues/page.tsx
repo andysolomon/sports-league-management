@@ -37,7 +37,7 @@ export default async function LeaguesPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">Leagues</h2>
+      <h2 className="mb-6 text-lg font-semibold text-foreground">Leagues</h2>
 
       {leagues.length === 0 ? (
         <EmptyState
@@ -68,7 +68,7 @@ export default async function LeaguesPage() {
                 </CardHeader>
                 <CardContent>
                   {leagueDivisions.length === 0 ? (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       No divisions in this league.
                     </p>
                   ) : (
@@ -80,8 +80,8 @@ export default async function LeaguesPage() {
                         return (
                           <div key={division.id}>
                             <div className="mb-2 flex items-center gap-2">
-                              <Layers className="h-4 w-4 text-gray-500" />
-                              <span className="text-sm font-medium text-gray-700">
+                              <Layers className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm font-medium text-foreground">
                                 {division.name}
                               </span>
                               <Badge variant="outline" className="text-xs">
@@ -95,14 +95,14 @@ export default async function LeaguesPage() {
                                   <Link
                                     key={team.id}
                                     href={`/dashboard/teams/${team.id}`}
-                                    className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm transition-colors hover:bg-gray-100"
+                                    className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-card"
                                   >
-                                    <Users className="h-3.5 w-3.5 text-gray-400" />
-                                    <span className="font-medium text-gray-700">
+                                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="font-medium text-foreground">
                                       {team.name}
                                     </span>
                                     {team.city && (
-                                      <span className="text-gray-400">
+                                      <span className="text-muted-foreground">
                                         &mdash; {team.city}
                                       </span>
                                     )}
@@ -110,7 +110,7 @@ export default async function LeaguesPage() {
                                 ))}
                               </div>
                             ) : (
-                              <p className="ml-6 text-sm text-gray-400">
+                              <p className="ml-6 text-sm text-muted-foreground">
                                 No teams in this division.
                               </p>
                             )}
