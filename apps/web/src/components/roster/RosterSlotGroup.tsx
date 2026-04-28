@@ -168,7 +168,7 @@ function RosterRow({
           <DropdownMenuItem
             onSelect={runRemove}
             disabled={pending}
-            className="text-red-600"
+            className="text-destructive"
           >
             Remove from roster
           </DropdownMenuItem>

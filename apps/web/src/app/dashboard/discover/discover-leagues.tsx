@@ -49,7 +49,7 @@ export default function DiscoverLeagues({
 
   if (leagues.length === 0) {
     return (
-      <p className="text-sm text-gray-500">No public leagues available.</p>
+      <p className="text-sm text-muted-foreground">No public leagues available.</p>
     );
   }
 

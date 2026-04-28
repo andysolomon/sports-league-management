@@ -74,10 +74,10 @@ export default function DepthChartBoard({
   return (
     <div>
       <header className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-foreground">
           {teamName} — Depth Chart
         </h2>
-        <p className="text-sm text-gray-500">Season: {season.name}</p>
+        <p className="text-sm text-muted-foreground">Season: {season.name}</p>
       </header>
 
       <LockBanner
@@ -89,7 +89,7 @@ export default function DepthChartBoard({
       />
 
       {columns.length === 0 ? (
-        <div className="rounded-md border border-dashed p-8 text-center text-sm text-gray-500">
+        <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           No players on this team. Add players before editing the depth chart.
         </div>
       ) : (

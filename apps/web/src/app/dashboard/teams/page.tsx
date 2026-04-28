@@ -13,16 +13,16 @@ export default async function TeamsPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">Teams</h2>
+      <h2 className="mb-6 text-lg font-semibold text-foreground">Teams</h2>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {teams.map((team) => (
           <Link
             key={team.id}
             href={`/dashboard/teams/${team.id}`}
-            className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+            className="rounded-lg border border-border bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-semibold text-gray-900">{team.name}</h3>
-            <dl className="mt-3 space-y-1 text-sm text-gray-600">
+            <h3 className="text-lg font-semibold text-foreground">{team.name}</h3>
+            <dl className="mt-3 space-y-1 text-sm text-muted-foreground">
               {team.city && (
                 <div>
                   <dt className="inline font-medium">City: </dt>
@@ -45,7 +45,7 @@ export default async function TeamsPage() {
           </Link>
         ))}
         {teams.length === 0 && (
-          <p className="text-gray-500">No teams found.</p>
+          <p className="text-muted-foreground">No teams found.</p>
         )}
       </div>
     </div>

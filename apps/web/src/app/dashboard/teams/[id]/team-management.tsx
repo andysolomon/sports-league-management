@@ -83,7 +83,7 @@ export default function TeamManagement({
       <Card className="mb-8">
         <CardContent className="pt-6">
           <div className="flex items-start justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">{team.name}</h2>
+            <h2 className="text-2xl font-bold text-foreground">{team.name}</h2>
             {canManage && (
               <Button
                 variant="outline"
@@ -98,26 +98,26 @@ export default function TeamManagement({
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
             {team.city && (
               <div>
-                <dt className="font-medium text-gray-500">City</dt>
-                <dd className="mt-1 text-gray-900">{team.city}</dd>
+                <dt className="font-medium text-muted-foreground">City</dt>
+                <dd className="mt-1 text-foreground">{team.city}</dd>
               </div>
             )}
             {team.stadium && (
               <div>
-                <dt className="font-medium text-gray-500">Stadium</dt>
-                <dd className="mt-1 text-gray-900">{team.stadium}</dd>
+                <dt className="font-medium text-muted-foreground">Stadium</dt>
+                <dd className="mt-1 text-foreground">{team.stadium}</dd>
               </div>
             )}
             {team.foundedYear && (
               <div>
-                <dt className="font-medium text-gray-500">Founded</dt>
-                <dd className="mt-1 text-gray-900">{team.foundedYear}</dd>
+                <dt className="font-medium text-muted-foreground">Founded</dt>
+                <dd className="mt-1 text-foreground">{team.foundedYear}</dd>
               </div>
             )}
             {team.location && (
               <div>
-                <dt className="font-medium text-gray-500">Location</dt>
-                <dd className="mt-1 text-gray-900">{team.location}</dd>
+                <dt className="font-medium text-muted-foreground">Location</dt>
+                <dd className="mt-1 text-foreground">{team.location}</dd>
               </div>
             )}
           </dl>
@@ -125,7 +125,7 @@ export default function TeamManagement({
       </Card>
 
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-lg font-semibold text-foreground">
           Player Roster ({players.length})
         </h3>
         {canManage && (
@@ -160,7 +160,7 @@ export default function TeamManagement({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-600 hover:text-red-700"
+                      className="text-destructive hover:text-destructive"
                       onClick={() =>
                         setModal({
                           type: "deletePlayer",

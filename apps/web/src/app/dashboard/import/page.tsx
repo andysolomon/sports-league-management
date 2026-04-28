@@ -4,7 +4,7 @@ import { NflSyncCard } from "./_components/nfl-sync-card";
 export default function ImportPage() {
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">
+      <h2 className="mb-6 text-lg font-semibold text-foreground">
         Import Data
       </h2>
       <div className="space-y-8">

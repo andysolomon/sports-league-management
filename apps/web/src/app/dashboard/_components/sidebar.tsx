@@ -33,7 +33,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="px-4 py-5">
-        <h2 className="text-lg font-semibold text-gray-900">Sports League</h2>
+        <h2 className="text-lg font-semibold text-foreground">Sports League</h2>
       </div>
       <nav className="flex-1 space-y-1 px-2" role="navigation" aria-label="Main navigation">
         {navItems.map((item) => (

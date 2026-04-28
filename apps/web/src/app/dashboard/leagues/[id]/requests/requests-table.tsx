@@ -61,10 +61,10 @@ export default function RequestsTable({ orgId }: { orgId: string }) {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Loading requests...</p>;
+  if (loading) return <p className="text-sm text-muted-foreground">Loading requests...</p>;
 
   if (requests.length === 0) {
-    return <p className="text-sm text-gray-500">No pending requests.</p>;
+    return <p className="text-sm text-muted-foreground">No pending requests.</p>;
   }
 
   return (
@@ -74,11 +74,11 @@ export default function RequestsTable({ orgId }: { orgId: string }) {
         return (
           <div
             key={req.userId}
-            className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3"
+            className="flex items-center justify-between rounded-lg border border-border px-4 py-3"
           >
             <div>
-              <p className="text-sm font-medium text-gray-900">{req.email}</p>
-              <p className="text-xs text-gray-500">
+              <p className="text-sm font-medium text-foreground">{req.email}</p>
+              <p className="text-xs text-muted-foreground">
                 Requested {new Date(req.requestedAt).toLocaleDateString()}
               </p>
             </div>

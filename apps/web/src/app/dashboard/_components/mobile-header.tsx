@@ -11,7 +11,7 @@ export default function MobileHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-200 px-4 py-3 lg:hidden">
+    <header className="flex items-center justify-between border-b border-border px-4 py-3 lg:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" aria-label="Open navigation menu">
@@ -22,7 +22,7 @@ export default function MobileHeader() {
           <Sidebar onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <h1 className="text-lg font-semibold text-gray-900">Dashboard</h1>
+      <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
       <UserButton />
     </header>
   );

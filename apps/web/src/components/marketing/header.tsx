@@ -8,11 +8,11 @@ interface HeaderProps {
 
 export function MarketingHeader({ isSignedIn }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-zinc-200/60 bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="flex items-center gap-2 text-zinc-900"
+          className="flex items-center gap-2 text-foreground"
           aria-label="sprtsmng home"
         >
           <Monogram size={32} />
@@ -20,16 +20,16 @@ export function MarketingHeader({ isSignedIn }: HeaderProps) {
         </Link>
 
         <nav
-          className="hidden items-center gap-6 text-sm font-medium text-zinc-600 sm:flex"
+          className="hidden items-center gap-6 text-sm font-medium text-muted-foreground sm:flex"
           aria-label="Primary"
         >
-          <Link href="#features" className="hover:text-zinc-900">
+          <Link href="#features" className="hover:text-foreground">
             Features
           </Link>
-          <Link href="#how-it-works" className="hover:text-zinc-900">
+          <Link href="#how-it-works" className="hover:text-foreground">
             How it works
           </Link>
-          <Link href="#pricing" className="hover:text-zinc-900">
+          <Link href="#pricing" className="hover:text-foreground">
             Pricing
           </Link>
         </nav>
@@ -43,7 +43,7 @@ export function MarketingHeader({ isSignedIn }: HeaderProps) {
             <>
               <Link
                 href="/sign-in"
-                className="hidden text-sm font-medium text-zinc-700 hover:text-zinc-900 sm:inline"
+                className="hidden text-sm font-medium text-foreground hover:text-foreground sm:inline"
               >
                 Sign in
               </Link>

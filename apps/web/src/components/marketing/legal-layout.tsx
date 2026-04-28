@@ -32,16 +32,16 @@ export async function LegalLayout({
             </p>
           </div>
 
-          <header className="mb-10 border-b border-zinc-200 pb-8">
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
+          <header className="mb-10 border-b border-border pb-8">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
               {title}
             </h1>
-            <p className="mt-3 text-sm text-zinc-500">
+            <p className="mt-3 text-sm text-muted-foreground">
               Last updated: {lastUpdated}
             </p>
           </header>
 
-          <article className="prose prose-zinc max-w-none [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-zinc-900 [&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-zinc-900 [&_p]:mt-3 [&_p]:text-base [&_p]:leading-7 [&_p]:text-zinc-700 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:text-base [&_ul]:text-zinc-700 [&_li]:mt-1 [&_a]:text-blue-600 [&_a]:underline hover:[&_a]:text-blue-700">
+          <article className="prose prose-zinc max-w-none [&_h2]:mt-10 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-foreground [&_p]:mt-3 [&_p]:text-base [&_p]:leading-7 [&_p]:text-foreground [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:text-base [&_ul]:text-foreground [&_li]:mt-1 [&_a]:text-primary [&_a]:underline hover:[&_a]:text-primary">
             {children}
           </article>
         </div>

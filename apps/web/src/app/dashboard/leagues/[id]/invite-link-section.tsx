@@ -57,14 +57,14 @@ export default function InviteLinkSection({ orgId }: { orgId: string }) {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Loading invite link...</p>;
+  if (loading) return <p className="text-sm text-muted-foreground">Loading invite link...</p>;
 
   return (
     <div>
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">Invite Link</h3>
+      <h3 className="mb-3 text-sm font-semibold text-foreground">Invite Link</h3>
       {linkUrl ? (
         <div className="flex items-center gap-2">
-          <code className="flex-1 rounded bg-gray-100 px-3 py-2 text-sm text-gray-700">
+          <code className="flex-1 rounded bg-card px-3 py-2 text-sm text-foreground">
             {linkUrl}
           </code>
           <Button size="sm" variant="outline" onClick={handleCopy}>

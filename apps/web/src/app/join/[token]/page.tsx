@@ -15,8 +15,8 @@ export default async function JoinPage({
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Invalid Invite Link</h1>
-          <p className="mt-2 text-gray-500">
+          <h1 className="text-2xl font-bold text-foreground">Invalid Invite Link</h1>
+          <p className="mt-2 text-muted-foreground">
             This invitation link is invalid or has been revoked.
           </p>
         </div>

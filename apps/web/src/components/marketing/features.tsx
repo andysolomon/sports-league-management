@@ -37,17 +37,17 @@ export function Features() {
   return (
     <section
       id="features"
-      className="border-t border-zinc-100 bg-zinc-50/50 py-20 sm:py-24"
+      className="border-t border-border bg-card/50 py-20 sm:py-24"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-primary">
             Features
           </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Everything you need. Nothing you don&apos;t.
           </h2>
-          <p className="mt-4 text-lg text-zinc-600">
+          <p className="mt-4 text-lg text-muted-foreground">
             Built specifically for volunteer and rec-league coaches.
           </p>
         </div>
@@ -56,15 +56,15 @@ export function Features() {
           {features.map((feature) => {
             const Icon = feature.icon;
             return (
-              <Card key={feature.title} className="border-zinc-200/80">
+              <Card key={feature.title} className="border-border/80">
                 <CardHeader>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-primary">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <CardTitle className="mt-4 text-xl">{feature.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-base leading-7 text-zinc-600">
+                  <p className="text-base leading-7 text-muted-foreground">
                     {feature.description}
                   </p>
                 </CardContent>

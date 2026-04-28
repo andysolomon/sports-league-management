@@ -43,13 +43,13 @@ export default async function BillingPage({
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
-        <p className="text-sm text-zinc-600">Manage your subscription and usage</p>
+        <p className="text-sm text-muted-foreground">Manage your subscription and usage</p>
       </div>
 
       {params.success && (
-        <Card className="border-green-200 bg-green-50">
+        <Card className="border-accent/30 bg-green-50">
           <CardContent className="py-4">
-            <p className="text-sm text-green-900">
+            <p className="text-sm text-accent">
               ✓ Subscription activated. Welcome to {config.name}!
             </p>
           </CardContent>
@@ -84,16 +84,16 @@ export default async function BillingPage({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Teams</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Teams</p>
               <p className="text-2xl font-semibold">
                 {teamCount}
-                <span className="text-sm font-normal text-zinc-500"> / {teamLimitDisplay}</span>
+                <span className="text-sm font-normal text-muted-foreground"> / {teamLimitDisplay}</span>
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Players</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Players</p>
               <p className="text-2xl font-semibold">
-                <span className="text-sm font-normal text-zinc-500">unlimited</span>
+                <span className="text-sm font-normal text-muted-foreground">unlimited</span>
               </p>
             </div>
           </div>

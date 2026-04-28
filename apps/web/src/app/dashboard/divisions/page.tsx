@@ -25,7 +25,7 @@ export default async function DivisionsPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-gray-900">Divisions</h2>
+      <h2 className="mb-6 text-lg font-semibold text-foreground">Divisions</h2>
       <DivisionsTable divisions={divisionsWithLeague} />
     </div>
   );

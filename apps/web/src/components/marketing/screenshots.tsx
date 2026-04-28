@@ -29,16 +29,16 @@ const screenshots = [
 
 export function Screenshots() {
   return (
-    <section className="border-t border-zinc-100 bg-white py-20 sm:py-24">
+    <section className="border-t border-border bg-white py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+          <p className="text-sm font-semibold uppercase tracking-wide text-primary">
             See it in action
           </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl">
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Built for the way you actually coach
           </h2>
-          <p className="mt-4 text-lg text-zinc-600">
+          <p className="mt-4 text-lg text-muted-foreground">
             Three clicks from sign-in to the player you&apos;re looking for.
           </p>
         </div>
@@ -46,7 +46,7 @@ export function Screenshots() {
         <div className="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-8 sm:grid-cols-3">
           {screenshots.map((shot) => (
             <figure key={shot.src} className="flex flex-col">
-              <div className="overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 shadow-sm">
+              <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
                 <Image
                   src={shot.src}
                   alt={shot.alt}
@@ -56,7 +56,7 @@ export function Screenshots() {
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 />
               </div>
-              <figcaption className="mt-3 text-center text-sm text-zinc-600">
+              <figcaption className="mt-3 text-center text-sm text-muted-foreground">
                 {shot.caption}
               </figcaption>
             </figure>

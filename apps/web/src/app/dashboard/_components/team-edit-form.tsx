@@ -91,7 +91,7 @@ export default function TeamEditForm({
         </DialogHeader>
 
         {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
             {error}
           </div>
         )}
