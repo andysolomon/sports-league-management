@@ -4,7 +4,7 @@ import { getUserTier, getStripeCustomerId } from "@/lib/authorization";
 import { TIER_CONFIGS } from "@/lib/tiers";
 import { getTeams } from "@/lib/salesforce-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/8bit/card";
 import { Badge } from "@/components/ui/badge";
 import { BillingActions } from "./_components/billing-actions";
 

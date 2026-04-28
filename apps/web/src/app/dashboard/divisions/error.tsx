@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/8bit/button";
 import { AlertTriangle } from "lucide-react";
 
 export default function DivisionsError({

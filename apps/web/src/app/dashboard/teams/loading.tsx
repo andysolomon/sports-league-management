@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/8bit/skeleton";
 
 export default function TeamsLoading() {
   return (

@@ -4,14 +4,14 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LeagueImportSchema } from "@sports-management/api-contracts";
 import type { ImportResult } from "@sports-management/shared-types";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/8bit/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/components/ui/8bit/card";
 import { Upload, FileJson, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 type ValidationError = {

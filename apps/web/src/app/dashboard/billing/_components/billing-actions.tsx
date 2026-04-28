@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/8bit/button";
 import { PricingTable } from "@/components/pricing-table";
 import type { Tier } from "@/lib/tiers";
 
