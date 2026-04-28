@@ -118,3 +118,12 @@ export async function withRosterFixture(
 export function getTestOrgId(): string | null {
   return process.env.E2E_CLERK_ORG_ID ?? null;
 }
+
+/**
+ * Secondary org ID for cross-org isolation specs. The Clerk test user
+ * configured in `E2E_CLERK_USER_ID_B` should be a member of *only* this
+ * org, never of `E2E_CLERK_ORG_ID`.
+ */
+export function getTestOrgIdB(): string | null {
+  return process.env.E2E_CLERK_ORG_ID_B ?? null;
+}

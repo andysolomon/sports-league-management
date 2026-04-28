@@ -48,12 +48,34 @@ async function mintSignInToken(
   return json.token;
 }
 
-export async function signInTestUser(page: Page): Promise<void> {
-  const userId = process.env.E2E_CLERK_USER_ID;
+export interface SignInOptions {
+  /**
+   * Which test user to impersonate. Defaults to the primary user (E2E_CLERK_USER_ID).
+   * Pass "B" to sign in as the secondary user (E2E_CLERK_USER_ID_B) — used for
+   * cross-org isolation specs where the test needs a user who is NOT a member
+   * of the fixture league's org.
+   */
+  userVariant?: "A" | "B";
+}
+
+function resolveUserId(variant: "A" | "B"): string | undefined {
+  return variant === "B"
+    ? process.env.E2E_CLERK_USER_ID_B
+    : process.env.E2E_CLERK_USER_ID;
+}
+
+export async function signInTestUser(
+  page: Page,
+  options: SignInOptions = {},
+): Promise<void> {
+  const variant = options.userVariant ?? "A";
+  const userId = resolveUserId(variant);
   const secret = process.env.CLERK_SECRET_KEY;
   if (!userId) {
+    const envName =
+      variant === "B" ? "E2E_CLERK_USER_ID_B" : "E2E_CLERK_USER_ID";
     throw new Error(
-      "[clerk-signin] E2E_CLERK_USER_ID is required to sign in the e2e test user.",
+      `[clerk-signin] ${envName} is required to sign in the e2e test user.`,
     );
   }
   if (!secret) {
