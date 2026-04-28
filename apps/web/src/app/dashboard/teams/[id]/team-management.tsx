@@ -9,8 +9,8 @@ import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/8bit/button";
+import { Card, CardContent } from "@/components/ui/8bit/card";
 import { UserCircle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 

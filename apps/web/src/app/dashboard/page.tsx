@@ -9,7 +9,7 @@ import {
   getLeagues,
 } from "@/lib/salesforce-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/8bit/card";
 import {
   Trophy,
   Users,
