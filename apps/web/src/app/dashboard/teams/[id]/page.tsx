@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getTeam, getPlayersByTeam } from "@/lib/salesforce-api";
+import { getTeam, getPlayersByTeam } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam } from "@/lib/authorization";
 import TeamManagement from "./team-management";

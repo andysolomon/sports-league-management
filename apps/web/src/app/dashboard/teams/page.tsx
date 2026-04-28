@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getTeams } from "@/lib/salesforce-api";
+import { getTeams } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 
 export default async function TeamsPage() {

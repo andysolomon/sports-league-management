@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getPlayers } from "@/lib/salesforce-api";
+import { getPlayers } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { PlayersTable } from "./players-table";
 
