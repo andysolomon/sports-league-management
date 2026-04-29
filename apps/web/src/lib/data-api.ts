@@ -187,6 +187,20 @@ const refs = {
   writeSyncReport: mutationRef<{ reportJson: string }, null>(
     "sports:writeSyncReport",
   ),
+  ingestPlayerAttributes: mutationRef<
+    {
+      playerId: string;
+      seasonId: string;
+      positionGroup: string;
+      attributesJson: string;
+      pffSourceJson: string | null;
+      maddenSourceJson: string | null;
+      pffWeight: number;
+      maddenWeight: number;
+      weightedOverall: number | null;
+    },
+    { id: string; created: boolean }
+  >("sports:ingestPlayerAttributes"),
   getDepthChartByTeamSeason: queryRef<
     { teamId: string; seasonId: string },
     DepthChartEntryDto[]
@@ -711,4 +725,138 @@ export async function updateRosterStatus(input: {
   actorUserId: string;
 }): Promise<RosterAssignmentDto> {
   return mutateConvex(refs.updateRosterStatus, input);
+}
+
+import { normalizePff } from "./attributes/sources/pff";
+import { normalizeMadden } from "./attributes/sources/madden";
+import { normalizeAdminJson } from "./attributes/sources/admin-json";
+import type { NormalizedSource } from "./attributes/sources/types";
+
+const OVERALL_KEYS = ["overall", "OVR", "OVERALL", "Overall"];
+
+function pickOverall(attributes: Record<string, number>): number | null {
+  for (const key of OVERALL_KEYS) {
+    if (typeof attributes[key] === "number") return attributes[key];
+  }
+  return null;
+}
+
+export interface IngestPlayerAttributesInput {
+  playerId: string;
+  seasonId: string;
+  pffSource?: unknown;
+  maddenSource?: unknown;
+  adminSource?: unknown;
+  /** Defaults to 0.5 each — wrapper renormalizes per actually-present source. */
+  pffWeight?: number;
+  maddenWeight?: number;
+}
+
+/**
+ * Ingest a single playerAttributes row (Phase 2 / WSM-000057).
+ *
+ * The wrapper handles all source normalization client-side: each
+ * raw payload is fed to its adapter, the resulting attribute maps are
+ * blended into a canonical attributes map, and weightedOverall is
+ * computed from the source overalls. Convex just persists the
+ * canonical pieces.
+ *
+ * Idempotent: multiple calls with the same (playerId, seasonId) replace
+ * the prior row.
+ *
+ * Throws when no source produces a normalized result for the player.
+ */
+export async function ingestPlayerAttributes(
+  input: IngestPlayerAttributesInput,
+): Promise<{ id: string; created: boolean }> {
+  const sources: Array<{
+    weight: number;
+    normalized: NormalizedSource;
+    raw: unknown;
+    kind: "pff" | "madden" | "admin";
+  }> = [];
+
+  if (input.pffSource !== undefined) {
+    const normalized = normalizePff(input.pffSource);
+    if (normalized) {
+      sources.push({
+        weight: input.pffWeight ?? 0.5,
+        normalized,
+        raw: input.pffSource,
+        kind: "pff",
+      });
+    }
+  }
+  if (input.maddenSource !== undefined) {
+    const normalized = normalizeMadden(input.maddenSource);
+    if (normalized) {
+      sources.push({
+        weight: input.maddenWeight ?? 0.5,
+        normalized,
+        raw: input.maddenSource,
+        kind: "madden",
+      });
+    }
+  }
+  if (input.adminSource !== undefined) {
+    const normalized = normalizeAdminJson(input.adminSource);
+    if (normalized) {
+      // Admin uploads override per-source weights — they're the canonical
+      // authority. Use weight 1.0 and skip pff/madden weighting if admin
+      // is the only source.
+      sources.push({
+        weight: 1.0,
+        normalized,
+        raw: input.adminSource,
+        kind: "admin",
+      });
+    }
+  }
+
+  if (sources.length === 0) {
+    throw new Error("ingest_no_valid_source");
+  }
+
+  // Use the first source's positionGroup. Sources should agree (same
+  // player) but we don't enforce — picking the first keeps it deterministic.
+  const positionGroup = sources[0].normalized.positionGroup;
+
+  // Blend attribute maps. For each attribute key, weighted average across
+  // sources that carry it.
+  const attributes: Record<string, number> = {};
+  const allKeys = new Set<string>();
+  for (const s of sources) {
+    for (const k of Object.keys(s.normalized.attributes)) allKeys.add(k);
+  }
+  for (const key of allKeys) {
+    let weightedSum = 0;
+    let totalWeight = 0;
+    for (const s of sources) {
+      const v = s.normalized.attributes[key];
+      if (typeof v === "number") {
+        weightedSum += v * s.weight;
+        totalWeight += s.weight;
+      }
+    }
+    if (totalWeight > 0) {
+      attributes[key] = weightedSum / totalWeight;
+    }
+  }
+
+  const weightedOverall = pickOverall(attributes);
+
+  const pffSource = sources.find((s) => s.kind === "pff");
+  const maddenSource = sources.find((s) => s.kind === "madden");
+
+  return mutateConvex(refs.ingestPlayerAttributes, {
+    playerId: input.playerId,
+    seasonId: input.seasonId,
+    positionGroup,
+    attributesJson: JSON.stringify(attributes),
+    pffSourceJson: pffSource ? JSON.stringify(pffSource.raw) : null,
+    maddenSourceJson: maddenSource ? JSON.stringify(maddenSource.raw) : null,
+    pffWeight: input.pffWeight ?? 0.5,
+    maddenWeight: input.maddenWeight ?? 0.5,
+    weightedOverall,
+  });
 }
