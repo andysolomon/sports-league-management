@@ -20,7 +20,13 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { depthChartV1, rosterSnapshotsV1, pageGuard, apiGuard } from "../flags";
+import {
+  depthChartV1,
+  rosterSnapshotsV1,
+  playerAttributesV1,
+  pageGuard,
+  apiGuard,
+} from "../flags";
 
 describe("depthChartV1 flag declaration", () => {
   it("uses the canonical key", () => {
@@ -39,6 +45,16 @@ describe("rosterSnapshotsV1 flag declaration", () => {
 
   it("has a Phase 1 description for the Vercel Toolbar", () => {
     expect(rosterSnapshotsV1.description).toMatch(/roster|snapshot/i);
+  });
+});
+
+describe("playerAttributesV1 flag declaration", () => {
+  it("uses the canonical key", () => {
+    expect(playerAttributesV1.key).toBe("player_attributes_v1");
+  });
+
+  it("has a Phase 2 description for the Vercel Toolbar", () => {
+    expect(playerAttributesV1.description).toMatch(/attribute|development/i);
   });
 });
 
