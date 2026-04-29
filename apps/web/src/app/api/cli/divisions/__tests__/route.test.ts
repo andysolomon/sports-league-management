@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/salesforce-api", () => ({ getDivisions: vi.fn() }));
+vi.mock("@/lib/data-api", () => ({ getDivisions: vi.fn() }));
 vi.mock("@/lib/org-context", () => ({ resolveOrgContext: vi.fn() }));
 vi.mock("@/lib/api-error", () => ({
   handleApiError: vi.fn(() => {
@@ -11,7 +11,7 @@ vi.mock("@/lib/api-error", () => ({
 }));
 
 import { auth } from "@clerk/nextjs/server";
-import { getDivisions } from "@/lib/salesforce-api";
+import { getDivisions } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { GET } from "../route";
 

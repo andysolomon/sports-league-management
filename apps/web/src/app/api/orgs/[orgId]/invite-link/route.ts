@@ -1,19 +1,21 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgAdmin } from "@/lib/org-context";
-import { setLeagueInviteToken } from "@/lib/data-api";
-import { getSalesforceConnection } from "@/lib/salesforce";
+import {
+  setLeagueInviteToken,
+  getLeagueForOrg as getLeagueForOrgFromConvex,
+} from "@/lib/data-api";
 import { handleApiError } from "@/lib/api-error";
 import crypto from "crypto";
 
-// Find the league that belongs to this org
-async function getLeagueForOrg(orgId: string): Promise<{ id: string; token: string | null }> {
-  const conn = await getSalesforceConnection();
-  const result = await conn.query<{ Id: string; Invite_Token__c: string | null }>(
-    `SELECT Id, Invite_Token__c FROM League__c WHERE Clerk_Org_Id__c = '${orgId}' LIMIT 1`,
-  );
-  if (result.totalSize === 0) throw new Error("League not found for this organization");
-  return { id: result.records[0].Id, token: result.records[0].Invite_Token__c ?? null };
+async function getLeagueForOrg(
+  orgId: string,
+): Promise<{ id: string; token: string | null }> {
+  const league = await getLeagueForOrgFromConvex(orgId);
+  if (!league) {
+    throw new Error("League not found for this organization");
+  }
+  return league;
 }
 
 export async function GET(

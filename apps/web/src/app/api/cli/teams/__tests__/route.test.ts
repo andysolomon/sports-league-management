@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 vi.mock("@clerk/nextjs/server", () => ({
   auth: vi.fn(),
 }));
-vi.mock("@/lib/salesforce-api", () => ({
+vi.mock("@/lib/data-api", () => ({
   getTeams: vi.fn(),
   getTeamsByLeague: vi.fn(),
   createTeam: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock("@/lib/api-error", () => ({
 }));
 
 import { auth } from "@clerk/nextjs/server";
-import { getTeams, getTeamsByLeague, createTeam } from "@/lib/salesforce-api";
+import { getTeams, getTeamsByLeague, createTeam } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { GET, POST } from "../route";
 

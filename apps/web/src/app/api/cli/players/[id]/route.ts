@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
-import { updatePlayer } from "@/lib/salesforce-api";
+import { updatePlayer } from "@/lib/data-api";
 import { handleApiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
