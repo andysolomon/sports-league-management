@@ -175,6 +175,25 @@ export interface SyncConfig {
   lastSyncReport: SyncReport | null;
 }
 
+// --- Player attributes (Phase 2, player_attributes_v1) ---
+
+export interface PlayerAttributeDto {
+  id: string;
+  playerId: string;
+  seasonId: string;
+  positionGroup: string;
+  /** Canonical attribute map (already normalized + weighted). */
+  attributes: Record<string, number>;
+  /** Raw PFF payload as ingested, null if not provided. */
+  pffSource: Record<string, unknown> | null;
+  /** Raw Madden payload as ingested, null if not provided. */
+  maddenSource: Record<string, unknown> | null;
+  pffWeight: number;
+  maddenWeight: number;
+  weightedOverall: number | null;
+  ingestedAt: string;
+}
+
 // --- Subscription tier types ---
 
 export type Tier = "free" | "plus" | "club" | "league";
