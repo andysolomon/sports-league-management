@@ -1,15 +1,10 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { getSalesforceConnection } from "@/lib/salesforce";
+import {
+  subscribeToLeague,
+  unsubscribeFromLeague,
+} from "@/lib/data-api";
 import { handleApiError } from "@/lib/api-error";
-
-async function verifyPublicLeague(leagueId: string): Promise<boolean> {
-  const conn = await getSalesforceConnection();
-  const result = await conn.query<{ Id: string }>(
-    `SELECT Id FROM League__c WHERE Id = '${leagueId}' AND Clerk_Org_Id__c = null LIMIT 1`,
-  );
-  return result.totalSize > 0;
-}
 
 export async function POST(request: NextRequest) {
   const { userId } = await auth();
@@ -26,29 +21,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isPublic = await verifyPublicLeague(leagueId);
-    if (!isPublic) {
-      return NextResponse.json(
-        { error: "League not found or not public" },
-        { status: 404 },
-      );
+    // The Convex `subscribeToLeague` mutation enforces the public-league
+    // check (throws "League not found or not public") and idempotently
+    // writes to the `leagueSubscriptions` table. We surface the error
+    // back to the client at 404 to preserve the prior contract.
+    try {
+      await subscribeToLeague(userId, leagueId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("not found") || msg.includes("not public")) {
+        return NextResponse.json(
+          { error: "League not found or not public" },
+          { status: 404 },
+        );
+      }
+      throw err;
     }
-
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const current =
-      (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
-
-    if (current.includes(leagueId)) {
-      return NextResponse.json({ message: "Already subscribed" });
-    }
-
-    await client.users.updateUser(userId, {
-      publicMetadata: {
-        ...user.publicMetadata,
-        subscribedLeagueIds: [...current, leagueId],
-      },
-    });
 
     return NextResponse.json({ message: "Subscribed" });
   } catch (error) {
@@ -71,18 +59,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const current =
-      (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
-
-    await client.users.updateUser(userId, {
-      publicMetadata: {
-        ...user.publicMetadata,
-        subscribedLeagueIds: current.filter((id) => id !== leagueId),
-      },
-    });
-
+    await unsubscribeFromLeague(userId, leagueId);
     return NextResponse.json({ message: "Unsubscribed" });
   } catch (error) {
     return handleApiError(error, "/api/leagues/subscribe");
