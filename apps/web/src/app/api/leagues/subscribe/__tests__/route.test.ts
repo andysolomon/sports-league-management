@@ -1,35 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockAuth, mockQuery, mockGetUser, mockUpdateUser } = vi.hoisted(
-  () => ({
+const { mockAuth, mockSubscribeToLeague, mockUnsubscribeFromLeague } =
+  vi.hoisted(() => ({
     mockAuth: vi.fn(),
-    mockQuery: vi.fn(),
-    mockGetUser: vi.fn(),
-    mockUpdateUser: vi.fn(),
-  }),
-);
+    mockSubscribeToLeague: vi.fn(),
+    mockUnsubscribeFromLeague: vi.fn(),
+  }));
 
 vi.mock("@clerk/nextjs/server", () => ({
   auth: mockAuth,
-  clerkClient: vi.fn().mockResolvedValue({
-    users: {
-      getUser: mockGetUser,
-      updateUser: mockUpdateUser,
-    },
-  }),
 }));
 
-vi.mock("@/lib/salesforce", () => ({
-  getSalesforceConnection: vi.fn().mockResolvedValue({
-    query: mockQuery,
-  }),
+vi.mock("@/lib/data-api", () => ({
+  subscribeToLeague: mockSubscribeToLeague,
+  unsubscribeFromLeague: mockUnsubscribeFromLeague,
 }));
 
 vi.mock("@/lib/api-error", () => ({
-  handleApiError: vi.fn().mockImplementation((error: unknown, route: string) => {
-    const { NextResponse } = require("next/server");
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }),
+  handleApiError: vi
+    .fn()
+    .mockImplementation((_error: unknown, _route: string) => {
+      const { NextResponse } = require("next/server");
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 },
+      );
+    }),
 }));
 
 import { POST, DELETE } from "../route";
@@ -62,7 +58,9 @@ describe("POST /api/leagues/subscribe", () => {
 
   it("returns 404 when league is not public", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockQuery.mockResolvedValue({ totalSize: 0, records: [] });
+    mockSubscribeToLeague.mockRejectedValue(
+      new Error("League not found or not public"),
+    );
 
     const res = await POST(makeRequest({ leagueId: "lg_private" }));
     expect(res.status).toBe(404);
@@ -70,41 +68,28 @@ describe("POST /api/leagues/subscribe", () => {
 
   it("returns 200 and subscribes successfully", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ Id: "lg_pub" }],
-    });
-    mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: [] },
-    });
-    mockUpdateUser.mockResolvedValue({});
+    mockSubscribeToLeague.mockResolvedValue(undefined);
 
     const res = await POST(makeRequest({ leagueId: "lg_pub" }));
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.message).toBe("Subscribed");
-    expect(mockUpdateUser).toHaveBeenCalledWith("user_1", {
-      publicMetadata: { subscribedLeagueIds: ["lg_pub"] },
-    });
+    expect(mockSubscribeToLeague).toHaveBeenCalledWith("user_1", "lg_pub");
   });
 
-  it("returns 200 when already subscribed (idempotent)", async () => {
+  it("idempotent — Convex mutation absorbs the dup write", async () => {
+    // The Convex `subscribeToLeague` mutation is idempotent: if the user
+    // is already subscribed, it returns null without throwing. The route
+    // therefore returns the standard "Subscribed" message in that case.
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockQuery.mockResolvedValue({
-      totalSize: 1,
-      records: [{ Id: "lg_pub" }],
-    });
-    mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: ["lg_pub"] },
-    });
+    mockSubscribeToLeague.mockResolvedValue(undefined);
 
     const res = await POST(makeRequest({ leagueId: "lg_pub" }));
     expect(res.status).toBe(200);
 
     const body = await res.json();
-    expect(body.message).toBe("Already subscribed");
-    expect(mockUpdateUser).not.toHaveBeenCalled();
+    expect(body.message).toBe("Subscribed");
   });
 });
 
@@ -120,18 +105,13 @@ describe("DELETE /api/leagues/subscribe", () => {
 
   it("returns 200 and unsubscribes successfully", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1" });
-    mockGetUser.mockResolvedValue({
-      publicMetadata: { subscribedLeagueIds: ["lg_pub", "lg_other"] },
-    });
-    mockUpdateUser.mockResolvedValue({});
+    mockUnsubscribeFromLeague.mockResolvedValue(undefined);
 
     const res = await DELETE(makeRequest({ leagueId: "lg_pub" }, "DELETE"));
     expect(res.status).toBe(200);
 
     const body = await res.json();
     expect(body.message).toBe("Unsubscribed");
-    expect(mockUpdateUser).toHaveBeenCalledWith("user_1", {
-      publicMetadata: { subscribedLeagueIds: ["lg_other"] },
-    });
+    expect(mockUnsubscribeFromLeague).toHaveBeenCalledWith("user_1", "lg_pub");
   });
 });
