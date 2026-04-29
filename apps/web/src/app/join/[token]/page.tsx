@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getLeagueByInviteToken } from "@/lib/salesforce-api";
+import { getLeagueByInviteToken } from "@/lib/data-api";
 import JoinForm from "./join-form";
 
 export default async function JoinPage({

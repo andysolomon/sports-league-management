@@ -1,6 +1,6 @@
 import type { SyncReport, SyncConfig } from "@sports-management/shared-types";
 import { getSalesforceConnection } from "../salesforce";
-import { bulkImportLeague } from "../salesforce-api";
+import { bulkImportLeague } from "../data-api";
 import { EspnNflAdapter } from "../adapters/espn-nfl";
 
 interface SyncConfigRecord {

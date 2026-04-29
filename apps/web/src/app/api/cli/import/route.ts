@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { LeagueImportSchema } from "@sports-management/api-contracts";
-import { bulkImportLeague } from "@/lib/salesforce-api";
+import { bulkImportLeague } from "@/lib/data-api";
 import { handleApiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";

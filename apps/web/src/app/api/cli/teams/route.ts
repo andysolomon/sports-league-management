@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse, type NextRequest } from "next/server";
-import { getTeams, getTeamsByLeague, createTeam } from "@/lib/salesforce-api";
+import { getTeams, getTeamsByLeague, createTeam } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { handleApiError } from "@/lib/api-error";
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/salesforce-api", () => ({ updatePlayer: vi.fn() }));
+vi.mock("@/lib/data-api", () => ({ updatePlayer: vi.fn() }));
 vi.mock("@/lib/api-error", () => ({
   handleApiError: vi.fn(() => {
     const { NextResponse } = require("next/server");
@@ -11,7 +11,7 @@ vi.mock("@/lib/api-error", () => ({
 }));
 
 import { auth } from "@clerk/nextjs/server";
-import { updatePlayer } from "@/lib/salesforce-api";
+import { updatePlayer } from "@/lib/data-api";
 import { PUT } from "../route";
 
 const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;

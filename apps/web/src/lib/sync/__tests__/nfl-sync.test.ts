@@ -28,7 +28,7 @@ const mockImportResult: ImportResult = {
   errors: [],
 };
 
-vi.mock("../../salesforce-api", () => ({
+vi.mock("../../data-api", () => ({
   bulkImportLeague: vi.fn(() => Promise.resolve(mockImportResult)),
 }));
 
@@ -41,7 +41,7 @@ vi.mock("../../adapters/espn-nfl", () => ({
 }));
 
 import { syncNfl, readSyncConfig, updateSyncEnabled } from "../nfl-sync";
-import { bulkImportLeague } from "../../salesforce-api";
+import { bulkImportLeague } from "../../data-api";
 
 describe("NFL Sync Service", () => {
   beforeEach(() => {

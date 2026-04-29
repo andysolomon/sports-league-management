@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/salesforce-api", () => ({ getPlayersByTeam: vi.fn() }));
+vi.mock("@/lib/data-api", () => ({ getPlayersByTeam: vi.fn() }));
 vi.mock("@/lib/org-context", () => ({ resolveOrgContext: vi.fn() }));
 vi.mock("@/lib/api-error", () => ({
   handleApiError: vi.fn(() => {
@@ -12,7 +12,7 @@ vi.mock("@/lib/api-error", () => ({
 }));
 
 import { auth } from "@clerk/nextjs/server";
-import { getPlayersByTeam } from "@/lib/salesforce-api";
+import { getPlayersByTeam } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { GET } from "../route";
 
