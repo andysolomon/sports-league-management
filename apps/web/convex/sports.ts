@@ -1748,3 +1748,73 @@ export const getRosterAssignmentHistory = query({
     return limited.map(toRosterAuditLogDto);
   },
 });
+
+/*
+ * Phase 2 — `player_attributes_v1` (Sprint 6B / WSM-000057).
+ *
+ * `ingestPlayerAttributes` upserts one playerAttributes row per
+ * (playerId, seasonId). Inputs are pre-normalized by the data-api
+ * wrapper — the mutation just persists the canonical pieces.
+ *
+ *   attributesJson  — already a JSON string of Record<string, number>
+ *   pffSourceJson   — raw PFF payload as ingested (or null)
+ *   maddenSourceJson — raw Madden payload as ingested (or null)
+ *   pffWeight, maddenWeight — per-source weights, normalized at the
+ *                              wrapper layer so they sum to 1 for the
+ *                              sources that are present.
+ *   weightedOverall — already computed at the wrapper layer (null if
+ *                     neither source carried an "OVR"/"overall" attribute).
+ */
+export const ingestPlayerAttributes = mutationGeneric({
+  args: {
+    playerId: v.id("players"),
+    seasonId: v.id("seasons"),
+    positionGroup: v.string(),
+    attributesJson: v.string(),
+    pffSourceJson: v.union(v.string(), v.null()),
+    maddenSourceJson: v.union(v.string(), v.null()),
+    pffWeight: v.number(),
+    maddenWeight: v.number(),
+    weightedOverall: v.union(v.number(), v.null()),
+  },
+  returns: v.object({
+    id: v.string(),
+    created: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    // Look up by playerId via the compound by_playerId_seasonId index;
+    // filter the (small) per-player set to the matching seasonId. We use
+    // the leading-field-only form because the chained-eq form trips the
+    // generic IndexRange typing under mutationGeneric — same outcome with
+    // negligible cost (one player typically has 1 row per season).
+    const candidates = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_playerId_seasonId", (q) =>
+        q.eq("playerId", args.playerId),
+      )
+      .collect();
+    const existing =
+      candidates.find((row) => row.seasonId === args.seasonId) ?? null;
+
+    const ingestedAt = new Date().toISOString();
+    const payload = {
+      playerId: args.playerId,
+      seasonId: args.seasonId,
+      positionGroup: args.positionGroup,
+      attributesJson: args.attributesJson,
+      pffSourceJson: args.pffSourceJson,
+      maddenSourceJson: args.maddenSourceJson,
+      pffWeight: args.pffWeight,
+      maddenWeight: args.maddenWeight,
+      weightedOverall: args.weightedOverall,
+      ingestedAt,
+    };
+
+    if (existing) {
+      await ctx.db.replace(existing._id, payload);
+      return { id: existing._id, created: false };
+    }
+    const id = await ctx.db.insert("playerAttributes", payload);
+    return { id, created: true };
+  },
+});
