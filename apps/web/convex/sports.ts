@@ -2254,3 +2254,93 @@ export const getFixture = queryGeneric({
     };
   },
 });
+
+/*
+ * Phase 3 — Game result CRUD (Sprint 7 / WSM-000069).
+ *
+ * Recording a result transitions the parent fixture's status to
+ * "final" in the same transaction. Idempotent on `fixtureId`:
+ * a re-record replaces the existing result row in place.
+ */
+
+const gameResultDtoValidator = v.object({
+  id: v.string(),
+  fixtureId: v.string(),
+  homeScore: v.number(),
+  awayScore: v.number(),
+  playerStatsJson: v.union(v.string(), v.null()),
+  recordedAt: v.string(),
+  recordedBy: v.string(),
+});
+
+export const recordGameResult = mutationGeneric({
+  args: {
+    fixtureId: v.id("fixtures"),
+    homeScore: v.number(),
+    awayScore: v.number(),
+    actorUserId: v.string(),
+  },
+  returns: gameResultDtoValidator,
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+
+    const recordedAt = new Date().toISOString();
+    const payload = {
+      fixtureId: args.fixtureId,
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      playerStatsJson: null,
+      recordedAt,
+      recordedBy: args.actorUserId,
+    };
+
+    const existing = await ctx.db
+      .query("gameResults")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+
+    let resultId: string;
+    if (existing) {
+      await ctx.db.replace(existing._id, payload);
+      resultId = existing._id;
+    } else {
+      resultId = await ctx.db.insert("gameResults", payload);
+    }
+
+    if (fixture.status !== "final") {
+      await ctx.db.patch(args.fixtureId, { status: "final" });
+    }
+
+    return {
+      id: resultId,
+      fixtureId: args.fixtureId,
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      playerStatsJson: null,
+      recordedAt,
+      recordedBy: args.actorUserId,
+    };
+  },
+});
+
+export const getResultByFixture = queryGeneric({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.union(gameResultDtoValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("gameResults")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) return null;
+    return {
+      id: row._id,
+      fixtureId: row.fixtureId,
+      homeScore: row.homeScore,
+      awayScore: row.awayScore,
+      playerStatsJson: row.playerStatsJson,
+      recordedAt: row.recordedAt,
+      recordedBy: row.recordedBy,
+    };
+  },
+});
