@@ -11,6 +11,7 @@ import {
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
 import StandingsTable from "@/components/schedule/StandingsTable";
+import { trackStandingsView } from "@/lib/analytics";
 
 export default async function LeagueStandingsPage({
   params,
@@ -55,6 +56,7 @@ export default async function LeagueStandingsPage({
 
   const standings = await computeStandings(activeSeason.id);
   const divisions = await getDivisions([leagueId]);
+  void trackStandingsView({ leagueId, route: "dashboard" });
 
   return (
     <div>

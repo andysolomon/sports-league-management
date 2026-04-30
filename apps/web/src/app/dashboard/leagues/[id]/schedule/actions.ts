@@ -11,6 +11,10 @@ import {
   recordGameResult,
 } from "@/lib/data-api";
 import { getUserRoleInOrg, resolveOrgContext } from "@/lib/org-context";
+import {
+  trackFixtureCreated,
+  trackResultRecorded,
+} from "@/lib/analytics";
 
 interface CreateFixtureActionInput {
   leagueId: string;
@@ -76,6 +80,10 @@ export async function createFixtureAction(
     });
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
+    void trackFixtureCreated({
+      leagueId: input.leagueId,
+      seasonId: input.seasonId,
+    });
     return { ok: true, id: fixture.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -118,6 +126,12 @@ export async function recordGameResultAction(
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     revalidatePath(`/leagues/${input.leagueId}/standings`);
+    void trackResultRecorded({
+      leagueId: input.leagueId,
+      fixtureId: input.fixtureId,
+      homeScore: input.homeScore,
+      awayScore: input.awayScore,
+    });
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

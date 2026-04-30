@@ -15,6 +15,32 @@ We are adding **roster management** on top of the existing League / Division / T
 
 ## 1. Overview
 
+### Phase 3 — LIVE (2026-04-29)
+
+Phase 3 (schedules + computed standings + public standings viewer) is merged to `main` behind the `schedules_standings_v1` Vercel flag. Production default is `off`; dev default is `on`. Shipped via Sprint 7 across ten PRs, one per story:
+
+| Story | PR | What shipped |
+|-------|----|--------------|
+| WSM-000066 | #166 | `fixtures` + `gameResults` tables + DTOs (`FixtureDto`, `GameResultDto`, `Standing`) |
+| WSM-000067 | #167 | `schedules_standings_v1` feature flag + tests |
+| WSM-000068 | #168 | Fixture mutations: `createFixture` (with same-team + cross-league guards), `updateFixture`, `deleteFixture` (cascades to results), `listFixturesBySeason`, `getFixture` |
+| WSM-000069 | #169 | `recordGameResult` mutation (idempotent, flips fixture status to `final` in same transaction) + `getResultByFixture` |
+| WSM-000070 | #170 | `computeStandings` + `computeDivisionStandings` queries with full tiebreaker chain (head-to-head → division record → points-differential) + 10 unit-test cases |
+| WSM-000071 | #171 | UI: `/dashboard/leagues/[id]/schedule` (org-gated) + `FixtureFormDialog` + `RecordResultDialog` + server actions |
+| WSM-000072 | #172 | UI: `/dashboard/leagues/[id]/standings` (org-gated) + reusable `StandingsTable` component |
+| WSM-000073 | #173 | UI: `/leagues/[id]/standings` (public viewer) + `computeStandingsPublic` query (layered visibility defense) |
+| WSM-000074 | #174 | Playwright e2e: full create-fixture → record-result → standings-update path + public-toggle gating |
+| WSM-000075 | this PR | Analytics events + `docs/roster-management.md` cutover + Sprint 7 verification + closeout |
+
+**Flag flip pending:** prod flip to `on` is gated on a preview-deploy manual QA pass + analytics verification per `docs/sprints/SPRINT_7_VERIFICATION.md`.
+
+**Routes added:**
+- `/dashboard/leagues/[id]/schedule` — org-gated per-week fixture list + admin dialogs
+- `/dashboard/leagues/[id]/standings` — org-gated computed standings table
+- `/leagues/[id]/standings` — public viewer (gated by `leagues.isPublic`)
+
+**Analytics events:** `fixture_created`, `result_recorded`, `standings_view`, `flag_exposure(schedules_standings_v1)`.
+
 ### Phase 2 — LIVE (2026-04-29)
 
 Phase 2 (player attributes & development + public viewer) is merged to `main` behind the `player_attributes_v1` Vercel flag. Production default is `off`; dev default is `on`. Shipped via Sprint 6B across twelve PRs, one per story:
