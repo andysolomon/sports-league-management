@@ -91,3 +91,28 @@ export function trackRosterLimitBlocked(props: {
     teamId: props.teamId,
   });
 }
+
+// --- Phase 2 (player_attributes_v1) ------------------------------
+
+export function trackPlayerAttributesView(props: {
+  playerId: string;
+  /** "dashboard" or "public" — distinguishes the two viewer routes. */
+  route: "dashboard" | "public";
+}): Promise<void> {
+  return safeTrack("player_attributes_view", {
+    playerId: props.playerId,
+    route: props.route,
+  });
+}
+
+export function trackPlayerAttributesIngest(props: {
+  playerId: string;
+  seasonId: string;
+  source: "pff" | "madden" | "admin";
+}): Promise<void> {
+  return safeTrack("player_attributes_ingest", {
+    playerId: props.playerId,
+    seasonId: props.seasonId,
+    source: props.source,
+  });
+}

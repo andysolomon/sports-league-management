@@ -10,6 +10,7 @@ import {
   getPlayer,
 } from "@/lib/data-api";
 import { getUserRoleInOrg, resolveOrgContext } from "@/lib/org-context";
+import { trackPlayerAttributesIngest } from "@/lib/analytics";
 
 export type AttributeSource = "pff" | "madden" | "admin";
 
@@ -83,6 +84,12 @@ export async function ingestPlayerAttributesAction(
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: message };
   }
+
+  void trackPlayerAttributesIngest({
+    playerId: input.playerId,
+    seasonId: input.seasonId,
+    source: input.source,
+  });
 
   revalidatePath(`/dashboard/players/${input.playerId}/development`);
   return { ok: true };

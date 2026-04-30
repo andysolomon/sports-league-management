@@ -13,6 +13,7 @@ import { resolveOrgContext, getUserRoleInOrg } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
 import AttributesUploadDialog from "@/components/attributes/AttributesUploadDialog";
+import { trackPlayerAttributesView } from "@/lib/analytics";
 
 export default async function PlayerDevelopmentPage({
   params,
@@ -34,6 +35,7 @@ export default async function PlayerDevelopmentPage({
   if (!player) notFound();
 
   const development = await getPlayerDevelopment(playerId);
+  void trackPlayerAttributesView({ playerId, route: "dashboard" });
 
   // Admin gate for the upload dialog: player → team → league → org admin.
   const playerLeagueId = await getTeamLeagueId(player.teamId).catch(
