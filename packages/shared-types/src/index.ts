@@ -194,6 +194,49 @@ export interface PlayerAttributeDto {
   ingestedAt: string;
 }
 
+// --- Schedules & standings (Phase 3, schedules_standings_v1) ---
+
+export type FixtureStatus = "scheduled" | "final" | "cancelled";
+
+export interface FixtureDto {
+  id: string;
+  seasonId: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  scheduledAt: string | null;
+  week: number | null;
+  venue: string | null;
+  status: FixtureStatus;
+  createdAt: string;
+  createdBy: string;
+}
+
+export interface GameResultDto {
+  id: string;
+  fixtureId: string;
+  homeScore: number;
+  awayScore: number;
+  playerStatsJson: string | null;
+  recordedAt: string;
+  recordedBy: string;
+}
+
+export interface Standing {
+  teamId: string;
+  teamName: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  divisionRank: number;
+  leagueRank: number;
+  /** Phase 4 per-player stat-rollup hook. */
+  extended?: Record<string, number>;
+}
+
 // --- Subscription tier types ---
 
 export type Tier = "free" | "plus" | "club" | "league";
