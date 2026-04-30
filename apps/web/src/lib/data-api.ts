@@ -5,6 +5,7 @@ import type {
   DepthChartEntryDto,
   DivisionDto,
   FixtureDto,
+  GameResultDto,
   ImportError,
   ImportResult,
   LeagueDto,
@@ -339,6 +340,18 @@ const refs = {
   ),
   getFixture: queryRef<{ fixtureId: string }, FixtureDto | null>(
     "sports:getFixture",
+  ),
+  recordGameResult: mutationRef<
+    {
+      fixtureId: string;
+      homeScore: number;
+      awayScore: number;
+      actorUserId: string;
+    },
+    GameResultDto
+  >("sports:recordGameResult"),
+  getResultByFixture: queryRef<{ fixtureId: string }, GameResultDto | null>(
+    "sports:getResultByFixture",
   ),
 };
 
@@ -1016,4 +1029,25 @@ export async function getFixture(
   fixtureId: string,
 ): Promise<FixtureDto | null> {
   return queryConvex(refs.getFixture, { fixtureId });
+}
+
+// --- Phase 3 — game result wrappers ---
+
+export interface RecordGameResultInput {
+  fixtureId: string;
+  homeScore: number;
+  awayScore: number;
+  actorUserId: string;
+}
+
+export async function recordGameResult(
+  input: RecordGameResultInput,
+): Promise<GameResultDto> {
+  return mutateConvex(refs.recordGameResult, input);
+}
+
+export async function getResultByFixture(
+  fixtureId: string,
+): Promise<GameResultDto | null> {
+  return queryConvex(refs.getResultByFixture, { fixtureId });
 }
