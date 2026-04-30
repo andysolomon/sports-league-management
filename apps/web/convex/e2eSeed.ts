@@ -99,6 +99,30 @@ async function deleteFixtureByKey(
         deleted += 1;
       }
     }
+
+    // Phase 3 cascade — drop any fixtures + gameResults attached to the
+    // league's seasons before the parent rows go away. Required for the
+    // schedules e2e (WSM-000074).
+    for (const season of seasons as Array<{ _id: Id<"seasons"> }>) {
+      const seasonFixtures = (await ctx.db
+        .query("fixtures")
+        .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
+        .collect()) as Array<{ _id: Id<"fixtures"> }>;
+      for (const fixture of seasonFixtures) {
+        const results = (await ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q: any) =>
+            q.eq("fixtureId", fixture._id),
+          )
+          .collect()) as Array<{ _id: Id<"gameResults"> }>;
+        for (const row of results) {
+          await ctx.db.delete(row._id);
+          deleted += 1;
+        }
+        await ctx.db.delete(fixture._id);
+        deleted += 1;
+      }
+    }
     for (const row of players) {
       await ctx.db.delete(row._id);
       deleted += 1;
@@ -222,5 +246,91 @@ export const resetRosterFixture = mutation({
     assertSeedEnabled();
     const deleted = await deleteFixtureByKey(ctx as any, args.fixtureKey);
     return { deleted };
+  },
+});
+
+/*
+ * Schedule fixture seed (Sprint 7 / WSM-000074).
+ *
+ * Creates a league + active season + two teams so the e2e spec
+ * has the inputs it needs to create a `fixtures` row.
+ * Reuses `deleteFixtureByKey` for cleanup (which now cascades through
+ * fixtures + gameResults).
+ */
+
+const scheduleFixtureResultValidator = v.object({
+  fixtureKey: v.string(),
+  leagueId: v.id("leagues"),
+  seasonId: v.id("seasons"),
+  homeTeamId: v.id("teams"),
+  awayTeamId: v.id("teams"),
+  homeTeamName: v.string(),
+  awayTeamName: v.string(),
+});
+
+export const createScheduleFixture = mutation({
+  args: {
+    fixtureKey: v.string(),
+    clerkOrgId: v.union(v.string(), v.null()),
+    homeTeamName: v.optional(v.string()),
+    awayTeamName: v.optional(v.string()),
+  },
+  returns: scheduleFixtureResultValidator,
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+    await deleteFixtureByKey(ctx as any, args.fixtureKey);
+
+    const homeTeamName = args.homeTeamName ?? "E2E Home Team";
+    const awayTeamName = args.awayTeamName ?? "E2E Away Team";
+
+    const leagueId = await ctx.db.insert("leagues", {
+      name: fixtureLeagueName(args.fixtureKey),
+      orgId: args.clerkOrgId,
+      isPublic: false,
+      inviteToken: null,
+    });
+
+    const seasonId = await ctx.db.insert("seasons", {
+      name: "E2E Season",
+      leagueId,
+      startDate: null,
+      endDate: null,
+      status: "active",
+      rosterLocked: false,
+    });
+
+    const homeTeamId = await ctx.db.insert("teams", {
+      name: homeTeamName,
+      leagueId,
+      divisionId: null,
+      city: "Home City",
+      stadium: "Home Stadium",
+      foundedYear: null,
+      location: "Home City, HC",
+      logoUrl: null,
+      rosterLimit: 53,
+    });
+
+    const awayTeamId = await ctx.db.insert("teams", {
+      name: awayTeamName,
+      leagueId,
+      divisionId: null,
+      city: "Away City",
+      stadium: "Away Stadium",
+      foundedYear: null,
+      location: "Away City, AC",
+      logoUrl: null,
+      rosterLimit: 53,
+    });
+
+    return {
+      fixtureKey: args.fixtureKey,
+      leagueId,
+      seasonId,
+      homeTeamId,
+      awayTeamId,
+      homeTeamName,
+      awayTeamName,
+    };
   },
 });
