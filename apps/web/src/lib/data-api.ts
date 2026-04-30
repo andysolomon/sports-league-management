@@ -13,6 +13,7 @@ import type {
   RosterAssignmentDto,
   RosterAuditLogDto,
   SeasonDto,
+  Standing,
   SyncConfig,
   SyncReport,
   TeamDto,
@@ -353,6 +354,13 @@ const refs = {
   getResultByFixture: queryRef<{ fixtureId: string }, GameResultDto | null>(
     "sports:getResultByFixture",
   ),
+  computeStandings: queryRef<{ seasonId: string }, Standing[]>(
+    "sports:computeStandings",
+  ),
+  computeDivisionStandings: queryRef<
+    { seasonId: string; divisionId: string },
+    Standing[]
+  >("sports:computeDivisionStandings"),
 };
 
 function requireLeagueAccessLocal(leagueId: string, orgContext: OrgContext): void {
@@ -1050,4 +1058,17 @@ export async function getResultByFixture(
   fixtureId: string,
 ): Promise<GameResultDto | null> {
   return queryConvex(refs.getResultByFixture, { fixtureId });
+}
+
+// --- Phase 3 — standings wrappers ---
+
+export async function computeStandings(seasonId: string): Promise<Standing[]> {
+  return queryConvex(refs.computeStandings, { seasonId });
+}
+
+export async function computeDivisionStandings(
+  seasonId: string,
+  divisionId: string,
+): Promise<Standing[]> {
+  return queryConvex(refs.computeDivisionStandings, { seasonId, divisionId });
 }

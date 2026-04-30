@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
+import { computeStandingsPure } from "./lib/standings";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -2342,5 +2343,137 @@ export const getResultByFixture = queryGeneric({
       recordedAt: row.recordedAt,
       recordedBy: row.recordedBy,
     };
+  },
+});
+
+/*
+ * Phase 3 — Standings compute (Sprint 7 / WSM-000070).
+ *
+ * Pure math lives in `convex/lib/standings.ts`. The queries below
+ * just hydrate `teams` + `fixtures` + `gameResults` for the season
+ * and delegate. Computed-on-read; no derived table.
+ */
+
+const standingValidator = v.object({
+  teamId: v.string(),
+  teamName: v.string(),
+  wins: v.number(),
+  losses: v.number(),
+  ties: v.number(),
+  pointsFor: v.number(),
+  pointsAgainst: v.number(),
+  divisionRank: v.number(),
+  leagueRank: v.number(),
+});
+
+export const computeStandings = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(standingValidator),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) return [];
+
+    const teamRows = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .collect();
+
+    const fixtureRows = await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+
+    const finalFixtureIds = fixtureRows
+      .filter((f) => f.status === "final")
+      .map((f) => f._id);
+
+    const resultRows = (
+      await Promise.all(
+        finalFixtureIds.map((fid) =>
+          ctx.db
+            .query("gameResults")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fid))
+            .first(),
+        ),
+      )
+    ).filter((r): r is NonNullable<typeof r> => r !== null);
+
+    return computeStandingsPure({
+      teams: teamRows.map((t) => ({
+        _id: t._id,
+        name: t.name,
+        divisionId: t.divisionId,
+      })),
+      fixtures: fixtureRows.map((f) => ({
+        _id: f._id,
+        seasonId: f.seasonId,
+        homeTeamId: f.homeTeamId,
+        awayTeamId: f.awayTeamId,
+        status: f.status,
+      })),
+      results: resultRows.map((r) => ({
+        fixtureId: r.fixtureId,
+        homeScore: r.homeScore,
+        awayScore: r.awayScore,
+      })),
+    });
+  },
+});
+
+export const computeDivisionStandings = query({
+  args: {
+    seasonId: v.id("seasons"),
+    divisionId: v.id("divisions"),
+  },
+  returns: v.array(standingValidator),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) return [];
+
+    const teamRows = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .collect();
+
+    const fixtureRows = await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+
+    const finalFixtureIds = fixtureRows
+      .filter((f) => f.status === "final")
+      .map((f) => f._id);
+
+    const resultRows = (
+      await Promise.all(
+        finalFixtureIds.map((fid) =>
+          ctx.db
+            .query("gameResults")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fid))
+            .first(),
+        ),
+      )
+    ).filter((r): r is NonNullable<typeof r> => r !== null);
+
+    return computeStandingsPure({
+      teams: teamRows.map((t) => ({
+        _id: t._id,
+        name: t.name,
+        divisionId: t.divisionId,
+      })),
+      fixtures: fixtureRows.map((f) => ({
+        _id: f._id,
+        seasonId: f.seasonId,
+        homeTeamId: f.homeTeamId,
+        awayTeamId: f.awayTeamId,
+        status: f.status,
+      })),
+      results: resultRows.map((r) => ({
+        fixtureId: r.fixtureId,
+        homeScore: r.homeScore,
+        awayScore: r.awayScore,
+      })),
+      divisionFilter: args.divisionId,
+    });
   },
 });
