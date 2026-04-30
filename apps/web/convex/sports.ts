@@ -1818,3 +1818,143 @@ export const ingestPlayerAttributes = mutationGeneric({
     return { id, created: true };
   },
 });
+
+/*
+ * Phase 2 — Read API (Sprint 6B / WSM-000058).
+ */
+
+function safeParseAttributes(json: string): Record<string, number> {
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object") {
+      const out: Record<string, number> = {};
+      for (const [k, v2] of Object.entries(parsed)) {
+        if (typeof v2 === "number" && Number.isFinite(v2)) out[k] = v2;
+      }
+      return out;
+    }
+  } catch {
+    // fallthrough
+  }
+  return {};
+}
+
+const playerDevelopmentRowValidator = v.object({
+  id: v.string(),
+  seasonId: v.string(),
+  seasonName: v.string(),
+  seasonStartDate: v.union(v.string(), v.null()),
+  positionGroup: v.string(),
+  attributes: v.record(v.string(), v.number()),
+  weightedOverall: v.union(v.number(), v.null()),
+  delta: v.union(v.number(), v.null()),
+  ingestedAt: v.string(),
+});
+
+export const getPlayerDevelopment = queryGeneric({
+  args: { playerId: v.id("players") },
+  returns: v.array(playerDevelopmentRowValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_playerId_seasonId", (q) =>
+        q.eq("playerId", args.playerId),
+      )
+      .collect();
+
+    // Hydrate season info for sort + axis labels.
+    const hydrated = await Promise.all(
+      rows.map(async (row) => {
+        const season = await ctx.db.get(row.seasonId);
+        return {
+          row,
+          seasonName: season?.name ?? "(unknown)",
+          seasonStartDate: season?.startDate ?? null,
+        };
+      }),
+    );
+
+    // Sort: startDate ASC (nulls last so a missing date doesn't skew
+    // the chart). Compute delta vs the immediately-preceding row.
+    hydrated.sort((a, b) => {
+      const aKey = a.seasonStartDate ?? "9999";
+      const bKey = b.seasonStartDate ?? "9999";
+      return aKey.localeCompare(bKey);
+    });
+
+    let prevOverall: number | null = null;
+    return hydrated.map(({ row, seasonName, seasonStartDate }) => {
+      const overall = row.weightedOverall;
+      const delta =
+        overall !== null && prevOverall !== null
+          ? overall - prevOverall
+          : null;
+      if (overall !== null) prevOverall = overall;
+      return {
+        id: row._id,
+        seasonId: row.seasonId,
+        seasonName,
+        seasonStartDate,
+        positionGroup: row.positionGroup,
+        attributes: safeParseAttributes(row.attributesJson),
+        weightedOverall: overall,
+        delta,
+        ingestedAt: row.ingestedAt,
+      };
+    });
+  },
+});
+
+const seasonAttributesRowValidator = v.object({
+  playerId: v.string(),
+  playerName: v.string(),
+  positionGroup: v.string(),
+  attributes: v.record(v.string(), v.number()),
+  weightedOverall: v.union(v.number(), v.null()),
+  ingestedAt: v.string(),
+});
+
+export const getSeasonAttributesByPosition = queryGeneric({
+  args: {
+    seasonId: v.id("seasons"),
+    positionGroup: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(seasonAttributesRowValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_seasonId_positionGroup", (q) =>
+        q.eq("seasonId", args.seasonId),
+      )
+      .collect();
+
+    const filtered = rows.filter(
+      (row) => row.positionGroup === args.positionGroup,
+    );
+
+    // Sort by weightedOverall DESC (nulls last).
+    filtered.sort((a, b) => {
+      const aOverall = a.weightedOverall ?? -Infinity;
+      const bOverall = b.weightedOverall ?? -Infinity;
+      return bOverall - aOverall;
+    });
+
+    const limit = args.limit ?? 25;
+    const limited = filtered.slice(0, limit);
+
+    return Promise.all(
+      limited.map(async (row) => {
+        const player = await ctx.db.get(row.playerId);
+        return {
+          playerId: row.playerId,
+          playerName: player?.name ?? "(unknown)",
+          positionGroup: row.positionGroup,
+          attributes: safeParseAttributes(row.attributesJson),
+          weightedOverall: row.weightedOverall,
+          ingestedAt: row.ingestedAt,
+        };
+      }),
+    );
+  },
+});

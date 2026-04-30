@@ -201,6 +201,31 @@ const refs = {
     },
     { id: string; created: boolean }
   >("sports:ingestPlayerAttributes"),
+  getPlayerDevelopment: queryRef<
+    { playerId: string },
+    Array<{
+      id: string;
+      seasonId: string;
+      seasonName: string;
+      seasonStartDate: string | null;
+      positionGroup: string;
+      attributes: Record<string, number>;
+      weightedOverall: number | null;
+      delta: number | null;
+      ingestedAt: string;
+    }>
+  >("sports:getPlayerDevelopment"),
+  getSeasonAttributesByPosition: queryRef<
+    { seasonId: string; positionGroup: string; limit?: number },
+    Array<{
+      playerId: string;
+      playerName: string;
+      positionGroup: string;
+      attributes: Record<string, number>;
+      weightedOverall: number | null;
+      ingestedAt: string;
+    }>
+  >("sports:getSeasonAttributesByPosition"),
   getDepthChartByTeamSeason: queryRef<
     { teamId: string; seasonId: string },
     DepthChartEntryDto[]
@@ -858,5 +883,21 @@ export async function ingestPlayerAttributes(
     pffWeight: input.pffWeight ?? 0.5,
     maddenWeight: input.maddenWeight ?? 0.5,
     weightedOverall,
+  });
+}
+
+export async function getPlayerDevelopment(playerId: string) {
+  return queryConvex(refs.getPlayerDevelopment, { playerId });
+}
+
+export async function getSeasonAttributesByPosition(
+  seasonId: string,
+  positionGroup: string,
+  limit?: number,
+) {
+  return queryConvex(refs.getSeasonAttributesByPosition, {
+    seasonId,
+    positionGroup,
+    limit,
   });
 }
