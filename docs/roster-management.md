@@ -15,6 +15,34 @@ We are adding **roster management** on top of the existing League / Division / T
 
 ## 1. Overview
 
+### Phase 2 — LIVE (2026-04-29)
+
+Phase 2 (player attributes & development + public viewer) is merged to `main` behind the `player_attributes_v1` Vercel flag. Production default is `off`; dev default is `on`. Shipped via Sprint 6B across twelve PRs, one per story:
+
+| Story | PR | What shipped |
+|-------|----|--------------|
+| WSM-000054 | #154 | `playerAttributes` table + DTO (per-player per-season, with PFF/Madden/admin source payloads + weighted overall) |
+| WSM-000055 | #155 | `player_attributes_v1` feature flag |
+| WSM-000056 | #156 | Source adapters: PFF + Madden + admin-JSON normalizers + canonical position-group taxonomy |
+| WSM-000057 | #157 | `ingestPlayerAttributes` mutation (Convex) + wrapper that runs adapters + computes weighted overall |
+| WSM-000058 | #158 | `getPlayerDevelopment` + `getSeasonAttributesByPosition` queries (Convex) + wrappers |
+| WSM-000059 | #159 | Public-read primitives: `leagues.isPublic` guard + `getPlayerDevelopmentPublic` |
+| WSM-000060 | #160 | UI: `/dashboard/players/[id]/development` (org-gated) + `PixelLineChart` 8-bit SVG component |
+| WSM-000061 | #161 | UI: `/leagues/[id]/players/[playerId]/development` (public viewer) + middleware whitelist |
+| WSM-000062 | #162 | UI: `/dashboard/seasons/[id]/attributes/[positionGroup]` (top-N table per position group) |
+| WSM-000063 | #163 | UI: `AttributesUploadDialog` (admin paste-JSON modal) + `LeaguePublicToggle` |
+| WSM-000064 | #164 | Playwright e2e: ingest happy path + public-toggle gating |
+| WSM-000065 | this PR | Analytics events + `docs/roster-management.md` cutover + Sprint 6B verification + closeout |
+
+**Flag flip pending:** prod flip to `on` is gated on a preview-deploy manual QA pass + analytics verification.
+
+**Routes added:**
+- `/dashboard/players/[id]/development` — org-gated development chart
+- `/leagues/[id]/players/[playerId]/development` — public viewer (gated by `leagues.isPublic`)
+- `/dashboard/seasons/[id]/attributes/[positionGroup]` — top-N per position group
+
+**Analytics events:** `player_attributes_view`, `player_attributes_ingest`, `flag_exposure(player_attributes_v1)`.
+
 ### Phase 1 — LIVE (2026-04-22)
 
 Phase 1 (season rosters + depth-chart migration + audit log) is merged to `main` behind the `roster_snapshots_v1` Vercel flag. Production default is `off`; dev default is `on`. Shipped via Sprint 2 across eleven PRs, one per story:

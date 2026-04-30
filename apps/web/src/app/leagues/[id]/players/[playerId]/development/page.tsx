@@ -5,6 +5,7 @@ import { getPlayerDevelopmentPublic } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
+import { trackPlayerAttributesView } from "@/lib/analytics";
 
 /*
  * Public viewer route (Phase 2 / WSM-000061).
@@ -31,6 +32,7 @@ export default async function PublicPlayerDevelopmentPage({
 
   const development = await getPlayerDevelopmentPublic(leagueId, playerId);
   if (development === null) notFound();
+  void trackPlayerAttributesView({ playerId, route: "public" });
 
   const points = development.map((row) => ({
     x: row.seasonName,
