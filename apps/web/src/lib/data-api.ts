@@ -226,6 +226,24 @@ const refs = {
       ingestedAt: string;
     }>
   >("sports:getSeasonAttributesByPosition"),
+  getLeagueVisibility: queryRef<
+    { leagueId: string },
+    { isPublic: boolean } | null
+  >("sports:getLeagueVisibility"),
+  getPlayerDevelopmentPublic: queryRef<
+    { leagueId: string; playerId: string },
+    Array<{
+      id: string;
+      seasonId: string;
+      seasonName: string;
+      seasonStartDate: string | null;
+      positionGroup: string;
+      attributes: Record<string, number>;
+      weightedOverall: number | null;
+      delta: number | null;
+      ingestedAt: string;
+    }> | null
+  >("sports:getPlayerDevelopmentPublic"),
   getDepthChartByTeamSeason: queryRef<
     { teamId: string; seasonId: string },
     DepthChartEntryDto[]
@@ -900,4 +918,15 @@ export async function getSeasonAttributesByPosition(
     positionGroup,
     limit,
   });
+}
+
+export async function getLeagueVisibility(leagueId: string) {
+  return queryConvex(refs.getLeagueVisibility, { leagueId });
+}
+
+export async function getPlayerDevelopmentPublic(
+  leagueId: string,
+  playerId: string,
+) {
+  return queryConvex(refs.getPlayerDevelopmentPublic, { leagueId, playerId });
 }
