@@ -1958,3 +1958,81 @@ export const getSeasonAttributesByPosition = queryGeneric({
     );
   },
 });
+
+/*
+ * Phase 2 — Public read primitives (Sprint 6B / WSM-000059).
+ *
+ * The public viewer in WSM-000061 hits these without a Clerk session.
+ * Both queries gate on `league.isPublic === true`. No org-membership
+ * check; visibility is the league's own opt-in.
+ */
+
+export const getLeagueVisibility = queryGeneric({
+  args: { leagueId: v.id("leagues") },
+  returns: v.union(v.object({ isPublic: v.boolean() }), v.null()),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) return null;
+    return { isPublic: league.isPublic };
+  },
+});
+
+export const getPlayerDevelopmentPublic = queryGeneric({
+  args: {
+    leagueId: v.id("leagues"),
+    playerId: v.id("players"),
+  },
+  returns: v.union(v.array(playerDevelopmentRowValidator), v.null()),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league || !league.isPublic) return null;
+
+    const player = await ctx.db.get(args.playerId);
+    if (!player || player.leagueId !== args.leagueId) return null;
+
+    const rows = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_playerId_seasonId", (q) =>
+        q.eq("playerId", args.playerId),
+      )
+      .collect();
+
+    const hydrated = await Promise.all(
+      rows.map(async (row) => {
+        const season = await ctx.db.get(row.seasonId);
+        return {
+          row,
+          seasonName: season?.name ?? "(unknown)",
+          seasonStartDate: season?.startDate ?? null,
+        };
+      }),
+    );
+
+    hydrated.sort((a, b) => {
+      const aKey = a.seasonStartDate ?? "9999";
+      const bKey = b.seasonStartDate ?? "9999";
+      return aKey.localeCompare(bKey);
+    });
+
+    let prevOverall: number | null = null;
+    return hydrated.map(({ row, seasonName, seasonStartDate }) => {
+      const overall = row.weightedOverall;
+      const delta =
+        overall !== null && prevOverall !== null
+          ? overall - prevOverall
+          : null;
+      if (overall !== null) prevOverall = overall;
+      return {
+        id: row._id,
+        seasonId: row.seasonId,
+        seasonName,
+        seasonStartDate,
+        positionGroup: row.positionGroup,
+        attributes: safeParseAttributes(row.attributesJson),
+        weightedOverall: overall,
+        delta,
+        ingestedAt: row.ingestedAt,
+      };
+    });
+  },
+});
