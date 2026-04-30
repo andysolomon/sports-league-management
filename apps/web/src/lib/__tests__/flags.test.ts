@@ -24,6 +24,7 @@ import {
   depthChartV1,
   rosterSnapshotsV1,
   playerAttributesV1,
+  schedulesStandingsV1,
   pageGuard,
   apiGuard,
 } from "../flags";
@@ -55,6 +56,18 @@ describe("playerAttributesV1 flag declaration", () => {
 
   it("has a Phase 2 description for the Vercel Toolbar", () => {
     expect(playerAttributesV1.description).toMatch(/attribute|development/i);
+  });
+});
+
+describe("schedulesStandingsV1 flag declaration", () => {
+  it("uses the canonical key", () => {
+    expect(schedulesStandingsV1.key).toBe("schedules_standings_v1");
+  });
+
+  it("has a Phase 3 description for the Vercel Toolbar", () => {
+    expect(schedulesStandingsV1.description).toMatch(
+      /schedule|standing|fixture/i,
+    );
   });
 });
 
