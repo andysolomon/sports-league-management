@@ -142,4 +142,40 @@ export default defineSchema({
   })
     .index("by_playerId_seasonId", ["playerId", "seasonId"])
     .index("by_seasonId_positionGroup", ["seasonId", "positionGroup"]),
+
+  /*
+   * Phase 3 — `schedules_standings_v1` (Sprint 7).
+   *
+   * One row per scheduled game. `status` transitions
+   * "scheduled" → "final" when a `gameResults` row is recorded.
+   * `scheduledAt` + `week` are nullable for TBD entries.
+   */
+  fixtures: defineTable({
+    seasonId: v.id("seasons"),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+    scheduledAt: v.union(v.string(), v.null()),
+    week: v.union(v.number(), v.null()),
+    venue: v.union(v.string(), v.null()),
+    status: v.string(),
+    createdAt: v.string(),
+    createdBy: v.string(),
+  })
+    .index("by_seasonId", ["seasonId"])
+    .index("by_seasonId_week", ["seasonId", "week"])
+    .index("by_homeTeamId", ["homeTeamId"])
+    .index("by_awayTeamId", ["awayTeamId"]),
+
+  /*
+   * One row per played fixture. `playerStatsJson` is reserved for
+   * Phase 4 per-player rollups feeding `playerAttributes`; null in v1.
+   */
+  gameResults: defineTable({
+    fixtureId: v.id("fixtures"),
+    homeScore: v.number(),
+    awayScore: v.number(),
+    playerStatsJson: v.union(v.string(), v.null()),
+    recordedAt: v.string(),
+    recordedBy: v.string(),
+  }).index("by_fixtureId", ["fixtureId"]),
 });
