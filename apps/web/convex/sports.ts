@@ -2050,3 +2050,207 @@ export const getPlayerDevelopmentPublic = queryGeneric({
     });
   },
 });
+
+/*
+ * Phase 3 — Fixture CRUD (Sprint 7 / WSM-000068).
+ *
+ * `fixtures` rows model scheduled games. The `recordGameResult`
+ * mutation in WSM-000069 will flip `status` → "final"; deletion
+ * cascades to the matching `gameResults` row to keep standings
+ * computation honest.
+ */
+
+const fixtureDtoValidator = v.object({
+  id: v.string(),
+  seasonId: v.string(),
+  homeTeamId: v.string(),
+  awayTeamId: v.string(),
+  homeTeamName: v.string(),
+  awayTeamName: v.string(),
+  scheduledAt: v.union(v.string(), v.null()),
+  week: v.union(v.number(), v.null()),
+  venue: v.union(v.string(), v.null()),
+  status: v.string(),
+  createdAt: v.string(),
+  createdBy: v.string(),
+});
+
+export const createFixture = mutationGeneric({
+  args: {
+    seasonId: v.id("seasons"),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+    scheduledAt: v.union(v.string(), v.null()),
+    week: v.union(v.number(), v.null()),
+    venue: v.union(v.string(), v.null()),
+    actorUserId: v.string(),
+  },
+  returns: fixtureDtoValidator,
+  handler: async (ctx, args) => {
+    if (args.homeTeamId === args.awayTeamId) {
+      throw new Error("home_and_away_must_differ");
+    }
+
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+
+    const home = await ctx.db.get(args.homeTeamId);
+    const away = await ctx.db.get(args.awayTeamId);
+    if (!home || !away) throw new Error("team_not_found");
+    if (
+      home.leagueId !== season.leagueId ||
+      away.leagueId !== season.leagueId
+    ) {
+      throw new Error("teams_outside_league");
+    }
+
+    const createdAt = new Date().toISOString();
+    const id = await ctx.db.insert("fixtures", {
+      seasonId: args.seasonId,
+      homeTeamId: args.homeTeamId,
+      awayTeamId: args.awayTeamId,
+      scheduledAt: args.scheduledAt,
+      week: args.week,
+      venue: args.venue,
+      status: "scheduled",
+      createdAt,
+      createdBy: args.actorUserId,
+    });
+
+    return {
+      id,
+      seasonId: args.seasonId,
+      homeTeamId: args.homeTeamId,
+      awayTeamId: args.awayTeamId,
+      homeTeamName: home.name,
+      awayTeamName: away.name,
+      scheduledAt: args.scheduledAt,
+      week: args.week,
+      venue: args.venue,
+      status: "scheduled",
+      createdAt,
+      createdBy: args.actorUserId,
+    };
+  },
+});
+
+export const updateFixture = mutationGeneric({
+  args: {
+    fixtureId: v.id("fixtures"),
+    scheduledAt: v.optional(v.union(v.string(), v.null())),
+    week: v.optional(v.union(v.number(), v.null())),
+    venue: v.optional(v.union(v.string(), v.null())),
+    status: v.optional(v.string()),
+  },
+  returns: v.union(fixtureDtoValidator, v.null()),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.fixtureId);
+    if (!existing) return null;
+
+    const patch: Record<string, unknown> = {};
+    if (args.scheduledAt !== undefined) patch.scheduledAt = args.scheduledAt;
+    if (args.week !== undefined) patch.week = args.week;
+    if (args.venue !== undefined) patch.venue = args.venue;
+    if (args.status !== undefined) patch.status = args.status;
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(args.fixtureId, patch);
+    }
+
+    const merged = { ...existing, ...patch } as typeof existing;
+    const home = await ctx.db.get(merged.homeTeamId);
+    const away = await ctx.db.get(merged.awayTeamId);
+    return {
+      id: merged._id,
+      seasonId: merged.seasonId,
+      homeTeamId: merged.homeTeamId,
+      awayTeamId: merged.awayTeamId,
+      homeTeamName: home?.name ?? "(unknown)",
+      awayTeamName: away?.name ?? "(unknown)",
+      scheduledAt: merged.scheduledAt,
+      week: merged.week,
+      venue: merged.venue,
+      status: merged.status,
+      createdAt: merged.createdAt,
+      createdBy: merged.createdBy,
+    };
+  },
+});
+
+export const deleteFixture = mutationGeneric({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.fixtureId);
+    if (!existing) return null;
+
+    // Cascade: drop any gameResults row attached to this fixture so
+    // standings computation doesn't keep counting an orphaned result.
+    const results = await ctx.db
+      .query("gameResults")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .collect();
+    for (const r of results) {
+      await ctx.db.delete(r._id);
+    }
+
+    await ctx.db.delete(args.fixtureId);
+    return null;
+  },
+});
+
+export const listFixturesBySeason = queryGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(fixtureDtoValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+
+    return Promise.all(
+      rows.map(async (row) => {
+        const home = await ctx.db.get(row.homeTeamId);
+        const away = await ctx.db.get(row.awayTeamId);
+        return {
+          id: row._id,
+          seasonId: row.seasonId,
+          homeTeamId: row.homeTeamId,
+          awayTeamId: row.awayTeamId,
+          homeTeamName: home?.name ?? "(unknown)",
+          awayTeamName: away?.name ?? "(unknown)",
+          scheduledAt: row.scheduledAt,
+          week: row.week,
+          venue: row.venue,
+          status: row.status,
+          createdAt: row.createdAt,
+          createdBy: row.createdBy,
+        };
+      }),
+    );
+  },
+});
+
+export const getFixture = queryGeneric({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.union(fixtureDtoValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.fixtureId);
+    if (!row) return null;
+    const home = await ctx.db.get(row.homeTeamId);
+    const away = await ctx.db.get(row.awayTeamId);
+    return {
+      id: row._id,
+      seasonId: row.seasonId,
+      homeTeamId: row.homeTeamId,
+      awayTeamId: row.awayTeamId,
+      homeTeamName: home?.name ?? "(unknown)",
+      awayTeamName: away?.name ?? "(unknown)",
+      scheduledAt: row.scheduledAt,
+      week: row.week,
+      venue: row.venue,
+      status: row.status,
+      createdAt: row.createdAt,
+      createdBy: row.createdBy,
+    };
+  },
+});

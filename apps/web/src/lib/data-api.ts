@@ -4,6 +4,7 @@ import type {
   CreateTeamInput,
   DepthChartEntryDto,
   DivisionDto,
+  FixtureDto,
   ImportError,
   ImportResult,
   LeagueDto,
@@ -308,6 +309,37 @@ const refs = {
     },
     RosterAssignmentDto
   >("sports:updateRosterStatus"),
+  createFixture: mutationRef<
+    {
+      seasonId: string;
+      homeTeamId: string;
+      awayTeamId: string;
+      scheduledAt: string | null;
+      week: number | null;
+      venue: string | null;
+      actorUserId: string;
+    },
+    FixtureDto
+  >("sports:createFixture"),
+  updateFixture: mutationRef<
+    {
+      fixtureId: string;
+      scheduledAt?: string | null;
+      week?: number | null;
+      venue?: string | null;
+      status?: string;
+    },
+    FixtureDto | null
+  >("sports:updateFixture"),
+  deleteFixture: mutationRef<{ fixtureId: string }, null>(
+    "sports:deleteFixture",
+  ),
+  listFixturesBySeason: queryRef<{ seasonId: string }, FixtureDto[]>(
+    "sports:listFixturesBySeason",
+  ),
+  getFixture: queryRef<{ fixtureId: string }, FixtureDto | null>(
+    "sports:getFixture",
+  ),
 };
 
 function requireLeagueAccessLocal(leagueId: string, orgContext: OrgContext): void {
@@ -940,4 +972,48 @@ export async function getPlayerDevelopmentPublic(
   playerId: string,
 ) {
   return queryConvex(refs.getPlayerDevelopmentPublic, { leagueId, playerId });
+}
+
+// --- Phase 3 (schedules_standings_v1) — fixture CRUD wrappers ---
+
+export interface CreateFixtureInput {
+  seasonId: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  scheduledAt: string | null;
+  week: number | null;
+  venue: string | null;
+  actorUserId: string;
+}
+
+export async function createFixture(
+  input: CreateFixtureInput,
+): Promise<FixtureDto> {
+  return mutateConvex(refs.createFixture, input);
+}
+
+export async function updateFixture(input: {
+  fixtureId: string;
+  scheduledAt?: string | null;
+  week?: number | null;
+  venue?: string | null;
+  status?: string;
+}): Promise<FixtureDto | null> {
+  return mutateConvex(refs.updateFixture, input);
+}
+
+export async function deleteFixture(fixtureId: string): Promise<void> {
+  await mutateConvex(refs.deleteFixture, { fixtureId });
+}
+
+export async function listFixturesBySeason(
+  seasonId: string,
+): Promise<FixtureDto[]> {
+  return queryConvex(refs.listFixturesBySeason, { seasonId });
+}
+
+export async function getFixture(
+  fixtureId: string,
+): Promise<FixtureDto | null> {
+  return queryConvex(refs.getFixture, { fixtureId });
 }
