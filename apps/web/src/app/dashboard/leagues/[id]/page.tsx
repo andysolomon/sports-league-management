@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getLeague } from "@/lib/data-api";
+import { getLeague, getLeagueVisibility } from "@/lib/data-api";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Trophy } from "lucide-react";
 import InviteForm from "./invite-form";
 import InvitationList from "./invitation-list";
 import InviteLinkSection from "./invite-link-section";
+import LeaguePublicToggle from "./league-public-toggle";
 
 export default async function LeagueDetailPage({
   params,
@@ -21,6 +22,7 @@ export default async function LeagueDetailPage({
   const { id } = await params;
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(id, orgContext);
+  const visibility = await getLeagueVisibility(id);
 
   // Check if user is admin of this league's org
   let isAdmin = false;
@@ -60,6 +62,10 @@ export default async function LeagueDetailPage({
               <InviteForm orgId={league.orgId} />
               <InvitationList orgId={league.orgId} />
               <InviteLinkSection orgId={league.orgId} />
+              <LeaguePublicToggle
+                leagueId={id}
+                initialIsPublic={visibility?.isPublic ?? false}
+              />
               <div className="flex gap-4">
                 <Link
                   href={`/dashboard/leagues/${id}/members`}

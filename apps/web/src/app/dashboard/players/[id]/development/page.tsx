@@ -5,10 +5,14 @@ import { playerAttributesV1 } from "@/lib/flags";
 import {
   getPlayer,
   getPlayerDevelopment,
+  getTeamLeagueId,
+  getLeagueOrgId,
+  getSeasons,
 } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import { resolveOrgContext, getUserRoleInOrg } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
+import AttributesUploadDialog from "@/components/attributes/AttributesUploadDialog";
 
 export default async function PlayerDevelopmentPage({
   params,
@@ -31,6 +35,19 @@ export default async function PlayerDevelopmentPage({
 
   const development = await getPlayerDevelopment(playerId);
 
+  // Admin gate for the upload dialog: player → team → league → org admin.
+  const playerLeagueId = await getTeamLeagueId(player.teamId).catch(
+    () => null,
+  );
+  const playerOrgId = playerLeagueId
+    ? await getLeagueOrgId(playerLeagueId)
+    : null;
+  const role = playerOrgId
+    ? await getUserRoleInOrg(playerOrgId, userId)
+    : null;
+  const isAdmin = role === "org:admin";
+  const seasons = playerLeagueId ? await getSeasons([playerLeagueId]) : [];
+
   const points = development.map((row) => ({
     x: row.seasonName,
     y: row.weightedOverall,
@@ -49,14 +66,22 @@ export default async function PlayerDevelopmentPage({
         &larr; Back to Players
       </Link>
 
-      <header className="mb-6 flex flex-col gap-1">
-        <h2 className="text-2xl font-bold text-foreground">
-          {player.name}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Position: {player.position}
-          {player.positionGroup ? ` · ${player.positionGroup}` : ""}
-        </p>
+      <header className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-2xl font-bold text-foreground">
+            {player.name}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Position: {player.position}
+            {player.positionGroup ? ` · ${player.positionGroup}` : ""}
+          </p>
+        </div>
+        {isAdmin ? (
+          <AttributesUploadDialog
+            playerId={playerId}
+            seasons={seasons.map((s) => ({ id: s.id, name: s.name }))}
+          />
+        ) : null}
       </header>
 
       <Card className="mb-6">

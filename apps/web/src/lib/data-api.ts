@@ -230,6 +230,10 @@ const refs = {
     { leagueId: string },
     { isPublic: boolean } | null
   >("sports:getLeagueVisibility"),
+  setLeaguePublic: mutationRef<
+    { leagueId: string; isPublic: boolean },
+    null
+  >("sports:setLeaguePublic"),
   getPlayerDevelopmentPublic: queryRef<
     { leagueId: string; playerId: string },
     Array<{
@@ -922,6 +926,13 @@ export async function getSeasonAttributesByPosition(
 
 export async function getLeagueVisibility(leagueId: string) {
   return queryConvex(refs.getLeagueVisibility, { leagueId });
+}
+
+export async function setLeaguePublic(
+  leagueId: string,
+  isPublic: boolean,
+): Promise<void> {
+  await mutateConvex(refs.setLeaguePublic, { leagueId, isPublic });
 }
 
 export async function getPlayerDevelopmentPublic(
