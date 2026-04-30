@@ -1977,6 +1977,20 @@ export const getLeagueVisibility = queryGeneric({
   },
 });
 
+export const setLeaguePublic = mutationGeneric({
+  args: {
+    leagueId: v.id("leagues"),
+    isPublic: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) throw new Error("league_not_found");
+    await ctx.db.patch(args.leagueId, { isPublic: args.isPublic });
+    return null;
+  },
+});
+
 export const getPlayerDevelopmentPublic = queryGeneric({
   args: {
     leagueId: v.id("leagues"),
