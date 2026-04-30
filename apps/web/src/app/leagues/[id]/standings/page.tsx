@@ -5,6 +5,7 @@ import { computeStandingsPublic } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
 import StandingsTable from "@/components/schedule/StandingsTable";
+import { trackStandingsView } from "@/lib/analytics";
 
 /*
  * Public viewer route (Phase 3 / WSM-000073).
@@ -27,6 +28,7 @@ export default async function PublicLeagueStandingsPage({
 
   const standings = await computeStandingsPublic(leagueId);
   if (standings === null) notFound();
+  void trackStandingsView({ leagueId, route: "public" });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">

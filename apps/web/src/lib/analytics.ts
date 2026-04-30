@@ -116,3 +116,40 @@ export function trackPlayerAttributesIngest(props: {
     source: props.source,
   });
 }
+
+// --- Phase 3 (schedules_standings_v1) ----------------------------
+
+export function trackFixtureCreated(props: {
+  leagueId: string;
+  seasonId: string;
+}): Promise<void> {
+  return safeTrack("fixture_created", {
+    leagueId: props.leagueId,
+    seasonId: props.seasonId,
+  });
+}
+
+export function trackResultRecorded(props: {
+  leagueId: string;
+  fixtureId: string;
+  homeScore: number;
+  awayScore: number;
+}): Promise<void> {
+  return safeTrack("result_recorded", {
+    leagueId: props.leagueId,
+    fixtureId: props.fixtureId,
+    homeScore: props.homeScore,
+    awayScore: props.awayScore,
+  });
+}
+
+export function trackStandingsView(props: {
+  leagueId: string;
+  /** "dashboard" or "public" — distinguishes the two viewer routes. */
+  route: "dashboard" | "public";
+}): Promise<void> {
+  return safeTrack("standings_view", {
+    leagueId: props.leagueId,
+    route: props.route,
+  });
+}
