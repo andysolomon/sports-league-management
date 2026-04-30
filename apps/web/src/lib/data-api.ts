@@ -361,6 +361,10 @@ const refs = {
     { seasonId: string; divisionId: string },
     Standing[]
   >("sports:computeDivisionStandings"),
+  computeStandingsPublic: queryRef<
+    { leagueId: string },
+    { seasonName: string; rows: Standing[] } | null
+  >("sports:computeStandingsPublic"),
 };
 
 function requireLeagueAccessLocal(leagueId: string, orgContext: OrgContext): void {
@@ -1071,4 +1075,10 @@ export async function computeDivisionStandings(
   divisionId: string,
 ): Promise<Standing[]> {
   return queryConvex(refs.computeDivisionStandings, { seasonId, divisionId });
+}
+
+export async function computeStandingsPublic(
+  leagueId: string,
+): Promise<{ seasonName: string; rows: Standing[] } | null> {
+  return queryConvex(refs.computeStandingsPublic, { leagueId });
 }

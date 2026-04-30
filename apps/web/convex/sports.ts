@@ -2477,3 +2477,81 @@ export const computeDivisionStandings = query({
     });
   },
 });
+
+/*
+ * Phase 3 — Public standings (Sprint 7 / WSM-000073).
+ *
+ * Returns null when the league isn't opt-in public OR has no seasons.
+ * Layered defense alongside the page-level `publicLeagueGuard`.
+ */
+
+export const computeStandingsPublic = query({
+  args: { leagueId: v.id("leagues") },
+  returns: v.union(
+    v.object({
+      seasonName: v.string(),
+      rows: v.array(standingValidator),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league || !league.isPublic) return null;
+
+    const seasonRows = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    if (seasonRows.length === 0) return null;
+
+    const activeSeason =
+      seasonRows.find((s) => s.status === "active") ?? seasonRows[0];
+
+    const teamRows = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+
+    const fixtureRows = await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", activeSeason._id))
+      .collect();
+
+    const finalFixtureIds = fixtureRows
+      .filter((f) => f.status === "final")
+      .map((f) => f._id);
+
+    const resultRows = (
+      await Promise.all(
+        finalFixtureIds.map((fid) =>
+          ctx.db
+            .query("gameResults")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fid))
+            .first(),
+        ),
+      )
+    ).filter((r): r is NonNullable<typeof r> => r !== null);
+
+    const rows = computeStandingsPure({
+      teams: teamRows.map((t) => ({
+        _id: t._id,
+        name: t.name,
+        divisionId: t.divisionId,
+      })),
+      fixtures: fixtureRows.map((f) => ({
+        _id: f._id,
+        seasonId: f.seasonId,
+        homeTeamId: f.homeTeamId,
+        awayTeamId: f.awayTeamId,
+        status: f.status,
+      })),
+      results: resultRows.map((r) => ({
+        fixtureId: r.fixtureId,
+        homeScore: r.homeScore,
+        awayScore: r.awayScore,
+      })),
+    });
+
+    return { seasonName: activeSeason.name, rows };
+  },
+});
