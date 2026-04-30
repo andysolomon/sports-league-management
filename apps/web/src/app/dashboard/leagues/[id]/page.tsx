@@ -79,6 +79,18 @@ export default async function LeagueDetailPage({
                 >
                   Join Requests &rarr;
                 </Link>
+                <Link
+                  href={`/dashboard/leagues/${id}/schedule`}
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  Schedule &rarr;
+                </Link>
+                <Link
+                  href={`/dashboard/leagues/${id}/standings`}
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  Standings &rarr;
+                </Link>
               </div>
             </div>
           )}
