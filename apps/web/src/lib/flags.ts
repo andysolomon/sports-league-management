@@ -2,7 +2,7 @@ import { flag } from "flags/next";
 import { notFound } from "next/navigation";
 import { trackFlagExposure } from "./analytics";
 
-const defaultOn = process.env.NODE_ENV !== "production";
+const defaultOn = process.env.VERCEL_ENV !== "production";
 
 export const depthChartV1 = flag<boolean>({
   key: "depth_chart_v1",
