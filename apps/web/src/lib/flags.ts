@@ -4,6 +4,17 @@ import { trackFlagExposure } from "./analytics";
 
 const defaultOn = process.env.VERCEL_ENV !== "production";
 
+// Per-flag production override (WSM-000079/80 cutover): set the env var to
+// "on" in Vercel Production and redeploy to flip a flag; "off" forces it
+// dark; unset falls back to the VERCEL_ENV default. Read at decide() time so
+// each request reflects the deployed env rather than module-load state.
+function resolveFlag(envKey: string): boolean {
+  const override = process.env[envKey];
+  if (override === "on") return true;
+  if (override === "off") return false;
+  return defaultOn;
+}
+
 export const depthChartV1 = flag<boolean>({
   key: "depth_chart_v1",
   description:
@@ -14,8 +25,9 @@ export const depthChartV1 = flag<boolean>({
     { label: "On", value: true },
   ],
   decide: () => {
-    void trackFlagExposure("depth_chart_v1", defaultOn);
-    return defaultOn;
+    const enabled = resolveFlag("FLAG_DEPTH_CHART_V1");
+    void trackFlagExposure("depth_chart_v1", enabled);
+    return enabled;
   },
 });
 
@@ -29,8 +41,9 @@ export const rosterSnapshotsV1 = flag<boolean>({
     { label: "On", value: true },
   ],
   decide: () => {
-    void trackFlagExposure("roster_snapshots_v1", defaultOn);
-    return defaultOn;
+    const enabled = resolveFlag("FLAG_ROSTER_SNAPSHOTS_V1");
+    void trackFlagExposure("roster_snapshots_v1", enabled);
+    return enabled;
   },
 });
 
@@ -44,8 +57,9 @@ export const playerAttributesV1 = flag<boolean>({
     { label: "On", value: true },
   ],
   decide: () => {
-    void trackFlagExposure("player_attributes_v1", defaultOn);
-    return defaultOn;
+    const enabled = resolveFlag("FLAG_PLAYER_ATTRIBUTES_V1");
+    void trackFlagExposure("player_attributes_v1", enabled);
+    return enabled;
   },
 });
 
@@ -59,8 +73,9 @@ export const schedulesStandingsV1 = flag<boolean>({
     { label: "On", value: true },
   ],
   decide: () => {
-    void trackFlagExposure("schedules_standings_v1", defaultOn);
-    return defaultOn;
+    const enabled = resolveFlag("FLAG_SCHEDULES_STANDINGS_V1");
+    void trackFlagExposure("schedules_standings_v1", enabled);
+    return enabled;
   },
 });
 

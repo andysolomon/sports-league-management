@@ -25,6 +25,15 @@ const KEYS_TO_COMPARE = [
   "SF_PRIVATE_KEY",
 ];
 
+// Displayed for visibility but never counted as drift — flag overrides are
+// expected to differ between local dev and production (WSM-000079/80).
+const INFORMATIONAL_KEYS = [
+  "FLAG_DEPTH_CHART_V1",
+  "FLAG_ROSTER_SNAPSHOTS_V1",
+  "FLAG_PLAYER_ATTRIBUTES_V1",
+  "FLAG_SCHEDULES_STANDINGS_V1",
+];
+
 function parseEnvFile(filePath) {
   const env = {};
   const raw = readFileSync(filePath, "utf8");
@@ -161,6 +170,13 @@ function main() {
     }
 
     printIdentityMarkers(localEnv, productionEnv);
+
+    console.log("\nFlag overrides (informational, not checked for drift):");
+    for (const key of INFORMATIONAL_KEYS) {
+      const local = normalizeValue(localEnv[key]) || "unset";
+      const production = normalizeValue(productionEnv[key]) || "unset";
+      console.log(`- ${key}: local=${local} prod=${production}`);
+    }
 
     const hasDrift = KEYS_TO_COMPARE.some((key) => {
       const localValue = normalizeValue(localEnv[key]);
