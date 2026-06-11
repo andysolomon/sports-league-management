@@ -72,3 +72,23 @@ out/
 .cursor/
 cursor_*.md
 .vercel
+
+# AI dotfiles
+.agents/
+.augment/
+.codebuddy/
+.kiro/
+.pi/
+.idea/
+skills-lock.json
+debrief.md
+validation.md
+
+# Claude local state — installed skill packs and locks
+# (project-authored skills under .claude/skills/ remain tracked; use `git add -f` for new ones)
+.claude/skills/
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# TypeScript incremental build info
+*.tsbuildinfo
