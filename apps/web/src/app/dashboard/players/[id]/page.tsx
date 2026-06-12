@@ -112,6 +112,18 @@ export default async function PlayerProfilePage({
                 <dd className="mt-1 text-foreground">{age}</dd>
               </div>
             )}
+            {player.experienceYears != null && (
+              <div>
+                <dt className="font-medium text-muted-foreground">
+                  Years active
+                </dt>
+                <dd className="mt-1 text-foreground">
+                  {player.experienceYears === 0
+                    ? "Rookie"
+                    : `${player.experienceYears} ${player.experienceYears === 1 ? "yr" : "yrs"}`}
+                </dd>
+              </div>
+            )}
           </dl>
 
           {developmentEnabled && (

@@ -81,6 +81,7 @@ function toPlayerDto(doc: {
   dateOfBirth: string | null;
   status: string;
   headshotUrl: string | null;
+  experienceYears?: number | null;
 }) {
   return {
     id: doc._id,
@@ -92,6 +93,7 @@ function toPlayerDto(doc: {
     dateOfBirth: doc.dateOfBirth ?? null,
     status: doc.status,
     headshotUrl: doc.headshotUrl ?? null,
+    experienceYears: doc.experienceYears ?? null,
   };
 }
 
@@ -498,6 +500,7 @@ export const listPlayers = queryGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -526,6 +529,7 @@ export const listPlayersByTeam = queryGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -550,6 +554,7 @@ export const getPlayer = queryGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
     v.null(),
   ),
@@ -820,6 +825,7 @@ export const upsertPlayer = mutationGeneric({
     dateOfBirth: v.union(v.string(), v.null()),
     status: v.string(),
     headshotUrl: v.union(v.string(), v.null()),
+    experienceYears: v.optional(v.union(v.number(), v.null())),
   },
   returns: v.object({
     dto: v.object({
@@ -832,6 +838,7 @@ export const upsertPlayer = mutationGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
     created: v.boolean(),
   }),
@@ -852,6 +859,7 @@ export const upsertPlayer = mutationGeneric({
         dateOfBirth: args.dateOfBirth,
         status: args.status,
         headshotUrl: args.headshotUrl,
+        experienceYears: args.experienceYears ?? null,
       });
       return {
         dto: toPlayerDto({
@@ -862,6 +870,7 @@ export const upsertPlayer = mutationGeneric({
           dateOfBirth: args.dateOfBirth,
           status: args.status,
           headshotUrl: args.headshotUrl,
+          experienceYears: args.experienceYears ?? null,
         }),
         created: false,
       };
@@ -882,6 +891,7 @@ export const upsertPlayer = mutationGeneric({
         dateOfBirth: args.dateOfBirth,
         status: args.status,
         headshotUrl: args.headshotUrl,
+        experienceYears: args.experienceYears ?? null,
       },
       created: true,
     };
@@ -999,6 +1009,7 @@ export const createPlayer = mutationGeneric({
     dateOfBirth: v.union(v.string(), v.null()),
     status: v.string(),
     headshotUrl: v.union(v.string(), v.null()),
+    experienceYears: v.optional(v.union(v.number(), v.null())),
   }),
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
@@ -1010,6 +1021,7 @@ export const createPlayer = mutationGeneric({
       ...args,
       leagueId: team.leagueId,
       headshotUrl: null,
+      experienceYears: null,
       positionGroup: null,
     });
 
@@ -1023,6 +1035,7 @@ export const createPlayer = mutationGeneric({
       dateOfBirth: args.dateOfBirth,
       status: args.status,
       headshotUrl: null,
+      experienceYears: null,
     };
   },
 });
@@ -1048,6 +1061,7 @@ export const updatePlayer = mutationGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
     v.null(),
   ),
