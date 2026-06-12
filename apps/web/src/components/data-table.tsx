@@ -29,6 +29,9 @@ interface DataTableProps<T> {
   pageSize?: number;
   emptyMessage?: string;
   actions?: (item: T) => React.ReactNode;
+  /** Makes rows clickable (cursor + hover affordance). Clicks inside the
+      actions cell never trigger this. */
+  onRowClick?: (item: T) => void;
 }
 
 export function DataTable<T extends Record<string, unknown>>({
@@ -39,6 +42,7 @@ export function DataTable<T extends Record<string, unknown>>({
   pageSize = 10,
   emptyMessage = "No results found.",
   actions,
+  onRowClick,
 }: DataTableProps<T>) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<string | null>(null);
@@ -136,7 +140,11 @@ export function DataTable<T extends Record<string, unknown>>({
           <TableBody>
             {paged.length > 0 ? (
               paged.map((item, i) => (
-                <TableRow key={(item as Record<string, unknown>).id as string ?? i}>
+                <TableRow
+                  key={(item as Record<string, unknown>).id as string ?? i}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  className={onRowClick ? "cursor-pointer" : undefined}
+                >
                   {columns.map((col) => (
                     <TableCell key={col.key}>
                       {col.render
@@ -145,7 +153,10 @@ export function DataTable<T extends Record<string, unknown>>({
                     </TableCell>
                   ))}
                   {actions && (
-                    <TableCell className="text-right">
+                    <TableCell
+                      className="text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {actions(item)}
                     </TableCell>
                   )}

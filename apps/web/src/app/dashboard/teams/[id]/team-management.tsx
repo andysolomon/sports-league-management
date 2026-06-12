@@ -9,6 +9,7 @@ import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
 import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
 import { StatusBadge } from "@/components/status-badge";
+import { abbreviateName } from "@/lib/position-group";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/8bit/button";
 import { Card, CardContent } from "@/components/ui/8bit/card";
@@ -62,22 +63,50 @@ export default function TeamManagement({
     }
   }
 
-  const columns: Column<PlayerDto & Record<string, unknown>>[] = [
-    { key: "name", header: "Name", sortable: true },
-    { key: "position", header: "Position", sortable: true },
-    {
-      key: "jerseyNumber",
-      header: "Jersey #",
-      sortable: true,
-      render: (p) => p.jerseyNumber ?? "\u2014",
-    },
-    {
-      key: "status",
-      header: "Status",
-      sortable: true,
-      render: (p) => <StatusBadge status={p.status} />,
-    },
-  ];
+  // Madden-style compact depth chart columns (WSM-000088). `slot` is the
+  // player's depth-order index within the active position-group tab \u2014
+  // attached to the row before render so it survives user re-sorting.
+  type RosterRow = PlayerDto & { slot?: number } & Record<string, unknown>;
+
+  function buildColumns(withSlot: boolean): Column<RosterRow>[] {
+    return [
+      ...(withSlot
+        ? [
+            {
+              key: "slot",
+              header: "Slot",
+              sortable: true,
+              render: (p: RosterRow) => (
+                <span className="font-mono text-muted-foreground">
+                  {p.slot}.
+                </span>
+              ),
+            } satisfies Column<RosterRow>,
+          ]
+        : []),
+      {
+        key: "name",
+        header: "Player",
+        sortable: true,
+        render: (p) => (
+          <span className="font-medium">{abbreviateName(p.name)}</span>
+        ),
+      },
+      { key: "position", header: "Pos", sortable: true },
+      {
+        key: "jerseyNumber",
+        header: "#",
+        sortable: true,
+        render: (p) => p.jerseyNumber ?? "\u2014",
+      },
+      {
+        key: "status",
+        header: "Status",
+        sortable: true,
+        render: (p) => <StatusBadge status={p.status} />,
+      },
+    ];
+  }
 
   return (
     <>
@@ -138,12 +167,19 @@ export default function TeamManagement({
 
       {players.length > 0 ? (
         <PositionGroupTabs players={players}>
-          {(groupPlayers) => (
+          {(groupPlayers, activeTab) => (
             <DataTable
-              data={groupPlayers as (PlayerDto & Record<string, unknown>)[]}
-              columns={columns}
+              data={
+                (activeTab === "All"
+                  ? groupPlayers
+                  : groupPlayers.map((p, i) => ({ ...p, slot: i + 1 }))) as RosterRow[]
+              }
+              columns={buildColumns(activeTab !== "All")}
               searchPlaceholder="Search players..."
               searchKeys={["name", "position", "status"]}
+              onRowClick={(p) =>
+                router.push(`/dashboard/players/${(p as RosterRow).id}`)
+              }
               actions={
                 canManage
                   ? (player) => (
