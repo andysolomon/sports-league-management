@@ -230,6 +230,14 @@ const refs = {
       ingestedAt: string;
     }>
   >("sports:getSeasonAttributesByPosition"),
+  getTeamAttributeSnapshots: queryRef<
+    { teamId: string; seasonId: string },
+    Array<{
+      playerId: string;
+      weightedOverall: number | null;
+      attributes: Record<string, number>;
+    }>
+  >("sports:getTeamAttributeSnapshots"),
   getLeagueVisibility: queryRef<
     { leagueId: string },
     { isPublic: boolean } | null
@@ -516,6 +524,28 @@ export async function getPlayersByTeam(
   const teamLeagueId = await getTeamLeagueId(teamId);
   requireLeagueAccessLocal(teamLeagueId, orgContext);
   return queryConvex(refs.listPlayersByTeam, { teamId });
+}
+
+/** WSM-000090: playerId → snapshot map for the roster stat columns. */
+export async function getTeamAttributeSnapshots(
+  teamId: string,
+  seasonId: string,
+  orgContext: OrgContext,
+): Promise<
+  Map<string, { weightedOverall: number | null; attributes: Record<string, number> }>
+> {
+  const teamLeagueId = await getTeamLeagueId(teamId);
+  requireLeagueAccessLocal(teamLeagueId, orgContext);
+  const rows = await queryConvex(refs.getTeamAttributeSnapshots, {
+    teamId,
+    seasonId,
+  });
+  return new Map(
+    rows.map((r) => [
+      r.playerId,
+      { weightedOverall: r.weightedOverall, attributes: r.attributes },
+    ]),
+  );
 }
 
 export async function getSeasons(

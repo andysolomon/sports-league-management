@@ -1975,6 +1975,50 @@ export const getSeasonAttributesByPosition = queryGeneric({
 });
 
 /*
+ * WSM-000090 — per-team attribute snapshots for the Madden-style
+ * roster stat columns. One row per team player that has a snapshot
+ * for the given season; players without one are simply absent (the
+ * UI renders an em dash). Access control lives in the data-api layer
+ * (league visibility), matching getPlayersByTeam.
+ */
+export const getTeamAttributeSnapshots = queryGeneric({
+  args: {
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+  },
+  returns: v.array(
+    v.object({
+      playerId: v.string(),
+      weightedOverall: v.union(v.number(), v.null()),
+      attributes: v.record(v.string(), v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+
+    const snapshots = [];
+    for (const player of players) {
+      // Leading-field index form — see ingestPlayerAttributes for why.
+      const candidates = await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_playerId_seasonId", (q) => q.eq("playerId", player._id))
+        .collect();
+      const row = candidates.find((r) => r.seasonId === args.seasonId);
+      if (!row) continue;
+      snapshots.push({
+        playerId: player._id as string,
+        weightedOverall: row.weightedOverall,
+        attributes: safeParseAttributes(row.attributesJson),
+      });
+    }
+    return snapshots;
+  },
+});
+
+/*
  * Phase 2 — Public read primitives (Sprint 6B / WSM-000059).
  *
  * The public viewer in WSM-000061 hits these without a Clerk session.
