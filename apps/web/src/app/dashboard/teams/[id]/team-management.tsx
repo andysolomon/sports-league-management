@@ -10,6 +10,11 @@ import { DataTable, type Column } from "@/components/data-table";
 import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
 import { StatusBadge } from "@/components/status-badge";
 import { abbreviateName } from "@/lib/position-group";
+import {
+  lookupAttribute,
+  presentHeadlineKeys,
+  type PlayerSnapshot,
+} from "@/lib/attributes/headline-columns";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/8bit/button";
 import { Card, CardContent } from "@/components/ui/8bit/card";
@@ -20,6 +25,9 @@ interface TeamManagementProps {
   team: TeamDto;
   players: PlayerDto[];
   canManage: boolean;
+  /** WSM-000090: playerId → attribute snapshot; empty when Phase 2 is
+      dark or the season has no ingested attributes. */
+  attributeSnapshots?: Record<string, PlayerSnapshot>;
 }
 
 type ModalState =
@@ -33,7 +41,9 @@ export default function TeamManagement({
   team,
   players,
   canManage,
+  attributeSnapshots = {},
 }: TeamManagementProps) {
+  const snapshots = new Map(Object.entries(attributeSnapshots));
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>({ type: "none" });
   const [isDeleting, setIsDeleting] = useState(false);
@@ -68,6 +78,13 @@ export default function TeamManagement({
   // attached to the row before render so it survives user re-sorting.
   type RosterRow = PlayerDto & { slot?: number } & Record<string, unknown>;
 
+  // Headline attribute columns render only for keys at least one
+  // player on the team actually has (WSM-000090).
+  const statKeys = presentHeadlineKeys(
+    snapshots,
+    players.map((p) => p.id),
+  );
+
   function buildColumns(withSlot: boolean): Column<RosterRow>[] {
     return [
       ...(withSlot
@@ -99,6 +116,49 @@ export default function TeamManagement({
         sortable: true,
         render: (p) => p.jerseyNumber ?? "\u2014",
       },
+      // Madden stat columns (WSM-000090) — only when snapshots exist.
+      ...(snapshots.size > 0
+        ? [
+            {
+              key: "ovr",
+              header: "OVR",
+              sortable: true,
+              accessor: (p: RosterRow) =>
+                snapshots.get(p.id as string)?.weightedOverall ?? null,
+              render: (p: RosterRow) => {
+                const ovr = snapshots.get(p.id as string)?.weightedOverall;
+                return ovr != null ? (
+                  <span className="font-mono font-semibold text-accent">
+                    {Math.round(ovr)}
+                  </span>
+                ) : (
+                  "—"
+                );
+              },
+            } satisfies Column<RosterRow>,
+            ...statKeys.map(
+              (key) =>
+                ({
+                  key: `attr_${key}`,
+                  header: key,
+                  sortable: true,
+                  accessor: (p: RosterRow) =>
+                    lookupAttribute(snapshots.get(p.id as string), key),
+                  render: (p: RosterRow) => {
+                    const value = lookupAttribute(
+                      snapshots.get(p.id as string),
+                      key,
+                    );
+                    return value != null ? (
+                      <span className="font-mono">{Math.round(value)}</span>
+                    ) : (
+                      "—"
+                    );
+                  },
+                }) satisfies Column<RosterRow>,
+            ),
+          ]
+        : []),
       {
         key: "status",
         header: "Status",
