@@ -1835,6 +1835,64 @@ export const ingestPlayerAttributes = mutationGeneric({
 });
 
 /*
+ * WSM-000090 — bulk form of ingestPlayerAttributes for whole-league
+ * ratings loads (a per-row CLI loop takes ~75 min for an NFL-sized
+ * league; this does it in a handful of calls). Same upsert semantics
+ * per row as the single mutation; rows are independent, so one bad
+ * playerId fails the whole batch atomically (Convex mutation = one
+ * transaction) — callers should pre-validate ids.
+ */
+export const ingestPlayerAttributesBatch = mutationGeneric({
+  args: {
+    seasonId: v.id("seasons"),
+    rows: v.array(
+      v.object({
+        playerId: v.id("players"),
+        positionGroup: v.string(),
+        attributesJson: v.string(),
+        weightedOverall: v.union(v.number(), v.null()),
+      }),
+    ),
+  },
+  returns: v.object({ created: v.number(), updated: v.number() }),
+  handler: async (ctx, args) => {
+    const ingestedAt = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    for (const row of args.rows) {
+      const candidates = await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_playerId_seasonId", (q) =>
+          q.eq("playerId", row.playerId),
+        )
+        .collect();
+      const existing =
+        candidates.find((r) => r.seasonId === args.seasonId) ?? null;
+      const payload = {
+        playerId: row.playerId,
+        seasonId: args.seasonId,
+        positionGroup: row.positionGroup,
+        attributesJson: row.attributesJson,
+        pffSourceJson: null,
+        maddenSourceJson: null,
+        pffWeight: 0,
+        maddenWeight: 1,
+        weightedOverall: row.weightedOverall,
+        ingestedAt,
+      };
+      if (existing) {
+        await ctx.db.replace(existing._id, payload);
+        updated += 1;
+      } else {
+        await ctx.db.insert("playerAttributes", payload);
+        created += 1;
+      }
+    }
+    return { created, updated };
+  },
+});
+
+/*
  * Phase 2 — Read API (Sprint 6B / WSM-000058).
  */
 
