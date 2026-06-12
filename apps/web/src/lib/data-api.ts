@@ -127,6 +127,22 @@ const refs = {
     { name: string; orgId: string | null },
     { dto: LeagueDto; created: boolean }
   >("sports:upsertLeague"),
+  clearSeasonPlayerAttributes: mutationRef<
+    { seasonId: string },
+    { deleted: number }
+  >("sports:clearSeasonPlayerAttributes"),
+  ingestPlayerAttributesBatch: mutationRef<
+    {
+      seasonId: string;
+      rows: Array<{
+        playerId: string;
+        positionGroup: string;
+        attributesJson: string;
+        weightedOverall: number | null;
+      }>;
+    },
+    { created: number; updated: number }
+  >("sports:ingestPlayerAttributesBatch"),
   upsertDivision: mutationRef<
     { name: string; leagueId: string },
     { dto: DivisionDto; created: boolean }

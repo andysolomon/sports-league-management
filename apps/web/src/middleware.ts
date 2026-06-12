@@ -10,6 +10,10 @@ const isPublicRoute = createRouteMatcher([
   "/api/health",
   "/api/stripe/webhook",
   "/api/webhooks/clerk",
+  // Vercel Cron routes carry no Clerk session — they authenticate via a
+  // CRON_SECRET bearer check inside each handler. Without this, Clerk's
+  // auth.protect() blocks the invocation before that check runs.
+  "/api/cron/(.*)",
   "/join(.*)",
   // Public viewer routes (Phase 2 / WSM-000061). Per-league opt-in via
   // `leagues.isPublic`; the route handlers enforce visibility through
