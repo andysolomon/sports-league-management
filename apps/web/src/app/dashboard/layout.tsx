@@ -18,7 +18,10 @@ export default function DashboardLayout({
         <Sidebar />
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      {/* min-w-0 lets this flex child shrink below its content's intrinsic
+          width — without it, wide tables push the page wider than the phone
+          viewport and overflow-x-auto containers never engage. */}
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile header with hamburger */}
         <MobileHeader />
 
