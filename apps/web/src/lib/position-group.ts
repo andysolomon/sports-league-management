@@ -82,6 +82,17 @@ export function derivePositionGroup(position: string): PositionGroup | null {
   return POSITION_TO_GROUP[normalized] ?? null;
 }
 
+/**
+ * Madden-style name abbreviation: "Adam Thielen" → "A. Thielen".
+ * Single-word names and empty strings pass through; multi-part last
+ * names keep everything after the first word ("T. Marshall Jr").
+ */
+export function abbreviateName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name.trim();
+  return `${parts[0][0]}. ${parts.slice(1).join(" ")}`;
+}
+
 interface Positioned {
   position: string;
   jerseyNumber?: number | null;

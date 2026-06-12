@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { derivePositionGroup, groupPlayersByPosition } from "../position-group";
+import { abbreviateName, derivePositionGroup, groupPlayersByPosition } from "../position-group";
 
 describe("derivePositionGroup", () => {
   const cases: Array<[string, ReturnType<typeof derivePositionGroup>]> = [
@@ -108,5 +108,23 @@ describe("groupPlayersByPosition (WSM-000086)", () => {
       "RG",
       "RT",
     ]);
+  });
+});
+
+describe("abbreviateName (WSM-000088)", () => {
+  it("abbreviates first name to an initial", () => {
+    expect(abbreviateName("Adam Thielen")).toBe("A. Thielen");
+  });
+
+  it("keeps multi-part last names", () => {
+    expect(abbreviateName("Terrace Marshall Jr")).toBe("T. Marshall Jr");
+  });
+
+  it("passes single-word names through", () => {
+    expect(abbreviateName("Neymar")).toBe("Neymar");
+  });
+
+  it("trims and collapses whitespace", () => {
+    expect(abbreviateName("  Bam   Knight  ")).toBe("B. Knight");
   });
 });
