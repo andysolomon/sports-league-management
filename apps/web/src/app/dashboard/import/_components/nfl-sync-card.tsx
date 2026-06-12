@@ -24,6 +24,9 @@ type CardState =
   | { phase: "error"; message: string }
   | { phase: "ready"; config: SyncConfig; syncing: boolean };
 
+const POLL_INTERVAL_MS = 5000;
+const POLL_TIMEOUT_MS = 8 * 60 * 1000;
+
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   const seconds = Math.round(ms / 1000);
@@ -163,9 +166,6 @@ export function NflSyncCard() {
       mountedRef.current = false;
     };
   }, []);
-
-  const POLL_INTERVAL_MS = 5000;
-  const POLL_TIMEOUT_MS = 8 * 60 * 1000;
 
   const handleSyncNow = useCallback(async () => {
     if (state.phase !== "ready") return;
