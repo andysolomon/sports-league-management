@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { SyncConfig, SyncReport } from "@sports-management/shared-types";
 import { Button } from "@/components/ui/8bit/button";
@@ -152,6 +152,21 @@ export function NflSyncCard() {
     }
   }, [state]);
 
+  // A full sync runs for minutes — longer than mobile browsers and proxies
+  // hold a single request (WSM-000084). The POST returns 202 immediately;
+  // we poll the persisted sync report until one newer than our request
+  // shows up. mountedRef stops polling after unmount.
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const POLL_INTERVAL_MS = 5000;
+  const POLL_TIMEOUT_MS = 8 * 60 * 1000;
+
   const handleSyncNow = useCallback(async () => {
     if (state.phase !== "ready") return;
     setState({ ...state, syncing: true });
@@ -159,23 +174,40 @@ export function NflSyncCard() {
     try {
       const res = await fetch("/api/import/nfl-sync", { method: "POST" });
       if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
-      const report: SyncReport = await res.json();
+      const { requestedAt }: { requestedAt: string } = await res.json();
 
-      setState({
-        phase: "ready",
-        config: { ...state.config, lastSyncReport: report },
-        syncing: false,
-      });
+      const deadline = Date.now() + POLL_TIMEOUT_MS;
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        if (!mountedRef.current) return;
 
-      if (
-        report.adapterErrors.length > 0 ||
-        (report.importResult?.errors?.length ?? 0) > 0
-      ) {
-        toast.warning("Sync completed with errors");
-      } else {
-        toast.success("NFL sync completed successfully");
+        const configRes = await fetch("/api/import/nfl-sync-config");
+        if (!configRes.ok) continue; // transient — keep polling
+        const config: SyncConfig = await configRes.json();
+        const report = config.lastSyncReport;
+
+        // ISO-8601 strings compare chronologically.
+        if (!report || report.startedAt < requestedAt) continue;
+
+        setState({ phase: "ready", config, syncing: false });
+        if (
+          report.adapterErrors.length > 0 ||
+          (report.importResult?.errors?.length ?? 0) > 0
+        ) {
+          toast.warning("Sync completed with errors");
+        } else {
+          toast.success("NFL sync completed successfully");
+        }
+        return;
       }
+
+      if (!mountedRef.current) return;
+      setState({ ...state, syncing: false });
+      toast.info(
+        "Sync is still running in the background. Refresh this page later to see the result.",
+      );
     } catch (err) {
+      if (!mountedRef.current) return;
       setState({ ...state, syncing: false });
       toast.error(
         err instanceof Error ? err.message : "Sync failed",
