@@ -168,7 +168,7 @@ export function DataTable<T extends Record<string, unknown>>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            Showing {safeCurrentPage * pageSize + 1}\u2013
+            Showing {safeCurrentPage * pageSize + 1}{"\u2013"}
             {Math.min((safeCurrentPage + 1) * pageSize, sorted.length)} of{" "}
             {sorted.length}
           </span>
