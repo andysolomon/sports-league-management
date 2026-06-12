@@ -40,6 +40,7 @@ export interface PlayerDto {
   dateOfBirth: string | null;
   status: string;
   headshotUrl: string | null;
+  experienceYears: number | null;
 }
 
 export interface SeasonDto {

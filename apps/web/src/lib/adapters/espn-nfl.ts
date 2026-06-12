@@ -62,6 +62,7 @@ interface EspnRosterResponse {
       position: { abbreviation: string };
       status?: { name: string };
       headshot?: { href: string };
+      experience?: { years?: number };
     }[];
   }[];
 }
@@ -131,6 +132,7 @@ export class EspnNflAdapter implements IDataSourceAdapter {
                   : null,
                 status: athlete.status?.name ?? "Active",
                 headshotUrl: athlete.headshot?.href ?? null,
+                experienceYears: athlete.experience?.years ?? null,
               })),
             );
           } catch {

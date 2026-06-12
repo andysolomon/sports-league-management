@@ -45,6 +45,8 @@ export default defineSchema({
     dateOfBirth: v.union(v.string(), v.null()),
     status: v.string(),
     headshotUrl: v.union(v.string(), v.null()),
+    // Optional: pre-experienceYears documents validate without backfill.
+    experienceYears: v.optional(v.union(v.number(), v.null())),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_teamId", ["teamId"])
