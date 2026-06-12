@@ -7,6 +7,7 @@ import PlayerForm from "../../_components/player-form";
 import TeamEditForm from "../../_components/team-edit-form";
 import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
+import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/8bit/button";
@@ -136,45 +137,49 @@ export default function TeamManagement({
       </div>
 
       {players.length > 0 ? (
-        <DataTable
-          data={players as (PlayerDto & Record<string, unknown>)[]}
-          columns={columns}
-          searchPlaceholder="Search players..."
-          searchKeys={["name", "position", "status"]}
-          actions={
-            canManage
-              ? (player) => (
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setModal({
-                          type: "editPlayer",
-                          player: player as unknown as PlayerDto,
-                        })
-                      }
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() =>
-                        setModal({
-                          type: "deletePlayer",
-                          player: player as unknown as PlayerDto,
-                        })
-                      }
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )
-              : undefined
-          }
-        />
+        <PositionGroupTabs players={players}>
+          {(groupPlayers) => (
+            <DataTable
+              data={groupPlayers as (PlayerDto & Record<string, unknown>)[]}
+              columns={columns}
+              searchPlaceholder="Search players..."
+              searchKeys={["name", "position", "status"]}
+              actions={
+                canManage
+                  ? (player) => (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setModal({
+                              type: "editPlayer",
+                              player: player as unknown as PlayerDto,
+                            })
+                          }
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() =>
+                            setModal({
+                              type: "deletePlayer",
+                              player: player as unknown as PlayerDto,
+                            })
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )
+                  : undefined
+              }
+            />
+          )}
+        </PositionGroupTabs>
       ) : (
         <EmptyState
           icon={UserCircle}
