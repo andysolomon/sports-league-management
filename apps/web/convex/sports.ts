@@ -1842,6 +1842,27 @@ export const ingestPlayerAttributes = mutationGeneric({
  * playerId fails the whole batch atomically (Convex mutation = one
  * transaction) — callers should pre-validate ids.
  */
+/*
+ * WSM-000091 — clear all attribute snapshots for a season. Used by the
+ * SPRT ingest to drop stale/synthetic rows before loading real ratings,
+ * so players without a computed rating fall back to "no snapshot" (em
+ * dash) rather than showing leftover values. Idempotent.
+ */
+export const clearSeasonPlayerAttributes = mutationGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.object({ deleted: v.number() }),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_seasonId_positionGroup", (q) =>
+        q.eq("seasonId", args.seasonId),
+      )
+      .collect();
+    for (const row of rows) await ctx.db.delete(row._id);
+    return { deleted: rows.length };
+  },
+});
+
 export const ingestPlayerAttributesBatch = mutationGeneric({
   args: {
     seasonId: v.id("seasons"),

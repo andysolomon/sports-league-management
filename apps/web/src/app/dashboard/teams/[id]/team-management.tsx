@@ -225,6 +225,14 @@ export default function TeamManagement({
         )}
       </div>
 
+      {snapshots.size > 0 && (
+        <p className="mb-3 text-xs text-muted-foreground">
+          OVR is the SPRT Rating — our own metric derived from open NFL
+          performance data (nflverse). Players without enough recent snaps are
+          unrated.
+        </p>
+      )}
+
       {players.length > 0 ? (
         <PositionGroupTabs players={players}>
           {(groupPlayers, activeTab) => (
