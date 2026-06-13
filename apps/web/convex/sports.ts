@@ -1298,7 +1298,9 @@ export const forkTeamToWorkspace = mutationGeneric({
     const refTeam = await ctx.db.get(args.sourceTeamId);
     if (!refTeam) throw new Error("Source team not found");
     const refLeague = await ctx.db.get(refTeam.leagueId);
-    if (!refLeague || !refLeague.isPublic) {
+    // Forkable = a public reference league we've marked claimable (the curated
+    // "discovery data we allow"). Workspace leagues (private) aren't forkable.
+    if (!refLeague || !refLeague.isPublic || !refLeague.claimable) {
       throw new Error("Team is not forkable");
     }
 

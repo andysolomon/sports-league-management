@@ -7,8 +7,9 @@ import { toast } from "sonner";
 import { ShieldCheck } from "lucide-react";
 
 /**
- * Converts a followed team into an owned, editable one (WSM-000110). On success
- * the team belongs to the user's active org and the roster becomes editable.
+ * Forks a reference team into the user's private workspace (WSM-000110/115). On
+ * success the server returns the new workspace team (an editable private copy);
+ * we redirect there. Creates the user's org automatically if they have none.
  */
 export function ClaimTeamButton({
   teamId,
@@ -32,12 +33,18 @@ export function ClaimTeamButton({
       if (res.ok) {
         toast.success(
           body.createdOrg
-            ? `${teamName} is yours — we set up your coaching organization. You can now manage the roster.`
-            : `${teamName} is yours — you can now manage the roster.`,
+            ? `Added ${teamName} — we set up your organization. Here's your editable copy.`
+            : `Added ${teamName} to your teams — here's your editable copy.`,
         );
-        router.refresh();
+        // Go to the new private workspace team (the editable copy), not the
+        // read-only reference we forked from.
+        if (body.teamId) {
+          router.push(`/dashboard/teams/${body.teamId}`);
+        } else {
+          router.refresh();
+        }
       } else {
-        toast.error(body.error ?? "Could not claim this team.");
+        toast.error(body.error ?? "Could not add this team.");
       }
     } finally {
       setLoading(false);
@@ -47,7 +54,7 @@ export function ClaimTeamButton({
   return (
     <Button onClick={claim} disabled={loading} size="sm">
       <ShieldCheck className="mr-1 h-4 w-4" />
-      {loading ? "Claiming…" : "Claim this team"}
+      {loading ? "Adding…" : "Add to my teams"}
     </Button>
   );
 }
