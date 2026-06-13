@@ -9,7 +9,6 @@ import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
 import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
 import { orderByDepth } from "@/lib/roster/depth-order";
-import { StatusBadge } from "@/components/status-badge";
 import { abbreviateName } from "@/lib/position-group";
 import {
   lookupAttribute,
@@ -189,12 +188,9 @@ export default function TeamManagement({
             } satisfies Column<RosterRow>,
           ]
         : []),
-      {
-        key: "status",
-        header: "Status",
-        sortable: true,
-        render: (p) => <StatusBadge status={p.status} />,
-      },
+      // Status column dropped for now (WSM-000097 follow-up) — it ate width for
+      // little signal. A future story will surface injury/inactive state as an
+      // icon/asterisk with a popover for the designation, not a full column.
     ];
   }
 
