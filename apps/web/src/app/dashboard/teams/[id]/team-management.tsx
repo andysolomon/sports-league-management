@@ -29,6 +29,8 @@ interface TeamManagementProps {
   /** WSM-000090: playerId → attribute snapshot; empty when Phase 2 is
       dark or the season has no ingested attributes. */
   attributeSnapshots?: Record<string, PlayerSnapshot>;
+  /** WSM-000095: playerId → Madden overall; empty when none ingested. */
+  maddenOveralls?: Record<string, number>;
 }
 
 type ModalState =
@@ -43,8 +45,10 @@ export default function TeamManagement({
   players,
   canManage,
   attributeSnapshots = {},
+  maddenOveralls = {},
 }: TeamManagementProps) {
   const snapshots = new Map(Object.entries(attributeSnapshots));
+  const madden = new Map(Object.entries(maddenOveralls));
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>({ type: "none" });
   const [isDeleting, setIsDeleting] = useState(false);
@@ -126,7 +130,7 @@ export default function TeamManagement({
         ? [
             {
               key: "ovr",
-              header: "OVR",
+              header: "SPRT",
               sortable: true,
               accessor: (p: RosterRow) =>
                 snapshots.get(p.id as string)?.weightedOverall ?? null,
@@ -162,6 +166,27 @@ export default function TeamManagement({
                   },
                 }) satisfies Column<RosterRow>,
             ),
+          ]
+        : []),
+      // Madden overall (WSM-000095) — independent of SPRT, shown side by side.
+      ...(madden.size > 0
+        ? [
+            {
+              key: "mad",
+              header: "MAD",
+              sortable: true,
+              accessor: (p: RosterRow) => madden.get(p.id as string) ?? null,
+              render: (p: RosterRow) => {
+                const ovr = madden.get(p.id as string);
+                return ovr != null ? (
+                  <span className="font-mono font-semibold text-primary">
+                    {ovr}
+                  </span>
+                ) : (
+                  "—"
+                );
+              },
+            } satisfies Column<RosterRow>,
           ]
         : []),
       {
@@ -230,11 +255,11 @@ export default function TeamManagement({
         )}
       </div>
 
-      {snapshots.size > 0 && (
+      {(snapshots.size > 0 || madden.size > 0) && (
         <p className="mb-3 text-xs text-muted-foreground">
-          OVR is the SPRT Rating — our own metric derived from open NFL
-          performance data (nflverse). Players without enough recent snaps are
-          unrated.
+          SPRT is our own rating from open NFL data (nflverse); MAD is the
+          Madden NFL 26 overall (EA Sports). Players without enough recent
+          snaps are unrated.
         </p>
       )}
 

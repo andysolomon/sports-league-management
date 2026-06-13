@@ -262,6 +262,20 @@ const refs = {
       attributes: Record<string, number>;
     }>
   >("sports:getTeamAttributeSnapshots"),
+  getPlayerMaddenRating: queryRef<
+    { playerId: string },
+    {
+      overall: number;
+      position: string;
+      attributes: Record<string, number>;
+      portraitUrl: string | null;
+      teamLogoUrl: string | null;
+    } | null
+  >("sports:getPlayerMaddenRating"),
+  getTeamMaddenOveralls: queryRef<
+    { teamId: string },
+    Array<{ playerId: string; overall: number }>
+  >("sports:getTeamMaddenOveralls"),
   getLeagueVisibility: queryRef<
     { leagueId: string },
     { isPublic: boolean } | null
@@ -587,6 +601,35 @@ export async function getTeamAttributeSnapshots(
       { weightedOverall: r.weightedOverall, attributes: r.attributes },
     ]),
   );
+}
+
+/** WSM-000095: one player's Madden snapshot for the profile card. */
+export async function getPlayerMaddenRating(
+  playerId: string,
+  orgContext: OrgContext,
+): Promise<{
+  overall: number;
+  position: string;
+  attributes: Record<string, number>;
+  portraitUrl: string | null;
+  teamLogoUrl: string | null;
+} | null> {
+  const player = await queryConvex(refs.getPlayer, { playerId });
+  if (!player) return null;
+  const teamLeagueId = await getTeamLeagueId(player.teamId);
+  requireLeagueAccessLocal(teamLeagueId, orgContext);
+  return queryConvex(refs.getPlayerMaddenRating, { playerId });
+}
+
+/** WSM-000095: playerId → Madden overall map for the roster MAD column. */
+export async function getTeamMaddenOveralls(
+  teamId: string,
+  orgContext: OrgContext,
+): Promise<Map<string, number>> {
+  const teamLeagueId = await getTeamLeagueId(teamId);
+  requireLeagueAccessLocal(teamLeagueId, orgContext);
+  const rows = await queryConvex(refs.getTeamMaddenOveralls, { teamId });
+  return new Map(rows.map((r) => [r.playerId, r.overall]));
 }
 
 export async function getSeasons(
