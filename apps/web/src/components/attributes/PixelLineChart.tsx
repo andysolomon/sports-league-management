@@ -131,20 +131,27 @@ export default function PixelLineChart({
         </text>
       ))}
 
-      {/* X-axis labels under each point */}
-      {points.map((p, i) => (
-        <text
-          key={`x-${i}`}
-          x={xPos(i)}
-          y={height - PADDING.bottom + 16}
-          textAnchor="middle"
-          fill="var(--color-muted-foreground)"
-          fontSize={10}
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
-          {p.x}
-        </text>
-      ))}
+      {/* X-axis labels — thinned so a long career (20+ seasons) doesn't
+          overlap into mush. Plot every point, but label at most ~8, always
+          keeping the first and last tick. */}
+      {points.map((p, i) => {
+        const stride = Math.max(1, Math.ceil(points.length / 8));
+        const show = i % stride === 0 || i === points.length - 1;
+        if (!show) return null;
+        return (
+          <text
+            key={`x-${i}`}
+            x={xPos(i)}
+            y={height - PADDING.bottom + 16}
+            textAnchor="middle"
+            fill="var(--color-muted-foreground)"
+            fontSize={10}
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {p.x}
+          </text>
+        );
+      })}
 
       {/* Chunky line segments */}
       {segments.map((s, i) => (

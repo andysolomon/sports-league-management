@@ -13,6 +13,7 @@ import { resolveOrgContext, getUserRoleInOrg } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
 import AttributesUploadDialog from "@/components/attributes/AttributesUploadDialog";
+import { seasonYearLabel } from "@/lib/attributes/season-label";
 import { trackPlayerAttributesView } from "@/lib/analytics";
 
 export default async function PlayerDevelopmentPage({
@@ -51,7 +52,7 @@ export default async function PlayerDevelopmentPage({
   const seasons = playerLeagueId ? await getSeasons([playerLeagueId]) : [];
 
   const points = development.map((row) => ({
-    x: row.seasonName,
+    x: seasonYearLabel(row.seasonName),
     y: row.weightedOverall,
   }));
 
