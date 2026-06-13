@@ -7,12 +7,15 @@ import {
   getSeasons,
   getTeamAttributeSnapshots,
   getTeamMaddenOveralls,
+  getLeagueClaimable,
+  getTeamOwnerOrgId,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam } from "@/lib/authorization";
 import { playerAttributesV1 } from "@/lib/flags";
 import type { PlayerSnapshot } from "@/lib/attributes/headline-columns";
 import TeamManagement from "./team-management";
+import { ClaimTeamButton } from "./claim-team-button";
 
 export default async function TeamDetailPage({
   params,
@@ -21,7 +24,7 @@ export default async function TeamDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ from?: string }>;
 }) {
-  const { userId } = await auth();
+  const { userId, orgId, orgRole } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { id } = await params;
@@ -40,6 +43,20 @@ export default async function TeamDetailPage({
     getPlayersByTeam(id, orgContext),
     canManageTeam(id, userId),
   ]);
+
+  // Claim affordance (WSM-000110): a followed team in a claimable template
+  // league can be claimed → owned + editable. Only relevant when the user
+  // can't already manage it. Failures degrade to "no claim offered".
+  let claim: { eligible: boolean } | null = null;
+  if (!canManage) {
+    const [claimable, ownerOrgId] = await Promise.all([
+      getLeagueClaimable(team.leagueId).catch(() => false),
+      getTeamOwnerOrgId(id).catch(() => null),
+    ]);
+    if (claimable && !ownerOrgId) {
+      claim = { eligible: Boolean(orgId) && orgRole === "org:admin" };
+    }
+  }
 
   // WSM-000090: attribute snapshots feed the Madden stat columns.
   // Phase 2-gated; resolved against the league's active season, same
@@ -72,6 +89,26 @@ export default async function TeamDetailPage({
       >
         &larr; {back.label}
       </Link>
+
+      {claim && (
+        <div className="mb-4 rounded-md border border-primary/40 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-foreground">Coach here?</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Claim {team.name} to manage its roster and depth chart — it becomes
+            yours to edit.
+          </p>
+          <div className="mt-3">
+            {claim.eligible ? (
+              <ClaimTeamButton teamId={team.id} teamName={team.name} />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                You need to be an admin of an organization to claim a team —
+                create or select one from your account menu first.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <TeamManagement
         team={team}
