@@ -2342,6 +2342,16 @@ export const setLeaguePublic = mutationGeneric({
   },
 });
 
+/** Whether a league's teams can be claimed by coaches (WSM-000109). */
+export const getLeagueClaimable = queryGeneric({
+  args: { leagueId: v.id("leagues") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    return league?.claimable === true;
+  },
+});
+
 /** Mark a (public template) league's teams claimable by coaches (WSM-000109). */
 export const setLeagueClaimable = mutationGeneric({
   args: {

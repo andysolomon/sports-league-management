@@ -117,6 +117,9 @@ const refs = {
     { leagueId: string; claimable: boolean },
     null
   >("sports:setLeagueClaimable"),
+  getLeagueClaimable: queryRef<{ leagueId: string }, boolean>(
+    "sports:getLeagueClaimable",
+  ),
   listPlayers: queryRef<{ leagueIds: string[] }, PlayerDto[]>("sports:listPlayers"),
   listPlayersByTeam: queryRef<{ teamId: string }, PlayerDto[]>(
     "sports:listPlayersByTeam",
@@ -591,6 +594,11 @@ export async function setLeagueClaimable(
   claimable: boolean,
 ): Promise<void> {
   await mutateConvex(refs.setLeagueClaimable, { leagueId, claimable });
+}
+
+/** WSM-000109: whether a league's teams can be claimed by coaches. */
+export async function getLeagueClaimable(leagueId: string): Promise<boolean> {
+  return queryConvex(refs.getLeagueClaimable, { leagueId });
 }
 
 export async function getPlayers(
