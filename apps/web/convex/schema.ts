@@ -12,6 +12,11 @@ export default defineSchema({
     // stays shared/read-only, but a claimed team becomes editable by its
     // owner. Reference leagues (NFL) leave this false/undefined.
     claimable: v.optional(v.boolean()),
+    // Org workspace model (WSM-000113/114): a workspace league (orgId set,
+    // isPublic false) is a private fork of a reference league. sourceLeagueId
+    // points to the reference it was forked from. Reference leagues leave it
+    // unset.
+    sourceLeagueId: v.optional(v.id("leagues")),
   })
     .index("by_name", ["name"])
     .index("by_orgId", ["orgId"])
@@ -39,6 +44,9 @@ export default defineSchema({
     // claimable league. null/undefined = unclaimed. An admin of this org can
     // edit the team + its roster even though the league itself is shared.
     ownerOrgId: v.optional(v.union(v.string(), v.null())),
+    // Org workspace (WSM-000114): a workspace team's link to the reference team
+    // it was forked from. Ratings + provenance resolve through it.
+    sourceTeamId: v.optional(v.id("teams")),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_divisionId", ["divisionId"])
@@ -57,6 +65,10 @@ export default defineSchema({
     headshotUrl: v.union(v.string(), v.null()),
     // Optional: pre-experienceYears documents validate without backfill.
     experienceYears: v.optional(v.union(v.number(), v.null())),
+    // Org workspace (WSM-000114): a workspace player's link to the reference
+    // player it was forked from — SPRT/Madden ratings resolve through it so
+    // they stay live without duplicating the rating pipeline per org.
+    sourcePlayerId: v.optional(v.id("players")),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_teamId", ["teamId"])

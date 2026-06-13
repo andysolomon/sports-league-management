@@ -1279,6 +1279,132 @@ export const unsubscribeFromLeague = mutationGeneric({
  * the Next.js layer before this runs. Idempotent and re-claim-safe for the same
  * org; rejects claiming a team another org already owns.
  */
+/**
+ * Fork a reference team into an org's PRIVATE workspace (WSM-000114). Creates
+ * (or reuses) the org's workspace league for the source league, then copies the
+ * team + its roster into it — `orgId`-owned, isolated from the reference and
+ * other orgs. Idempotent per (org, sourceTeam). Source links let ratings +
+ * provenance resolve back to the reference. This replaces the shared-edit
+ * claimTeam path under the private-only workspace model (RFC §11).
+ */
+export const forkTeamToWorkspace = mutationGeneric({
+  args: { orgId: v.string(), sourceTeamId: v.id("teams") },
+  returns: v.object({
+    teamId: v.string(),
+    leagueId: v.string(),
+    created: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const refTeam = await ctx.db.get(args.sourceTeamId);
+    if (!refTeam) throw new Error("Source team not found");
+    const refLeague = await ctx.db.get(refTeam.leagueId);
+    if (!refLeague || !refLeague.isPublic) {
+      throw new Error("Team is not forkable");
+    }
+
+    // Get-or-create the org's workspace league for this reference league.
+    let workspaceLeague =
+      (
+        await ctx.db
+          .query("leagues")
+          .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+          .collect()
+      ).find((l) => l.sourceLeagueId === refLeague._id) ?? null;
+    if (!workspaceLeague) {
+      const id = await ctx.db.insert("leagues", {
+        name: refLeague.name,
+        orgId: args.orgId,
+        isPublic: false,
+        inviteToken: null,
+        sourceLeagueId: refLeague._id,
+      });
+      workspaceLeague = await ctx.db.get(id);
+    }
+    const workspaceLeagueId = workspaceLeague!._id;
+
+    // Idempotent: already forked this team into the workspace?
+    const existing =
+      (
+        await ctx.db
+          .query("teams")
+          .withIndex("by_leagueId", (q) =>
+            q.eq("leagueId", workspaceLeagueId),
+          )
+          .collect()
+      ).find((t) => t.sourceTeamId === args.sourceTeamId) ?? null;
+    if (existing) {
+      return {
+        teamId: existing._id as string,
+        leagueId: workspaceLeagueId as string,
+        created: false,
+      };
+    }
+
+    // Mirror the team's division into the workspace (by name).
+    let workspaceDivisionId: Id<"divisions"> | null = null;
+    if (refTeam.divisionId) {
+      const refDiv = await ctx.db.get(refTeam.divisionId);
+      if (refDiv) {
+        const existingDiv =
+          (
+            await ctx.db
+              .query("divisions")
+              .withIndex("by_leagueId", (q) =>
+                q.eq("leagueId", workspaceLeagueId),
+              )
+              .collect()
+          ).find((d) => d.name === refDiv.name) ?? null;
+        workspaceDivisionId = existingDiv
+          ? existingDiv._id
+          : await ctx.db.insert("divisions", {
+              name: refDiv.name,
+              leagueId: workspaceLeagueId,
+            });
+      }
+    }
+
+    const newTeamId = await ctx.db.insert("teams", {
+      name: refTeam.name,
+      leagueId: workspaceLeagueId,
+      divisionId: workspaceDivisionId,
+      city: refTeam.city,
+      stadium: refTeam.stadium,
+      foundedYear: refTeam.foundedYear,
+      location: refTeam.location,
+      logoUrl: refTeam.logoUrl,
+      rosterLimit: refTeam.rosterLimit,
+      ownerOrgId: args.orgId,
+      sourceTeamId: args.sourceTeamId,
+    });
+
+    const refPlayers = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.sourceTeamId))
+      .collect();
+    for (const p of refPlayers) {
+      await ctx.db.insert("players", {
+        name: p.name,
+        leagueId: workspaceLeagueId,
+        teamId: newTeamId,
+        position: p.position,
+        positionGroup: p.positionGroup,
+        jerseyNumber: p.jerseyNumber,
+        dateOfBirth: p.dateOfBirth,
+        status: p.status,
+        headshotUrl: p.headshotUrl,
+        experienceYears: p.experienceYears,
+        sourcePlayerId: p._id,
+      });
+    }
+
+    return {
+      teamId: newTeamId as string,
+      leagueId: workspaceLeagueId as string,
+      created: true,
+    };
+  },
+});
+
 export const claimTeam = mutationGeneric({
   args: {
     userId: v.string(),

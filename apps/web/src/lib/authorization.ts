@@ -5,6 +5,7 @@ import {
   getLeagueOrgId,
   getTeamOwnerOrgId,
   claimTeam,
+  forkTeamToWorkspace,
 } from "./data-api";
 import { requireOrgAdmin } from "./org-context";
 
@@ -71,6 +72,20 @@ export async function claimTeamForOrg(
 ): Promise<{ leagueId: string }> {
   await requireOrgAdmin(orgId, userId); // throws if not an admin of orgId
   return claimTeam(userId, orgId, teamId);
+}
+
+/**
+ * Fork a reference team into an org's private workspace (WSM-000114), verifying
+ * the user admins the org first. The private-workspace replacement for
+ * claimTeamForOrg under the isolation model (RFC §11).
+ */
+export async function forkTeamForOrg(
+  userId: string,
+  orgId: string,
+  sourceTeamId: string,
+): Promise<{ teamId: string; leagueId: string; created: boolean }> {
+  await requireOrgAdmin(orgId, userId);
+  return forkTeamToWorkspace(orgId, sourceTeamId);
 }
 
 /**
