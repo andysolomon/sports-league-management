@@ -30,6 +30,7 @@ export default async function DepthChartPage({
     orgIds: [],
     visibleLeagueIds: [],
     subscribedLeagueIds: [],
+    subscriptionTeamScopes: {},
   }).catch(() => null);
   if (!team) notFound();
 
@@ -66,6 +67,7 @@ export default async function DepthChartPage({
       orgIds: [orgId],
       visibleLeagueIds: [team.leagueId],
       subscribedLeagueIds: [],
+      subscriptionTeamScopes: {},
     }),
     getDepthChartByTeamSeason(teamId, activeSeason.id),
   ]);

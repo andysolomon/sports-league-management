@@ -67,7 +67,11 @@ function mutationRef<Args extends object, Return>(name: string) {
 const refs = {
   getVisibleLeagueContext: queryRef<
     { orgIds: string[]; userId: string },
-    { visibleLeagueIds: string[]; subscribedLeagueIds: string[] }
+    {
+      visibleLeagueIds: string[];
+      subscribedLeagueIds: string[];
+      subscriptionScopes: Array<{ leagueId: string; teamIds: string[] }>;
+    }
   >("sports:getVisibleLeagueContext"),
   listPublicLeagues: queryRef<Record<string, never>, LeagueDto[]>(
     "sports:listPublicLeagues",
@@ -186,9 +190,10 @@ const refs = {
     { leagueId: string; token: string | null },
     null
   >("sports:setLeagueInviteToken"),
-  subscribeToLeague: mutationRef<{ userId: string; leagueId: string }, null>(
-    "sports:subscribeToLeague",
-  ),
+  subscribeToLeague: mutationRef<
+    { userId: string; leagueId: string; teamIds?: string[] },
+    null
+  >("sports:subscribeToLeague"),
   unsubscribeFromLeague: mutationRef<{ userId: string; leagueId: string }, null>(
     "sports:unsubscribeFromLeague",
   ),
@@ -448,6 +453,21 @@ export async function getPublicLeagues(): Promise<LeagueDto[]> {
   return queryConvex(refs.listPublicLeagues, {});
 }
 
+/**
+ * Teams + divisions for a PUBLIC league's à la carte import tree (WSM-000100).
+ * The league id must come from getPublicLeagues — public leagues are browseable
+ * for import, so there's no org-access gate here.
+ */
+export async function getPublicLeagueImportTree(
+  leagueId: string,
+): Promise<{ teams: TeamDto[]; divisions: DivisionDto[] }> {
+  const [teams, divisions] = await Promise.all([
+    queryConvex(refs.listTeamsByLeague, { leagueId }),
+    queryConvex(refs.listDivisions, { leagueIds: [leagueId] }),
+  ]);
+  return { teams, divisions };
+}
+
 export async function getLeagueByInviteToken(
   token: string,
 ): Promise<{ leagueId: string; orgId: string | null; name: string } | null> {
@@ -698,8 +718,9 @@ export async function upsertSeason(input: {
 export async function subscribeToLeague(
   userId: string,
   leagueId: string,
+  teamIds?: string[],
 ): Promise<void> {
-  await mutateConvex(refs.subscribeToLeague, { userId, leagueId });
+  await mutateConvex(refs.subscribeToLeague, { userId, leagueId, teamIds });
 }
 
 export async function unsubscribeFromLeague(

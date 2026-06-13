@@ -208,6 +208,15 @@ export const getVisibleLeagueContext = queryGeneric({
   returns: v.object({
     visibleLeagueIds: v.array(v.string()),
     subscribedLeagueIds: v.array(v.string()),
+    // À la carte scopes (WSM-000100): one entry per PARTIAL subscription
+    // (teamIds set & non-empty). Full ("import all") subscriptions are omitted
+    // so the consumer treats them as unrestricted.
+    subscriptionScopes: v.array(
+      v.object({
+        leagueId: v.string(),
+        teamIds: v.array(v.string()),
+      }),
+    ),
   }),
   handler: async (ctx, args) => {
     const subscriptionDocs = await ctx.db
@@ -216,6 +225,12 @@ export const getVisibleLeagueContext = queryGeneric({
       .collect();
 
     const subscribedLeagueIds = subscriptionDocs.map((doc) => doc.leagueId);
+    const subscriptionScopes = subscriptionDocs
+      .filter((doc) => doc.teamIds && doc.teamIds.length > 0)
+      .map((doc) => ({
+        leagueId: doc.leagueId as string,
+        teamIds: (doc.teamIds ?? []).map((id: string) => id),
+      }));
     const orgLeagueDocs = await Promise.all(
       args.orgIds.map((orgId) =>
         ctx.db
@@ -235,6 +250,7 @@ export const getVisibleLeagueContext = queryGeneric({
     return {
       visibleLeagueIds,
       subscribedLeagueIds,
+      subscriptionScopes,
     };
   },
 });
@@ -1188,6 +1204,9 @@ export const subscribeToLeague = mutationGeneric({
   args: {
     userId: v.string(),
     leagueId: v.id("leagues"),
+    // À la carte (WSM-000100): the teams to import. Omitted/empty = import all.
+    // Doubles as an update-scope path — re-calling patches an existing row.
+    teamIds: v.optional(v.array(v.id("teams"))),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -1195,6 +1214,9 @@ export const subscribeToLeague = mutationGeneric({
     if (!league || !league.isPublic) {
       throw new Error("League not found or not public");
     }
+
+    // Normalize: undefined/empty selection means "import all" (no teamIds).
+    const teamIds = args.teamIds && args.teamIds.length > 0 ? args.teamIds : undefined;
 
     const existing =
       (
@@ -1204,8 +1226,14 @@ export const subscribeToLeague = mutationGeneric({
           .collect()
       ).find((subscription) => subscription.leagueId === args.leagueId) ?? null;
 
-    if (!existing) {
-      await ctx.db.insert("leagueSubscriptions", args);
+    if (existing) {
+      await ctx.db.patch(existing._id, { teamIds });
+    } else {
+      await ctx.db.insert("leagueSubscriptions", {
+        userId: args.userId,
+        leagueId: args.leagueId,
+        teamIds,
+      });
     }
     return null;
   },

@@ -13,20 +13,25 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { leagueId } = await request.json();
+    const { leagueId, teamIds } = await request.json();
     if (!leagueId || typeof leagueId !== "string") {
       return NextResponse.json(
         { error: "leagueId is required" },
         { status: 400 },
       );
     }
+    // À la carte (WSM-000100): optional team selection. A non-array or empty
+    // selection means "import all".
+    const scopedTeamIds =
+      Array.isArray(teamIds) && teamIds.every((t) => typeof t === "string")
+        ? (teamIds as string[])
+        : undefined;
 
     // The Convex `subscribeToLeague` mutation enforces the public-league
     // check (throws "League not found or not public") and idempotently
-    // writes to the `leagueSubscriptions` table. We surface the error
-    // back to the client at 404 to preserve the prior contract.
+    // upserts the `leagueSubscriptions` row (including the team scope).
     try {
-      await subscribeToLeague(userId, leagueId);
+      await subscribeToLeague(userId, leagueId, scopedTeamIds);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("not found") || msg.includes("not public")) {
