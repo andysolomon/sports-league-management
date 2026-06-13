@@ -10,6 +10,7 @@ import InviteForm from "./invite-form";
 import InvitationList from "./invitation-list";
 import InviteLinkSection from "./invite-link-section";
 import LeaguePublicToggle from "./league-public-toggle";
+import { RenameLeagueForm, DeleteLeagueButton } from "../leagues-actions";
 
 export default async function LeagueDetailPage({
   params,
@@ -46,13 +47,25 @@ export default async function LeagueDetailPage({
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <Trophy className="h-5 w-5 text-primary" />
-            <CardTitle>{league.name}</CardTitle>
-            {league.orgId ? (
-              <Badge variant="secondary">Organization</Badge>
-            ) : (
-              <Badge variant="outline">Public</Badge>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <Trophy className="h-5 w-5 shrink-0 text-primary" />
+              <CardTitle className="truncate">{league.name}</CardTitle>
+              {league.orgId ? (
+                <Badge variant="secondary" className="shrink-0">
+                  Organization
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="shrink-0">
+                  Public
+                </Badge>
+              )}
+            </div>
+            {isAdmin && league.orgId && (
+              <div className="flex items-center gap-1">
+                <RenameLeagueForm leagueId={id} currentName={league.name} />
+                <DeleteLeagueButton leagueId={id} leagueName={league.name} />
+              </div>
             )}
           </div>
         </CardHeader>

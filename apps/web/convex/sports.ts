@@ -752,6 +752,132 @@ export const upsertLeague = mutationGeneric({
   },
 });
 
+/** Create a new org-owned league (WSM-000118). Name unique within the org. */
+export const createLeague = mutationGeneric({
+  args: { name: v.string(), orgId: v.string() },
+  returns: v.object({ id: v.string(), name: v.string() }),
+  handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (!name) throw new Error("League name is required");
+    const dupe = (
+      await ctx.db
+        .query("leagues")
+        .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+        .collect()
+    ).some((l) => l.name === name);
+    if (dupe) throw new Error("You already have a league with that name");
+    const id = await ctx.db.insert("leagues", {
+      name,
+      orgId: args.orgId,
+      isPublic: false,
+      inviteToken: null,
+    });
+    return { id: id as string, name };
+  },
+});
+
+/** Rename a league (WSM-000118). Auth enforced in the calling server action. */
+export const renameLeague = mutationGeneric({
+  args: { leagueId: v.id("leagues"), name: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (!name) throw new Error("League name is required");
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) throw new Error("league_not_found");
+    await ctx.db.patch(args.leagueId, { name });
+    return null;
+  },
+});
+
+/**
+ * Delete a league and everything under it (WSM-000118): subscriptions, audit
+ * log, roster assignments, seasons + fixtures + game results + player
+ * attributes, depth-chart entries, players, teams, divisions. Auth enforced in
+ * the calling server action (org:admin of the league's org).
+ */
+export const deleteLeague = mutationGeneric({
+  args: { leagueId: v.id("leagues") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) return null;
+
+    for (const s of await ctx.db
+      .query("leagueSubscriptions")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(s._id);
+    for (const a of await ctx.db
+      .query("rosterAuditLog")
+      .withIndex("by_leagueId_createdAt", (q) =>
+        q.eq("leagueId", args.leagueId),
+      )
+      .collect())
+      await ctx.db.delete(a._id);
+    for (const r of await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_leagueId_seasonId", (q) =>
+        q.eq("leagueId", args.leagueId),
+      )
+      .collect())
+      await ctx.db.delete(r._id);
+
+    const seasons = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    for (const season of seasons) {
+      const fixtures = await ctx.db
+        .query("fixtures")
+        .withIndex("by_seasonId", (q) => q.eq("seasonId", season._id))
+        .collect();
+      for (const f of fixtures) {
+        for (const gr of await ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+          .collect())
+          await ctx.db.delete(gr._id);
+        await ctx.db.delete(f._id);
+      }
+      for (const pa of await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_seasonId_positionGroup", (q) =>
+          q.eq("seasonId", season._id),
+        )
+        .collect())
+        await ctx.db.delete(pa._id);
+      await ctx.db.delete(season._id);
+    }
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    for (const team of teams) {
+      for (const dce of await ctx.db
+        .query("depthChartEntries")
+        .withIndex("by_team_season", (q) => q.eq("teamId", team._id))
+        .collect())
+        await ctx.db.delete(dce._id);
+    }
+    for (const p of await ctx.db
+      .query("players")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(p._id);
+    for (const t of teams) await ctx.db.delete(t._id);
+    for (const d of await ctx.db
+      .query("divisions")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(d._id);
+
+    await ctx.db.delete(args.leagueId);
+    return null;
+  },
+});
+
 export const upsertDivision = mutationGeneric({
   args: {
     name: v.string(),
