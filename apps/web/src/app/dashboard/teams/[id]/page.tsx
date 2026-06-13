@@ -24,7 +24,7 @@ export default async function TeamDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ from?: string }>;
 }) {
-  const { userId, orgId, orgRole } = await auth();
+  const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { id } = await params;
@@ -44,18 +44,17 @@ export default async function TeamDetailPage({
     canManageTeam(id, userId),
   ]);
 
-  // Claim affordance (WSM-000110): a followed team in a claimable template
-  // league can be claimed → owned + editable. Only relevant when the user
-  // can't already manage it. Failures degrade to "no claim offered".
-  let claim: { eligible: boolean } | null = null;
+  // Claim affordance (WSM-000110/111): a followed team in a claimable template
+  // league can be claimed → owned + editable. Offered whenever the user can't
+  // already manage it and the team is unclaimed — no org prerequisite, since
+  // the claim creates one for the coach (org-on-claim). Degrades to no offer.
+  let offerClaim = false;
   if (!canManage) {
     const [claimable, ownerOrgId] = await Promise.all([
       getLeagueClaimable(team.leagueId).catch(() => false),
       getTeamOwnerOrgId(id).catch(() => null),
     ]);
-    if (claimable && !ownerOrgId) {
-      claim = { eligible: Boolean(orgId) && orgRole === "org:admin" };
-    }
+    offerClaim = claimable && !ownerOrgId;
   }
 
   // WSM-000090: attribute snapshots feed the Madden stat columns.
@@ -90,22 +89,16 @@ export default async function TeamDetailPage({
         &larr; {back.label}
       </Link>
 
-      {claim && (
+      {offerClaim && (
         <div className="mb-4 rounded-md border border-primary/40 bg-primary/5 p-4">
           <p className="text-sm font-medium text-foreground">Coach here?</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Claim {team.name} to manage its roster and depth chart — it becomes
-            yours to edit.
+            yours to edit. We&rsquo;ll set up your coaching organization if you
+            don&rsquo;t have one yet.
           </p>
           <div className="mt-3">
-            {claim.eligible ? (
-              <ClaimTeamButton teamId={team.id} teamName={team.name} />
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                You need to be an admin of an organization to claim a team —
-                create or select one from your account menu first.
-              </p>
-            )}
+            <ClaimTeamButton teamId={team.id} teamName={team.name} />
           </div>
         </div>
       )}

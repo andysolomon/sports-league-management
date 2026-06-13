@@ -23,10 +23,18 @@ export function ClaimTeamButton({
   async function claim() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/teams/${teamId}/claim`, { method: "POST" });
+      const res = await fetch(`/api/teams/${teamId}/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamName }),
+      });
       const body = await res.json().catch(() => ({}));
       if (res.ok) {
-        toast.success(`${teamName} is yours — you can now manage the roster.`);
+        toast.success(
+          body.createdOrg
+            ? `${teamName} is yours — we set up your coaching organization. You can now manage the roster.`
+            : `${teamName} is yours — you can now manage the roster.`,
+        );
         router.refresh();
       } else {
         toast.error(body.error ?? "Could not claim this team.");

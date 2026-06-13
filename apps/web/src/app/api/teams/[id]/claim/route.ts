@@ -1,38 +1,74 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { claimTeam } from "@/lib/data-api";
 import { claimTeamForOrg } from "@/lib/authorization";
 import { handleApiError } from "@/lib/api-error";
 
 /**
- * Claim a team into the caller's active organization (WSM-000110). Requires an
- * active org and org:admin (enforced in claimTeamForOrg). On success the team
- * is owned + editable by the org and subscribed (scoped) for the user.
+ * Claim a team (WSM-000110/111). Resolves an org the user admins to own the
+ * team — never making them set one up first:
+ *   1. the active org, if they admin it; else
+ *   2. any org they already admin; else
+ *   3. a freshly created org (they become its admin) — org-on-claim onboarding.
+ * Then sets the team's owner to that org and subscribes the user (scoped).
  */
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { userId, orgId } = await auth();
+  const { userId, orgId, orgRole } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (!orgId) {
-    return NextResponse.json(
-      {
-        error:
-          "Select or create an organization before claiming a team — it becomes the owner.",
-      },
-      { status: 400 },
-    );
   }
 
   try {
     const { id: teamId } = await params;
-    const { leagueId } = await claimTeamForOrg(userId, orgId, teamId);
-    return NextResponse.json({ message: "Claimed", leagueId });
+    const body = await request.json().catch(() => ({}));
+    const teamName =
+      typeof body?.teamName === "string" && body.teamName.trim()
+        ? body.teamName.trim()
+        : "My Team";
+
+    const client = await clerkClient();
+    let createdOrg = false;
+    let targetOrgId: string;
+
+    if (orgId && orgRole === "org:admin") {
+      targetOrgId = orgId;
+    } else {
+      const memberships = await client.users.getOrganizationMembershipList({
+        userId,
+      });
+      const adminMembership = memberships.data.find(
+        (m) => m.role === "org:admin",
+      );
+      if (adminMembership) {
+        targetOrgId = adminMembership.organization.id;
+      } else {
+        // Org-on-claim: stand up the coach's organization behind the scenes.
+        const org = await client.organizations.createOrganization({
+          name: teamName,
+          createdBy: userId,
+        });
+        targetOrgId = org.id;
+        createdOrg = true;
+      }
+    }
+
+    // For a just-created org we already know the user is its admin, so skip the
+    // redundant (and possibly not-yet-propagated) membership re-check.
+    const { leagueId } = createdOrg
+      ? await claimTeam(userId, targetOrgId, teamId)
+      : await claimTeamForOrg(userId, targetOrgId, teamId);
+
+    return NextResponse.json({
+      message: "Claimed",
+      leagueId,
+      orgId: targetOrgId,
+      createdOrg,
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    // Friendly status for the expected rejections.
     if (msg.includes("admin")) {
       return NextResponse.json({ error: msg }, { status: 403 });
     }
