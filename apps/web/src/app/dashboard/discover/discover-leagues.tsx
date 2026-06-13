@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -10,16 +10,16 @@ import {
 } from "@/components/ui/8bit/card";
 import { Button } from "@/components/ui/8bit/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
+import { Trophy, CheckCircle2, Plus } from "lucide-react";
 
 export interface DiscoverLeague {
   id: string;
   name: string;
-  subscribed: boolean;
-  /** null = imported all (or not subscribed); array = the imported subset. */
-  importedTeamIds: string[] | null;
+  /** Whether teams in this (reference) league can be forked into a workspace. */
+  forkable: boolean;
   divisions: { id: string; name: string }[];
-  teams: { id: string; name: string; divisionId: string }[];
+  teams: { id: string; name: string; divisionId: string; added: boolean }[];
 }
 
 export default function DiscoverLeagues({
@@ -35,28 +35,24 @@ export default function DiscoverLeagues({
     );
   }
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="space-y-4">
       {leagues.map((league) => (
-        <LeagueImportCard key={league.id} league={league} />
+        <LeagueCatalogCard key={league.id} league={league} />
       ))}
     </div>
   );
 }
 
-function LeagueImportCard({ league }: { league: DiscoverLeague }) {
+function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
   const router = useRouter();
   const { divisions, teams } = league;
-  const allTeamIds = useMemo(() => teams.map((t) => t.id), [teams]);
-
-  const [subscribed, setSubscribed] = useState(league.subscribed);
-  const [importAll, setImportAll] = useState(league.importedTeamIds === null);
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(league.importedTeamIds ?? allTeamIds),
+  // Local "added" overlay so the UI updates without a full refetch.
+  const [added, setAdded] = useState<Set<string>>(
+    () => new Set(teams.filter((t) => t.added).map((t) => t.id)),
   );
-  const [expanded, setExpanded] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [bulk, setBulk] = useState(false);
 
-  // Group teams by division for the tree; ungrouped fall into "Other".
   const groups = useMemo(() => {
     const byDivision = new Map<string, typeof teams>();
     for (const team of teams) {
@@ -65,220 +61,119 @@ function LeagueImportCard({ league }: { league: DiscoverLeague }) {
       byDivision.set(team.divisionId, list);
     }
     const named = divisions
-      .map((d) => ({
-        id: d.id,
-        name: d.name,
-        teams: byDivision.get(d.id) ?? [],
-      }))
+      .map((d) => ({ id: d.id, name: d.name, teams: byDivision.get(d.id) ?? [] }))
       .filter((g) => g.teams.length > 0);
-    const knownIds = new Set(divisions.map((d) => d.id));
-    const other = teams.filter((t) => !knownIds.has(t.divisionId));
-    if (other.length > 0) {
-      named.push({ id: "__other", name: "Other", teams: other });
-    }
+    const known = new Set(divisions.map((d) => d.id));
+    const other = teams.filter((t) => !known.has(t.divisionId));
+    if (other.length) named.push({ id: "__other", name: "Other", teams: other });
     return named;
   }, [divisions, teams]);
 
-  function toggleTeam(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  async function addTeam(teamId: string, teamName: string): Promise<boolean> {
+    const res = await fetch(`/api/teams/${teamId}/claim`, { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setAdded((prev) => new Set(prev).add(teamId));
+      return true;
+    }
+    toast.error(body.error ?? `Could not add ${teamName}.`);
+    return false;
   }
 
-  function toggleDivision(teamIds: string[], fullySelected: boolean) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const id of teamIds) {
-        if (fullySelected) next.delete(id);
-        else next.add(id);
-      }
-      return next;
-    });
-  }
-
-  const canSubmit = importAll || selected.size > 0;
-
-  async function save() {
-    setLoading(true);
+  async function onAddOne(teamId: string, teamName: string) {
+    setBusy(teamId);
     try {
-      const teamIds = importAll ? [] : Array.from(selected);
-      const res = await fetch("/api/leagues/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leagueId: league.id, teamIds }),
-      });
-      if (res.ok) {
-        setSubscribed(true);
-        setExpanded(false);
+      if (await addTeam(teamId, teamName)) {
+        toast.success(`Added ${teamName} to your teams.`);
         router.refresh();
       }
     } finally {
-      setLoading(false);
+      setBusy(null);
     }
   }
 
-  async function unsubscribe() {
-    setLoading(true);
+  async function onAddAll() {
+    setBulk(true);
     try {
-      const res = await fetch("/api/leagues/subscribe", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leagueId: league.id }),
-      });
-      if (res.ok) {
-        setSubscribed(false);
-        setExpanded(false);
-        router.refresh();
+      let n = 0;
+      for (const t of league.teams) {
+        if (added.has(t.id)) continue;
+        if (await addTeam(t.id, t.name)) n += 1;
       }
+      if (n) toast.success(`Added ${n} team${n === 1 ? "" : "s"} to your teams.`);
+      router.refresh();
     } finally {
-      setLoading(false);
+      setBulk(false);
     }
   }
 
-  const summary = !subscribed
-    ? null
-    : importAll
-      ? "All teams"
-      : `${selected.size} of ${allTeamIds.length} teams`;
+  const remaining = league.teams.filter((t) => !added.has(t.id)).length;
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Trophy className="h-4 w-4 text-primary" />
-          <CardTitle className="text-base">{league.name}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">Public</Badge>
-          {subscribed && (
-            <Badge className="gap-1 bg-accent text-accent-foreground">
-              <CheckCircle2 className="h-3 w-3" />
-              Subscribed · {summary}
-            </Badge>
-          )}
-        </div>
-
-        {league.teams.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 text-sm text-primary hover:underline"
-          >
-            {expanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-            {subscribed ? "Edit import" : "Choose what to import"}
-          </button>
-        )}
-
-        {expanded && league.teams.length > 0 && (
-          <div className="rounded-md border border-border p-3">
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-primary"
-                checked={importAll}
-                onChange={(e) => setImportAll(e.target.checked)}
-              />
-              Import all teams
-            </label>
-
-            {!importAll && (
-              <div className="mt-3 space-y-3">
-                {groups.map((group) => {
-                  const ids = group.teams.map((t) => t.id);
-                  const selCount = ids.filter((id) => selected.has(id)).length;
-                  const fully = selCount === ids.length;
-                  return (
-                    <div key={group.id}>
-                      <DivisionCheckbox
-                        label={group.name}
-                        checked={fully}
-                        indeterminate={selCount > 0 && !fully}
-                        onToggle={() => toggleDivision(ids, fully)}
-                      />
-                      <div className="ml-6 mt-1 grid grid-cols-1 gap-1 sm:grid-cols-2">
-                        {group.teams.map((team) => (
-                          <label
-                            key={team.id}
-                            className="flex items-center gap-2 text-sm text-muted-foreground"
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 accent-primary"
-                              checked={selected.has(team.id)}
-                              onChange={() => toggleTeam(team.id)}
-                            />
-                            <span className="truncate">{team.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-                {!canSubmit && (
-                  <p className="text-xs text-destructive">
-                    Pick at least one team, or choose Import all.
-                  </p>
-                )}
-              </div>
-            )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">{league.name}</CardTitle>
+            <Badge variant="outline">Public</Badge>
           </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <Button size="sm" disabled={loading || !canSubmit} onClick={save}>
-            {loading ? "..." : subscribed ? "Save changes" : "Subscribe"}
-          </Button>
-          {subscribed && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={loading}
-              onClick={unsubscribe}
-            >
-              Unsubscribe
+          {league.forkable && remaining > 0 && (
+            <Button size="sm" variant="outline" disabled={bulk} onClick={onAddAll}>
+              {bulk ? "Adding…" : `Add all (${remaining})`}
             </Button>
           )}
         </div>
+      </CardHeader>
+      <CardContent>
+        {!league.forkable ? (
+          <p className="text-sm text-muted-foreground">
+            This league isn&rsquo;t available to add yet.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {groups.map((group) => (
+              <div key={group.id}>
+                <p className="mb-2 text-sm font-medium text-foreground">
+                  {group.name}
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.teams.map((team) => {
+                    const isAdded = added.has(team.id);
+                    return (
+                      <div
+                        key={team.id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
+                      >
+                        <span className="truncate font-medium text-foreground">
+                          {team.name}
+                        </span>
+                        {isAdded ? (
+                          <span className="flex shrink-0 items-center gap-1 text-xs text-accent">
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            Added
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 shrink-0 px-2"
+                            disabled={busy === team.id || bulk}
+                            onClick={() => onAddOne(team.id, team.name)}
+                          >
+                            <Plus className="mr-1 h-3.5 w-3.5" />
+                            {busy === team.id ? "…" : "Add"}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
-  );
-}
-
-/** Native checkbox with a controllable indeterminate state. */
-function DivisionCheckbox({
-  label,
-  checked,
-  indeterminate,
-  onToggle,
-}: {
-  label: string;
-  checked: boolean;
-  indeterminate: boolean;
-  onToggle: () => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (ref.current) ref.current.indeterminate = indeterminate;
-  }, [indeterminate]);
-  return (
-    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-      <input
-        ref={ref}
-        type="checkbox"
-        className="h-4 w-4 accent-primary"
-        checked={checked}
-        onChange={onToggle}
-      />
-      {label}
-    </label>
   );
 }

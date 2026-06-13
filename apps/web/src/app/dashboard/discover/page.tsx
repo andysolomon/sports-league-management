@@ -1,38 +1,56 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getPublicLeagues, getPublicLeagueImportTree } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import {
+  getPublicLeagues,
+  getPublicLeagueImportTree,
+  getLeagueClaimable,
+  getOrgForkedSourceTeamIds,
+} from "@/lib/data-api";
 import DiscoverLeagues, { type DiscoverLeague } from "./discover-leagues";
 
 export default async function DiscoverPage() {
-  const { userId } = await auth();
+  const { userId, orgId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  // Subscriptions (and à la carte team scopes) are the source of truth in
-  // Convex; resolveOrgContext carries both (WSM-000099 / WSM-000100).
-  const [orgContext, publicLeagues] = await Promise.all([
-    resolveOrgContext(userId),
-    getPublicLeagues(),
-  ]);
+  // The org whose forks we mark as "Added" — the active org, else the user's
+  // first admin org (a fork may have created one that isn't active yet).
+  let forkOrgId = orgId ?? null;
+  if (!forkOrgId) {
+    const client = await clerkClient();
+    const memberships = await client.users.getOrganizationMembershipList({
+      userId,
+    });
+    forkOrgId =
+      memberships.data.find((m) => m.role === "org:admin")?.organization.id ??
+      null;
+  }
 
-  // Each public league carries its division/team tree so the card can offer
-  // à la carte selection, plus the user's current import state.
+  const [publicLeagues, forkedIds] = await Promise.all([
+    getPublicLeagues(),
+    forkOrgId ? getOrgForkedSourceTeamIds(forkOrgId) : Promise.resolve([]),
+  ]);
+  const forked = new Set(forkedIds);
+
+  // Discover is a catalog of reference leagues you fork teams from (WSM-000117).
   const leagues: DiscoverLeague[] = await Promise.all(
     publicLeagues.map(async (league) => {
-      const { teams, divisions } = await getPublicLeagueImportTree(
-        league.id,
-      ).catch(() => ({ teams: [], divisions: [] }));
+      const [{ teams, divisions }, forkable] = await Promise.all([
+        getPublicLeagueImportTree(league.id).catch(() => ({
+          teams: [],
+          divisions: [],
+        })),
+        getLeagueClaimable(league.id).catch(() => false),
+      ]);
       return {
         id: league.id,
         name: league.name,
-        subscribed: orgContext.subscribedLeagueIds.includes(league.id),
-        // null = imported all (or not subscribed); array = the imported subset.
-        importedTeamIds: orgContext.subscriptionTeamScopes[league.id] ?? null,
+        forkable,
         divisions: divisions.map((d) => ({ id: d.id, name: d.name })),
         teams: teams.map((t) => ({
           id: t.id,
           name: t.name,
           divisionId: t.divisionId,
+          added: forked.has(t.id),
         })),
       };
     }),
@@ -44,8 +62,8 @@ export default async function DiscoverPage() {
         Discover Leagues
       </h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        Browse public leagues and import them. Import everything, or pick the
-        divisions and teams you want.
+        Browse leagues and add teams to your dashboard. Each team you add becomes
+        your own private copy to manage — separate from everyone else.
       </p>
       <DiscoverLeagues leagues={leagues} />
     </div>
