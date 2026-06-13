@@ -37,6 +37,7 @@ export default async function RosterPage({
     orgIds: [],
     visibleLeagueIds: [leagueId],
     subscribedLeagueIds: [],
+    subscriptionTeamScopes: {},
   }).catch(() => null);
   if (!team) notFound();
 
@@ -72,6 +73,7 @@ export default async function RosterPage({
       orgIds: [orgId],
       visibleLeagueIds: [team.leagueId],
       subscribedLeagueIds: [],
+      subscriptionTeamScopes: {},
     }),
     getRosterBySeasonTeam(activeSeason.id, teamId),
     getTeamRosterLimitStatus(activeSeason.id, teamId),

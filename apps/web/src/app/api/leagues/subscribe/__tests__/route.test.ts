@@ -75,7 +75,38 @@ describe("POST /api/leagues/subscribe", () => {
 
     const body = await res.json();
     expect(body.message).toBe("Subscribed");
-    expect(mockSubscribeToLeague).toHaveBeenCalledWith("user_1", "lg_pub");
+    // No team selection → "import all" (undefined scope). (WSM-000100)
+    expect(mockSubscribeToLeague).toHaveBeenCalledWith(
+      "user_1",
+      "lg_pub",
+      undefined,
+    );
+  });
+
+  it("passes an à la carte team selection through (WSM-000100)", async () => {
+    mockAuth.mockResolvedValue({ userId: "user_1" });
+    mockSubscribeToLeague.mockResolvedValue(undefined);
+
+    const res = await POST(
+      makeRequest({ leagueId: "lg_pub", teamIds: ["t1", "t2"] }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockSubscribeToLeague).toHaveBeenCalledWith("user_1", "lg_pub", [
+      "t1",
+      "t2",
+    ]);
+  });
+
+  it("ignores a non-array teamIds (treats as import all)", async () => {
+    mockAuth.mockResolvedValue({ userId: "user_1" });
+    mockSubscribeToLeague.mockResolvedValue(undefined);
+
+    await POST(makeRequest({ leagueId: "lg_pub", teamIds: "nope" }));
+    expect(mockSubscribeToLeague).toHaveBeenCalledWith(
+      "user_1",
+      "lg_pub",
+      undefined,
+    );
   });
 
   it("idempotent — Convex mutation absorbs the dup write", async () => {

@@ -110,6 +110,11 @@ export default defineSchema({
   leagueSubscriptions: defineTable({
     userId: v.string(),
     leagueId: v.id("leagues"),
+    // À la carte import (WSM-000100): the teams the user chose to import from
+    // this league. undefined/empty = "import all" (backward-compatible with
+    // pre-feature rows). A display filter on the Teams/Players lists, not an
+    // access boundary — the league stays fully viewable (standings, detail).
+    teamIds: v.optional(v.array(v.id("teams"))),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_leagueId", ["userId", "leagueId"])

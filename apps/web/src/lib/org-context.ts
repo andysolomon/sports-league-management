@@ -7,6 +7,13 @@ export interface OrgContext {
   orgIds: string[];
   visibleLeagueIds: string[];
   subscribedLeagueIds: string[];
+  /**
+   * À la carte import scopes (WSM-000100): leagueId → the team ids the user
+   * imported from that league. Only present for PARTIAL subscriptions; a
+   * league absent from this map means "all teams". A display filter for the
+   * Teams/Players lists — not an access boundary.
+   */
+  subscriptionTeamScopes: Record<string, string[]>;
 }
 
 /**
@@ -47,10 +54,23 @@ export const resolveOrgContext = cache(
     // Single Convex query resolves both visible-league fan-out (via the
     // `leagues.by_orgId` index for each org the user belongs to) and the
     // subscribed-league set (via `leagueSubscriptions.by_userId`).
-    const { visibleLeagueIds, subscribedLeagueIds } =
+    const { visibleLeagueIds, subscribedLeagueIds, subscriptionScopes } =
       await getVisibleLeagueContextFromConvex(userId, orgIds);
 
-    return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
+    // `?? []` keeps this resilient if the web deploys ahead of the Convex
+    // function that adds subscriptionScopes — no scopes just means "import all".
+    const subscriptionTeamScopes: Record<string, string[]> = {};
+    for (const scope of subscriptionScopes ?? []) {
+      subscriptionTeamScopes[scope.leagueId] = scope.teamIds;
+    }
+
+    return {
+      userId,
+      orgIds,
+      visibleLeagueIds,
+      subscribedLeagueIds,
+      subscriptionTeamScopes,
+    };
   },
 );
 

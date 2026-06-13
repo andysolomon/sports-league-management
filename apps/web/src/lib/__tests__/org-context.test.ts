@@ -43,6 +43,9 @@ describe("resolveOrgContext", () => {
     mockGetVisibleLeagueContext.mockResolvedValue({
       visibleLeagueIds: ["league_1", "league_2", "league_pub_1"],
       subscribedLeagueIds: ["league_pub_1"],
+      subscriptionScopes: [
+        { leagueId: "league_pub_1", teamIds: ["team_a", "team_b"] },
+      ],
     });
 
     const ctx = await resolveOrgContext("user_123");
@@ -55,6 +58,10 @@ describe("resolveOrgContext", () => {
       "league_pub_1",
     ]);
     expect(ctx.subscribedLeagueIds).toEqual(["league_pub_1"]);
+    // À la carte scopes map leagueId → imported teamIds (WSM-000100).
+    expect(ctx.subscriptionTeamScopes).toEqual({
+      league_pub_1: ["team_a", "team_b"],
+    });
     expect(mockGetVisibleLeagueContext).toHaveBeenCalledWith("user_123", [
       "org_abc",
       "org_def",
@@ -66,6 +73,7 @@ describe("resolveOrgContext", () => {
     mockGetVisibleLeagueContext.mockResolvedValue({
       visibleLeagueIds: [],
       subscribedLeagueIds: [],
+      subscriptionScopes: [],
     });
 
     const ctx = await resolveOrgContext("user_no_orgs");
@@ -84,6 +92,7 @@ describe("resolveOrgContext", () => {
     mockGetVisibleLeagueContext.mockResolvedValue({
       visibleLeagueIds: ["league_pub_1", "league_pub_2"],
       subscribedLeagueIds: ["league_pub_1", "league_pub_2"],
+      subscriptionScopes: [],
     });
 
     const ctx = await resolveOrgContext("user_with_subs");
@@ -108,6 +117,7 @@ describe("resolveOrgContext", () => {
     mockGetVisibleLeagueContext.mockResolvedValue({
       visibleLeagueIds: [],
       subscribedLeagueIds: [],
+      subscriptionScopes: [],
     });
 
     const ctx = await resolveOrgContext("user_many_orgs");
@@ -128,6 +138,7 @@ describe("requireLeagueAccess", () => {
       orgIds: ["org_1"],
       visibleLeagueIds: ["lg_1", "lg_2"],
       subscribedLeagueIds: [],
+      subscriptionTeamScopes: {},
     };
     expect(() => requireLeagueAccess("lg_1", ctx)).not.toThrow();
   });
@@ -138,6 +149,7 @@ describe("requireLeagueAccess", () => {
       orgIds: ["org_1"],
       visibleLeagueIds: ["lg_1"],
       subscribedLeagueIds: [],
+      subscriptionTeamScopes: {},
     };
     expect(() => requireLeagueAccess("lg_other", ctx)).toThrow(
       "You do not have access to this league",
