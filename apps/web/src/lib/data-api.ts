@@ -113,6 +113,10 @@ const refs = {
     { userId: string; orgId: string; teamId: string },
     { leagueId: string }
   >("sports:claimTeam"),
+  forkTeamToWorkspace: mutationRef<
+    { orgId: string; sourceTeamId: string },
+    { teamId: string; leagueId: string; created: boolean }
+  >("sports:forkTeamToWorkspace"),
   setLeagueClaimable: mutationRef<
     { leagueId: string; claimable: boolean },
     null
@@ -587,6 +591,17 @@ export async function claimTeam(
   teamId: string,
 ): Promise<{ leagueId: string }> {
   return mutateConvex(refs.claimTeam, { userId, orgId, teamId });
+}
+
+/**
+ * WSM-000114: fork a reference team into the org's private workspace. Raw
+ * wrapper — caller MUST verify org admin first (see forkTeamForOrg).
+ */
+export async function forkTeamToWorkspace(
+  orgId: string,
+  sourceTeamId: string,
+): Promise<{ teamId: string; leagueId: string; created: boolean }> {
+  return mutateConvex(refs.forkTeamToWorkspace, { orgId, sourceTeamId });
 }
 
 export async function setLeagueClaimable(
