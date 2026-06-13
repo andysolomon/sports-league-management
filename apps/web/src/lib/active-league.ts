@@ -35,8 +35,18 @@ export const resolveActiveLeague = cache(
     const orgContext = await resolveOrgContext(userId);
     const leagues = await getLeagues(orgContext.visibleLeagueIds);
     const cookieVal = (await cookies()).get(ACTIVE_LEAGUE_COOKIE)?.value;
+    // Default order (WSM-000105): an explicit switcher choice (cookie) wins;
+    // otherwise prefer a league the user's org OWNS (their primary) over any
+    // followed/subscribed public league; finally fall back to the first
+    // visible league. `leagues` is name-sorted, so each pick is deterministic.
+    const owned = leagues.filter(
+      (l) => l.orgId !== null && orgContext.orgIds.includes(l.orgId),
+    );
     const activeLeagueId =
-      (cookieVal && leagues.some((l) => l.id === cookieVal) ? cookieVal : null) ??
+      (cookieVal && leagues.some((l) => l.id === cookieVal)
+        ? cookieVal
+        : null) ??
+      owned[0]?.id ??
       leagues[0]?.id ??
       null;
     return { orgContext, leagues, activeLeagueId };
