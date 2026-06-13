@@ -10,7 +10,7 @@ import {
   getLeagueClaimable,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { canManageTeam } from "@/lib/authorization";
+import { canManageTeam, canAdministerTeam } from "@/lib/authorization";
 import { playerAttributesV1 } from "@/lib/flags";
 import type { PlayerSnapshot } from "@/lib/attributes/headline-columns";
 import TeamManagement from "./team-management";
@@ -37,10 +37,13 @@ export default async function TeamDetailPage({
       : { href: "/dashboard/teams", label: "Back to Teams" };
   const orgContext = await resolveOrgContext(userId);
 
-  const [team, players, canManage] = await Promise.all([
+  // canManage = admin or coach (roster/players/edit); canDelete = admin only
+  // (removing the whole team). WSM-000121 intra-org roles.
+  const [team, players, canManage, canDelete] = await Promise.all([
     getTeam(id, orgContext),
     getPlayersByTeam(id, orgContext),
     canManageTeam(id, userId),
+    canAdministerTeam(id, userId),
   ]);
 
   // Fork affordance (WSM-000115): a reference team in a forkable league can be
@@ -103,6 +106,7 @@ export default async function TeamDetailPage({
         team={team}
         players={players}
         canManage={canManage}
+        canDelete={canDelete}
         attributeSnapshots={Object.fromEntries(snapshots)}
         maddenOveralls={Object.fromEntries(maddenOveralls)}
       />

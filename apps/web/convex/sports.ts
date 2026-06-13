@@ -2723,6 +2723,88 @@ export const getLeagueClaimable = queryGeneric({
   },
 });
 
+/*
+ * Intra-org capability roles (WSM-000121). The Clerk admin bit and membership
+ * are the source of truth; these functions only persist the coach/viewer split
+ * for org:member users. A missing row means "viewer".
+ */
+// Compound-index `.eq().eq()` chaining doesn't type-check under the generic ctx
+// (the second `.eq` sees an IndexRange), so query the orgId prefix and pick the
+// user in JS — the same pattern used elsewhere in this file.
+export const getOrgMemberRole = queryGeneric({
+  args: { orgId: v.string(), userId: v.string() },
+  returns: v.union(v.literal("coach"), v.literal("viewer"), v.null()),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const row = rows.find((r) => r.userId === args.userId);
+    if (!row) return null;
+    return row.role === "coach" ? "coach" : "viewer";
+  },
+});
+
+export const listOrgMemberRoles = queryGeneric({
+  args: { orgId: v.string() },
+  returns: v.array(
+    v.object({
+      userId: v.string(),
+      role: v.union(v.literal("coach"), v.literal("viewer")),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    return rows.map((r) => ({
+      userId: r.userId,
+      role: (r.role === "coach" ? "coach" : "viewer") as "coach" | "viewer",
+    }));
+  },
+});
+
+export const setOrgMemberRole = mutationGeneric({
+  args: {
+    orgId: v.string(),
+    userId: v.string(),
+    role: v.union(v.literal("coach"), v.literal("viewer")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const existing = rows.find((r) => r.userId === args.userId);
+    if (existing) {
+      await ctx.db.patch(existing._id, { role: args.role });
+    } else {
+      await ctx.db.insert("orgMemberRoles", {
+        orgId: args.orgId,
+        userId: args.userId,
+        role: args.role,
+      });
+    }
+    return null;
+  },
+});
+
+export const deleteOrgMemberRole = mutationGeneric({
+  args: { orgId: v.string(), userId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const existing = rows.find((r) => r.userId === args.userId);
+    if (existing) await ctx.db.delete(existing._id);
+    return null;
+  },
+});
+
 /** Mark a (public template) league's teams claimable by coaches (WSM-000109). */
 export const setLeagueClaimable = mutationGeneric({
   args: {

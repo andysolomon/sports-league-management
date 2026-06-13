@@ -24,7 +24,10 @@ import { toast } from "sonner";
 interface TeamManagementProps {
   team: TeamDto;
   players: PlayerDto[];
+  /** Admin or coach: edit team, manage players/roster (WSM-000121). */
   canManage: boolean;
+  /** Admin only: remove the whole team (WSM-000121). */
+  canDelete?: boolean;
   /** WSM-000090: playerId → attribute snapshot; empty when Phase 2 is
       dark or the season has no ingested attributes. */
   attributeSnapshots?: Record<string, PlayerSnapshot>;
@@ -44,6 +47,7 @@ export default function TeamManagement({
   team,
   players,
   canManage,
+  canDelete = false,
   attributeSnapshots = {},
   maddenOveralls = {},
 }: TeamManagementProps) {
@@ -220,25 +224,29 @@ export default function TeamManagement({
         <CardContent className="pt-6">
           <div className="flex items-start justify-between">
             <h2 className="text-2xl font-bold text-foreground">{team.name}</h2>
-            {canManage && (
+            {(canManage || canDelete) && (
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setModal({ type: "editTeam" })}
-                >
-                  <Pencil className="mr-1 h-3 w-3" />
-                  Edit Team
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setModal({ type: "deleteTeam" })}
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  Remove Team
-                </Button>
+                {canManage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModal({ type: "editTeam" })}
+                  >
+                    <Pencil className="mr-1 h-3 w-3" />
+                    Edit Team
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setModal({ type: "deleteTeam" })}
+                  >
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    Remove Team
+                  </Button>
+                )}
               </div>
             )}
           </div>

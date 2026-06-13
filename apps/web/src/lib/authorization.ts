@@ -7,56 +7,75 @@ import {
   claimTeam,
   forkTeamToWorkspace,
 } from "./data-api";
-import { requireOrgAdmin } from "./org-context";
+import { requireOrgAdmin, resolveBestOrgRole } from "./org-context";
+import {
+  canManageRoster,
+  canManageOrgSettings,
+  type OrgRole,
+} from "./permissions";
 
 export interface AuthorizationResult {
   userId: string;
   isAuthorized: boolean;
+  /** The user's strongest role across the team's league/owner orgs (WSM-000121),
+   *  or null if they hold no seat. Lets callers gate finer than a boolean. */
+  role: OrgRole | null;
 }
 
 /**
- * Authorize a mutation on a team. Edit rights come from being an `org:admin`
- * of EITHER:
+ * Resolve a user's effective role on a team (WSM-000121). Rights flow from a
+ * seat in EITHER:
  *   - the league's own org (owns the whole league), or
- *   - the org that CLAIMED this team (WSM-000109 Hybrid fork) — so a coach can
- *     edit their claimed team inside a shared/public template league.
+ *   - the org that forked/claimed this team into its workspace — so a coach can
+ *     manage their team inside a shared/public template league.
  *
- * A team with neither a league org nor an owner org (e.g. an unclaimed team in
- * a public reference league) is read-only.
+ * Returns the STRONGEST role across both. A team with neither a league org nor
+ * an owner org (an unclaimed team in a public reference league) is read-only.
+ */
+export async function resolveTeamRole(
+  teamId: string,
+  userId: string,
+): Promise<OrgRole | null> {
+  const leagueId = await getTeamLeagueId(teamId);
+  const [leagueOrgId, ownerOrgId] = await Promise.all([
+    getLeagueOrgId(leagueId),
+    // Resilient if the Convex query deploys after the web: a missing owner
+    // just means no team-fork grant — league-org auth still applies.
+    getTeamOwnerOrgId(teamId).catch(() => null),
+  ]);
+  return resolveBestOrgRole([leagueOrgId, ownerOrgId], userId);
+}
+
+/**
+ * Authorize a roster/player/team-edit mutation on a team. Granted to admin OR
+ * coach of the team's league/owner org (WSM-000121). For admin-only operations
+ * (team deletion) use `authorizeTeamAdmin`.
  */
 export async function authorizeTeamMutation(
   teamId: string,
   userId: string,
 ): Promise<AuthorizationResult> {
   try {
-    const leagueId = await getTeamLeagueId(teamId);
-    const [leagueOrgId, ownerOrgId] = await Promise.all([
-      getLeagueOrgId(leagueId),
-      // Resilient if the Convex query deploys after the web: a missing owner
-      // just means no team-claim grant — league-org auth still applies.
-      getTeamOwnerOrgId(teamId).catch(() => null),
-    ]);
-
-    const candidateOrgIds = [leagueOrgId, ownerOrgId].filter(
-      (id): id is string => Boolean(id),
-    );
-    if (candidateOrgIds.length === 0) {
-      return { userId, isAuthorized: false };
-    }
-
-    const client = await clerkClient();
-    const memberships = await client.users.getOrganizationMembershipList({
-      userId,
-    });
-    const isAuthorized = memberships.data.some(
-      (m) =>
-        candidateOrgIds.includes(m.organization.id) &&
-        m.role === "org:admin",
-    );
-
-    return { userId, isAuthorized };
+    const role = await resolveTeamRole(teamId, userId);
+    return { userId, role, isAuthorized: canManageRoster(role) };
   } catch {
-    return { userId, isAuthorized: false };
+    return { userId, role: null, isAuthorized: false };
+  }
+}
+
+/**
+ * Authorize an admin-only operation on a team (deletion). Requires admin of the
+ * team's league or owner org — coach is not enough.
+ */
+export async function authorizeTeamAdmin(
+  teamId: string,
+  userId: string,
+): Promise<AuthorizationResult> {
+  try {
+    const role = await resolveTeamRole(teamId, userId);
+    return { userId, role, isAuthorized: canManageOrgSettings(role) };
+  } catch {
+    return { userId, role: null, isAuthorized: false };
   }
 }
 
@@ -89,13 +108,26 @@ export async function forkTeamForOrg(
 }
 
 /**
- * Check if user can manage a team (for UI display).
+ * Whether the user can manage a team's roster/players/details (admin or coach).
+ * For UI display of Edit/Add/roster controls.
  */
 export async function canManageTeam(
   teamId: string,
   userId: string,
 ): Promise<boolean> {
   const result = await authorizeTeamMutation(teamId, userId);
+  return result.isAuthorized;
+}
+
+/**
+ * Whether the user can administer a team (delete it) — admin only. Gates the
+ * destructive "Remove Team" affordance (WSM-000121).
+ */
+export async function canAdministerTeam(
+  teamId: string,
+  userId: string,
+): Promise<boolean> {
+  const result = await authorizeTeamAdmin(teamId, userId);
   return result.isAuthorized;
 }
 

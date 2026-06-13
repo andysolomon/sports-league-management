@@ -127,6 +127,21 @@ const refs = {
   getLeagueClaimable: queryRef<{ leagueId: string }, boolean>(
     "sports:getLeagueClaimable",
   ),
+  getOrgMemberRole: queryRef<
+    { orgId: string; userId: string },
+    "coach" | "viewer" | null
+  >("sports:getOrgMemberRole"),
+  listOrgMemberRoles: queryRef<
+    { orgId: string },
+    Array<{ userId: string; role: "coach" | "viewer" }>
+  >("sports:listOrgMemberRoles"),
+  setOrgMemberRole: mutationRef<
+    { orgId: string; userId: string; role: "coach" | "viewer" },
+    null
+  >("sports:setOrgMemberRole"),
+  deleteOrgMemberRole: mutationRef<{ orgId: string; userId: string }, null>(
+    "sports:deleteOrgMemberRole",
+  ),
   listPlayers: queryRef<{ leagueIds: string[] }, PlayerDto[]>("sports:listPlayers"),
   listPlayersByTeam: queryRef<{ teamId: string }, PlayerDto[]>(
     "sports:listPlayersByTeam",
@@ -652,6 +667,35 @@ export async function setLeagueClaimable(
 /** WSM-000109: whether a league's teams can be claimed by coaches. */
 export async function getLeagueClaimable(leagueId: string): Promise<boolean> {
   return queryConvex(refs.getLeagueClaimable, { leagueId });
+}
+
+/** WSM-000121: a member's coach/viewer sub-role (null = viewer default). */
+export async function getOrgMemberRole(
+  orgId: string,
+  userId: string,
+): Promise<"coach" | "viewer" | null> {
+  return queryConvex(refs.getOrgMemberRole, { orgId, userId });
+}
+
+export async function listOrgMemberRoles(
+  orgId: string,
+): Promise<Array<{ userId: string; role: "coach" | "viewer" }>> {
+  return queryConvex(refs.listOrgMemberRoles, { orgId });
+}
+
+export async function setOrgMemberRole(
+  orgId: string,
+  userId: string,
+  role: "coach" | "viewer",
+): Promise<void> {
+  await mutateConvex(refs.setOrgMemberRole, { orgId, userId, role });
+}
+
+export async function deleteOrgMemberRole(
+  orgId: string,
+  userId: string,
+): Promise<void> {
+  await mutateConvex(refs.deleteOrgMemberRole, { orgId, userId });
 }
 
 export async function getPlayers(

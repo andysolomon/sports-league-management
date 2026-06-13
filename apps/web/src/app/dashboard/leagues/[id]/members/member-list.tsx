@@ -3,6 +3,14 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/8bit/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/8bit/select";
+import { ORG_ROLES, roleLabel, type OrgRole } from "@/lib/permissions";
 
 interface Member {
   userId: string;
@@ -10,9 +18,15 @@ interface Member {
   firstName: string;
   lastName: string;
   imageUrl: string;
-  role: string;
+  role: OrgRole;
   createdAt: number;
 }
+
+const ROLE_HINT: Record<OrgRole, string> = {
+  admin: "Full control",
+  coach: "Manage rosters & players",
+  viewer: "Read-only",
+};
 
 export default function MemberList({ orgId }: { orgId: string }) {
   const [members, setMembers] = useState<Member[]>([]);
@@ -34,7 +48,7 @@ export default function MemberList({ orgId }: { orgId: string }) {
     load();
   }, [orgId]);
 
-  async function handleRoleChange(memberUserId: string, newRole: string) {
+  async function handleRoleChange(memberUserId: string, newRole: OrgRole) {
     setActionLoading(memberUserId);
     try {
       const res = await fetch(`/api/orgs/${orgId}/members`, {
@@ -112,26 +126,27 @@ export default function MemberList({ orgId }: { orgId: string }) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge
-                variant={
-                  member.role === "org:admin" ? "default" : "secondary"
-                }
-              >
-                {member.role === "org:admin" ? "Admin" : "Member"}
+              <Badge variant={member.role === "admin" ? "default" : "secondary"}>
+                {roleLabel(member.role)}
               </Badge>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isLoading}
-                onClick={() =>
-                  handleRoleChange(
-                    member.userId,
-                    member.role === "org:admin" ? "org:member" : "org:admin",
-                  )
+              <Select
+                value={member.role}
+                onValueChange={(value) =>
+                  handleRoleChange(member.userId, value as OrgRole)
                 }
+                disabled={isLoading}
               >
-                {member.role === "org:admin" ? "Demote" : "Promote"}
-              </Button>
+                <SelectTrigger className="w-[120px]" aria-label="Member role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORG_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {roleLabel(r)} — {ROLE_HINT[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 size="sm"
                 variant="outline"

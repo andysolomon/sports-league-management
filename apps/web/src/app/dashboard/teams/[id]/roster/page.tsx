@@ -11,7 +11,8 @@ import {
   getRosterBySeasonTeam,
   getTeamRosterLimitStatus,
 } from "@/lib/data-api";
-import { getUserRoleInOrg } from "@/lib/org-context";
+import { resolveOrgRole } from "@/lib/org-context";
+import { canManageRoster } from "@/lib/permissions";
 import RosterBoard from "@/components/roster/RosterBoard";
 
 export default async function RosterPage({
@@ -44,8 +45,10 @@ export default async function RosterPage({
   const orgId = await getLeagueOrgId(team.leagueId);
   if (!orgId) notFound();
 
-  const role = await getUserRoleInOrg(orgId, userId);
+  const role = await resolveOrgRole(orgId, userId);
   if (!role) notFound();
+  // Coaches + admins edit the roster; viewers see it read-only (WSM-000121).
+  const canManage = canManageRoster(role);
 
   const seasons = await getSeasons([team.leagueId]);
   const activeSeason =
@@ -93,6 +96,7 @@ export default async function RosterPage({
         players={players}
         assignments={assignments}
         limitStatus={limitStatus}
+        canManage={canManage}
       />
     </div>
   );

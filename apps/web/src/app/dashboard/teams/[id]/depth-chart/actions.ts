@@ -7,7 +7,8 @@ import {
   setRosterLocked as setRosterLockedMutation,
   getLeagueOrgId,
 } from "@/lib/data-api";
-import { getUserRoleInOrg } from "@/lib/org-context";
+import { resolveOrgRole } from "@/lib/org-context";
+import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
 import {
   trackDepthChartReorder,
   trackSeasonLockToggle,
@@ -21,11 +22,11 @@ async function requireFlag() {
   }
 }
 
-async function requireOrgMembership(orgId: string, userId: string) {
-  const role = await getUserRoleInOrg(orgId, userId);
-  if (!role) {
-    throw new Error("not_authorized");
-  }
+// Editing the depth chart needs a manager seat (admin or coach) — viewers are
+// read-only (WSM-000121).
+async function requireRosterManager(orgId: string, userId: string) {
+  const role = await resolveOrgRole(orgId, userId);
+  if (!canManageRoster(role)) throw new Error("not_authorized");
   return role;
 }
 
@@ -42,7 +43,7 @@ export async function reorderDepthChartAction(input: {
 
   const orgId = await getLeagueOrgId(input.leagueId);
   if (!orgId) throw new Error("not_authorized");
-  await requireOrgMembership(orgId, userId);
+  await requireRosterManager(orgId, userId);
 
   const result = await reorderDepthChartMutation({
     teamId: input.teamId,
@@ -68,10 +69,11 @@ export async function setRosterLockedAction(input: {
   const { userId } = await auth();
   if (!userId) throw new Error("not_authenticated");
 
+  // Locking a season's roster is an admin-only structural action (WSM-000121).
   const orgId = await getLeagueOrgId(input.leagueId);
   if (!orgId) throw new Error("not_authorized");
-  const role = await requireOrgMembership(orgId, userId);
-  if (role !== "org:admin") throw new Error("not_authorized");
+  const role = await resolveOrgRole(orgId, userId);
+  if (!canManageOrgSettings(role)) throw new Error("not_authorized");
 
   const result = await setRosterLockedMutation(input.seasonId, input.locked);
   void trackSeasonLockToggle({
