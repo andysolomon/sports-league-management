@@ -3,6 +3,13 @@
 **Status:** Draft for review. Foundational — read before building. Supersedes part of the
 team-claim approach (#226–228). Pairs with the coach-platform strategy docs.
 
+## Decision log
+- **2026-06-13 — Private isolation only, permanently** (§8 resolved). Every org is a fully
+  isolated workspace; the app will **never** host shared in-app competition across orgs. Real
+  cross-org standings/schedules are MaxPreps' job. This collapses the design to a **single
+  mode** (no shared-league mode) and means the shared-edit claim engine (#226–228) is
+  **superseded** by fork-to-workspace, not retained as a second mode (see §8, §11).
+
 ## 1. Intent (from product)
 
 > NFL would only be claimable **per organization** — the claim doesn't affect all users, just
@@ -99,19 +106,16 @@ efficient, no duplication, auto-inherits reference updates — but **much more c
 read merges overlays; conflict semantics). Recommend **copy-on-fork** for v1; revisit overlay
 only if duplication cost bites.
 
-## 8. The shared-league question (must resolve)
-Per-org copies **lose shared standings/schedule** across orgs. For a **real GHSA region**,
-coaches want to compete on a common table. Options:
-- **A. Everything is a private workspace** (simplest; no cross-org competition in-app). Real
-  standings live on MaxPreps; we're a management tool.
-- **B. Support both:** private workspaces (this RFC) **and** opt-in shared leagues (the
-  #226–228 team-claim mechanic) where orgs join a common competition.
-- _Recommendation:_ ship **A** first (it's what the user asked for), design **B** as a later
-  mode so the GHSA real-competition case isn't foreclosed.
+## 8. The shared-league question — RESOLVED: private only, permanently
+Per-org copies lose shared standings/schedule across orgs. **Decision (2026-06-13): option A,
+permanently** — every org is a private workspace and the app will **not** host cross-org
+competition. Real GHSA standings/schedules are deferred to **MaxPreps**; we are the coach's
+management tool. Consequence: **no shared-league mode is built**, and the GHSA Cobb seed is a
+**reference directory orgs fork from**, not a league they jointly compete in.
 
 ## 9. Open decisions (need product input)
 1. **Roles:** the exact intra-org role set + permissions (start with admin/coach/viewer?).
-2. **Shared leagues:** option A now, B later — confirm?
+2. ~~Shared leagues~~ — **resolved (§8): private only, permanently.**
 3. **Re-sync:** do workspace copies ever pull updates from the reference, or fork-and-forget?
 4. **Billing/limits:** per-org plan limits (teams, users) — tie into existing tiers?
 5. **Migration:** convert current subscriptions/claims (only the test data so far) to forks.
@@ -119,13 +123,17 @@ coaches want to compete on a common table. Options:
 ## 10. Phasing
 1. **Model + isolation:** ownership discriminator + `sourceId`; fork-on-import; workspace-
    scoped visibility + auth; intra-org roles (admin/coach/viewer).
-2. **Migrate** existing subscriptions/claims → workspace forks; retire shared-edit claim path.
+2. **Migrate** existing subscriptions/claims → workspace forks; **retire the shared-edit claim
+   path** (#226–228) entirely.
 3. **Workspace polish:** invite users, role management UI, re-sync-from-source.
-4. **Shared leagues (option B)** if/when the GHSA real-competition case is prioritized.
+
+_(No shared-league phase — see §8.)_
 
 ## 11. Impact on in-flight work
-- The **claim engine (#226–228)** is not wasted — `ownerOrgId`/`claimable` + the auth
-  extension become the **shared-league** primitive (§8B). The default path shifts to fork.
+- The **claim engine (#226–228)** is **superseded** (single private-only mode). Its
+  `claimTeam`/`ownerOrgId`/`claimable` shared-edit mechanic is replaced by **fork-to-
+  workspace** (the workspace copy's `orgId` is the owner; no claiming of shared records). The
+  auth extension's idea (org membership grants edit) carries over to workspace records.
 - The **stat-keeping keystone PRD (#112)** is unaffected in spirit but its data attaches to
-  **workspace** teams/games, not shared ones.
-- **Do NOT** flip NFL `claimable` until fork-to-workspace exists (avoids shared-data leakage).
+  **workspace** teams/games.
+- **Do NOT** flip NFL `claimable` — it's a no-op under the new model and a leak under the old.
