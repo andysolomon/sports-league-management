@@ -2,9 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getPlayer, getTeam } from "@/lib/data-api";
+import { getPlayer, getTeam, getSeasons, getPlayerSeasonAttributes } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { derivePositionGroup } from "@/lib/position-group";
+import { orderedComponents } from "@/lib/ratings/component-labels";
 import { playerAttributesV1 } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import { Button } from "@/components/ui/8bit/button";
@@ -48,7 +49,27 @@ export default async function PlayerProfilePage({
   const team = await getTeam(player.teamId, orgContext).catch(() => null);
   const positionGroup = derivePositionGroup(player.position);
   const age = player.dateOfBirth ? ageFrom(player.dateOfBirth) : null;
-  const developmentEnabled = await playerAttributesV1();
+  const attributesEnabled = await playerAttributesV1();
+
+  // SPRT rating breakdown (WSM-000093) — the player's snapshot for the
+  // league's active season, when Phase 2 is on. Never blocks the page.
+  let rating: {
+    weightedOverall: number | null;
+    attributes: Record<string, number>;
+  } | null = null;
+  if (attributesEnabled && team) {
+    const seasons = await getSeasons([team.leagueId]).catch(() => []);
+    const activeSeason =
+      seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+    if (activeSeason) {
+      rating = await getPlayerSeasonAttributes(
+        playerId,
+        activeSeason.id,
+        orgContext,
+      ).catch(() => null);
+    }
+  }
+  const components = rating ? orderedComponents(rating.attributes) : [];
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -126,7 +147,7 @@ export default async function PlayerProfilePage({
             )}
           </dl>
 
-          {developmentEnabled && (
+          {attributesEnabled && (
             <div className="mt-6">
               <Button asChild variant="outline" size="sm">
                 <Link href={`/dashboard/players/${player.id}/development`}>
@@ -137,6 +158,59 @@ export default async function PlayerProfilePage({
           )}
         </CardContent>
       </Card>
+
+      {rating && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-lg font-semibold text-foreground">
+                SPRT Rating
+              </h3>
+              {rating.weightedOverall != null && (
+                <span className="font-mono text-2xl font-bold text-accent">
+                  {Math.round(rating.weightedOverall)}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    OVR
+                  </span>
+                </span>
+              )}
+            </div>
+
+            {components.length > 0 && (
+              <dl className="mt-4 space-y-2">
+                {components.map((c) => (
+                  <div key={c.key} className="flex items-center gap-3">
+                    <dt className="w-32 shrink-0 text-sm text-muted-foreground">
+                      {c.label}
+                    </dt>
+                    <div
+                      className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
+                      role="meter"
+                      aria-valuenow={Math.round(c.value)}
+                      aria-valuemin={0}
+                      aria-valuemax={99}
+                      aria-label={c.label}
+                    >
+                      <div
+                        className="h-full rounded-full bg-accent"
+                        style={{ width: `${Math.min(100, (c.value / 99) * 100)}%` }}
+                      />
+                    </div>
+                    <dd className="w-8 shrink-0 text-right font-mono text-sm text-foreground">
+                      {Math.round(c.value)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            <p className="mt-4 text-xs text-muted-foreground">
+              SPRT Rating is our own metric derived from open NFL performance
+              data (nflverse).
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
