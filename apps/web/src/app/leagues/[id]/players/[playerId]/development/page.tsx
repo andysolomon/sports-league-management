@@ -5,6 +5,7 @@ import { getPlayerDevelopmentPublic } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
+import { seasonYearLabel } from "@/lib/attributes/season-label";
 import { trackPlayerAttributesView } from "@/lib/analytics";
 
 /*
@@ -35,7 +36,7 @@ export default async function PublicPlayerDevelopmentPage({
   void trackPlayerAttributesView({ playerId, route: "public" });
 
   const points = development.map((row) => ({
-    x: row.seasonName,
+    x: seasonYearLabel(row.seasonName),
     y: row.weightedOverall,
   }));
 
