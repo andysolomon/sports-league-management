@@ -94,7 +94,7 @@ export default async function LeaguesPage() {
                                 {divTeams.map((team) => (
                                   <Link
                                     key={team.id}
-                                    href={`/dashboard/teams/${team.id}`}
+                                    href={`/dashboard/teams/${team.id}?from=leagues`}
                                     className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-card"
                                   >
                                     <Users className="h-3.5 w-3.5 text-muted-foreground" />

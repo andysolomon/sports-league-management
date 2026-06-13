@@ -16,13 +16,23 @@ import TeamManagement from "./team-management";
 
 export default async function TeamDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { id } = await params;
+  // Back link reflects where the user came from (WSM-000102): a team reached
+  // from the Leagues page should go back to Leagues, not Teams. Linking pages
+  // pass `?from`; default is the Teams list.
+  const { from } = await searchParams;
+  const back =
+    from === "leagues"
+      ? { href: "/dashboard/leagues", label: "Back to Leagues" }
+      : { href: "/dashboard/teams", label: "Back to Teams" };
   const orgContext = await resolveOrgContext(userId);
 
   const [team, players, canManage] = await Promise.all([
@@ -57,10 +67,10 @@ export default async function TeamDetailPage({
   return (
     <div>
       <Link
-        href="/dashboard/teams"
+        href={back.href}
         className="mb-4 inline-block text-sm text-primary hover:underline"
       >
-        &larr; Back to Teams
+        &larr; {back.label}
       </Link>
 
       <TeamManagement
