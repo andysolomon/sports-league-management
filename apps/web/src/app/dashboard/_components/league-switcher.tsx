@@ -12,7 +12,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { ACTIVE_LEAGUE_COOKIE } from "@/lib/active-league";
+import { ACTIVE_LEAGUE_COOKIE } from "@/lib/active-league-cookie";
 
 interface LeagueOption {
   id: string;

@@ -3,14 +3,19 @@ import { cookies } from "next/headers";
 import type { LeagueDto } from "@sports-management/shared-types";
 import { resolveOrgContext, type OrgContext } from "./org-context";
 import { getLeagues } from "./data-api";
+import { ACTIVE_LEAGUE_COOKIE } from "./active-league-cookie";
 
 /**
  * Global "active league" context (WSM-000103). The dashboard focuses on one
  * league at a time (Convex-deployment-switcher style); the active league is a
  * preference cookie, read server-side so SSR pages scope their queries without
  * a round-trip. Falls back to the first visible league.
+ *
+ * The cookie name is re-exported from the client-safe module so existing
+ * server importers keep working; the client switcher imports it directly from
+ * there to avoid pulling `next/headers` into the client bundle.
  */
-export const ACTIVE_LEAGUE_COOKIE = "activeLeagueId";
+export { ACTIVE_LEAGUE_COOKIE };
 
 export interface ActiveLeagueContext {
   orgContext: OrgContext;
