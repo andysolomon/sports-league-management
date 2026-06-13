@@ -8,6 +8,7 @@ import TeamEditForm from "../../_components/team-edit-form";
 import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
 import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
+import { orderByDepth } from "@/lib/roster/depth-order";
 import { StatusBadge } from "@/components/status-badge";
 import { abbreviateName } from "@/lib/position-group";
 import {
@@ -84,6 +85,10 @@ export default function TeamManagement({
     snapshots,
     players.map((p) => p.id),
   );
+
+  // Depth order for a position group (slot 1 = starter) keyed off SPRT OVR.
+  const depthOvr = (p: PlayerDto) =>
+    snapshots.get(p.id)?.weightedOverall ?? null;
 
   function buildColumns(withSlot: boolean): Column<RosterRow>[] {
     return [
@@ -240,7 +245,10 @@ export default function TeamManagement({
               data={
                 (activeTab === "All"
                   ? groupPlayers
-                  : groupPlayers.map((p, i) => ({ ...p, slot: i + 1 }))) as RosterRow[]
+                  : orderByDepth(groupPlayers, depthOvr).map((p, i) => ({
+                      ...p,
+                      slot: i + 1,
+                    }))) as RosterRow[]
               }
               columns={buildColumns(activeTab !== "All")}
               searchPlaceholder="Search players..."
