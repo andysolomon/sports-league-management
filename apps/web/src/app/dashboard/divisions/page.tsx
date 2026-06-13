@@ -1,15 +1,16 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getDivisions, getLeagues } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import { resolveActiveLeague } from "@/lib/active-league";
 import { DivisionsTable } from "./divisions-table";
 
 export default async function DivisionsPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const orgContext = await resolveOrgContext(userId);
-  const ids = orgContext.visibleLeagueIds;
+  // Scoped to the active league from the global switcher (WSM-000103).
+  const { activeLeagueId } = await resolveActiveLeague(userId);
+  const ids = activeLeagueId ? [activeLeagueId] : [];
 
   const [divisions, leagues] = await Promise.all([
     getDivisions(ids),
