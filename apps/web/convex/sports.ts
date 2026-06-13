@@ -2131,6 +2131,95 @@ export const getTeamAttributeSnapshots = queryGeneric({
 });
 
 /*
+ * Madden ratings (WSM-000095) — ingest + reads. One row per player; the
+ * ingest upserts by playerId so a re-run refreshes in place.
+ */
+export const ingestMaddenRatingsBatch = mutationGeneric({
+  args: {
+    rows: v.array(
+      v.object({
+        playerId: v.id("players"),
+        overall: v.number(),
+        position: v.string(),
+        attributesJson: v.string(),
+        portraitUrl: v.union(v.string(), v.null()),
+        teamLogoUrl: v.union(v.string(), v.null()),
+      }),
+    ),
+  },
+  returns: v.object({ created: v.number(), updated: v.number() }),
+  handler: async (ctx, args) => {
+    const ingestedAt = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    for (const row of args.rows) {
+      const existing = await ctx.db
+        .query("maddenRatings")
+        .withIndex("by_playerId", (q) => q.eq("playerId", row.playerId))
+        .unique();
+      const payload = { ...row, ingestedAt };
+      if (existing) {
+        await ctx.db.replace(existing._id, payload);
+        updated += 1;
+      } else {
+        await ctx.db.insert("maddenRatings", payload);
+        created += 1;
+      }
+    }
+    return { created, updated };
+  },
+});
+
+const maddenRatingValidator = v.object({
+  overall: v.number(),
+  position: v.string(),
+  attributes: v.record(v.string(), v.number()),
+  portraitUrl: v.union(v.string(), v.null()),
+  teamLogoUrl: v.union(v.string(), v.null()),
+});
+
+export const getPlayerMaddenRating = queryGeneric({
+  args: { playerId: v.id("players") },
+  returns: v.union(maddenRatingValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("maddenRatings")
+      .withIndex("by_playerId", (q) => q.eq("playerId", args.playerId))
+      .unique();
+    if (!row) return null;
+    return {
+      overall: row.overall,
+      position: row.position,
+      attributes: safeParseAttributes(row.attributesJson),
+      portraitUrl: row.portraitUrl,
+      teamLogoUrl: row.teamLogoUrl,
+    };
+  },
+});
+
+export const getTeamMaddenOveralls = queryGeneric({
+  args: { teamId: v.id("teams") },
+  returns: v.array(
+    v.object({ playerId: v.string(), overall: v.number() }),
+  ),
+  handler: async (ctx, args) => {
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    const out: Array<{ playerId: string; overall: number }> = [];
+    for (const player of players) {
+      const row = await ctx.db
+        .query("maddenRatings")
+        .withIndex("by_playerId", (q) => q.eq("playerId", player._id))
+        .unique();
+      if (row) out.push({ playerId: player._id as string, overall: row.overall });
+    }
+    return out;
+  },
+});
+
+/*
  * Phase 2 — Public read primitives (Sprint 6B / WSM-000059).
  *
  * The public viewer in WSM-000061 hits these without a Clerk session.
