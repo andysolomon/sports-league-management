@@ -2060,6 +2060,39 @@ export const getSeasonAttributesByPosition = queryGeneric({
  * UI renders an em dash). Access control lives in the data-api layer
  * (league visibility), matching getPlayersByTeam.
  */
+/*
+ * WSM-000093 — single-player attribute snapshot for the profile rating
+ * breakdown. Point read via by_playerId_seasonId. Access control lives
+ * in the data-api layer, matching getPlayer.
+ */
+export const getPlayerSeasonAttributes = queryGeneric({
+  args: {
+    playerId: v.id("players"),
+    seasonId: v.id("seasons"),
+  },
+  returns: v.union(
+    v.object({
+      weightedOverall: v.union(v.number(), v.null()),
+      attributes: v.record(v.string(), v.number()),
+      positionGroup: v.string(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const candidates = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_playerId_seasonId", (q) => q.eq("playerId", args.playerId))
+      .collect();
+    const row = candidates.find((r) => r.seasonId === args.seasonId);
+    if (!row) return null;
+    return {
+      weightedOverall: row.weightedOverall,
+      attributes: safeParseAttributes(row.attributesJson),
+      positionGroup: row.positionGroup,
+    };
+  },
+});
+
 export const getTeamAttributeSnapshots = queryGeneric({
   args: {
     teamId: v.id("teams"),
