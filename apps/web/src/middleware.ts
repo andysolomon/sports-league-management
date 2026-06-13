@@ -15,6 +15,10 @@ const isPublicRoute = createRouteMatcher([
   // auth.protect() blocks the invocation before that check runs.
   "/api/cron/(.*)",
   "/join(.*)",
+  // Visual-regression harnesses (WSM-000082) render pure presentational
+  // components with fixed data and no session. They 404 in production via the
+  // route handler; here they just bypass Clerk so Playwright can screenshot.
+  "/dev/visual/(.*)",
   // Public viewer routes (Phase 2 / WSM-000061). Per-league opt-in via
   // `leagues.isPublic`; the route handlers enforce visibility through
   // publicLeagueGuard. Middleware just doesn't gate them on Clerk auth.
