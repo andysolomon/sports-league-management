@@ -152,6 +152,14 @@ const refs = {
     { name: string; orgId: string | null },
     { dto: LeagueDto; created: boolean }
   >("sports:upsertLeague"),
+  createLeague: mutationRef<
+    { name: string; orgId: string },
+    { id: string; name: string }
+  >("sports:createLeague"),
+  renameLeague: mutationRef<{ leagueId: string; name: string }, null>(
+    "sports:renameLeague",
+  ),
+  deleteLeague: mutationRef<{ leagueId: string }, null>("sports:deleteLeague"),
   clearSeasonPlayerAttributes: mutationRef<
     { seasonId: string },
     { deleted: number }
@@ -510,6 +518,25 @@ export async function setLeagueInviteToken(
 
 export async function getLeagueOrgId(leagueId: string): Promise<string | null> {
   return queryConvex(refs.getLeagueOrgId, { leagueId });
+}
+
+/** WSM-000118: league CRUD. Auth enforced in the calling server actions. */
+export async function createLeague(
+  name: string,
+  orgId: string,
+): Promise<{ id: string; name: string }> {
+  return mutateConvex(refs.createLeague, { name, orgId });
+}
+
+export async function renameLeague(
+  leagueId: string,
+  name: string,
+): Promise<void> {
+  await mutateConvex(refs.renameLeague, { leagueId, name });
+}
+
+export async function deleteLeague(leagueId: string): Promise<void> {
+  await mutateConvex(refs.deleteLeague, { leagueId });
 }
 
 export async function getLeagues(visibleLeagueIds: string[]): Promise<LeagueDto[]> {
