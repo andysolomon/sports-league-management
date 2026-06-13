@@ -7,6 +7,11 @@ export default defineSchema({
     orgId: v.union(v.string(), v.null()),
     isPublic: v.boolean(),
     inviteToken: v.union(v.string(), v.null()),
+    // Hybrid fork model (WSM-000109): when true, individual teams in this
+    // (public template) league can be CLAIMED by a coach's org — the league
+    // stays shared/read-only, but a claimed team becomes editable by its
+    // owner. Reference leagues (NFL) leave this false/undefined.
+    claimable: v.optional(v.boolean()),
   })
     .index("by_name", ["name"])
     .index("by_orgId", ["orgId"])
@@ -30,10 +35,15 @@ export default defineSchema({
     location: v.string(),
     logoUrl: v.union(v.string(), v.null()),
     rosterLimit: v.union(v.number(), v.null()),
+    // Hybrid fork model (WSM-000109): the Clerk org that CLAIMED this team in a
+    // claimable league. null/undefined = unclaimed. An admin of this org can
+    // edit the team + its roster even though the league itself is shared.
+    ownerOrgId: v.optional(v.union(v.string(), v.null())),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_divisionId", ["divisionId"])
-    .index("by_leagueId_name", ["leagueId", "name"]),
+    .index("by_leagueId_name", ["leagueId", "name"])
+    .index("by_ownerOrgId", ["ownerOrgId"]),
 
   players: defineTable({
     name: v.string(),

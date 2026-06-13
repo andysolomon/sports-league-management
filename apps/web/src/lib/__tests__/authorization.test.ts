@@ -3,16 +3,23 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const {
   mockGetTeamLeagueId,
   mockGetLeagueOrgId,
+  mockGetTeamOwnerOrgId,
+  mockClaimTeam,
   mockGetOrganizationMembershipList,
 } = vi.hoisted(() => ({
   mockGetTeamLeagueId: vi.fn(),
   mockGetLeagueOrgId: vi.fn(),
+  mockGetTeamOwnerOrgId: vi.fn(),
+  mockClaimTeam: vi.fn(),
   mockGetOrganizationMembershipList: vi.fn(),
 }));
 
 vi.mock("../data-api", () => ({
   getTeamLeagueId: mockGetTeamLeagueId,
   getLeagueOrgId: mockGetLeagueOrgId,
+  getTeamOwnerOrgId: mockGetTeamOwnerOrgId,
+  claimTeam: mockClaimTeam,
+  getVisibleLeagueContext: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({
@@ -31,6 +38,8 @@ import { authorizeTeamMutation, canManageTeam } from "../authorization";
 describe("authorizeTeamMutation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: team is unclaimed unless a test says otherwise.
+    mockGetTeamOwnerOrgId.mockResolvedValue(null);
   });
 
   it("returns not authorized when team is not found", async () => {
@@ -82,6 +91,34 @@ describe("authorizeTeamMutation", () => {
     });
 
     const result = await authorizeTeamMutation("team_1", "user_1");
+
+    expect(result).toEqual({ userId: "user_1", isAuthorized: false });
+  });
+
+  // WSM-000109: a claimed team in a shared/public league is editable by an
+  // admin of the org that claimed it, even though the league org is null.
+  it("authorizes an admin of the team's owner org (claimed team)", async () => {
+    mockGetTeamLeagueId.mockResolvedValue("league_pub");
+    mockGetLeagueOrgId.mockResolvedValue(null); // public template league
+    mockGetTeamOwnerOrgId.mockResolvedValue("org_coach");
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [{ organization: { id: "org_coach" }, role: "org:admin" }],
+    });
+
+    const result = await authorizeTeamMutation("team_claimed", "user_1");
+
+    expect(result).toEqual({ userId: "user_1", isAuthorized: true });
+  });
+
+  it("denies a non-admin member of the team's owner org", async () => {
+    mockGetTeamLeagueId.mockResolvedValue("league_pub");
+    mockGetLeagueOrgId.mockResolvedValue(null);
+    mockGetTeamOwnerOrgId.mockResolvedValue("org_coach");
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [{ organization: { id: "org_coach" }, role: "org:member" }],
+    });
+
+    const result = await authorizeTeamMutation("team_claimed", "user_1");
 
     expect(result).toEqual({ userId: "user_1", isAuthorized: false });
   });

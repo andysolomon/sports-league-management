@@ -78,7 +78,9 @@ async function main() {
   console.log(`  league ${league.created ? "created" : "exists"}: ${leagueId}`);
 
   await m("sports:setLeaguePublic", { leagueId, isPublic: true });
-  console.log("  league set public");
+  // Hybrid fork (WSM-000109): coaches can claim their school in this template.
+  await m("sports:setLeagueClaimable", { leagueId, claimable: true });
+  console.log("  league set public + claimable");
 
   const divisionByClass = new Map<string, string>();
   for (const cls of classes) {
