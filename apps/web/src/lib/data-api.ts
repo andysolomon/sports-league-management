@@ -106,6 +106,17 @@ const refs = {
   getTeamLeagueId: queryRef<{ teamId: string }, string | null>(
     "sports:getTeamLeagueId",
   ),
+  getTeamOwnerOrgId: queryRef<{ teamId: string }, string | null>(
+    "sports:getTeamOwnerOrgId",
+  ),
+  claimTeam: mutationRef<
+    { userId: string; orgId: string; teamId: string },
+    { leagueId: string }
+  >("sports:claimTeam"),
+  setLeagueClaimable: mutationRef<
+    { leagueId: string; claimable: boolean },
+    null
+  >("sports:setLeagueClaimable"),
   listPlayers: queryRef<{ leagueIds: string[] }, PlayerDto[]>("sports:listPlayers"),
   listPlayersByTeam: queryRef<{ teamId: string }, PlayerDto[]>(
     "sports:listPlayersByTeam",
@@ -554,6 +565,32 @@ export async function getTeamLeagueId(teamId: string): Promise<string> {
   const leagueId = await queryConvex(refs.getTeamLeagueId, { teamId });
   if (!leagueId) throw new Error("Team not found");
   return leagueId;
+}
+
+/** WSM-000109: the org that claimed this team, or null if unclaimed. */
+export async function getTeamOwnerOrgId(
+  teamId: string,
+): Promise<string | null> {
+  return queryConvex(refs.getTeamOwnerOrgId, { teamId });
+}
+
+/**
+ * WSM-000109: claim a team into an org. Raw wrapper — the caller MUST verify
+ * the user is an admin of `orgId` first (see claimTeamForOrg in authorization).
+ */
+export async function claimTeam(
+  userId: string,
+  orgId: string,
+  teamId: string,
+): Promise<{ leagueId: string }> {
+  return mutateConvex(refs.claimTeam, { userId, orgId, teamId });
+}
+
+export async function setLeagueClaimable(
+  leagueId: string,
+  claimable: boolean,
+): Promise<void> {
+  await mutateConvex(refs.setLeagueClaimable, { leagueId, claimable });
 }
 
 export async function getPlayers(

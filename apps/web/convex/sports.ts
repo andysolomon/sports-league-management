@@ -503,6 +503,16 @@ export const getTeamLeagueId = queryGeneric({
   },
 });
 
+/** Hybrid fork model (WSM-000109): the org that claimed this team, or null. */
+export const getTeamOwnerOrgId = queryGeneric({
+  args: { teamId: v.id("teams") },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const doc = await ctx.db.get(args.teamId);
+    return doc?.ownerOrgId ?? null;
+  },
+});
+
 export const listPlayers = queryGeneric({
   args: { leagueIds: v.array(v.id("leagues")) },
   returns: v.array(
@@ -1258,6 +1268,59 @@ export const unsubscribeFromLeague = mutationGeneric({
       await ctx.db.delete(existing._id);
     }
     return null;
+  },
+});
+
+/**
+ * Claim a team within a claimable (public template) league (WSM-000109). Sets
+ * the team's ownerOrgId so an admin of that org can edit it, and subscribes the
+ * user to the league scoped to the claimed team (merging with any existing
+ * scope) so it shows up in their dashboard. The org:admin check is enforced in
+ * the Next.js layer before this runs. Idempotent and re-claim-safe for the same
+ * org; rejects claiming a team another org already owns.
+ */
+export const claimTeam = mutationGeneric({
+  args: {
+    userId: v.string(),
+    orgId: v.string(),
+    teamId: v.id("teams"),
+  },
+  returns: v.object({ leagueId: v.string() }),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("Team not found");
+    const league = await ctx.db.get(team.leagueId);
+    if (!league || !league.isPublic || !league.claimable) {
+      throw new Error("Team is not claimable");
+    }
+    if (team.ownerOrgId && team.ownerOrgId !== args.orgId) {
+      throw new Error("Team already claimed by another org");
+    }
+
+    await ctx.db.patch(args.teamId, { ownerOrgId: args.orgId });
+
+    // Subscribe (scoped to the claimed team) so it's visible + in the switcher.
+    const existing =
+      (
+        await ctx.db
+          .query("leagueSubscriptions")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .collect()
+      ).find((s) => s.leagueId === team.leagueId) ?? null;
+    const merged = Array.from(
+      new Set([...(existing?.teamIds ?? []), args.teamId]),
+    );
+    if (existing) {
+      await ctx.db.patch(existing._id, { teamIds: merged });
+    } else {
+      await ctx.db.insert("leagueSubscriptions", {
+        userId: args.userId,
+        leagueId: team.leagueId,
+        teamIds: merged,
+      });
+    }
+
+    return { leagueId: team.leagueId as string };
   },
 });
 
@@ -2275,6 +2338,21 @@ export const setLeaguePublic = mutationGeneric({
     const league = await ctx.db.get(args.leagueId);
     if (!league) throw new Error("league_not_found");
     await ctx.db.patch(args.leagueId, { isPublic: args.isPublic });
+    return null;
+  },
+});
+
+/** Mark a (public template) league's teams claimable by coaches (WSM-000109). */
+export const setLeagueClaimable = mutationGeneric({
+  args: {
+    leagueId: v.id("leagues"),
+    claimable: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) throw new Error("league_not_found");
+    await ctx.db.patch(args.leagueId, { claimable: args.claimable });
     return null;
   },
 });
