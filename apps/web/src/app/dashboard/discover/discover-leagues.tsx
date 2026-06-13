@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
 import { Button } from "@/components/ui/8bit/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy } from "lucide-react";
+import { Trophy, CheckCircle2 } from "lucide-react";
 
 interface League {
   id: string;
@@ -68,8 +68,16 @@ export default function DiscoverLeagues({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
-                <Badge variant="outline">Public</Badge>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">Public</Badge>
+                  {isSubscribed && (
+                    <Badge className="gap-1 bg-accent text-accent-foreground">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Subscribed
+                    </Badge>
+                  )}
+                </div>
                 <Button
                   size="sm"
                   variant={isSubscribed ? "outline" : "default"}

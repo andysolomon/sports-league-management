@@ -1,18 +1,22 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getPublicLeagues } from "@/lib/data-api";
+import { resolveOrgContext } from "@/lib/org-context";
 import DiscoverLeagues from "./discover-leagues";
 
 export default async function DiscoverPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const subscribedLeagueIds =
-    (user.publicMetadata?.subscribedLeagueIds as string[]) ?? [];
-
-  const publicLeagues = await getPublicLeagues();
+  // Subscriptions are the source of truth in Convex (leagueSubscriptions),
+  // not Clerk publicMetadata — the subscribe route only writes Convex, so the
+  // old metadata read was always empty and every card showed "Subscribe"
+  // (WSM-000099). resolveOrgContext returns the real subscribed league ids.
+  const [orgContext, publicLeagues] = await Promise.all([
+    resolveOrgContext(userId),
+    getPublicLeagues(),
+  ]);
+  const subscribedLeagueIds = orgContext.subscribedLeagueIds;
 
   return (
     <div>
