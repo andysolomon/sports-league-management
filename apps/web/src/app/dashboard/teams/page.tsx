@@ -2,14 +2,15 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getTeams } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import { resolveActiveLeague } from "@/lib/active-league";
 
 export default async function TeamsPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const orgContext = await resolveOrgContext(userId);
-  const teams = await getTeams(orgContext.visibleLeagueIds);
+  // Scoped to the active league chosen in the global switcher (WSM-000103).
+  const { activeLeagueId } = await resolveActiveLeague(userId);
+  const teams = activeLeagueId ? await getTeams([activeLeagueId]) : [];
 
   return (
     <div>
