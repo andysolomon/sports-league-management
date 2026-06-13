@@ -25,10 +25,47 @@ import {
 } from "@/components/ui/8bit/select";
 import { toast } from "sonner";
 
+// Football position pick-list (WSM-000119). Common positions first, then the
+// granular variants. ATH = athlete/unspecified.
+const POSITION_OPTIONS = [
+  "QB",
+  "RB",
+  "FB",
+  "WR",
+  "TE",
+  "OL",
+  "LT",
+  "LG",
+  "C",
+  "RG",
+  "RT",
+  "DL",
+  "DE",
+  "DT",
+  "NT",
+  "EDGE",
+  "LB",
+  "OLB",
+  "MLB",
+  "ILB",
+  "DB",
+  "CB",
+  "S",
+  "FS",
+  "SS",
+  "K",
+  "P",
+  "LS",
+  "ATH",
+];
+
 interface PlayerFormProps {
   mode: "create" | "edit";
   teamId: string;
   player?: PlayerDto;
+  /** Jersey numbers already on the roster (excluding this player) — for the
+      duplicate warning (WSM-000119). Duplicates are allowed (e.g. college). */
+  existingJerseyNumbers?: number[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -38,6 +75,7 @@ export default function PlayerForm({
   mode,
   teamId,
   player,
+  existingJerseyNumbers = [],
   open,
   onOpenChange,
   onSuccess,
@@ -51,6 +89,11 @@ export default function PlayerForm({
   const [status, setStatus] = useState(player?.status ?? "Active");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Duplicate jersey is allowed (e.g. college) but flagged (WSM-000119).
+  const jerseyTaken =
+    jerseyNumber !== "" &&
+    existingJerseyNumbers.includes(Number(jerseyNumber));
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,6 +109,12 @@ export default function PlayerForm({
         dateOfBirth: dateOfBirth || null,
         status,
       };
+
+      if (jerseyTaken) {
+        toast.warning(
+          `#${jerseyNumber} is already used on this roster — saved anyway.`,
+        );
+      }
 
       if (mode === "create") {
         const parsed = CreatePlayerInputSchema.safeParse(data);
@@ -145,13 +194,18 @@ export default function PlayerForm({
 
           <div className="space-y-2">
             <Label htmlFor="player-position">Position *</Label>
-            <Input
-              id="player-position"
-              type="text"
-              required
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-            />
+            <Select value={position} onValueChange={setPosition}>
+              <SelectTrigger id="player-position">
+                <SelectValue placeholder="Select a position" />
+              </SelectTrigger>
+              <SelectContent>
+                {POSITION_OPTIONS.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -159,9 +213,18 @@ export default function PlayerForm({
             <Input
               id="player-jersey"
               type="number"
+              min={0}
+              max={99}
               value={jerseyNumber}
               onChange={(e) => setJerseyNumber(e.target.value)}
+              aria-invalid={jerseyTaken}
             />
+            {jerseyTaken && (
+              <p className="text-xs text-yellow-600 dark:text-yellow-500">
+                #{jerseyNumber} is already on this roster — allowed, but it&rsquo;s
+                a duplicate.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

@@ -338,6 +338,9 @@ export default function TeamManagement({
       <PlayerForm
         mode="create"
         teamId={team.id}
+        existingJerseyNumbers={players
+          .map((p) => p.jerseyNumber)
+          .filter((n): n is number => n != null)}
         open={modal.type === "addPlayer"}
         onOpenChange={(open) => !open && setModal({ type: "none" })}
         onSuccess={handleSuccess}
@@ -348,6 +351,10 @@ export default function TeamManagement({
           mode="edit"
           teamId={team.id}
           player={modal.player}
+          existingJerseyNumbers={players
+            .filter((p) => p.id !== modal.player.id)
+            .map((p) => p.jerseyNumber)
+            .filter((n): n is number => n != null)}
           open
           onOpenChange={(open) => !open && setModal({ type: "none" })}
           onSuccess={handleSuccess}
