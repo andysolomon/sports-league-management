@@ -240,11 +240,14 @@ export const getVisibleLeagueContext = queryGeneric({
       ),
     );
 
+    // Private-workspace model (WSM-000117): the dashboard shows ONLY the user's
+    // org (workspace) leagues. Reference leagues are reached via Discover, not
+    // a "follow" subscription — so subscriptions no longer grant visibility.
+    // This also removes the dual-presence wart (a followed reference league and
+    // its forked copy both appearing). subscribedLeagueIds is still returned for
+    // back-compat but no longer feeds visibility.
     const visibleLeagueIds = Array.from(
-      new Set([
-        ...subscribedLeagueIds,
-        ...orgLeagueDocs.flat().map((league) => league._id),
-      ]),
+      new Set(orgLeagueDocs.flat().map((league) => league._id)),
     );
 
     return {
@@ -252,6 +255,32 @@ export const getVisibleLeagueContext = queryGeneric({
       subscribedLeagueIds,
       subscriptionScopes,
     };
+  },
+});
+
+/**
+ * The set of reference team ids an org has already forked into its workspace
+ * (WSM-000117). Lets Discover mark teams as "Added".
+ */
+export const getOrgForkedSourceTeamIds = queryGeneric({
+  args: { orgId: v.string() },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const workspaceLeagues = await ctx.db
+      .query("leagues")
+      .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const sourceTeamIds: string[] = [];
+    for (const league of workspaceLeagues) {
+      const teams = await ctx.db
+        .query("teams")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", league._id))
+        .collect();
+      for (const t of teams) {
+        if (t.sourceTeamId) sourceTeamIds.push(t.sourceTeamId as string);
+      }
+    }
+    return sourceTeamIds;
   },
 });
 

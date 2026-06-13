@@ -117,6 +117,9 @@ const refs = {
     { orgId: string; sourceTeamId: string },
     { teamId: string; leagueId: string; created: boolean }
   >("sports:forkTeamToWorkspace"),
+  getOrgForkedSourceTeamIds: queryRef<{ orgId: string }, string[]>(
+    "sports:getOrgForkedSourceTeamIds",
+  ),
   setLeagueClaimable: mutationRef<
     { leagueId: string; claimable: boolean },
     null
@@ -602,6 +605,13 @@ export async function forkTeamToWorkspace(
   sourceTeamId: string,
 ): Promise<{ teamId: string; leagueId: string; created: boolean }> {
   return mutateConvex(refs.forkTeamToWorkspace, { orgId, sourceTeamId });
+}
+
+/** WSM-000117: reference team ids the org has already forked (for Discover). */
+export async function getOrgForkedSourceTeamIds(
+  orgId: string,
+): Promise<string[]> {
+  return queryConvex(refs.getOrgForkedSourceTeamIds, { orgId });
 }
 
 export async function setLeagueClaimable(
