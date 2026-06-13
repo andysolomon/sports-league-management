@@ -8,7 +8,6 @@ import {
   getTeamAttributeSnapshots,
   getTeamMaddenOveralls,
   getLeagueClaimable,
-  getTeamOwnerOrgId,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam } from "@/lib/authorization";
@@ -44,17 +43,13 @@ export default async function TeamDetailPage({
     canManageTeam(id, userId),
   ]);
 
-  // Claim affordance (WSM-000110/111): a followed team in a claimable template
-  // league can be claimed → owned + editable. Offered whenever the user can't
-  // already manage it and the team is unclaimed — no org prerequisite, since
-  // the claim creates one for the coach (org-on-claim). Degrades to no offer.
-  let offerClaim = false;
+  // Fork affordance (WSM-000115): a reference team in a forkable league can be
+  // copied into the user's private workspace (editable). Offered whenever the
+  // user can't already manage this (read-only reference) team and the league is
+  // forkable — no org prerequisite (the fork creates one). Degrades to no offer.
+  let offerFork = false;
   if (!canManage) {
-    const [claimable, ownerOrgId] = await Promise.all([
-      getLeagueClaimable(team.leagueId).catch(() => false),
-      getTeamOwnerOrgId(id).catch(() => null),
-    ]);
-    offerClaim = claimable && !ownerOrgId;
+    offerFork = await getLeagueClaimable(team.leagueId).catch(() => false);
   }
 
   // WSM-000090: attribute snapshots feed the Madden stat columns.
@@ -89,13 +84,14 @@ export default async function TeamDetailPage({
         &larr; {back.label}
       </Link>
 
-      {offerClaim && (
+      {offerFork && (
         <div className="mb-4 rounded-md border border-primary/40 bg-primary/5 p-4">
           <p className="text-sm font-medium text-foreground">Coach here?</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Claim {team.name} to manage its roster and depth chart — it becomes
-            yours to edit. We&rsquo;ll set up your coaching organization if you
-            don&rsquo;t have one yet.
+            Add {team.name} to your teams — you&rsquo;ll get your own private
+            copy to manage (roster, depth chart, stats), separate from everyone
+            else. We&rsquo;ll set up your organization if you don&rsquo;t have
+            one yet.
           </p>
           <div className="mt-3">
             <ClaimTeamButton teamId={team.id} teamName={team.name} />

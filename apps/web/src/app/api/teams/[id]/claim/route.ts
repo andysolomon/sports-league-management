@@ -1,16 +1,17 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { claimTeam } from "@/lib/data-api";
-import { claimTeamForOrg } from "@/lib/authorization";
+import { forkTeamToWorkspace } from "@/lib/data-api";
 import { handleApiError } from "@/lib/api-error";
 
 /**
- * Claim a team (WSM-000110/111). Resolves an org the user admins to own the
- * team — never making them set one up first:
+ * Add a team to the caller's org — forking it into their PRIVATE workspace
+ * (WSM-000110/111/115). Resolves an org the user admins, never making them set
+ * one up first:
  *   1. the active org, if they admin it; else
  *   2. any org they already admin; else
  *   3. a freshly created org (they become its admin) — org-on-claim onboarding.
- * Then sets the team's owner to that org and subscribes the user (scoped).
+ * Then forks the reference team (+ roster) into that org's workspace and returns
+ * the workspace team to redirect to (the editable copy).
  */
 export async function POST(
   request: NextRequest,
@@ -55,24 +56,25 @@ export async function POST(
       }
     }
 
-    // For a just-created org we already know the user is its admin, so skip the
-    // redundant (and possibly not-yet-propagated) membership re-check.
-    const { leagueId } = createdOrg
-      ? await claimTeam(userId, targetOrgId, teamId)
-      : await claimTeamForOrg(userId, targetOrgId, teamId);
+    // targetOrgId is always an org this user admins (active/found/just-created),
+    // so fork directly into it. Fork = a private editable copy of the team.
+    const {
+      teamId: workspaceTeamId,
+      leagueId,
+      created,
+    } = await forkTeamToWorkspace(targetOrgId, teamId);
 
     return NextResponse.json({
-      message: "Claimed",
+      message: "Added",
+      teamId: workspaceTeamId,
       leagueId,
       orgId: targetOrgId,
       createdOrg,
+      created,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    if (msg.includes("admin")) {
-      return NextResponse.json({ error: msg }, { status: 403 });
-    }
-    if (msg.includes("not claimable") || msg.includes("already claimed")) {
+    if (msg.includes("not forkable")) {
       return NextResponse.json({ error: msg }, { status: 409 });
     }
     return handleApiError(error, "/api/teams/[id]/claim");
