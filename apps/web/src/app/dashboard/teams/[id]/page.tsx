@@ -6,6 +6,7 @@ import {
   getPlayersByTeam,
   getSeasons,
   getTeamAttributeSnapshots,
+  getTeamMaddenOveralls,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam } from "@/lib/authorization";
@@ -35,6 +36,7 @@ export default async function TeamDetailPage({
   // rule as the depth-chart page. Failure here must never take down
   // the roster — columns simply don't render.
   let snapshots: ReadonlyMap<string, PlayerSnapshot> = new Map();
+  let maddenOveralls: ReadonlyMap<string, number> = new Map();
   if (await playerAttributesV1()) {
     const seasons = await getSeasons([team.leagueId]).catch(() => []);
     const activeSeason =
@@ -46,6 +48,10 @@ export default async function TeamDetailPage({
         orgContext,
       ).catch(() => new Map());
     }
+    // WSM-000095: Madden overall per player, shown beside SPRT. Season-agnostic.
+    maddenOveralls = await getTeamMaddenOveralls(id, orgContext).catch(
+      () => new Map(),
+    );
   }
 
   return (
@@ -62,6 +68,7 @@ export default async function TeamDetailPage({
         players={players}
         canManage={canManage}
         attributeSnapshots={Object.fromEntries(snapshots)}
+        maddenOveralls={Object.fromEntries(maddenOveralls)}
       />
     </div>
   );

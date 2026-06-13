@@ -2,10 +2,17 @@ import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { getPlayer, getTeam, getSeasons, getPlayerSeasonAttributes } from "@/lib/data-api";
+import {
+  getPlayer,
+  getTeam,
+  getSeasons,
+  getPlayerSeasonAttributes,
+  getPlayerMaddenRating,
+} from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { derivePositionGroup } from "@/lib/position-group";
 import { orderedComponents } from "@/lib/ratings/component-labels";
+import { orderedMaddenAttributes } from "@/lib/madden/attributes";
 import { playerAttributesV1 } from "@/lib/flags";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import { Button } from "@/components/ui/8bit/button";
@@ -70,6 +77,15 @@ export default async function PlayerProfilePage({
     }
   }
   const components = rating ? orderedComponents(rating.attributes) : [];
+
+  // Madden rating (WSM-000095) — the player's current Madden snapshot, shown
+  // side-by-side with SPRT. Independent of season; never blocks the page.
+  const madden = attributesEnabled
+    ? await getPlayerMaddenRating(playerId, orgContext).catch(() => null)
+    : null;
+  const maddenAttributes = madden
+    ? orderedMaddenAttributes(madden.attributes)
+    : [];
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -207,6 +223,50 @@ export default async function PlayerProfilePage({
             <p className="mt-4 text-xs text-muted-foreground">
               SPRT Rating is our own metric derived from open NFL performance
               data (nflverse).
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {madden && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-lg font-semibold text-foreground">
+                Madden 26
+              </h3>
+              <span className="font-mono text-2xl font-bold text-primary">
+                {madden.overall}
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  OVR
+                </span>
+              </span>
+            </div>
+
+            {maddenAttributes.length > 0 && (
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+                {maddenAttributes.map((a) => (
+                  <div
+                    key={a.key}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <dt className="truncate text-xs text-muted-foreground">
+                      {a.label}
+                    </dt>
+                    <dd
+                      className={`shrink-0 font-mono text-sm font-semibold ${
+                        a.value >= 90 ? "text-accent" : "text-foreground"
+                      }`}
+                    >
+                      {a.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+
+            <p className="mt-4 text-xs text-muted-foreground">
+              Madden NFL 26 player ratings (EA Sports).
             </p>
           </CardContent>
         </Card>
