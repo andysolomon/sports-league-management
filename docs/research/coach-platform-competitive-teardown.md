@@ -53,6 +53,35 @@ ratings, mobile). The gap is **stat-keeping + export** and a **coach-owned (edit
 The real job is **fast, accurate, single-operator post-game entry** (often from the film) —
 which is exactly where MaxPreps is buggy and GameChanger is absent.
 
+## GameChanger ↔ MaxPreps sync — the integration model (and its cracks)
+
+How the loved tool feeds the mandated one (per GameChanger + MaxPreps support docs):
+
+- **MaxPreps is the system of record.** You build roster + schedule **in MaxPreps first**,
+  then import into GameChanger at team-creation ("Import MaxPreps Roster"). GameChanger
+  defers to MaxPreps.
+- **Stat sync is the payoff** — games scored in GameChanger auto-upload to the MaxPreps team
+  page. That's the whole reason coaches tolerate the setup.
+- **The coupling is brittle:**
+  - Roster import is **team-creation-only** — "no way to import the roster at a later time."
+  - MaxPreps schedule edits after setup **don't sync back**.
+  - **Dual-roster maintenance:** any player added in GameChanger "will also need to be added
+    to your roster on MaxPreps for the stats to sync." Mismatches silently break the sync —
+    hence whole support articles: "[Stats Not Syncing?](https://support.maxpreps.com/hc/en-us/articles/5450374047387-GameChanger-Stats-Not-Syncing-to-MaxPreps)", "[Unsuccessful Import](https://support.maxpreps.com/hc/en-us/articles/360015705333-Unsuccessful-Import-from-GameChanger)", and a **[Manual Stat Upload](https://help.gc.com/hc/en-us/articles/11298180524685-MaxPreps-Manual-Stat-Upload)** fallback.
+
+**Two weaknesses to exploit:**
+1. **Invert the system-of-record.** Be the coach's source of truth (their owned league —
+   roster + depth chart + stats in one place); treat MaxPreps as a **downstream export**, not
+   the master. GameChanger made MaxPreps the master and inherited all its friction.
+2. **Delete dual-roster maintenance.** One roster, one place. Our export carries our roster +
+   stats together, so there's no "did you also add them on MaxPreps?" failure mode.
+
+**Export path that needs no partnership:** MaxPreps accepts a **manual stat upload** file
+(the same mechanism as the Hudl export/import workaround). We can emit that file format and
+let coaches upload once — getting the eligibility mandate satisfied without becoming a
+contracted MaxPreps stat partner (which remains a later option). _Exact format = a
+primary-research to-do._
+
 ## Jobs-to-be-done — HS football coach
 
 | JTBD | Today's tool | sprtsmng |
@@ -87,8 +116,11 @@ fork-to-own model.
    single-operator; designed for after-the-game (incl. from film), not live HC scoring.
    **Bonus:** feeds the SPRT engine from **real HS games**, turning our rating into
    something no competitor has at the HS level.
-3. **MaxPreps-compatible export** — emit a stat file in MaxPreps' import format (they accept
-   80+ partners) so coaches never double-enter. This is the switching-cost killer.
+3. **MaxPreps-compatible export** — emit the **manual stat upload** file MaxPreps accepts (no
+   partnership required initially; same mechanism as the Hudl workaround), carrying **our**
+   roster + stats together so the dual-maintenance failure that plagues the GameChanger sync
+   never happens. This is the switching-cost killer. _Becoming a contracted stat partner is a
+   later upgrade._
 4. **Depth chart + development as the daily hub** — already built; polish for HS (OL/DL,
    special teams).
 5. **Schedule/practice + team comms** — GameChanger-parity hooks once the core lands.
