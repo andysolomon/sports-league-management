@@ -46,10 +46,10 @@ export default function PixelLineChart({
   if (points.length === 0) {
     return (
       <svg
-        width={width}
-        height={height}
+        viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={ariaLabel}
+        className="h-auto w-full"
         style={{ imageRendering: "pixelated" }}
       >
         <rect
@@ -99,10 +99,10 @@ export default function PixelLineChart({
 
   return (
     <svg
-      width={width}
-      height={height}
+      viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={ariaLabel}
+      className="h-auto w-full"
       style={{ imageRendering: "pixelated" }}
     >
       {/* Plot area background */}
