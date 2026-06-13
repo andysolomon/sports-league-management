@@ -2168,10 +2168,14 @@ export const getPlayerDevelopment = queryGeneric({
   args: { playerId: v.id("players") },
   returns: v.array(playerDevelopmentRowValidator),
   handler: async (ctx, args) => {
+    // Workspace fork (WSM-000116): development history lives on the reference
+    // player, so resolve through sourcePlayerId when present.
+    const player = await ctx.db.get(args.playerId);
+    const developmentPlayerId = player?.sourcePlayerId ?? args.playerId;
     const rows = await ctx.db
       .query("playerAttributes")
       .withIndex("by_playerId_seasonId", (q) =>
-        q.eq("playerId", args.playerId),
+        q.eq("playerId", developmentPlayerId),
       )
       .collect();
 
@@ -2401,9 +2405,13 @@ export const getPlayerMaddenRating = queryGeneric({
   args: { playerId: v.id("players") },
   returns: v.union(maddenRatingValidator, v.null()),
   handler: async (ctx, args) => {
+    // Workspace fork (WSM-000116): ratings live on the reference player, so
+    // resolve through sourcePlayerId when present.
+    const player = await ctx.db.get(args.playerId);
+    const ratingPlayerId = player?.sourcePlayerId ?? args.playerId;
     const row = await ctx.db
       .query("maddenRatings")
-      .withIndex("by_playerId", (q) => q.eq("playerId", args.playerId))
+      .withIndex("by_playerId", (q) => q.eq("playerId", ratingPlayerId))
       .unique();
     if (!row) return null;
     return {
@@ -2428,9 +2436,11 @@ export const getTeamMaddenOveralls = queryGeneric({
       .collect();
     const out: Array<{ playerId: string; overall: number }> = [];
     for (const player of players) {
+      // Workspace fork (WSM-000116): resolve ratings via the source player.
+      const ratingPlayerId = player.sourcePlayerId ?? player._id;
       const row = await ctx.db
         .query("maddenRatings")
-        .withIndex("by_playerId", (q) => q.eq("playerId", player._id))
+        .withIndex("by_playerId", (q) => q.eq("playerId", ratingPlayerId))
         .unique();
       if (row) out.push({ playerId: player._id as string, overall: row.overall });
     }
