@@ -35,6 +35,7 @@ interface TeamManagementProps {
 type ModalState =
   | { type: "none" }
   | { type: "editTeam" }
+  | { type: "deleteTeam" }
   | { type: "addPlayer" }
   | { type: "editPlayer"; player: PlayerDto }
   | { type: "deletePlayer"; player: PlayerDto };
@@ -72,6 +73,25 @@ export default function TeamManagement({
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to delete player";
+      toast.error(message);
+      setIsDeleting(false);
+    }
+  }
+
+  async function handleDeleteTeam() {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/teams/${team.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Failed to remove team");
+      }
+      toast.success(`${team.name} removed`);
+      // The team no longer exists — return to its league rather than refresh.
+      router.push(`/dashboard/leagues/${team.leagueId}`);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to remove team";
       toast.error(message);
       setIsDeleting(false);
     }
@@ -201,14 +221,25 @@ export default function TeamManagement({
           <div className="flex items-start justify-between">
             <h2 className="text-2xl font-bold text-foreground">{team.name}</h2>
             {canManage && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setModal({ type: "editTeam" })}
-              >
-                <Pencil className="mr-1 h-3 w-3" />
-                Edit Team
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModal({ type: "editTeam" })}
+                >
+                  <Pencil className="mr-1 h-3 w-3" />
+                  Edit Team
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setModal({ type: "deleteTeam" })}
+                >
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  Remove Team
+                </Button>
+              </div>
             )}
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
@@ -368,6 +399,19 @@ export default function TeamManagement({
           isOpen
           isDeleting={isDeleting}
           onConfirm={() => handleDeletePlayer(modal.player.id)}
+          onCancel={() => setModal({ type: "none" })}
+        />
+      )}
+
+      {modal.type === "deleteTeam" && (
+        <DeleteConfirm
+          title="Remove Team"
+          message={`Remove ${team.name} and its ${players.length} player${
+            players.length === 1 ? "" : "s"
+          } from this league? This also deletes the team's depth charts and schedule. This action cannot be undone.`}
+          isOpen
+          isDeleting={isDeleting}
+          onConfirm={handleDeleteTeam}
           onCancel={() => setModal({ type: "none" })}
         />
       )}
