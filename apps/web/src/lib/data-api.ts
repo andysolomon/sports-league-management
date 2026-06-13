@@ -229,6 +229,7 @@ const refs = {
     PlayerDto | null
   >("sports:updatePlayer"),
   deletePlayer: mutationRef<{ playerId: string }, null>("sports:deletePlayer"),
+  deleteTeam: mutationRef<{ teamId: string }, null>("sports:deleteTeam"),
   setSyncEnabled: mutationRef<{ enabled: boolean }, null>("sports:setSyncEnabled"),
   writeSyncReport: mutationRef<{ reportJson: string }, null>(
     "sports:writeSyncReport",
@@ -757,6 +758,10 @@ export async function updatePlayer(
 
 export async function deletePlayer(id: string): Promise<null> {
   return mutateConvex(refs.deletePlayer, { playerId: id });
+}
+
+export async function deleteTeam(id: string): Promise<null> {
+  return mutateConvex(refs.deleteTeam, { teamId: id });
 }
 
 export async function createTeam(input: CreateTeamInput): Promise<TeamDto> {

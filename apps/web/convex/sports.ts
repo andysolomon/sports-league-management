@@ -1160,6 +1160,84 @@ export const deletePlayer = mutationGeneric({
   },
 });
 
+/*
+ * Remove a single team from a league (WSM-000120). Cascades every row that
+ * references the team so no orphans survive:
+ *   players → their playerAttributes / maddenRatings / rosterAssignments
+ *   depthChartEntries (all seasons) · rosterAuditLog
+ *   fixtures (home or away) → their gameResults
+ * Scoped to one team, so it stays comfortably inside mutation limits (unlike a
+ * whole forked-NFL league delete). Idempotent: a missing team is a no-op.
+ */
+export const deleteTeam = mutationGeneric({
+  args: { teamId: v.id("teams") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) return null;
+
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    for (const player of players) {
+      const attributes = await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_playerId_seasonId", (q) =>
+          q.eq("playerId", player._id),
+        )
+        .collect();
+      for (const row of attributes) await ctx.db.delete(row._id);
+
+      const madden = await ctx.db
+        .query("maddenRatings")
+        .withIndex("by_playerId", (q) => q.eq("playerId", player._id))
+        .collect();
+      for (const row of madden) await ctx.db.delete(row._id);
+
+      const assignments = await ctx.db
+        .query("rosterAssignments")
+        .withIndex("by_playerId", (q) => q.eq("playerId", player._id))
+        .collect();
+      for (const row of assignments) await ctx.db.delete(row._id);
+
+      await ctx.db.delete(player._id);
+    }
+
+    const depthEntries = await ctx.db
+      .query("depthChartEntries")
+      .withIndex("by_team_season", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    for (const row of depthEntries) await ctx.db.delete(row._id);
+
+    const auditRows = await ctx.db
+      .query("rosterAuditLog")
+      .withIndex("by_teamId_createdAt", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    for (const row of auditRows) await ctx.db.delete(row._id);
+
+    const homeFixtures = await ctx.db
+      .query("fixtures")
+      .withIndex("by_homeTeamId", (q) => q.eq("homeTeamId", args.teamId))
+      .collect();
+    const awayFixtures = await ctx.db
+      .query("fixtures")
+      .withIndex("by_awayTeamId", (q) => q.eq("awayTeamId", args.teamId))
+      .collect();
+    for (const fixture of [...homeFixtures, ...awayFixtures]) {
+      const results = await ctx.db
+        .query("gameResults")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fixture._id))
+        .collect();
+      for (const row of results) await ctx.db.delete(row._id);
+      await ctx.db.delete(fixture._id);
+    }
+
+    await ctx.db.delete(args.teamId);
+    return null;
+  },
+});
+
 export const upsertSeason = mutationGeneric({
   args: {
     name: v.string(),
