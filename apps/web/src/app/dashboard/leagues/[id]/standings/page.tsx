@@ -9,7 +9,7 @@ import {
   getSeasons,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StandingsTable from "@/components/schedule/StandingsTable";
 import { trackStandingsView } from "@/lib/analytics";
 

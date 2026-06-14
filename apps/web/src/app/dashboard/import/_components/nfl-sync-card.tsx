@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { SyncConfig, SyncReport } from "@sports-management/shared-types";
-import { Button } from "@/components/ui/8bit/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/8bit/card";
+} from "@/components/ui/card";
 import {
   Loader2,
   RefreshCw,

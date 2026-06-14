@@ -13,8 +13,8 @@ import { derivePositionGroup } from "@/lib/position-group";
 import { orderedComponents } from "@/lib/ratings/component-labels";
 import { orderedMaddenAttributes } from "@/lib/madden/attributes";
 import { playerAttributesV1 } from "@/lib/flags";
-import { Card, CardContent } from "@/components/ui/8bit/card";
-import { Button } from "@/components/ui/8bit/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { UserCircle } from "lucide-react";
 

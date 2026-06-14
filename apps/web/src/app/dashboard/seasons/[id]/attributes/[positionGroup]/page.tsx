@@ -7,7 +7,7 @@ import {
   getSeasonAttributesByPosition,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   POSITION_GROUPS,
   isValidPositionGroup,

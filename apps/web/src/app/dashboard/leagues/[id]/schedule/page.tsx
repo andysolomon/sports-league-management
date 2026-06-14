@@ -12,7 +12,7 @@ import {
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 

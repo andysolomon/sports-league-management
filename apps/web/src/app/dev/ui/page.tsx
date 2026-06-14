@@ -1,11 +1,10 @@
 "use client";
 
 /*
- * WSM-000136 P1 — Professional theme kitchen sink.
+ * WSM-000136 — Design system kitchen sink.
  *
- * Renders the base shadcn `ui/*` primitives inside `.theme-pro` (monochrome
- * dark) so the new design language can be reviewed in isolation, without
- * touching the live 8bit-themed pages. Dev-only; not linked from nav.
+ * Renders the base shadcn `ui/*` primitives in the app's standard theme for
+ * quick visual review. Dev-only; not linked from nav.
  */
 import { Button } from "@/components/ui/button";
 import {
@@ -55,15 +54,14 @@ function Section({
 
 export default function UiKitchenSinkPage() {
   return (
-    <div className="theme-pro min-h-screen px-6 py-10 font-sans">
+    <div className="min-h-screen px-6 py-10 font-sans">
       <div className="mx-auto max-w-4xl space-y-12">
         <header className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
             Design system — professional theme
           </h1>
           <p className="text-sm text-muted-foreground">
-            WSM-000136 P1 · monochrome, dark-first · base shadcn/ui primitives
-            scoped to <code className="font-mono">.theme-pro</code>.
+            WSM-000136 · standard shadcn/ui · dark-first.
           </p>
         </header>
 

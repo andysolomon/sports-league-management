@@ -9,17 +9,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/8bit/dialog";
-import { Button } from "@/components/ui/8bit/button";
-import { Label } from "@/components/ui/8bit/label";
-import { Input } from "@/components/ui/8bit/input";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/8bit/select";
+} from "@/components/ui/select";
 import { createFixtureAction } from "@/app/dashboard/leagues/[id]/schedule/actions";
 
 export interface FixtureFormDialogProps {

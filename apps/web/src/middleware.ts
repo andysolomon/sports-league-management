@@ -19,6 +19,8 @@ const isPublicRoute = createRouteMatcher([
   // components with fixed data and no session. They 404 in production via the
   // route handler; here they just bypass Clerk so Playwright can screenshot.
   "/dev/visual/(.*)",
+  // Design-system kitchen sink (WSM-000136) — presentational only, no session.
+  "/dev/ui",
   // Public viewer routes (Phase 2 / WSM-000061). Per-league opt-in via
   // `leagues.isPublic`; the route handlers enforce visibility through
   // publicLeagueGuard. Middleware just doesn't gate them on Clerk auth.

@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/8bit/button";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/8bit/select";
+} from "@/components/ui/select";
 import { ORG_ROLES, roleLabel, type OrgRole } from "@/lib/permissions";
 
 interface Member {

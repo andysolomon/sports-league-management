@@ -3,7 +3,7 @@ import Link from "next/link";
 import { schedulesStandingsV1 } from "@/lib/flags";
 import { computeStandingsPublic } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StandingsTable from "@/components/schedule/StandingsTable";
 import { trackStandingsView } from "@/lib/analytics";
 

@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getLeague, getLeagueVisibility } from "@/lib/data-api";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy } from "lucide-react";
 import InviteForm from "./invite-form";

@@ -16,8 +16,8 @@ import {
   type PlayerSnapshot,
 } from "@/lib/attributes/headline-columns";
 import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/8bit/button";
-import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { UserCircle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
