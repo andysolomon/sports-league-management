@@ -98,7 +98,7 @@ export default async function PlayerDevelopmentPage({
             {headlineDelta !== null ? (
               <span
                 className={`font-mono text-sm ${
-                  headlineDelta >= 0 ? "text-accent" : "text-destructive"
+                  headlineDelta >= 0 ? "text-green-500" : "text-destructive"
                 }`}
               >
                 {headlineDelta >= 0 ? "+" : ""}
@@ -161,7 +161,7 @@ export default async function PlayerDevelopmentPage({
                         row.delta === null
                           ? "text-muted-foreground"
                           : row.delta >= 0
-                            ? "text-accent"
+                            ? "text-green-500"
                             : "text-destructive"
                       }`}
                     >

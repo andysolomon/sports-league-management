@@ -47,9 +47,9 @@ export default async function BillingPage({
       </div>
 
       {params.success && (
-        <Card className="border-accent/30 bg-green-50">
+        <Card className="border-green-500/30 bg-green-500/10">
           <CardContent className="py-4">
-            <p className="text-sm text-accent">
+            <p className="text-sm text-green-400">
               ✓ Subscription activated. Welcome to {config.name}!
             </p>
           </CardContent>
@@ -57,9 +57,9 @@ export default async function BillingPage({
       )}
 
       {params.cancelled && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-500/30 bg-amber-500/10">
           <CardContent className="py-4">
-            <p className="text-sm text-amber-900">
+            <p className="text-sm text-amber-300">
               Checkout cancelled. You can upgrade anytime below.
             </p>
           </CardContent>

@@ -41,7 +41,7 @@ export function Features() {
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Features
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -58,7 +58,7 @@ export function Features() {
             return (
               <Card key={feature.title} className="border-border/80">
                 <CardHeader>
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-primary">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-foreground">
                     <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <CardTitle className="mt-4 text-xl">{feature.title}</CardTitle>

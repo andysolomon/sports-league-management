@@ -20,7 +20,7 @@ export async function LegalLayout({
   return (
     <>
       <MarketingHeader isSignedIn={isSignedIn} />
-      <main id="main" className="bg-white">
+      <main id="main" className="bg-background">
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
           {/* Disclaimer banner */}
           <div className="mb-8 rounded-lg border border-amber-200 bg-amber-50 p-4">

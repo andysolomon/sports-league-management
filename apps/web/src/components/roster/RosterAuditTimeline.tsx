@@ -24,10 +24,10 @@ const ACTION_FILTERS: Array<{
 ];
 
 const ACTION_COLORS: Record<RosterAuditAction, string> = {
-  assign: "bg-green-100 text-accent border-accent/30",
+  assign: "bg-green-500/15 text-green-400 border-green-500/30",
   remove: "bg-destructive/15 text-destructive border-destructive/30",
-  status_change: "bg-amber-100 text-amber-800 border-amber-200",
-  depth_reorder: "bg-blue-100 text-primary border-blue-200",
+  status_change: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+  depth_reorder: "bg-blue-500/15 text-blue-400 border-blue-500/30",
 };
 
 type AuditSnapshot = {

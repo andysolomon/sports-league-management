@@ -28,11 +28,11 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="border-t border-border bg-white py-20 sm:py-24"
+      className="border-t border-border bg-background py-20 sm:py-24"
     >
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             How it works
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -50,7 +50,7 @@ export function HowItWorks() {
               <li key={step.number} className="relative">
                 <div className="flex flex-col items-start">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-primary">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-foreground">
                       <Icon className="h-6 w-6" aria-hidden="true" />
                     </div>
                     <span className="text-sm font-semibold tracking-wide text-muted-foreground">

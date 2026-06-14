@@ -53,7 +53,7 @@ export default function LockBanner({
     <div
       className={`mb-4 flex items-center justify-between rounded-md border p-3 ${
         optimisticLocked
-          ? "border-amber-300 bg-amber-50"
+          ? "border-amber-500/30 bg-amber-500/10"
           : "border-border bg-card"
       }`}
     >

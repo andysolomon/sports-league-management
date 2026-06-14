@@ -177,7 +177,7 @@ export default async function PlayerProfilePage({
                 SPRT Rating
               </h3>
               {rating.weightedOverall != null && (
-                <span className="font-mono text-2xl font-bold text-accent">
+                <span className="font-mono text-2xl font-bold text-green-500">
                   {Math.round(rating.weightedOverall)}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
                     OVR
@@ -202,7 +202,7 @@ export default async function PlayerProfilePage({
                       aria-label={c.label}
                     >
                       <div
-                        className="h-full rounded-full bg-accent"
+                        className="h-full rounded-full bg-foreground"
                         style={{ width: `${Math.min(100, (c.value / 99) * 100)}%` }}
                       />
                     </div>
@@ -249,7 +249,7 @@ export default async function PlayerProfilePage({
                     </dt>
                     <dd
                       className={`shrink-0 font-mono text-sm font-semibold ${
-                        a.value >= 90 ? "text-accent" : "text-foreground"
+                        a.value >= 90 ? "text-green-500" : "text-foreground"
                       }`}
                     >
                       {a.value}

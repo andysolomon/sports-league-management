@@ -149,7 +149,7 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
                           {team.name}
                         </span>
                         {isAdded ? (
-                          <span className="flex shrink-0 items-center gap-1 text-xs text-accent">
+                          <span className="flex shrink-0 items-center gap-1 text-xs text-green-500">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Added
                           </span>

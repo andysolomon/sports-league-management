@@ -62,7 +62,7 @@ export default function InviteForm({ orgId }: { orgId: string }) {
       </form>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       {success && (
-        <p className="mt-2 text-sm text-accent">Invitation sent successfully!</p>
+        <p className="mt-2 text-sm text-green-500">Invitation sent successfully!</p>
       )}
     </div>
   );

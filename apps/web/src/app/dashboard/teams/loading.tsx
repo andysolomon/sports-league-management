@@ -8,7 +8,7 @@ export default function TeamsLoading() {
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-lg border border-border bg-white p-6"
+            className="rounded-lg border border-border bg-card p-6"
           >
             <Skeleton className="h-5 w-32" />
             <div className="mt-3 space-y-2">
