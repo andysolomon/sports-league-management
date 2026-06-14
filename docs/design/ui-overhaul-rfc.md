@@ -40,8 +40,9 @@ shadows, type and spacing do the work, motion is subtle and purposeful.
 - Canvas `#0a0a0a` / elevated surface `#111`, card `#0f0f0f`; borders
   `#1f1f1f`–`#262626` (hairline, ~1px).
 - Text: foreground `#ededed`, muted `#a1a1a1`, faint `#ededed/40`.
-- One accent (keep a sport-forward hue — refined orange or shift to Vercel-blue;
-  decision below). Semantic green/red/amber for status only.
+- **Monochrome** — no brand accent. The UI is white/gray on near-black; color is
+  reserved for **semantic status only** (green/red/amber). Interactive emphasis
+  comes from contrast/weight, not hue. (Decision §9.1.)
 - Radius: `8–10px` (md), `6px` (sm). Elevation: borders + faint inner glow, not
   drop shadows.
 - Type: a Geist-like grotesk (`Geist`/`Inter`) + `Geist Mono` for numbers/IDs.
@@ -126,12 +127,18 @@ degrade gracefully when a data source is empty (e.g. no season yet).
 - **Data:** team coordinates needed for the map (geocode/store) — scope into
   phase 4.
 
-## 9. Decisions to confirm
+## 9. Decisions (resolved 2026-06-14)
 
-1. **Accent:** keep a refined sport-orange, or move to Vercel-blue / monochrome?
-2. **Themes:** dark-only, or dark-first with light retained?
-3. **Geo:** dashboard **map** + optional **globe** hero — or globe only?
-4. **8bit:** full replacement (recommended) vs. keep as a selectable theme?
+1. **Accent → Monochrome + status only.** White/gray on near-black; no brand
+   hue. Color is reserved for semantic status (green/red/amber). Emphasis via
+   contrast and weight, not color.
+2. **Themes → Dark-first, light retained.** Dark is the default and the design
+   target; a working light theme is kept (tokens defined for both).
+3. **Geo → Map + optional globe.** A dashboard league **map** (teams by metro +
+   regions list) is the utility piece; a `cobe` **globe** hero is optional on the
+   public/landing page.
+4. **8bit → Full replacement.** Retire `ui/8bit/*` + `retro.css` + retro tokens;
+   migrate all ~55 importers to the new primitives.
 
 ## 10. Out of scope (separate tracks)
 
