@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { PlayerDto } from "@sports-management/shared-types";
 import { DataTable, type Column } from "@/components/data-table";
 import { StatusBadge } from "@/components/status-badge";
@@ -28,6 +29,8 @@ interface PlayersTableProps {
 }
 
 export function PlayersTable({ players }: PlayersTableProps) {
+  const router = useRouter();
+
   if (players.length === 0) {
     return (
       <EmptyState
@@ -44,6 +47,7 @@ export function PlayersTable({ players }: PlayersTableProps) {
       columns={columns}
       searchPlaceholder="Search players..."
       searchKeys={["name", "position", "status"]}
+      onRowClick={(p) => router.push(`/dashboard/players/${p.id}`)}
     />
   );
 }

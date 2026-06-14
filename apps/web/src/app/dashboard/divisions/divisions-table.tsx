@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { DivisionDto } from "@sports-management/shared-types";
 import { DataTable, type Column } from "@/components/data-table";
 import { EmptyState } from "@/components/empty-state";
@@ -22,6 +23,8 @@ interface DivisionsTableProps {
 }
 
 export function DivisionsTable({ divisions }: DivisionsTableProps) {
+  const router = useRouter();
+
   if (divisions.length === 0) {
     return (
       <EmptyState
@@ -38,6 +41,7 @@ export function DivisionsTable({ divisions }: DivisionsTableProps) {
       columns={columns}
       searchPlaceholder="Search divisions..."
       searchKeys={["name", "leagueName"]}
+      onRowClick={(d) => router.push(`/dashboard/divisions/${d.id}`)}
     />
   );
 }
