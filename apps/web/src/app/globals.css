@@ -109,6 +109,61 @@
 }
 
 /*
+ * `.theme-pro` — WSM-000136 P1: the professional dark "Vercel/Convex" theme,
+ * scoped to a subtree (the /dev/ui kitchen sink for now) so it can be developed
+ * and reviewed WITHOUT recoloring the 55 live 8bit pages mid-overhaul. Overrides
+ * the same shadcn `--color-*` vars by cascade, so any base `ui/*` primitive
+ * rendered inside picks it up automatically. Monochrome: white/gray on
+ * near-black; color reserved for semantic status. Later phases migrate pages
+ * into this theme and finally flip it global (RFC §7 P6).
+ */
+.theme-pro {
+  --color-background: #0a0a0a;
+  --color-foreground: #ededed;
+  --color-card: #0f0f0f;
+  --color-card-foreground: #ededed;
+  --color-popover: #111111;
+  --color-popover-foreground: #ededed;
+
+  /* Monochrome "primary" = near-white surface, near-black text (Vercel CTA). */
+  --color-primary: #ededed;
+  --color-primary-foreground: #0a0a0a;
+  --color-secondary: #1a1a1a;
+  --color-secondary-foreground: #ededed;
+  --color-muted: #1a1a1a;
+  --color-muted-foreground: #a1a1a1;
+  --color-accent: #1f1f1f; /* subtle hover/active surface */
+  --color-accent-foreground: #ededed;
+  --color-destructive: #e5484d; /* semantic only */
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: #262626; /* hairline */
+  --color-input: #262626;
+  --color-ring: #ededed;
+
+  /* Soft, modern corners (the 8bit theme pins these to 0). */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* Drop the pixel display font — headings use the grotesk body sans. */
+  --font-display: var(--font-sans);
+
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.theme-pro h1,
+.theme-pro h2,
+.theme-pro h3,
+.theme-pro h4,
+.theme-pro h5,
+.theme-pro h6 {
+  letter-spacing: -0.01em; /* tighter, professional */
+}
+
+/*
  * Headings — Pixel display font.
  *
  * Maps every h1-h6 to --font-display so any page-level heading picks up
