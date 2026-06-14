@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import {
   getTeam,
   getPlayersByTeam,
-  getSeasons,
   getTeamAttributeSnapshots,
   getTeamMaddenOveralls,
   getLeagueClaimable,
@@ -55,23 +54,16 @@ export default async function TeamDetailPage({
     offerFork = await getLeagueClaimable(team.leagueId).catch(() => false);
   }
 
-  // WSM-000090: attribute snapshots feed the Madden stat columns.
-  // Phase 2-gated; resolved against the league's active season, same
-  // rule as the depth-chart page. Failure here must never take down
-  // the roster — columns simply don't render.
+  // WSM-000090: attribute snapshots feed the SPRT stat columns. Phase 2-gated;
+  // the season is resolved server-side — including workspace forks, which read
+  // their source league's current season (WSM-000122). Failure here must never
+  // take down the roster — columns simply don't render.
   let snapshots: ReadonlyMap<string, PlayerSnapshot> = new Map();
   let maddenOveralls: ReadonlyMap<string, number> = new Map();
   if (await playerAttributesV1()) {
-    const seasons = await getSeasons([team.leagueId]).catch(() => []);
-    const activeSeason =
-      seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
-    if (activeSeason) {
-      snapshots = await getTeamAttributeSnapshots(
-        id,
-        activeSeason.id,
-        orgContext,
-      ).catch(() => new Map());
-    }
+    snapshots = await getTeamAttributeSnapshots(id, orgContext).catch(
+      () => new Map(),
+    );
     // WSM-000095: Madden overall per player, shown beside SPRT. Season-agnostic.
     maddenOveralls = await getTeamMaddenOveralls(id, orgContext).catch(
       () => new Map(),

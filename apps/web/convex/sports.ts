@@ -1,7 +1,7 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
 import { computeStandingsPure } from "./lib/standings";
@@ -2609,10 +2609,47 @@ export const getSeasonAttributesByPosition = queryGeneric({
  * breakdown. Point read via by_playerId_seasonId. Access control lives
  * in the data-api layer, matching getPlayer.
  */
+/*
+ * The season whose attributes represent a league's "current" SPRT ratings —
+ * the active season, else whichever exists first. Matches the convention the
+ * dashboard pages used to apply caller-side; centralized here so workspace
+ * forks (whose own league has no seasons) resolve against their SOURCE league.
+ */
+async function currentSeasonId(
+  ctx: QueryCtx,
+  leagueId: Id<"leagues">,
+): Promise<Id<"seasons"> | null> {
+  const seasons = await ctx.db
+    .query("seasons")
+    .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+    .collect();
+  const chosen =
+    seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+  return chosen ? chosen._id : null;
+}
+
+/*
+ * The league whose seasons + players carry a team's SPRT attributes. A forked
+ * workspace team (WSM-000122) holds no attributes of its own — they live on the
+ * source reference team's players/season — so resolve through `sourceTeamId`.
+ */
+async function attributeLeagueId(
+  ctx: QueryCtx,
+  team: { leagueId: Id<"leagues">; sourceTeamId?: Id<"teams"> },
+): Promise<Id<"leagues">> {
+  if (team.sourceTeamId) {
+    const source = await ctx.db.get(team.sourceTeamId);
+    if (source) return source.leagueId;
+  }
+  return team.leagueId;
+}
+
 export const getPlayerSeasonAttributes = queryGeneric({
   args: {
     playerId: v.id("players"),
-    seasonId: v.id("seasons"),
+    // Optional + ignored now that the season is self-resolved (WSM-000122) —
+    // kept so a previously-deployed web passing it still validates.
+    seasonId: v.optional(v.id("seasons")),
   },
   returns: v.union(
     v.object({
@@ -2623,11 +2660,22 @@ export const getPlayerSeasonAttributes = queryGeneric({
     v.null(),
   ),
   handler: async (ctx, args) => {
+    const player = await ctx.db.get(args.playerId);
+    if (!player) return null;
+    // Workspace fork: attributes live on the source player, keyed by the source
+    // league's current season — so resolve both from the source (WSM-000122).
+    const attrPlayer = player.sourcePlayerId
+      ? ((await ctx.db.get(player.sourcePlayerId)) ?? player)
+      : player;
+    const seasonId = await currentSeasonId(ctx as QueryCtx, attrPlayer.leagueId);
+    if (!seasonId) return null;
     const candidates = await ctx.db
       .query("playerAttributes")
-      .withIndex("by_playerId_seasonId", (q) => q.eq("playerId", args.playerId))
+      .withIndex("by_playerId_seasonId", (q) =>
+        q.eq("playerId", attrPlayer._id),
+      )
       .collect();
-    const row = candidates.find((r) => r.seasonId === args.seasonId);
+    const row = candidates.find((r) => r.seasonId === seasonId);
     if (!row) return null;
     return {
       weightedOverall: row.weightedOverall,
@@ -2640,7 +2688,8 @@ export const getPlayerSeasonAttributes = queryGeneric({
 export const getTeamAttributeSnapshots = queryGeneric({
   args: {
     teamId: v.id("teams"),
-    seasonId: v.id("seasons"),
+    // Optional + ignored now that the season is self-resolved (WSM-000122).
+    seasonId: v.optional(v.id("seasons")),
   },
   returns: v.array(
     v.object({
@@ -2650,6 +2699,18 @@ export const getTeamAttributeSnapshots = queryGeneric({
     }),
   ),
   handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) return [];
+
+    // For a forked team this is the source reference league's current season;
+    // for a native team, its own. Both source players' attributes are keyed by
+    // this season (WSM-000122).
+    const seasonId = await currentSeasonId(
+      ctx as QueryCtx,
+      await attributeLeagueId(ctx as QueryCtx, team),
+    );
+    if (!seasonId) return [];
+
     const players = await ctx.db
       .query("players")
       .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
@@ -2657,12 +2718,15 @@ export const getTeamAttributeSnapshots = queryGeneric({
 
     const snapshots = [];
     for (const player of players) {
+      const attrPlayerId = player.sourcePlayerId ?? player._id;
       // Leading-field index form — see ingestPlayerAttributes for why.
       const candidates = await ctx.db
         .query("playerAttributes")
-        .withIndex("by_playerId_seasonId", (q) => q.eq("playerId", player._id))
+        .withIndex("by_playerId_seasonId", (q) =>
+          q.eq("playerId", attrPlayerId),
+        )
         .collect();
-      const row = candidates.find((r) => r.seasonId === args.seasonId);
+      const row = candidates.find((r) => r.seasonId === seasonId);
       if (!row) continue;
       snapshots.push({
         playerId: player._id as string,
