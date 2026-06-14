@@ -300,7 +300,7 @@ const refs = {
     }>
   >("sports:getSeasonAttributesByPosition"),
   getPlayerSeasonAttributes: queryRef<
-    { playerId: string; seasonId: string },
+    { playerId: string },
     {
       weightedOverall: number | null;
       attributes: Record<string, number>;
@@ -308,7 +308,7 @@ const refs = {
     } | null
   >("sports:getPlayerSeasonAttributes"),
   getTeamAttributeSnapshots: queryRef<
-    { teamId: string; seasonId: string },
+    { teamId: string },
     Array<{
       playerId: string;
       weightedOverall: number | null;
@@ -745,10 +745,11 @@ export async function getPlayersByTeam(
   return queryConvex(refs.listPlayersByTeam, { teamId });
 }
 
-/** WSM-000093: one player's SPRT snapshot for the profile breakdown. */
+/** WSM-000093: one player's SPRT snapshot for the profile breakdown. The
+ *  season is resolved server-side (the source season for workspace forks),
+ *  so callers no longer pass one (WSM-000122). */
 export async function getPlayerSeasonAttributes(
   playerId: string,
-  seasonId: string,
   orgContext: OrgContext,
 ): Promise<{
   weightedOverall: number | null;
@@ -759,23 +760,20 @@ export async function getPlayerSeasonAttributes(
   if (!player) return null;
   const teamLeagueId = await getTeamLeagueId(player.teamId);
   requireLeagueAccessLocal(teamLeagueId, orgContext);
-  return queryConvex(refs.getPlayerSeasonAttributes, { playerId, seasonId });
+  return queryConvex(refs.getPlayerSeasonAttributes, { playerId });
 }
 
-/** WSM-000090: playerId → snapshot map for the roster stat columns. */
+/** WSM-000090: playerId → snapshot map for the roster stat columns. Season
+ *  resolved server-side, including workspace forks (WSM-000122). */
 export async function getTeamAttributeSnapshots(
   teamId: string,
-  seasonId: string,
   orgContext: OrgContext,
 ): Promise<
   Map<string, { weightedOverall: number | null; attributes: Record<string, number> }>
 > {
   const teamLeagueId = await getTeamLeagueId(teamId);
   requireLeagueAccessLocal(teamLeagueId, orgContext);
-  const rows = await queryConvex(refs.getTeamAttributeSnapshots, {
-    teamId,
-    seasonId,
-  });
+  const rows = await queryConvex(refs.getTeamAttributeSnapshots, { teamId });
   return new Map(
     rows.map((r) => [
       r.playerId,

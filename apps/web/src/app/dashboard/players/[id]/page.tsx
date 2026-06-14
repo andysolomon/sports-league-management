@@ -5,7 +5,6 @@ import Image from "next/image";
 import {
   getPlayer,
   getTeam,
-  getSeasons,
   getPlayerSeasonAttributes,
   getPlayerMaddenRating,
 } from "@/lib/data-api";
@@ -58,23 +57,18 @@ export default async function PlayerProfilePage({
   const age = player.dateOfBirth ? ageFrom(player.dateOfBirth) : null;
   const attributesEnabled = await playerAttributesV1();
 
-  // SPRT rating breakdown (WSM-000093) — the player's snapshot for the
-  // league's active season, when Phase 2 is on. Never blocks the page.
+  // SPRT rating breakdown (WSM-000093) — the player's current-season snapshot
+  // when Phase 2 is on. The season is resolved server-side, including workspace
+  // forks that read their source player/season (WSM-000122). Never blocks the
+  // page.
   let rating: {
     weightedOverall: number | null;
     attributes: Record<string, number>;
   } | null = null;
   if (attributesEnabled && team) {
-    const seasons = await getSeasons([team.leagueId]).catch(() => []);
-    const activeSeason =
-      seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
-    if (activeSeason) {
-      rating = await getPlayerSeasonAttributes(
-        playerId,
-        activeSeason.id,
-        orgContext,
-      ).catch(() => null);
-    }
+    rating = await getPlayerSeasonAttributes(playerId, orgContext).catch(
+      () => null,
+    );
   }
   const components = rating ? orderedComponents(rating.attributes) : [];
 
