@@ -3,18 +3,14 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getTeams } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
-import { teamsInScope } from "@/lib/subscription-scope";
 
 export default async function TeamsPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  // Scoped to the active league (WSM-000103), then to the à la carte imported
-  // teams within it (WSM-000100) — a partial import shows only those teams.
-  const { orgContext, activeLeagueId } = await resolveActiveLeague(userId);
-  const teams = activeLeagueId
-    ? teamsInScope(await getTeams([activeLeagueId]), activeLeagueId, orgContext)
-    : [];
+  // Scoped to the active league (WSM-000103).
+  const { activeLeagueId } = await resolveActiveLeague(userId);
+  const teams = activeLeagueId ? await getTeams([activeLeagueId]) : [];
 
   return (
     <div>

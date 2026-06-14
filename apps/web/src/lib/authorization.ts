@@ -4,7 +4,6 @@ import {
   getTeamLeagueId,
   getLeagueOrgId,
   getTeamOwnerOrgId,
-  claimTeam,
   forkTeamToWorkspace,
 } from "./data-api";
 import { requireOrgAdmin, resolveBestOrgRole } from "./org-context";
@@ -80,23 +79,9 @@ export async function authorizeTeamAdmin(
 }
 
 /**
- * Claim a team into an org the user administers (WSM-000109). Verifies the
- * user is an `org:admin` of `orgId` before claiming — the org-admin gate the
- * Convex mutation can't enforce itself. Returns the claimed team's leagueId.
- */
-export async function claimTeamForOrg(
-  userId: string,
-  orgId: string,
-  teamId: string,
-): Promise<{ leagueId: string }> {
-  await requireOrgAdmin(orgId, userId); // throws if not an admin of orgId
-  return claimTeam(userId, orgId, teamId);
-}
-
-/**
  * Fork a reference team into an org's private workspace (WSM-000114), verifying
- * the user admins the org first. The private-workspace replacement for
- * claimTeamForOrg under the isolation model (RFC §11).
+ * the user admins the org first. The private-workspace replacement for the old
+ * team-claim flow under the isolation model (RFC §11).
  */
 export async function forkTeamForOrg(
   userId: string,
