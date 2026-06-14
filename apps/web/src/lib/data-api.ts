@@ -174,7 +174,10 @@ const refs = {
   renameLeague: mutationRef<{ leagueId: string; name: string }, null>(
     "sports:renameLeague",
   ),
-  deleteLeague: mutationRef<{ leagueId: string }, null>("sports:deleteLeague"),
+  deleteLeagueBatch: mutationRef<
+    { leagueId: string; maxTeams?: number },
+    { done: boolean; teamsDeleted: number }
+  >("sports:deleteLeagueBatch"),
   clearSeasonPlayerAttributes: mutationRef<
     { seasonId: string },
     { deleted: number }
@@ -551,8 +554,24 @@ export async function renameLeague(
   await mutateConvex(refs.renameLeague, { leagueId, name });
 }
 
+/**
+ * Delete a league, batching the cascade over teams so a large forked league
+ * (NFL ~2,900 players) stays inside Convex mutation limits (WSM-000122). Loops
+ * until the backend reports `done`; a generous iteration cap guards against an
+ * unexpected non-terminating response.
+ */
 export async function deleteLeague(leagueId: string): Promise<void> {
-  await mutateConvex(refs.deleteLeague, { leagueId });
+  // ~10 teams/batch keeps each transaction comfortably bounded (a forked
+  // 32-team league finishes in ~4 round trips); the cap (400) covers leagues
+  // far larger than anything real before it would ever trip.
+  for (let i = 0; i < 400; i++) {
+    const { done } = await mutateConvex(refs.deleteLeagueBatch, {
+      leagueId,
+      maxTeams: 10,
+    });
+    if (done) return;
+  }
+  throw new Error("deleteLeague did not complete within the batch limit");
 }
 
 export async function getLeagues(visibleLeagueIds: string[]): Promise<LeagueDto[]> {
