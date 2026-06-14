@@ -8,7 +8,7 @@ import {
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { UpdateTeamInputSchema } from "@sports-management/api-contracts";
-import { authorizeTeamMutation } from "@/lib/authorization";
+import { authorizeTeamMutation, authorizeTeamAdmin } from "@/lib/authorization";
 import { handleApiError } from "@/lib/api-error";
 
 export async function GET(
@@ -79,10 +79,11 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const authorization = await authorizeTeamMutation(id, userId);
+  // Removing a whole team is admin-only — coaches manage rosters, not structure.
+  const authorization = await authorizeTeamAdmin(id, userId);
   if (!authorization.isAuthorized) {
     return NextResponse.json(
-      { error: "You are not authorized to manage this team" },
+      { error: "You are not authorized to remove this team" },
       { status: 403 },
     );
   }

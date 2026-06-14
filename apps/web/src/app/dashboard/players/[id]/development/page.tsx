@@ -9,7 +9,8 @@ import {
   getLeagueOrgId,
   getSeasons,
 } from "@/lib/data-api";
-import { resolveOrgContext, getUserRoleInOrg } from "@/lib/org-context";
+import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
+import { canManageRoster } from "@/lib/permissions";
 import { Card, CardContent } from "@/components/ui/8bit/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
 import AttributesUploadDialog from "@/components/attributes/AttributesUploadDialog";
@@ -46,9 +47,10 @@ export default async function PlayerDevelopmentPage({
     ? await getLeagueOrgId(playerLeagueId)
     : null;
   const role = playerOrgId
-    ? await getUserRoleInOrg(playerOrgId, userId)
+    ? await resolveOrgRole(playerOrgId, userId)
     : null;
-  const isAdmin = role === "org:admin";
+  // Coaches manage player development data too (WSM-000121).
+  const isAdmin = canManageRoster(role);
   const seasons = playerLeagueId ? await getSeasons([playerLeagueId]) : [];
 
   const points = development.map((row) => ({

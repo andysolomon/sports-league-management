@@ -16,7 +16,11 @@ interface DepthChartBoardProps {
   season: SeasonDto;
   players: PlayerDto[];
   entries: DepthChartEntryDto[];
+  /** Admin only: can toggle the season roster lock. */
   isAdmin: boolean;
+  /** Admin or coach: can reorder the depth chart. Viewers are read-only
+   *  (WSM-000121). Defaults true to preserve existing callers. */
+  canEdit?: boolean;
 }
 
 export default function DepthChartBoard({
@@ -27,6 +31,7 @@ export default function DepthChartBoard({
   players,
   entries,
   isAdmin,
+  canEdit = true,
 }: DepthChartBoardProps) {
   const [rosterLocked, setRosterLocked] = useState(season.rosterLocked);
 
@@ -102,7 +107,7 @@ export default function DepthChartBoard({
               leagueId={leagueId}
               positionSlot={positionSlot}
               players={slotPlayers}
-              disabled={rosterLocked}
+              disabled={rosterLocked || !canEdit}
             />
           ))}
         </div>

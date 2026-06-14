@@ -30,6 +30,12 @@ vi.mock("@/lib/org-context", () => ({
   requireOrgAdmin: mockRequireOrgAdmin,
 }));
 
+vi.mock("@/lib/data-api", () => ({
+  listOrgMemberRoles: vi.fn().mockResolvedValue([]),
+  setOrgMemberRole: vi.fn().mockResolvedValue(undefined),
+  deleteOrgMemberRole: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/api-error", () => ({
   handleApiError: vi.fn().mockReturnValue(
     new Response(JSON.stringify({ error: "Internal server error" }), {
@@ -111,7 +117,10 @@ describe("Members API", () => {
       const data = await res.json();
       expect(data).toHaveLength(2);
       expect(data[0].email).toBe("admin@test.com");
-      expect(data[1].role).toBe("org:member");
+      // Effective capability roles: org:admin → admin; org:member with no
+      // sub-role → viewer (WSM-000121).
+      expect(data[0].role).toBe("admin");
+      expect(data[1].role).toBe("viewer");
     });
   });
 
@@ -124,9 +133,17 @@ describe("Members API", () => {
       expect(res.status).toBe(400);
     });
 
+    it("returns 400 for an unknown role", async () => {
+      const res = await PATCH(
+        makeRequest({ memberUserId: "user_2", role: "org:member" }),
+        makeParams("org_1"),
+      );
+      expect(res.status).toBe(400);
+    });
+
     it("returns 400 when demoting last admin", async () => {
       const res = await PATCH(
-        makeRequest({ memberUserId: "user_1", role: "org:member" }),
+        makeRequest({ memberUserId: "user_1", role: "viewer" }),
         makeParams("org_1"),
       );
       expect(res.status).toBe(400);
@@ -134,10 +151,21 @@ describe("Members API", () => {
       expect(data.error).toBe("Cannot demote the last admin");
     });
 
-    it("returns 200 on role update", async () => {
+    it("returns 200 promoting a member to admin", async () => {
       mockUpdateMembership.mockResolvedValue({});
       const res = await PATCH(
-        makeRequest({ memberUserId: "user_2", role: "org:admin" }),
+        makeRequest({ memberUserId: "user_2", role: "admin" }),
+        makeParams("org_1"),
+      );
+      expect(res.status).toBe(200);
+      const data = await res.json();
+      expect(data.success).toBe(true);
+    });
+
+    it("returns 200 setting a member to coach", async () => {
+      mockUpdateMembership.mockResolvedValue({});
+      const res = await PATCH(
+        makeRequest({ memberUserId: "user_2", role: "coach" }),
         makeParams("org_1"),
       );
       expect(res.status).toBe(200);

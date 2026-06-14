@@ -149,6 +149,22 @@ export default defineSchema({
   }).index("by_key", ["key"]),
 
   /*
+   * Intra-org capability roles (WSM-000121).
+   *
+   * Clerk owns membership + the admin bit (org:admin). For org:member users we
+   * layer a finer capability role here — "coach" (manage rosters/players) or
+   * "viewer" (read-only). Absence of a row means viewer (the least-privilege
+   * default), so admins and brand-new members need no row. Orphan rows are
+   * harmless: callers always gate on live Clerk membership first, then consult
+   * this table only to split a member into coach vs viewer.
+   */
+  orgMemberRoles: defineTable({
+    orgId: v.string(),
+    userId: v.string(),
+    role: v.string(), // "coach" | "viewer"
+  }).index("by_orgId_userId", ["orgId", "userId"]),
+
+  /*
    * Phase 2 — `player_attributes_v1` (Sprint 6B).
    *
    * One row per player per season. Stores raw source payloads

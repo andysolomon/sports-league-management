@@ -9,7 +9,8 @@ import {
   getLeagueOrgId,
   getPlayer,
 } from "@/lib/data-api";
-import { getUserRoleInOrg, resolveOrgContext } from "@/lib/org-context";
+import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
+import { canManageRoster } from "@/lib/permissions";
 import { trackPlayerAttributesIngest } from "@/lib/analytics";
 
 export type AttributeSource = "pff" | "madden" | "admin";
@@ -59,8 +60,8 @@ export async function ingestPlayerAttributesAction(
   const orgId = await getLeagueOrgId(leagueId);
   if (!orgId) return { ok: false, error: "league_not_owned" };
 
-  const role = await getUserRoleInOrg(orgId, userId);
-  if (role !== "org:admin") return { ok: false, error: "not_admin" };
+  const role = await resolveOrgRole(orgId, userId);
+  if (!canManageRoster(role)) return { ok: false, error: "not_authorized" };
 
   // Parse raw JSON.
   let parsed: unknown;

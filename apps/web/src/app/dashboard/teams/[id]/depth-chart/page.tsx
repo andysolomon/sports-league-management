@@ -9,7 +9,8 @@ import {
   getDepthChartByTeamSeason,
   getLeagueOrgId,
 } from "@/lib/data-api";
-import { getUserRoleInOrg } from "@/lib/org-context";
+import { resolveOrgRole } from "@/lib/org-context";
+import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
 import DepthChartBoard from "@/components/depth-chart/DepthChartBoard";
 
 export default async function DepthChartPage({
@@ -37,9 +38,11 @@ export default async function DepthChartPage({
   const orgId = await getLeagueOrgId(team.leagueId);
   if (!orgId) notFound();
 
-  const role = await getUserRoleInOrg(orgId, userId);
+  const role = await resolveOrgRole(orgId, userId);
   if (!role) notFound();
-  const isAdmin = role === "org:admin";
+  // Coaches can edit the depth chart; only admins toggle the season lock.
+  const canEdit = canManageRoster(role);
+  const isAdmin = canManageOrgSettings(role);
 
   const seasons = await getSeasons([team.leagueId]);
   const activeSeason =
@@ -88,6 +91,7 @@ export default async function DepthChartPage({
         players={players}
         entries={entries}
         isAdmin={isAdmin}
+        canEdit={canEdit}
       />
     </div>
   );

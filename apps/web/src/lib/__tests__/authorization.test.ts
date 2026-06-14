@@ -5,12 +5,14 @@ const {
   mockGetLeagueOrgId,
   mockGetTeamOwnerOrgId,
   mockClaimTeam,
+  mockGetOrgMemberRole,
   mockGetOrganizationMembershipList,
 } = vi.hoisted(() => ({
   mockGetTeamLeagueId: vi.fn(),
   mockGetLeagueOrgId: vi.fn(),
   mockGetTeamOwnerOrgId: vi.fn(),
   mockClaimTeam: vi.fn(),
+  mockGetOrgMemberRole: vi.fn(),
   mockGetOrganizationMembershipList: vi.fn(),
 }));
 
@@ -19,6 +21,7 @@ vi.mock("../data-api", () => ({
   getLeagueOrgId: mockGetLeagueOrgId,
   getTeamOwnerOrgId: mockGetTeamOwnerOrgId,
   claimTeam: mockClaimTeam,
+  getOrgMemberRole: mockGetOrgMemberRole,
   getVisibleLeagueContext: vi.fn(),
 }));
 
@@ -38,8 +41,10 @@ import { authorizeTeamMutation, canManageTeam } from "../authorization";
 describe("authorizeTeamMutation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: team is unclaimed unless a test says otherwise.
+    // Default: team is unclaimed and members carry no sub-role (→ viewer)
+    // unless a test says otherwise.
     mockGetTeamOwnerOrgId.mockResolvedValue(null);
+    mockGetOrgMemberRole.mockResolvedValue(null);
   });
 
   it("returns not authorized when team is not found", async () => {
@@ -47,7 +52,7 @@ describe("authorizeTeamMutation", () => {
 
     const result = await authorizeTeamMutation("team_missing", "user_1");
 
-    expect(result).toEqual({ userId: "user_1", isAuthorized: false });
+    expect(result).toEqual({ userId: "user_1", role: null, isAuthorized: false });
   });
 
   it("returns not authorized for public league (null orgId)", async () => {
@@ -56,7 +61,7 @@ describe("authorizeTeamMutation", () => {
 
     const result = await authorizeTeamMutation("team_1", "user_1");
 
-    expect(result).toEqual({ userId: "user_1", isAuthorized: false });
+    expect(result).toEqual({ userId: "user_1", role: null, isAuthorized: false });
   });
 
   it("returns authorized for org admin", async () => {
@@ -68,10 +73,31 @@ describe("authorizeTeamMutation", () => {
 
     const result = await authorizeTeamMutation("team_1", "user_1");
 
-    expect(result).toEqual({ userId: "user_1", isAuthorized: true });
+    expect(result).toEqual({
+      userId: "user_1",
+      role: "admin",
+      isAuthorized: true,
+    });
   });
 
-  it("returns not authorized for org member (non-admin)", async () => {
+  it("authorizes a coach (org member with coach sub-role)", async () => {
+    mockGetTeamLeagueId.mockResolvedValue("league_1");
+    mockGetLeagueOrgId.mockResolvedValue("org_1");
+    mockGetOrganizationMembershipList.mockResolvedValue({
+      data: [{ organization: { id: "org_1" }, role: "org:member" }],
+    });
+    mockGetOrgMemberRole.mockResolvedValue("coach");
+
+    const result = await authorizeTeamMutation("team_1", "user_1");
+
+    expect(result).toEqual({
+      userId: "user_1",
+      role: "coach",
+      isAuthorized: true,
+    });
+  });
+
+  it("denies a viewer (org member, no sub-role)", async () => {
     mockGetTeamLeagueId.mockResolvedValue("league_1");
     mockGetLeagueOrgId.mockResolvedValue("org_1");
     mockGetOrganizationMembershipList.mockResolvedValue({
@@ -80,7 +106,11 @@ describe("authorizeTeamMutation", () => {
 
     const result = await authorizeTeamMutation("team_1", "user_1");
 
-    expect(result).toEqual({ userId: "user_1", isAuthorized: false });
+    expect(result).toEqual({
+      userId: "user_1",
+      role: "viewer",
+      isAuthorized: false,
+    });
   });
 
   it("returns not authorized for non-member of org", async () => {
@@ -92,12 +122,12 @@ describe("authorizeTeamMutation", () => {
 
     const result = await authorizeTeamMutation("team_1", "user_1");
 
-    expect(result).toEqual({ userId: "user_1", isAuthorized: false });
+    expect(result).toEqual({ userId: "user_1", role: null, isAuthorized: false });
   });
 
-  // WSM-000109: a claimed team in a shared/public league is editable by an
-  // admin of the org that claimed it, even though the league org is null.
-  it("authorizes an admin of the team's owner org (claimed team)", async () => {
+  // WSM-000109/121: a forked team in a shared/public league is editable by an
+  // admin (or coach) of the org that owns it, even though the league org is null.
+  it("authorizes an admin of the team's owner org (forked team)", async () => {
     mockGetTeamLeagueId.mockResolvedValue("league_pub");
     mockGetLeagueOrgId.mockResolvedValue(null); // public template league
     mockGetTeamOwnerOrgId.mockResolvedValue("org_coach");
@@ -105,12 +135,16 @@ describe("authorizeTeamMutation", () => {
       data: [{ organization: { id: "org_coach" }, role: "org:admin" }],
     });
 
-    const result = await authorizeTeamMutation("team_claimed", "user_1");
+    const result = await authorizeTeamMutation("team_forked", "user_1");
 
-    expect(result).toEqual({ userId: "user_1", isAuthorized: true });
+    expect(result).toEqual({
+      userId: "user_1",
+      role: "admin",
+      isAuthorized: true,
+    });
   });
 
-  it("denies a non-admin member of the team's owner org", async () => {
+  it("denies a viewer member of the team's owner org", async () => {
     mockGetTeamLeagueId.mockResolvedValue("league_pub");
     mockGetLeagueOrgId.mockResolvedValue(null);
     mockGetTeamOwnerOrgId.mockResolvedValue("org_coach");
@@ -118,9 +152,13 @@ describe("authorizeTeamMutation", () => {
       data: [{ organization: { id: "org_coach" }, role: "org:member" }],
     });
 
-    const result = await authorizeTeamMutation("team_claimed", "user_1");
+    const result = await authorizeTeamMutation("team_forked", "user_1");
 
-    expect(result).toEqual({ userId: "user_1", isAuthorized: false });
+    expect(result).toEqual({
+      userId: "user_1",
+      role: "viewer",
+      isAuthorized: false,
+    });
   });
 });
 

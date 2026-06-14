@@ -8,7 +8,8 @@ import {
   updateRosterStatus as updateRosterStatusMutation,
   getLeagueOrgId,
 } from "@/lib/data-api";
-import { getUserRoleInOrg } from "@/lib/org-context";
+import { resolveOrgRole } from "@/lib/org-context";
+import { canManageRoster } from "@/lib/permissions";
 import {
   trackRosterAssign,
   trackRosterLimitBlocked,
@@ -22,9 +23,11 @@ async function requireFlag() {
   if (!enabled) throw new Error("flag_disabled");
 }
 
-async function requireOrgMembership(orgId: string, userId: string) {
-  const role = await getUserRoleInOrg(orgId, userId);
-  if (!role) throw new Error("not_authorized");
+// Roster edits need a manager seat (admin or coach) — viewers are read-only
+// (WSM-000121).
+async function requireRosterManager(orgId: string, userId: string) {
+  const role = await resolveOrgRole(orgId, userId);
+  if (!canManageRoster(role)) throw new Error("not_authorized");
   return role;
 }
 
@@ -41,7 +44,7 @@ export async function assignPlayerToRosterAction(input: {
 
   const orgId = await getLeagueOrgId(input.leagueId);
   if (!orgId) throw new Error("not_authorized");
-  await requireOrgMembership(orgId, userId);
+  await requireRosterManager(orgId, userId);
 
   try {
     const result = await assignPlayerToRosterMutation({
@@ -82,7 +85,7 @@ export async function removePlayerFromRosterAction(input: {
 
   const orgId = await getLeagueOrgId(input.leagueId);
   if (!orgId) throw new Error("not_authorized");
-  await requireOrgMembership(orgId, userId);
+  await requireRosterManager(orgId, userId);
 
   await removePlayerFromRosterMutation({
     assignmentId: input.assignmentId,
@@ -109,7 +112,7 @@ export async function updateRosterStatusAction(input: {
 
   const orgId = await getLeagueOrgId(input.leagueId);
   if (!orgId) throw new Error("not_authorized");
-  await requireOrgMembership(orgId, userId);
+  await requireRosterManager(orgId, userId);
 
   const result = await updateRosterStatusMutation({
     assignmentId: input.assignmentId,
