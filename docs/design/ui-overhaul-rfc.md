@@ -50,15 +50,23 @@ shadows, type and spacing do the work, motion is subtle and purposeful.
 
 ## 4. Component strategy
 
-Re-skin to a clean shadcn baseline and **retire 8bit**:
-1. Define the new tokens in `globals.css` (+ a `theme` mapping).
-2. Build/restyle the base primitives under `src/components/ui/*` to the new
-   tokens (button, card, input, select, dialog, table, badge, tabs, command,
-   sheet, dropdown, skeleton, separator, tooltip).
-3. **Migrate the 55 importers** from `ui/8bit/*` → `ui/*` (codemod the import
+**Lean on shadcn/ui (https://ui.shadcn.com) as the baseline — install from the
+registry, extend/compose only when a need isn't met. Do not hand-roll what the
+registry already provides.** Then **retire 8bit**:
+1. Define the new monochrome tokens in `globals.css` (+ a `theme` mapping). Since
+   shadcn is token-driven (CSS variables), the look comes almost entirely from
+   tokens — minimal per-component overrides.
+2. Pull the needed primitives via the shadcn CLI (`npx shadcn@latest add …`):
+   button, card, input, select, dialog, table, badge, tabs, command, sheet,
+   dropdown-menu, skeleton, separator, tooltip, sonner, accordion, popover,
+   scroll-area. They land under `src/components/ui/*` as editable source we own.
+3. **Extend, don't fork:** wrap/compose for app-specific needs (e.g. the
+   `DataTable`, status badges, role chips) rather than re-implementing the base.
+   New bespoke pieces (bento widgets, map, globe) compose these primitives.
+4. **Migrate the 55 importers** from `ui/8bit/*` → `ui/*` (codemod the import
    paths; APIs are near-identical). Delete `ui/8bit/*` + `retro.css` at the end.
-4. Lock primitives with a Storybook-less "kitchen sink" route (`/dev/ui`) for
-   visual review, and rebaseline the Playwright visual specs.
+5. Lock primitives with a "kitchen sink" route (`/dev/ui`) for visual review, and
+   rebaseline the Playwright visual specs.
 
 ## 5. Navigation shell
 
