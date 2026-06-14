@@ -173,3 +173,20 @@ h1, h2, h3, h4, h5, h6 {
 .skip-to-content:focus {
   top: 0;
 }
+
+/*
+ * Prevent iOS Safari from auto-zooming the page when a form control is focused
+ * (WSM-000085). Safari zooms whenever the focused field's font-size is < 16px,
+ * and our controls use text-sm (14px). Bump them to 16px on touch devices only
+ * — `pointer: coarse` targets phones/tablets and leaves mouse-driven desktops
+ * untouched. `!important` is needed to beat the per-component Tailwind text-*
+ * utilities. We intentionally do NOT pin maximum-scale on the viewport, which
+ * would suppress the zoom but also disable pinch-to-zoom (an a11y regression).
+ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

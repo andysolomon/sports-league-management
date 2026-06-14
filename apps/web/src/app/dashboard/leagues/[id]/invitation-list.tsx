@@ -39,10 +39,12 @@ export default function InvitationList({ orgId }: { orgId: string }) {
         {invitations.map((inv) => (
           <li
             key={inv.id}
-            className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
+            className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
           >
-            <span className="text-foreground">{inv.emailAddress}</span>
-            <div className="flex items-center gap-2">
+            <span className="min-w-0 truncate text-foreground">
+              {inv.emailAddress}
+            </span>
+            <div className="flex shrink-0 items-center gap-2">
               <Badge variant={inv.status === "pending" ? "secondary" : "outline"}>
                 {inv.status}
               </Badge>

@@ -41,8 +41,11 @@ export default function InviteForm({ orgId }: { orgId: string }) {
   return (
     <div>
       <h3 className="mb-3 text-sm font-semibold text-foreground">Invite Member</h3>
-      <form onSubmit={handleSubmit} className="flex items-end gap-3">
-        <div className="flex-1">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-3 sm:flex-row sm:items-end"
+      >
+        <div className="min-w-0 flex-1">
           <Label htmlFor="invite-email">Email address</Label>
           <Input
             id="invite-email"
@@ -53,7 +56,7 @@ export default function InviteForm({ orgId }: { orgId: string }) {
             required
           />
         </div>
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting} className="shrink-0">
           {submitting ? "Sending..." : "Send Invite"}
         </Button>
       </form>

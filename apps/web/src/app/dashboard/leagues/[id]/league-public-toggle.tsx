@@ -33,17 +33,18 @@ export default function LeaguePublicToggle({
 
   return (
     <div className="flex flex-col gap-2 border-2 border-border bg-card p-4">
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
             Public viewer
           </p>
           <p className="text-xs text-muted-foreground">
             When on, anyone can view player development charts at{" "}
-            <code className="font-mono">/leagues/{leagueId}/...</code>
+            <code className="break-all font-mono">/leagues/{leagueId}/...</code>
           </p>
         </div>
         <Button
+          className="shrink-0"
           variant={isPublic ? "destructive" : "default"}
           onClick={handleToggle}
           disabled={pending}

@@ -79,7 +79,7 @@ export default async function LeagueDetailPage({
                 leagueId={id}
                 initialIsPublic={visibility?.isPublic ?? false}
               />
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-x-4 gap-y-2">
                 <Link
                   href={`/dashboard/leagues/${id}/members`}
                   className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
