@@ -33,7 +33,9 @@ export default async function TeamDetailPage({
   const back =
     from === "leagues"
       ? { href: "/dashboard/leagues", label: "Back to Leagues" }
-      : { href: "/dashboard/teams", label: "Back to Teams" };
+      : from === "divisions"
+        ? { href: "/dashboard/divisions", label: "Back to Divisions" }
+        : { href: "/dashboard/teams", label: "Back to Teams" };
   const orgContext = await resolveOrgContext(userId);
 
   // canManage = admin or coach (roster/players/edit); canDelete = admin only
