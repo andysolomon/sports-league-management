@@ -222,10 +222,12 @@ export default function TeamManagement({
     <>
       <Card className="mb-8">
         <CardContent className="pt-6">
-          <div className="flex items-start justify-between">
-            <h2 className="text-2xl font-bold text-foreground">{team.name}</h2>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h2 className="min-w-0 break-words text-2xl font-bold text-foreground">
+              {team.name}
+            </h2>
             {(canManage || canDelete) && (
-              <div className="flex gap-2">
+              <div className="flex shrink-0 flex-wrap gap-2">
                 {canManage && (
                   <Button
                     variant="outline"
