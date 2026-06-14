@@ -7,8 +7,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-} from "@/components/ui/8bit/card";
-import { Button } from "@/components/ui/8bit/button";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Trophy, CheckCircle2, Plus } from "lucide-react";
@@ -149,7 +149,7 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
                           {team.name}
                         </span>
                         {isAdded ? (
-                          <span className="flex shrink-0 items-center gap-1 text-xs text-accent">
+                          <span className="flex shrink-0 items-center gap-1 text-xs text-green-500">
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             Added
                           </span>

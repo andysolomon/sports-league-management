@@ -4,14 +4,14 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LeagueImportSchema } from "@sports-management/api-contracts";
 import type { ImportResult } from "@sports-management/shared-types";
-import { Button } from "@/components/ui/8bit/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/8bit/card";
+} from "@/components/ui/card";
 import { Upload, FileJson, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 type ValidationError = {
@@ -278,9 +278,9 @@ export function ImportForm() {
 
       {/* Result */}
       {state.step === "done" && (
-        <Card className="border-accent/30">
+        <Card className="border-green-500/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-accent">
+            <CardTitle className="flex items-center gap-2 text-green-500">
               <CheckCircle2 className="h-5 w-5" />
               Import Complete
             </CardTitle>
@@ -294,7 +294,7 @@ export function ImportForm() {
                       {entity}
                     </p>
                     <p className="text-sm">
-                      <span className="font-semibold text-accent">
+                      <span className="font-semibold text-green-500">
                         {state.result.created[entity]} created
                       </span>
                       {", "}

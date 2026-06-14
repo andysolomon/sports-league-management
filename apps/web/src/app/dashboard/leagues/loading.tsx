@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/8bit/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LeaguesLoading() {
   return (
@@ -8,7 +8,7 @@ export default function LeaguesLoading() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-lg border border-border bg-white p-6"
+            className="rounded-lg border border-border bg-card p-6"
           >
             <Skeleton className="h-6 w-40" />
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

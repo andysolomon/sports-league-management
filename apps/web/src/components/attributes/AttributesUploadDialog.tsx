@@ -9,17 +9,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/8bit/dialog";
-import { Button } from "@/components/ui/8bit/button";
-import { Label } from "@/components/ui/8bit/label";
-import { Textarea } from "@/components/ui/8bit/textarea";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/8bit/select";
+} from "@/components/ui/select";
 import {
   ingestPlayerAttributesAction,
   type AttributeSource,

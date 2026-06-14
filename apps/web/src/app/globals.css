@@ -1,65 +1,89 @@
 @import "tailwindcss";
 
 /*
- * Sprint 3 — 8-bit re-skin (WSM-000027 design tokens).
+ * Standard shadcn/ui theme (WSM-000136 — UI overhaul global cutover).
  *
- * Modern indie pixel-art palette (Stardew/Celeste-leaning, modern colors,
- * high-contrast borders for crisp pixel edges). Replaces the previous
- * minimal token set so 8bitcn/ui components inherit the new aesthetic
- * via the standard shadcn token names (--primary, --background, etc.).
- *
- * Pixel font registration lives in WSM-000028.
+ * Neutral, token-driven shadcn theme. Tokens live in :root (light) and .dark
+ * (dark) as `--<name>`; `@theme inline` maps them to the Tailwind v4
+ * `--color-<name>` namespace that powers bg-*/text-*/border-* utilities, so
+ * every shadcn `ui/*` primitive inherits the palette. The app renders dark-first
+ * (`.dark` is set on <html>); the light set is retained for a future toggle.
  */
-@theme {
-  /* Typography (WSM-000028)
-   *
-   * Three font roles registered via next/font in layout.tsx:
-   *   --font-geist-sans     body sans, default
-   *   --font-geist-mono     monospace (code, IDs, metrics, timestamps)
-   *   --font-pixelify-sans  display / heading / 8-bit accents
-   *
-   * `--font-sans` and `--font-mono` are the Tailwind v4 names that power
-   * `font-sans` / `font-mono` utility classes; we point them at Geist.
-   * `--font-display` is a sprtsmng-specific role mapped to the pixel font
-   * and applied to h1-h6 below + the .retro class override.
-   */
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+@theme inline {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
-  --font-display:
-    var(--font-pixelify-sans), "Press Start 2P", ui-monospace, monospace;
 
-  /* Surfaces */
-  --color-background: #f5e6d3;       /* warm cream paper */
-  --color-foreground: #2a2438;       /* deep purple-black */
-  --color-card: #fff8e7;             /* lighter paper for cards */
-  --color-card-foreground: #2a2438;
-  --color-popover: #fff8e7;
-  --color-popover-foreground: #2a2438;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  /* Brand + semantic */
-  --color-primary: #d97757;          /* warm sport orange */
-  --color-primary-foreground: #fff8e7;
-  --color-secondary: #5b6c8c;        /* dusky blue-grey */
-  --color-secondary-foreground: #fff8e7;
-  --color-muted: #d6c4ad;            /* warm tan */
-  --color-muted-foreground: #6b5e54;
-  --color-accent: #84a07c;           /* sage green for positive states */
-  --color-accent-foreground: #2a2438;
-  --color-destructive: #c04040;      /* pixel red */
-  --color-destructive-foreground: #fff8e7;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 
-  /* Structure */
-  --color-border: #2a2438;           /* high-contrast crisp pixel borders */
-  --color-input: #d6c4ad;
-  --color-ring: #d97757;
-
-  /* Radii — chunky 8-bit means crisp corners. 0 everywhere except sm. */
-  --radius-sm: 0px;
-  --radius-md: 0px;
-  --radius-lg: 0px;
-  --radius-xl: 4px;
-
-  /* Existing animation tokens preserved */
   --animate-in: enter 0.2s ease-out;
   --animate-out: exit 0.2s ease-in;
 
@@ -78,138 +102,18 @@
   }
 }
 
-/*
- * Dark mode — deep night purple-blue, warm cream foreground. Triggered
- * by the standard shadcn .dark class on <html> or <body>. Tokens mirror
- * the light set so consumers using bg-primary / text-foreground / etc.
- * automatically swap.
- */
-.dark {
-  --color-background: #1a1a2e;
-  --color-foreground: #e6dcc6;
-  --color-card: #232342;
-  --color-card-foreground: #e6dcc6;
-  --color-popover: #232342;
-  --color-popover-foreground: #e6dcc6;
-
-  --color-primary: #ff6b35;
-  --color-primary-foreground: #1a1a2e;
-  --color-secondary: #5b6c8c;
-  --color-secondary-foreground: #e6dcc6;
-  --color-muted: #2e2e4f;
-  --color-muted-foreground: #9b9bb1;
-  --color-accent: #6dad6d;
-  --color-accent-foreground: #1a1a2e;
-  --color-destructive: #ff5252;
-  --color-destructive-foreground: #1a1a2e;
-
-  --color-border: #e6dcc6;
-  --color-input: #2e2e4f;
-  --color-ring: #ff6b35;
+@layer base {
+  * {
+    border-color: var(--color-border);
+    outline-color: var(--color-ring);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
 }
 
-/*
- * `.theme-pro` — WSM-000136 P1: the professional dark "Vercel/Convex" theme,
- * scoped to a subtree (the /dev/ui kitchen sink for now) so it can be developed
- * and reviewed WITHOUT recoloring the 55 live 8bit pages mid-overhaul. Overrides
- * the same shadcn `--color-*` vars by cascade, so any base `ui/*` primitive
- * rendered inside picks it up automatically. Monochrome: white/gray on
- * near-black; color reserved for semantic status. Later phases migrate pages
- * into this theme and finally flip it global (RFC §7 P6).
- */
-.theme-pro {
-  --color-background: #0a0a0a;
-  --color-foreground: #ededed;
-  --color-card: #0f0f0f;
-  --color-card-foreground: #ededed;
-  --color-popover: #111111;
-  --color-popover-foreground: #ededed;
-
-  /* Monochrome "primary" = near-white surface, near-black text (Vercel CTA). */
-  --color-primary: #ededed;
-  --color-primary-foreground: #0a0a0a;
-  --color-secondary: #1a1a1a;
-  --color-secondary-foreground: #ededed;
-  --color-muted: #1a1a1a;
-  --color-muted-foreground: #a1a1a1;
-  --color-accent: #1f1f1f; /* subtle hover/active surface */
-  --color-accent-foreground: #ededed;
-  --color-destructive: #e5484d; /* semantic only */
-  --color-destructive-foreground: #ffffff;
-
-  --color-border: #262626; /* hairline */
-  --color-input: #262626;
-  --color-ring: #ededed;
-
-  /* Soft, modern corners (the 8bit theme pins these to 0). */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
-
-  /* Drop the pixel display font — headings use the grotesk body sans. */
-  --font-display: var(--font-sans);
-
-  background-color: var(--color-background);
-  color: var(--color-foreground);
-}
-
-.theme-pro h1,
-.theme-pro h2,
-.theme-pro h3,
-.theme-pro h4,
-.theme-pro h5,
-.theme-pro h6 {
-  letter-spacing: -0.01em; /* tighter, professional */
-}
-
-/*
- * Headings — Pixel display font.
- *
- * Maps every h1-h6 to --font-display so any page-level heading picks up
- * the 8-bit aesthetic without per-component opt-in. Tracking is loosened
- * slightly because Pixelify Sans renders chunky at default tracking.
- */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
-  letter-spacing: 0.02em;
-}
-
-/*
- * `.retro` is shipped by 8bitcn/ui in src/components/ui/8bit/retro.css
- * with `font-family: "Press Start 2P", ...`. Override it here so 8bit
- * components inherit Pixelify Sans (loaded via next/font) instead of
- * pulling Press Start 2P off Google Fonts via @import. Keeps payload
- * out of the critical path and matches the chosen heading font.
- */
-.retro {
-  font-family: var(--font-display) !important;
-}
-
-/*
- * Optional scanline overlay — apply to any element to get a subtle CRT
- * scanline texture. Off by default; opt-in per surface.
- */
-.scanlines {
-  position: relative;
-}
-
-.scanlines::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.06) 0px,
-    rgba(0, 0, 0, 0.06) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  z-index: 1;
-}
-
-/* Skip to content link for accessibility (preserved from prior tokens) */
+/* Skip-to-content link for accessibility. */
 .skip-to-content {
   position: absolute;
   top: -100%;
@@ -221,8 +125,7 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 0.875rem;
   font-weight: 500;
   text-decoration: none;
-  border-radius: 0;
-  border: 2px solid var(--color-foreground);
+  border-radius: var(--radius-sm);
 }
 
 .skip-to-content:focus {

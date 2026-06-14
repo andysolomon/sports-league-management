@@ -16,8 +16,8 @@ import {
   type PlayerSnapshot,
 } from "@/lib/attributes/headline-columns";
 import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/8bit/button";
-import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { UserCircle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -160,7 +160,7 @@ export default function TeamManagement({
               render: (p: RosterRow) => {
                 const ovr = snapshots.get(p.id as string)?.weightedOverall;
                 return ovr != null ? (
-                  <span className="font-mono font-semibold text-accent">
+                  <span className="font-mono font-semibold text-green-500">
                     {Math.round(ovr)}
                   </span>
                 ) : (

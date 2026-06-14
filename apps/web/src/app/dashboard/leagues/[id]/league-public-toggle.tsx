@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/8bit/button";
+import { Button } from "@/components/ui/button";
 import { setLeaguePublicAction } from "./actions";
 
 export interface LeaguePublicToggleProps {

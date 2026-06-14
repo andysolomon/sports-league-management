@@ -3,7 +3,7 @@ import Link from "next/link";
 import { playerAttributesV1 } from "@/lib/flags";
 import { getPlayerDevelopmentPublic } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
-import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Card, CardContent } from "@/components/ui/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
 import { seasonYearLabel } from "@/lib/attributes/season-label";
 import { trackPlayerAttributesView } from "@/lib/analytics";
@@ -73,7 +73,7 @@ export default async function PublicPlayerDevelopmentPage({
             {headlineDelta !== null ? (
               <span
                 className={`font-mono text-sm ${
-                  headlineDelta >= 0 ? "text-accent" : "text-destructive"
+                  headlineDelta >= 0 ? "text-green-500" : "text-destructive"
                 }`}
               >
                 {headlineDelta >= 0 ? "+" : ""}
@@ -136,7 +136,7 @@ export default async function PublicPlayerDevelopmentPage({
                         row.delta === null
                           ? "text-muted-foreground"
                           : row.delta >= 0
-                            ? "text-accent"
+                            ? "text-green-500"
                             : "text-destructive"
                       }`}
                     >

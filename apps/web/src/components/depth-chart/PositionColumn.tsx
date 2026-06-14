@@ -94,7 +94,7 @@ export default function PositionColumn({
 
   return (
     <section
-      className="rounded-md border bg-white"
+      className="rounded-md border bg-card"
       aria-label={`${positionSlot} depth chart`}
     >
       <header className="flex items-center justify-between border-b px-3 py-2">

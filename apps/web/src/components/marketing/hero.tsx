@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/8bit/button";
+import { Button } from "@/components/ui/button";
 
 interface HeroProps {
   isSignedIn: boolean;
@@ -11,14 +11,14 @@ export function MarketingHero({ isSignedIn }: HeroProps) {
     <section className="relative overflow-hidden">
       {/* Soft gradient background */}
       <div
-        className="absolute inset-0 -z-10 bg-gradient-to-b from-blue-50/60 via-white to-white"
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-muted/20 via-background to-background"
         aria-hidden="true"
       />
 
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-32">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-primary">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
             Free for one team, forever
           </p>
 

@@ -11,7 +11,7 @@ import {
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
-import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Card, CardContent } from "@/components/ui/card";
 import PixelLineChart from "@/components/attributes/PixelLineChart";
 import AttributesUploadDialog from "@/components/attributes/AttributesUploadDialog";
 import { seasonYearLabel } from "@/lib/attributes/season-label";
@@ -98,7 +98,7 @@ export default async function PlayerDevelopmentPage({
             {headlineDelta !== null ? (
               <span
                 className={`font-mono text-sm ${
-                  headlineDelta >= 0 ? "text-accent" : "text-destructive"
+                  headlineDelta >= 0 ? "text-green-500" : "text-destructive"
                 }`}
               >
                 {headlineDelta >= 0 ? "+" : ""}
@@ -161,7 +161,7 @@ export default async function PlayerDevelopmentPage({
                         row.delta === null
                           ? "text-muted-foreground"
                           : row.delta >= 0
-                            ? "text-accent"
+                            ? "text-green-500"
                             : "text-destructive"
                       }`}
                     >

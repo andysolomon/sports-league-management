@@ -29,10 +29,10 @@ const screenshots = [
 
 export function Screenshots() {
   return (
-    <section className="border-t border-border bg-white py-20 sm:py-24">
+    <section className="border-t border-border bg-background py-20 sm:py-24">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-primary">
+          <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             See it in action
           </p>
           <h2 className="mt-2 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">

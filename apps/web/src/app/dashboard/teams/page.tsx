@@ -20,7 +20,7 @@ export default async function TeamsPage() {
           <Link
             key={team.id}
             href={`/dashboard/teams/${team.id}`}
-            className="rounded-lg border border-border bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+            className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
           >
             <h3 className="text-lg font-semibold text-foreground">{team.name}</h3>
             <dl className="mt-3 space-y-1 text-sm text-muted-foreground">
