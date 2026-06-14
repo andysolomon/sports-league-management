@@ -109,10 +109,6 @@ const refs = {
   getTeamOwnerOrgId: queryRef<{ teamId: string }, string | null>(
     "sports:getTeamOwnerOrgId",
   ),
-  claimTeam: mutationRef<
-    { userId: string; orgId: string; teamId: string },
-    { leagueId: string }
-  >("sports:claimTeam"),
   forkTeamToWorkspace: mutationRef<
     { orgId: string; sourceTeamId: string },
     { teamId: string; leagueId: string; created: boolean }
@@ -237,13 +233,6 @@ const refs = {
     { leagueId: string; token: string | null },
     null
   >("sports:setLeagueInviteToken"),
-  subscribeToLeague: mutationRef<
-    { userId: string; leagueId: string; teamIds?: string[] },
-    null
-  >("sports:subscribeToLeague"),
-  unsubscribeFromLeague: mutationRef<{ userId: string; leagueId: string }, null>(
-    "sports:unsubscribeFromLeague",
-  ),
   createTeam: mutationRef<CreateTeamInput, TeamDto>("sports:createTeam"),
   updateTeam: mutationRef<
     { teamId: string } & UpdateTeamInput,
@@ -647,18 +636,6 @@ export async function getTeamOwnerOrgId(
 }
 
 /**
- * WSM-000109: claim a team into an org. Raw wrapper — the caller MUST verify
- * the user is an admin of `orgId` first (see claimTeamForOrg in authorization).
- */
-export async function claimTeam(
-  userId: string,
-  orgId: string,
-  teamId: string,
-): Promise<{ leagueId: string }> {
-  return mutateConvex(refs.claimTeam, { userId, orgId, teamId });
-}
-
-/**
  * WSM-000114: fork a reference team into the org's private workspace. Raw
  * wrapper — caller MUST verify org admin first (see forkTeamForOrg).
  */
@@ -878,21 +855,6 @@ export async function upsertSeason(input: {
   status: string;
 }): Promise<{ dto: SeasonDto; created: boolean }> {
   return mutateConvex(refs.upsertSeason, input);
-}
-
-export async function subscribeToLeague(
-  userId: string,
-  leagueId: string,
-  teamIds?: string[],
-): Promise<void> {
-  await mutateConvex(refs.subscribeToLeague, { userId, leagueId, teamIds });
-}
-
-export async function unsubscribeFromLeague(
-  userId: string,
-  leagueId: string,
-): Promise<void> {
-  await mutateConvex(refs.unsubscribeFromLeague, { userId, leagueId });
 }
 
 export async function readSyncConfig(): Promise<SyncConfig> {
