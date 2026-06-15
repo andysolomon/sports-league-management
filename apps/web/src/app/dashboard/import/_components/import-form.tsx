@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LeagueImportSchema } from "@sports-management/api-contracts";
 import type { ImportResult } from "@sports-management/shared-types";
+import { csvToLeagueImport } from "@/lib/csv-import";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -55,21 +56,44 @@ export function ImportForm() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback((file: File) => {
+    const isCsv =
+      file.name.toLowerCase().endsWith(".csv") || file.type === "text/csv";
     const reader = new FileReader();
     reader.onload = (e) => {
-      let json: unknown;
-      try {
-        json = JSON.parse(e.target?.result as string);
-      } catch {
-        setState({
-          step: "invalid",
-          fileName: file.name,
-          errors: { formErrors: ["File is not valid JSON"], fieldErrors: {} },
-        });
-        return;
+      const text = e.target?.result as string;
+      let payload: unknown;
+
+      if (isCsv) {
+        const { payload: csvPayload, rowErrors } = csvToLeagueImport(text);
+        if (rowErrors.length > 0 || csvPayload === null) {
+          setState({
+            step: "invalid",
+            fileName: file.name,
+            errors: {
+              formErrors:
+                rowErrors.length > 0
+                  ? rowErrors
+                  : ["Could not read any rows from the CSV file"],
+              fieldErrors: {},
+            },
+          });
+          return;
+        }
+        payload = csvPayload;
+      } else {
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          setState({
+            step: "invalid",
+            fileName: file.name,
+            errors: { formErrors: ["File is not valid JSON"], fieldErrors: {} },
+          });
+          return;
+        }
       }
 
-      const parsed = LeagueImportSchema.safeParse(json);
+      const parsed = LeagueImportSchema.safeParse(payload);
       if (!parsed.success) {
         setState({
           step: "invalid",
@@ -83,7 +107,7 @@ export function ImportForm() {
         step: "preview",
         fileName: file.name,
         preview: computePreview(parsed.data),
-        rawPayload: json,
+        rawPayload: payload,
       });
     };
     reader.readAsText(file);
@@ -152,10 +176,18 @@ export function ImportForm() {
       {/* File Upload Area */}
       <Card>
         <CardHeader>
-          <CardTitle>JSON Import</CardTitle>
+          <CardTitle>File Import</CardTitle>
           <CardDescription>
-            Upload a JSON file containing league, division, team, and player
-            data. Existing records are matched by name and updated.
+            Upload a JSON or CSV file containing league, division, team, and
+            player data. Existing records are matched by name and updated. See
+            the{" "}
+            <a
+              href="/dashboard/import/format"
+              className="font-medium text-primary hover:underline"
+            >
+              import format guide
+            </a>{" "}
+            for the exact schema, examples, and a generator prompt.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -169,19 +201,20 @@ export function ImportForm() {
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
             }}
-            aria-label="Upload JSON file"
+            aria-label="Upload import file"
           >
             <Upload className="mb-3 h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Drop a <code>.json</code> file here or click to browse
+              Drop a <code>.json</code> or <code>.csv</code> file here or click
+              to browse
             </p>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".json,application/json"
+              accept=".json,application/json,.csv,text/csv"
               onChange={handleInputChange}
               className="hidden"
-              aria-label="Choose JSON file"
+              aria-label="Choose import file"
             />
           </div>
         </CardContent>
