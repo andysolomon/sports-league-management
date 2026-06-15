@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, ChevronRight, CalendarDays, Trash2 } from "lucide-react";
+import { Users, ChevronRight, CalendarDays, Trash2, Upload } from "lucide-react";
 
 export default function LocalHomePage() {
   const provider = useLocalProvider();
@@ -108,12 +108,20 @@ export default function LocalHomePage() {
             required. Everything persists across reloads.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/local/schedule">
-            <CalendarDays className="mr-1.5 h-4 w-4" />
-            Schedule &amp; standings
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/local/import">
+              <Upload className="mr-1.5 h-4 w-4" />
+              Import
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/local/schedule">
+              <CalendarDays className="mr-1.5 h-4 w-4" />
+              Schedule &amp; standings
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Teams */}
