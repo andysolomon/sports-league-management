@@ -4,3 +4,7 @@ test-results/
 *.tsbuildinfo
 
 .env.local
+
+# Convex ai-files install (local tooling guidance, not source)
+/AGENTS.md
+/CLAUDE.md
