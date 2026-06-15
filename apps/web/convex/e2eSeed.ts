@@ -1,6 +1,19 @@
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+
+/*
+ * e2e seed fixtures (WSM-000139, fast-follow to WSM-000096).
+ *
+ * These mutations create/destroy real rows, so they are `internalMutation` —
+ * NOT callable by an anonymous `ConvexHttpClient` over the public Internet
+ * (anonymous calls get `404 FunctionPathNotFound`). The Playwright harness
+ * (`e2e/helpers/seed-roster.ts`, `seed-schedule.ts`) reaches them with an
+ * admin-keyed client (`CONVEX_ADMIN_KEY`), which is what authorizes internal
+ * calls. `assertSeedEnabled()` is a second, defense-in-depth gate so even a
+ * trusted caller can't seed a deployment where `CONVEX_ENABLE_E2E_SEED` is
+ * unset (e.g. prod). See [[reference_convex_security_model]].
+ */
 
 const FIXTURE_LEAGUE_PREFIX = "E2E:";
 const SEED_ACTOR = "e2e_seed_harness";
@@ -142,7 +155,7 @@ async function deleteFixtureByKey(
   return deleted;
 }
 
-export const createRosterFixture = mutation({
+export const createRosterFixture = internalMutation({
   args: {
     fixtureKey: v.string(),
     clerkOrgId: v.union(v.string(), v.null()),
@@ -239,7 +252,7 @@ export const createRosterFixture = mutation({
   },
 });
 
-export const resetRosterFixture = mutation({
+export const resetRosterFixture = internalMutation({
   args: { fixtureKey: v.string() },
   returns: v.object({ deleted: v.number() }),
   handler: async (ctx, args) => {
@@ -268,7 +281,7 @@ const scheduleFixtureResultValidator = v.object({
   awayTeamName: v.string(),
 });
 
-export const createScheduleFixture = mutation({
+export const createScheduleFixture = internalMutation({
   args: {
     fixtureKey: v.string(),
     clerkOrgId: v.union(v.string(), v.null()),
