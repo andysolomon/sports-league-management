@@ -5,9 +5,16 @@ model ([org-workspace-data-model-rfc](./org-workspace-data-model-rfc.md)), the i
 (#248), and the "Free for one team, forever" landing promise.
 
 ## Decision log
-- _(unresolved)_ — Storage engine (raw IndexedDB vs Dexie vs localStorage). Recommendation in §6.
-- _(unresolved)_ — Entry path (`/local/**` parallel route vs a global mode flag). Recommendation in §4.
-- _(unresolved)_ — Migration trigger (auto-prompt on first sign-in vs explicit "Import my local data"). Recommendation in §8.
+- **2026-06-15 — Storage engine: Dexie** (§6 resolved). IndexedDB via Dexie, not raw IDB or
+  localStorage. Added `dexie` (dep) + `fake-indexeddb` (dev, for node-env tests).
+- **2026-06-15 — Entry path: `/local/**` parallel client-rendered route** (§4 resolved, Option A).
+  The authed `/dashboard` SSR path is left untouched.
+- **2026-06-15 — Migration trigger: explicit one-click prompt** on first sign-in (§8 resolved), not
+  silent auto-import.
+- **2026-06-15 — Slice 1 shipped.** `WorkspaceDataProvider` contract + `LocalWorkspaceProvider`
+  (leagues/divisions/teams/players) over a versioned Dexie schema, with defaults and the
+  jersey-duplicate policy mirrored from the server. 15 unit tests (CRUD, cascade delete, jersey
+  policy, persistence-across-reopen). No UI yet — Slice 2 adds the `/local` shell.
 
 ## 1. Intent (from product)
 
