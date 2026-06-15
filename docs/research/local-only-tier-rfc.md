@@ -28,6 +28,11 @@ model ([org-workspace-data-model-rfc](./org-workspace-data-model-rfc.md)), the i
   provider, merging by name. `/local/import` page reuses the #248 drop-zone + `LeagueImportSchema`.
   3 unit tests through the full CSV→payload→local chain (seed, idempotent re-import, merge). One
   payload shape now serves server import + local seed; Slice 6 adds the third use (local→server).
+- **2026-06-15 — Slice 5 shipped (AC #2 met).** The boundary: account-only features are already
+  absent from the `/local` route tree (hidden); this slice adds the "clearly marked" half — an
+  `<AccountOnly>` upgrade chip and an "Unlock with a free account" panel listing the server-only
+  capabilities (cloud backup, public link, roles, Discover) as dashed chips linking to sign-up, so
+  the boundary doubles as the upgrade funnel. Presentational; no new tests.
 
 ## 1. Intent (from product)
 
