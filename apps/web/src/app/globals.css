@@ -168,3 +168,22 @@
     font-size: 16px !important;
   }
 }
+
+/*
+ * Reduced-motion a11y override (WSM-000136 P7). When the user has requested
+ * reduced motion at the OS level, collapse all transitions/animations to a
+ * near-instant duration and disable smooth scrolling. This neutralises the
+ * subtle shadcn enter/exit, accordion, and transition-colors motion globally
+ * without removing the end state. `!important` ensures it beats the per-utility
+ * Tailwind durations applied on individual primitives.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
