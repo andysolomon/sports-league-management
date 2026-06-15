@@ -1,18 +1,15 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { forkTeamToWorkspace } from "@/lib/data-api";
+import { forkDivisionToWorkspace } from "@/lib/data-api";
 import { handleApiError } from "@/lib/api-error";
 import { resolveForkTargetOrg } from "@/lib/fork-target-org";
 
 /**
- * Add a team to the caller's org — forking it into their PRIVATE workspace
- * (WSM-000110/111/115). Resolves an org the user admins, never making them set
- * one up first:
- *   1. the active org, if they admin it; else
- *   2. any org they already admin; else
- *   3. a freshly created org (they become its admin) — org-on-claim onboarding.
- * Then forks the reference team (+ roster) into that org's workspace and returns
- * the workspace team to redirect to (the editable copy).
+ * Add a whole division to the caller's workspace (WSM-000133) — fork EVERY team
+ * in the reference division into their PRIVATE workspace in one idempotent
+ * action. Resolves the target org exactly like per-team claim (active admin org,
+ * else any admin org, else org-on-claim). Already-forked teams are skipped, so
+ * re-running over a partially-added division adds only the remaining teams.
  */
 export async function POST(
   request: NextRequest,
@@ -24,9 +21,9 @@ export async function POST(
   }
 
   try {
-    const { id: teamId } = await params;
+    const { id: divisionId } = await params;
     const body = await request.json().catch(() => ({}));
-    const teamName =
+    const orgName =
       typeof body?.teamName === "string" && body.teamName.trim()
         ? body.teamName.trim()
         : "My Team";
@@ -35,30 +32,26 @@ export async function POST(
       userId,
       orgId,
       orgRole,
-      newOrgName: teamName,
+      newOrgName: orgName,
     });
 
-    // targetOrgId is always an org this user admins (active/found/just-created),
-    // so fork directly into it. Fork = a private editable copy of the team.
-    const {
-      teamId: workspaceTeamId,
-      leagueId,
-      created,
-    } = await forkTeamToWorkspace(targetOrgId, teamId);
+    const { leagueId, totalTeams, forkedTeams, alreadyForked } =
+      await forkDivisionToWorkspace(targetOrgId, divisionId);
 
     return NextResponse.json({
       message: "Added",
-      teamId: workspaceTeamId,
       leagueId,
       orgId: targetOrgId,
       createdOrg,
-      created,
+      totalTeams,
+      forkedTeams,
+      alreadyForked,
     });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     if (msg.includes("not forkable")) {
       return NextResponse.json({ error: msg }, { status: 409 });
     }
-    return handleApiError(error, "/api/teams/[id]/claim");
+    return handleApiError(error, "/api/divisions/[id]/fork");
   }
 }

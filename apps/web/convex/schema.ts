@@ -23,12 +23,31 @@ export default defineSchema({
     .index("by_isPublic", ["isPublic"])
     .index("by_inviteToken", ["inviteToken"]),
 
-  divisions: defineTable({
+  /*
+   * Hierarchy level above divisions (WSM-000133). A reference league can group
+   * its divisions under conferences (e.g. NFL's AFC/NFC). Optional: leagues with
+   * a flat division list simply have no conference rows. Mirrors `divisions`
+   * (leagueId + name), plus `sourceConferenceId` so a workspace fork can point
+   * back at the reference conference it mirrored.
+   */
+  conferences: defineTable({
     name: v.string(),
     leagueId: v.id("leagues"),
+    sourceConferenceId: v.optional(v.id("conferences")),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_leagueId_name", ["leagueId", "name"]),
+
+  divisions: defineTable({
+    name: v.string(),
+    leagueId: v.id("leagues"),
+    // Optional parent conference (WSM-000133). Absent = the division sits
+    // directly under the league (flat hierarchy, backward-compatible).
+    conferenceId: v.optional(v.id("conferences")),
+  })
+    .index("by_leagueId", ["leagueId"])
+    .index("by_leagueId_name", ["leagueId", "name"])
+    .index("by_conferenceId", ["conferenceId"]),
 
   teams: defineTable({
     name: v.string(),

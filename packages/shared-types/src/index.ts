@@ -11,10 +11,18 @@ export interface LeagueDto {
   orgId: string | null;
 }
 
+export interface ConferenceDto {
+  id: string;
+  name: string;
+  leagueId: string;
+}
+
 export interface DivisionDto {
   id: string;
   name: string;
   leagueId: string;
+  /** Parent conference (WSM-000133), or null when the division is top-level. */
+  conferenceId: string | null;
 }
 
 export interface TeamDto {

@@ -40,6 +40,9 @@ void internal.sports.deleteDivision;
 void internal.sports.setLeaguePublic;
 void internal.sports.recordGameResult;
 void internal.sports.assignPlayerToRoster;
+void internal.sports.forkTeamToWorkspace;
+void internal.sports.forkDivisionToWorkspace;
+void internal.sports.forkConferenceToWorkspace;
 
 // --- Writes MUST NOT be on the public API (each access must be a type error) ---
 // @ts-expect-error createTeam is internal, not public
@@ -56,9 +59,14 @@ void api.sports.clearSeasonPlayerAttributes;
 void api.sports.ingestMaddenRatingsBatch;
 // @ts-expect-error setOrgMemberRole is internal, not public
 void api.sports.setOrgMemberRole;
+// @ts-expect-error forkDivisionToWorkspace is internal, not public
+void api.sports.forkDivisionToWorkspace;
+// @ts-expect-error forkConferenceToWorkspace is internal, not public
+void api.sports.forkConferenceToWorkspace;
 
 // --- Public READ queries must remain public (these must exist on api) ---
 void api.sports.listTeams;
+void api.sports.listConferences;
 void api.sports.getPlayer;
 void api.sports.listPublicLeagues;
 void api.sports.computeStandingsPublic;
