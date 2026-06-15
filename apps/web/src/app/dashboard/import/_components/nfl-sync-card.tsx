@@ -122,6 +122,9 @@ export function NflSyncCard() {
   }, []);
 
   useEffect(() => {
+    // Justified: fetches sync config from the API on mount; setState runs after
+    // the awaited fetch inside loadConfig(), not as a synchronous cascading render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadConfig();
   }, [loadConfig]);
 

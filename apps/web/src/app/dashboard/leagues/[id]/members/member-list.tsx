@@ -112,6 +112,8 @@ export default function MemberList({ orgId }: { orgId: string }) {
           >
             <div className="flex items-center gap-3">
               {member.imageUrl && (
+                // Clerk-hosted avatar URL; next/image would need a host allowlist.
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={member.imageUrl}
                   alt=""

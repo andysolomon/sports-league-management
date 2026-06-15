@@ -111,12 +111,20 @@ export default function LocalSchedulePage() {
   );
 
   useEffect(() => {
+    // Justified: async load from the client-only IndexedDB provider once it
+    // mounts. The setState calls run after awaits inside reload(), not as a
+    // synchronous cascading render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (provider) void reload(provider);
   }, [provider, reload]);
 
   // Re-derive fixtures/standings when the selected season changes.
   useEffect(() => {
+    // Justified: async re-derive from the client-only provider on season change;
+    // setState runs after awaits inside refreshSeason(), not synchronously.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (provider && !loading) void refreshSeason(provider, seasonId);
+    // Intentionally narrowed to seasonId so we don't re-run on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seasonId]);
 

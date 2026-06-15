@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openCommandPalette } from "./command-palette";
+
+// Platform never changes after mount, so the store has nothing to subscribe to.
+const emptySubscribe = () => () => {};
 
 /**
  * Opens the global command palette (WSM-000136 P2). Two looks:
@@ -16,13 +19,14 @@ export function CommandTrigger({
 }: {
   variant?: "bar" | "icon";
 }) {
-  const [isMac, setIsMac] = useState(false);
-  useEffect(() => {
-    setIsMac(
-      typeof navigator !== "undefined" &&
-        navigator.platform.toLowerCase().includes("mac"),
-    );
-  }, []);
+  // Platform is client-only. Read it through useSyncExternalStore (SSR snapshot
+  // is `false`) so the ⌘/Ctrl hint resolves after hydration without a
+  // setState-in-effect.
+  const isMac = useSyncExternalStore(
+    emptySubscribe,
+    () => navigator.platform.toLowerCase().includes("mac"),
+    () => false,
+  );
 
   if (variant === "icon") {
     return (

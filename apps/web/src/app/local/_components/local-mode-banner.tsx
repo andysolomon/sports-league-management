@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Info, X } from "lucide-react";
 
 const DISMISS_KEY = "wsm-local-banner-dismissed";
+const DISMISS_EVENT = "wsm-local-banner-change";
+
+function subscribe(onChange: () => void) {
+  window.addEventListener(DISMISS_EVENT, onChange);
+  return () => window.removeEventListener(DISMISS_EVENT, onChange);
+}
+
+function isDismissed() {
+  return sessionStorage.getItem(DISMISS_KEY) === "1";
+}
 
 /**
  * Persistent (per-session, dismissible) notice that the user is in local mode —
@@ -12,11 +22,11 @@ const DISMISS_KEY = "wsm-local-banner-dismissed";
  * evicted / is per-device) and funnels toward a free account for backup + sharing.
  */
 export function LocalModeBanner() {
-  const [dismissed, setDismissed] = useState(true);
-
-  useEffect(() => {
-    setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
-  }, []);
+  // sessionStorage is client-only, so read it via useSyncExternalStore: the SSR
+  // snapshot is `true` (render nothing) and the client snapshot reflects the
+  // stored flag, re-read when the dismiss handler dispatches DISMISS_EVENT. This
+  // avoids a setState-in-effect for the initial hydration read.
+  const dismissed = useSyncExternalStore(subscribe, isDismissed, () => true);
 
   if (dismissed) return null;
 
@@ -38,7 +48,7 @@ export function LocalModeBanner() {
         className="shrink-0 text-muted-foreground hover:text-foreground"
         onClick={() => {
           sessionStorage.setItem(DISMISS_KEY, "1");
-          setDismissed(true);
+          window.dispatchEvent(new Event(DISMISS_EVENT));
         }}
       >
         <X className="h-4 w-4" />
