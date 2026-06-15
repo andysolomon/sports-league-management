@@ -48,12 +48,16 @@ export function MarketingHero({ isSignedIn }: HeroProps) {
               </Button>
             )}
             <Button asChild variant="outline" size="lg">
-              <Link href="#pricing">See pricing</Link>
+              <Link href="/local">Try it free — no account</Link>
             </Button>
           </div>
 
           <p className="mt-6 text-sm text-muted-foreground">
-            No credit card required · Sign in with Google
+            No credit card required · Sign in with Google · Or{" "}
+            <Link href="/local" className="underline hover:text-foreground">
+              start in your browser
+            </Link>{" "}
+            with no sign-up
           </p>
         </div>
       </div>
