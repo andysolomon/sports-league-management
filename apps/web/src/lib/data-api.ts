@@ -117,6 +117,10 @@ const refs = {
     { orgId: string; sourceTeamId: string },
     { teamId: string; leagueId: string; created: boolean }
   >("sports:forkTeamToWorkspace"),
+  unforkTeamFromWorkspace: mutationRef<
+    { orgId: string; sourceTeamId: string },
+    { removed: boolean }
+  >("sports:unforkTeamFromWorkspace"),
   forkDivisionToWorkspace: mutationRef<
     { orgId: string; divisionId: string },
     {
@@ -721,6 +725,18 @@ export async function forkTeamToWorkspace(
   sourceTeamId: string,
 ): Promise<{ teamId: string; leagueId: string; created: boolean }> {
   return mutateConvex(refs.forkTeamToWorkspace, { orgId, sourceTeamId });
+}
+
+/**
+ * WSM-000129: reverse of forkTeamToWorkspace — delete the org's private fork of
+ * a reference team (the team whose sourceTeamId matches, plus its roster). Raw
+ * wrapper — caller MUST resolve an org the user admins first.
+ */
+export async function unforkTeamFromWorkspace(
+  orgId: string,
+  sourceTeamId: string,
+): Promise<{ removed: boolean }> {
+  return mutateConvex(refs.unforkTeamFromWorkspace, { orgId, sourceTeamId });
 }
 
 /**

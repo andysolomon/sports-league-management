@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import DeleteConfirm from "@/app/dashboard/_components/delete-confirm";
 import { toast } from "sonner";
-import { Trophy, CheckCircle2, Plus, Layers } from "lucide-react";
+import { Trophy, CheckCircle2, Plus, Layers, X } from "lucide-react";
 
 export interface DiscoverLeague {
   id: string;
@@ -82,6 +83,11 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
   );
   // What's currently being added — a team id, "div:<id>", "conf:<id>", or "all".
   const [busy, setBusy] = useState<string | null>(null);
+  // The team pending removal confirmation (un-add deletes the private fork).
+  const [confirmRemove, setConfirmRemove] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Build the conference → division → team hierarchy. Divisions without a
   // conference (or leagues with no conferences at all) fall under a synthetic
@@ -163,6 +169,35 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
       }
     } finally {
       setBusy(null);
+    }
+  }
+
+  // Un-add: open the confirm dialog (removal deletes the private fork + roster).
+  function onRemoveTeam(teamId: string, teamName: string) {
+    setConfirmRemove({ id: teamId, name: teamName });
+  }
+
+  async function doRemoveTeam() {
+    if (!confirmRemove) return;
+    const { id, name } = confirmRemove;
+    setBusy(id);
+    try {
+      const res = await fetch(`/api/teams/${id}/unclaim`, { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setAdded((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        toast.success(`Removed ${name} from your teams.`);
+        router.refresh();
+      } else {
+        toast.error(body.error ?? `Could not remove ${name}.`);
+      }
+    } finally {
+      setBusy(null);
+      setConfirmRemove(null);
     }
   }
 
@@ -281,6 +316,7 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
                 onAddConference={onAddConference}
                 onAddDivision={onAddDivision}
                 onAddTeam={onAddTeam}
+                onRemoveTeam={onRemoveTeam}
               />
             ))}
             {looseDivisions.length > 0 && (
@@ -294,6 +330,7 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
                     anyBusy={anyBusy}
                     onAddDivision={onAddDivision}
                     onAddTeam={onAddTeam}
+                    onRemoveTeam={onRemoveTeam}
                   />
                 ))}
               </Accordion>
@@ -301,6 +338,14 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
           </div>
         )}
       </CardContent>
+      <DeleteConfirm
+        isOpen={confirmRemove !== null}
+        isDeleting={confirmRemove !== null && busy === confirmRemove.id}
+        title={`Remove ${confirmRemove?.name ?? "team"}?`}
+        message="This deletes your private copy of this team and its roster. The original league is unaffected, and you can add it again later."
+        onConfirm={doRemoveTeam}
+        onCancel={() => setConfirmRemove(null)}
+      />
     </Card>
   );
 }
@@ -332,6 +377,7 @@ function ConferenceSection({
   onAddConference,
   onAddDivision,
   onAddTeam,
+  onRemoveTeam,
 }: {
   conference: ConferenceGroup;
   added: Set<string>;
@@ -340,6 +386,7 @@ function ConferenceSection({
   onAddConference: (conf: ConferenceGroup) => void;
   onAddDivision: (group: DivisionGroup) => void;
   onAddTeam: (teamId: string, teamName: string) => void;
+  onRemoveTeam: (teamId: string, teamName: string) => void;
 }) {
   const allTeams = conference.divisions.flatMap((d) => d.teams);
   const state = addState(allTeams, added);
@@ -379,6 +426,7 @@ function ConferenceSection({
                 anyBusy={anyBusy}
                 onAddDivision={onAddDivision}
                 onAddTeam={onAddTeam}
+                onRemoveTeam={onRemoveTeam}
               />
             ))}
           </Accordion>
@@ -395,6 +443,7 @@ function DivisionSection({
   anyBusy,
   onAddDivision,
   onAddTeam,
+  onRemoveTeam,
 }: {
   group: DivisionGroup;
   added: Set<string>;
@@ -402,6 +451,7 @@ function DivisionSection({
   anyBusy: boolean;
   onAddDivision: (group: DivisionGroup) => void;
   onAddTeam: (teamId: string, teamName: string) => void;
+  onRemoveTeam: (teamId: string, teamName: string) => void;
 }) {
   const state = addState(group.teams, added);
   const remaining = group.teams.filter((t) => !added.has(t.id)).length;
@@ -443,10 +493,26 @@ function DivisionSection({
                   {team.name}
                 </span>
                 {isAdded ? (
-                  <span className="flex shrink-0 items-center gap-1 text-xs text-green-500">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Added
-                  </span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <span className="flex items-center gap-1 text-xs text-green-500">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Added
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                      disabled={anyBusy}
+                      onClick={() => onRemoveTeam(team.id, team.name)}
+                      aria-label={`Remove ${team.name}`}
+                    >
+                      {busy === team.id ? (
+                        "…"
+                      ) : (
+                        <X className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
                 ) : (
                   <Button
                     size="sm"
