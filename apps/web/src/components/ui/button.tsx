@@ -4,7 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
+  // WSM-000085 (AC3): `pointer-coarse:min-h-11` enforces a 44px minimum touch
+  // target on phones/tablets while leaving mouse-driven desktops at the denser
+  // h-8/h-9 heights — same coarse-pointer strategy as the 16px input rule in
+  // globals.css. Icon buttons additionally get min-w-11 for a square 44px hit area.
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-11",
   {
     variants: {
       variant: {
@@ -22,7 +26,7 @@ const buttonVariants = cva(
         default: "h-9 px-4 py-2",
         sm: "h-8 rounded-md px-3 text-xs",
         lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        icon: "h-9 w-9 pointer-coarse:min-w-11",
       },
     },
     defaultVariants: {
