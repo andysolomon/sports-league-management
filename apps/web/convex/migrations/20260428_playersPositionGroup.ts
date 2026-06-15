@@ -1,8 +1,11 @@
-import { mutationGeneric } from "convex/server";
+import { internalMutationGeneric } from "convex/server";
 import { v } from "convex/values";
 import { derivePositionGroup } from "../../src/lib/position-group";
 
-export const backfillPlayersPositionGroup = mutationGeneric({
+// Internal-only: migrations write data and must not be anonymously callable
+// over the public Internet (WSM-000079 follow-up; see WSM-000096). Run with an
+// admin/deploy key: `npx convex run migrations/... --prod`.
+export const backfillPlayersPositionGroup = internalMutationGeneric({
   args: {},
   returns: v.object({
     scanned: v.number(),
