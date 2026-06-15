@@ -15,6 +15,14 @@ model ([org-workspace-data-model-rfc](./org-workspace-data-model-rfc.md)), the i
   (leagues/divisions/teams/players) over a versioned Dexie schema, with defaults and the
   jersey-duplicate policy mirrored from the server. 15 unit tests (CRUD, cascade delete, jersey
   policy, persistence-across-reopen). No UI yet — Slice 2 adds the `/local` shell.
+- **2026-06-15 — Slice 2 shipped.** Public `/local` route (Clerk bypass) + client-rendered shell
+  (local-mode banner) + team & roster CRUD against the provider + landing "Try it free" CTA.
+  Satisfies AC #1 for the single-team core.
+- **2026-06-15 — Slice 3 shipped.** Seasons, schedule (fixtures + results), and standings in local
+  mode. **Standings use the server's existing pure `computeStandingsPure`** (imported directly), so
+  local and synced standings cannot drift — the §11 risk is closed by sharing the one function, not
+  porting it. Division create/assign UI added. `/local/schedule` page (season picker, fixtures,
+  result entry, standings table). 9 new unit tests incl. an end-to-end standings computation.
 
 ## 1. Intent (from product)
 
