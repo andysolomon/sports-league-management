@@ -14,6 +14,7 @@ import {
   RenameLeagueForm,
 } from "./leagues-actions";
 import { LeaguesAccordion, type AccordionDivision } from "./leagues-accordion";
+import { PageHeader } from "../_components/page-header";
 
 export default async function LeaguesPage() {
   const { userId } = await auth();
@@ -25,10 +26,7 @@ export default async function LeaguesPage() {
   if (leagues.length === 0) {
     return (
       <div>
-        <div className="mb-6 flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold text-foreground">Leagues</h2>
-          <CreateLeagueButton />
-        </div>
+        <PageHeader title="Leagues" action={<CreateLeagueButton />} />
         <EmptyState
           icon={Trophy}
           title="No leagues yet"

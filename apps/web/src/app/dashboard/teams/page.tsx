@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getTeams } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
+import { PageHeader } from "../_components/page-header";
 
 export default async function TeamsPage() {
   const { userId } = await auth();
@@ -14,7 +15,7 @@ export default async function TeamsPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-foreground">Teams</h2>
+      <PageHeader title="Teams" description="Every team in the active league." />
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {teams.map((team) => (
           <Link

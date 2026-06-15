@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getPlayers } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayersTable } from "./players-table";
+import { PageHeader } from "../_components/page-header";
 
 export default async function PlayersPage() {
   const { userId } = await auth();
@@ -14,7 +15,7 @@ export default async function PlayersPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-foreground">Players</h2>
+      <PageHeader title="Players" description="All players on rosters in the active league." />
       <PlayersTable players={players} />
     </div>
   );
