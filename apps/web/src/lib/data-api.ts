@@ -194,6 +194,14 @@ const refs = {
     { name: string; leagueId: string },
     { dto: DivisionDto; created: boolean }
   >("sports:upsertDivision"),
+  updateDivision: mutationRef<
+    { divisionId: string; name: string },
+    DivisionDto | null
+  >("sports:updateDivision"),
+  deleteDivision: mutationRef<
+    { divisionId: string },
+    { ok: boolean; teamCount: number }
+  >("sports:deleteDivision"),
   upsertTeam: mutationRef<
     {
       name: string;
@@ -610,6 +618,36 @@ export async function getDivision(
   if (!division) throw new Error("Division not found");
   requireLeagueAccessLocal(division.leagueId, orgContext);
   return division;
+}
+
+export async function createDivision(input: {
+  name: string;
+  leagueId: string;
+}): Promise<{ dto: DivisionDto; created: boolean }> {
+  return mutateConvex(refs.upsertDivision, input);
+}
+
+export async function updateDivision(input: {
+  divisionId: string;
+  name: string;
+}): Promise<DivisionDto> {
+  const dto = await mutateConvex(refs.updateDivision, input);
+  if (!dto) throw new Error("Division not found");
+  return dto;
+}
+
+export async function deleteDivision(
+  divisionId: string,
+): Promise<{ ok: boolean; teamCount: number }> {
+  return mutateConvex(refs.deleteDivision, { divisionId });
+}
+
+/** Resolve a division's league for authorization, without an org-access gate. */
+export async function getDivisionLeagueId(
+  divisionId: string,
+): Promise<string | null> {
+  const division = await queryConvex(refs.getDivision, { divisionId });
+  return division?.leagueId ?? null;
 }
 
 export async function getTeams(visibleLeagueIds: string[]): Promise<TeamDto[]> {

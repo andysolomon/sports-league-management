@@ -35,6 +35,8 @@ void internal.sports.clearSeasonPlayerAttributes;
 void internal.sports.ingestMaddenRatingsBatch;
 void internal.sports.ingestPlayerAttributesBatch;
 void internal.sports.setOrgMemberRole;
+void internal.sports.updateDivision;
+void internal.sports.deleteDivision;
 void internal.sports.setLeaguePublic;
 void internal.sports.recordGameResult;
 void internal.sports.assignPlayerToRoster;

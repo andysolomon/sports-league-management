@@ -989,6 +989,41 @@ export const upsertDivision = internalMutationGeneric({
   },
 });
 
+/** Rename a division by id (WSM-000132 / WSM-000128). */
+export const updateDivision = internalMutationGeneric({
+  args: { divisionId: v.id("divisions"), name: v.string() },
+  returns: v.union(
+    v.object({ id: v.string(), name: v.string(), leagueId: v.string() }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.divisionId);
+    if (!existing) return null;
+    await ctx.db.patch(args.divisionId, { name: args.name });
+    return toDivisionDto({ ...existing, name: args.name });
+  },
+});
+
+/**
+ * Delete an empty division (WSM-000132 / WSM-000128). Refuses when teams still
+ * reference it — they must be moved or removed first — so no team is orphaned.
+ */
+export const deleteDivision = internalMutationGeneric({
+  args: { divisionId: v.id("divisions") },
+  returns: v.object({ ok: v.boolean(), teamCount: v.number() }),
+  handler: async (ctx, args) => {
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_divisionId", (q) => q.eq("divisionId", args.divisionId))
+      .collect();
+    if (teams.length > 0) {
+      return { ok: false, teamCount: teams.length };
+    }
+    await ctx.db.delete(args.divisionId);
+    return { ok: true, teamCount: 0 };
+  },
+});
+
 export const upsertTeam = internalMutationGeneric({
   args: {
     name: v.string(),
