@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import type { PlayerDto, TeamDto } from "@sports-management/shared-types";
+import type {
+  DivisionDto,
+  PlayerDto,
+  TeamDto,
+} from "@sports-management/shared-types";
 import { useLocalProvider } from "@/lib/local/use-local-provider";
 import type { LocalWorkspaceProvider } from "@/lib/local/local-workspace-provider";
 import { DuplicateJerseyError } from "@/lib/local/workspace-provider";
@@ -42,6 +46,7 @@ export default function LocalTeamPage() {
 
   const [team, setTeam] = useState<TeamDto | null>(null);
   const [players, setPlayers] = useState<PlayerDto[]>([]);
+  const [divisions, setDivisions] = useState<DivisionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -49,6 +54,8 @@ export default function LocalTeamPage() {
   const [name, setName] = useState("");
   const [city, setCity] = useState("");
   const [stadium, setStadium] = useState("");
+  // "__none" sentinel ⇄ no division (Radix Select forbids empty-string values).
+  const [divisionId, setDivisionId] = useState("__none");
   const [savingTeam, setSavingTeam] = useState(false);
 
   // Add-player fields
@@ -70,7 +77,13 @@ export default function LocalTeamPage() {
       setName(t.name);
       setCity(t.city);
       setStadium(t.stadium);
-      setPlayers(await p.listPlayersByTeam(teamId));
+      setDivisionId(t.divisionId === "" ? "__none" : t.divisionId);
+      const [roster, divs] = await Promise.all([
+        p.listPlayersByTeam(teamId),
+        p.listDivisions(t.leagueId),
+      ]);
+      setPlayers(roster);
+      setDivisions(divs);
       setLoading(false);
     },
     [teamId],
@@ -93,6 +106,7 @@ export default function LocalTeamPage() {
         name: name.trim(),
         city: city.trim(),
         stadium: stadium.trim(),
+        divisionId: divisionId === "__none" ? "" : divisionId,
       });
       if (updated) setTeam(updated);
       toast.success("Team saved.");
@@ -201,6 +215,22 @@ export default function LocalTeamPage() {
             <div className="space-y-1.5">
               <Label htmlFor="t-stadium">Home venue</Label>
               <Input id="t-stadium" value={stadium} onChange={(e) => setStadium(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="t-division">Division</Label>
+              <Select value={divisionId} onValueChange={setDivisionId}>
+                <SelectTrigger id="t-division">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">No division</SelectItem>
+                  {divisions.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="sm:col-span-3">
               <Button type="submit" disabled={savingTeam}>

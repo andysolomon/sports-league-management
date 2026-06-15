@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import type { LeagueDto, TeamDto } from "@sports-management/shared-types";
+import type {
+  DivisionDto,
+  LeagueDto,
+  TeamDto,
+} from "@sports-management/shared-types";
 import { useLocalProvider } from "@/lib/local/use-local-provider";
 import { ensureLocalWorkspace } from "@/lib/local/local-workspace";
 import type { LocalWorkspaceProvider } from "@/lib/local/local-workspace-provider";
@@ -18,12 +22,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, ChevronRight } from "lucide-react";
+import { Users, ChevronRight, CalendarDays, Trash2 } from "lucide-react";
 
 export default function LocalHomePage() {
   const provider = useLocalProvider();
   const [league, setLeague] = useState<LeagueDto | null>(null);
   const [teams, setTeams] = useState<TeamDto[]>([]);
+  const [divisions, setDivisions] = useState<DivisionDto[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [name, setName] = useState("");
@@ -31,10 +36,15 @@ export default function LocalHomePage() {
   const [stadium, setStadium] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [divName, setDivName] = useState("");
+  const [savingDiv, setSavingDiv] = useState(false);
+
   const reload = useCallback(async (p: LocalWorkspaceProvider) => {
     const lg = await ensureLocalWorkspace(p);
     setLeague(lg);
-    setTeams(await p.listTeams(lg.id));
+    const [t, d] = await Promise.all([p.listTeams(lg.id), p.listDivisions(lg.id)]);
+    setTeams(t);
+    setDivisions(d);
     setLoading(false);
   }, []);
 
@@ -67,16 +77,43 @@ export default function LocalHomePage() {
     }
   }
 
+  async function onCreateDivision(e: React.FormEvent) {
+    e.preventDefault();
+    if (!provider || !league || !divName.trim()) return;
+    setSavingDiv(true);
+    try {
+      await provider.createDivision({ name: divName.trim(), leagueId: league.id });
+      setDivName("");
+      await reload(provider);
+    } finally {
+      setSavingDiv(false);
+    }
+  }
+
+  async function onDeleteDivision(id: string) {
+    if (!provider) return;
+    await provider.deleteDivision(id);
+    setDivisions((prev) => prev.filter((d) => d.id !== id));
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">
-          Your local workspace
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create and manage teams right here in your browser — no account
-          required. Everything persists across reloads.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">
+            Your local workspace
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create and manage teams right here in your browser — no account
+            required. Everything persists across reloads.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/local/schedule">
+            <CalendarDays className="mr-1.5 h-4 w-4" />
+            Schedule &amp; standings
+          </Link>
+        </Button>
       </div>
 
       {/* Teams */}
@@ -160,6 +197,54 @@ export default function LocalHomePage() {
                 {saving ? "Adding…" : "Add team"}
               </Button>
             </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Divisions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Divisions</CardTitle>
+          <CardDescription>
+            Optional — group teams into divisions for standings. Assign a team to
+            a division on its page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {divisions.length > 0 && (
+            <ul className="divide-y divide-border rounded-md border border-border">
+              {divisions.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex items-center justify-between gap-2 px-3 py-2 text-sm"
+                >
+                  <span className="font-medium text-foreground">{d.name}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                    aria-label={`Delete ${d.name}`}
+                    onClick={() => onDeleteDivision(d.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form onSubmit={onCreateDivision} className="flex items-end gap-2">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="div-name">New division</Label>
+              <Input
+                id="div-name"
+                value={divName}
+                onChange={(e) => setDivName(e.target.value)}
+                placeholder="East"
+              />
+            </div>
+            <Button type="submit" variant="outline" disabled={savingDiv || !provider}>
+              {savingDiv ? "Adding…" : "Add"}
+            </Button>
           </form>
         </CardContent>
       </Card>
