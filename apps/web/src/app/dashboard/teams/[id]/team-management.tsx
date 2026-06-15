@@ -18,7 +18,7 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { UserCircle, Pencil, Trash2 } from "lucide-react";
+import { UserCircle, Pencil, Trash2, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 interface TeamManagementProps {
@@ -223,9 +223,55 @@ export default function TeamManagement({
       <Card className="mb-8">
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <h2 className="min-w-0 break-words text-2xl font-bold text-foreground">
-              {team.name}
-            </h2>
+            <div className="flex min-w-0 items-center gap-3">
+              {team.logoUrl ? (
+                // Arbitrary user-pasted host; next/image would need an allowlist.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={team.logoUrl}
+                  alt={`${team.name} logo`}
+                  className="h-12 w-12 shrink-0 rounded-md bg-muted object-contain"
+                />
+              ) : (
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted"
+                  style={
+                    team.primaryColor
+                      ? { backgroundColor: team.primaryColor }
+                      : undefined
+                  }
+                >
+                  <Shield className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <h2 className="min-w-0 break-words text-2xl font-bold text-foreground">
+                  {team.name}
+                  {team.teamName ? (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      &mdash; {team.teamName}
+                    </span>
+                  ) : null}
+                </h2>
+                {team.primaryColor || team.secondaryColor ? (
+                  <div className="mt-1 flex gap-1" aria-hidden>
+                    {team.primaryColor ? (
+                      <span
+                        className="h-2 w-8 rounded-full"
+                        style={{ backgroundColor: team.primaryColor }}
+                      />
+                    ) : null}
+                    {team.secondaryColor ? (
+                      <span
+                        className="h-2 w-8 rounded-full"
+                        style={{ backgroundColor: team.secondaryColor }}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </div>
             {(canManage || canDelete) && (
               <div className="flex shrink-0 flex-wrap gap-2">
                 {canManage && (
