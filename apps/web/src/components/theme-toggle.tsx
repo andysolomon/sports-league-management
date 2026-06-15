@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Never changes after mount, so the store has nothing to subscribe to.
+const emptySubscribe = () => () => {};
 
 /**
  * Dark/light toggle (WSM-000136 P1). Renders a stable icon until mounted to
@@ -11,8 +14,14 @@ import { Button } from "@/components/ui/button";
  */
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // `mounted` is false during SSR and the first client render (matching the
+  // server markup), then true — via useSyncExternalStore rather than a
+  // setState-in-effect, so the React Compiler lint guard stays satisfied.
+  const mounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
 
   const isDark = resolvedTheme !== "light";
 

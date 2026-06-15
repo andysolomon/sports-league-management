@@ -90,6 +90,10 @@ export default function LocalTeamPage() {
   );
 
   useEffect(() => {
+    // Justified: async load from the client-only IndexedDB provider once it
+    // mounts. The setState calls run after awaits inside load(), not as a
+    // synchronous cascading render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (provider) void load(provider);
   }, [provider, load]);
 

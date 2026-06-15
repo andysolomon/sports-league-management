@@ -17,15 +17,6 @@ const eslintConfig = [
     ],
   },
   ...nextCoreWebVitals,
-  {
-    rules: {
-      // New in eslint-config-next 16 (React Compiler era). Flags pre-existing
-      // client-hydration / lazy-init effects (e.g. `setMounted(true)` SSR
-      // guards). Downgraded to `warn` so the Next 16 upgrade lands without
-      // bundling a behavioral refactor of 9 call sites — tracked as follow-up.
-      "react-hooks/set-state-in-effect": "warn",
-    },
-  },
 ];
 
 export default eslintConfig;
