@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Monogram } from "./monogram";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface HeaderProps {
   isSignedIn: boolean;
@@ -35,6 +36,7 @@ export function MarketingHeader({ isSignedIn }: HeaderProps) {
         </nav>
 
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           {isSignedIn ? (
             <Button asChild size="sm">
               <Link href="/dashboard">Go to Dashboard</Link>
