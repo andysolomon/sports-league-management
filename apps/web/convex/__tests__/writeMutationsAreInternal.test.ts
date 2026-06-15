@@ -75,6 +75,82 @@ void api.sports.listPublicLeagues;
 void api.sports.computeStandingsPublic;
 void api.sports.getPlayerDevelopmentPublic;
 
+/*
+ * EXHAUSTIVE backstop (WSM-000096 hardening).
+ *
+ * The per-name lists above protect only the writes someone remembered to add.
+ * This catches the rest: every sports.ts write is an `internalMutation`, so it
+ * never appears on the public `api.sports` object — therefore `api.sports` must
+ * expose ONLY read queries. `AllowedPublicSportsReads` enumerates them; if a
+ * future write is registered as a public `mutation`, its name joins
+ * `keyof typeof api.sports`, falls outside the allow-list, and
+ * `LeakedPublicSportsWrites` becomes a non-`never` union that fails the
+ * assignment below at compile time (tsc names the leaked function). This is the
+ * exact regression that wrote 1,637 unauthenticated rows to prod — now it can't
+ * merge undetected.
+ *
+ * Adding a genuinely-public READ query? Add its name here — a deliberate,
+ * security-reviewed act — to keep the backstop green.
+ */
+type AllowedPublicSportsReads =
+  | "computeDivisionStandings"
+  | "computeStandings"
+  | "computeStandingsPublic"
+  | "getDepthChartByTeamSeason"
+  | "getDivision"
+  | "getFixture"
+  | "getLeague"
+  | "getLeagueByInviteToken"
+  | "getLeagueByName"
+  | "getLeagueClaimable"
+  | "getLeagueForOrg"
+  | "getLeagueOrgId"
+  | "getLeagueVisibility"
+  | "getOrgForkedSourceTeamIds"
+  | "getOrgMemberRole"
+  | "getPlayer"
+  | "getPlayerDevelopment"
+  | "getPlayerDevelopmentPublic"
+  | "getPlayerMaddenRating"
+  | "getPlayerSeasonAttributes"
+  | "getResultByFixture"
+  | "getRosterAssignmentHistory"
+  | "getRosterBySeasonTeam"
+  | "getSeason"
+  | "getSeasonAttributesByPosition"
+  | "getSyncConfig"
+  | "getTeam"
+  | "getTeamAttributeSnapshots"
+  | "getTeamLeagueId"
+  | "getTeamMaddenOveralls"
+  | "getTeamOwnerOrgId"
+  | "getTeamRosterLimitStatus"
+  | "getVisibleLeagueContext"
+  | "healthSummary"
+  | "listConferences"
+  | "listDivisions"
+  | "listFixturesBySeason"
+  | "listLeagues"
+  | "listOrgMemberRoles"
+  | "listPlayers"
+  | "listPlayersByTeam"
+  | "listPublicLeagues"
+  | "listSeasons"
+  | "listTeams"
+  | "listTeamsByLeague";
+
+type LeakedPublicSportsWrites = Exclude<
+  keyof typeof api.sports,
+  AllowedPublicSportsReads
+>;
+
+// If any write leaks onto the public API, the right-hand `true` is no longer
+// assignable to the (now non-`never`) leaked-name union and tsc fails here.
+const _noLeakedPublicSportsWrites: LeakedPublicSportsWrites extends never
+  ? true
+  : LeakedPublicSportsWrites = true;
+void _noLeakedPublicSportsWrites;
+
 // --- e2e seed mutations MUST be internal too (WSM-000139) ---
 // Same vuln class as the sports.ts writes above: they create/destroy real
 // rows, so they must never be reachable by an anonymous client. The env gate
