@@ -117,9 +117,11 @@ test.describe.serial(
       if (!fixture) test.skip();
       const leagueId = fixture!.leagueId;
 
-      // Public viewer with a private league → 404.
+      // Public viewers with a private league → 404 (standings + landing hub).
       const privateResp = await page.goto(`/leagues/${leagueId}/standings`);
       expect(privateResp?.status()).toBe(404);
+      const privateLanding = await page.goto(`/leagues/${leagueId}`);
+      expect(privateLanding?.status()).toBe(404);
 
       // Flip public via the admin toggle on the league detail page.
       await page.goto(`/dashboard/leagues/${leagueId}`);
@@ -135,6 +137,13 @@ test.describe.serial(
       ).toBeVisible();
       await expect(
         page.getByRole("cell", { name: "E2E Home Hawks" }),
+      ).toBeVisible();
+
+      // Landing hub (WSM-000083) renders and links to the standings viewer.
+      const publicLanding = await page.goto(`/leagues/${leagueId}`);
+      expect(publicLanding?.ok()).toBe(true);
+      await expect(
+        page.getByRole("link", { name: /Standings/ }),
       ).toBeVisible();
     });
   },
