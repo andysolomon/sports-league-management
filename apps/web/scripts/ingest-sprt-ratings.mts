@@ -56,9 +56,12 @@ async function main() {
 
   const client = new ConvexHttpClient(CONVEX_URL);
   const adminKey = process.env.CONVEX_ADMIN_KEY;
-  if (adminKey) {
-    (client as unknown as { setAdminAuth: (k: string) => void }).setAdminAuth(adminKey);
+  if (!adminKey) {
+    throw new Error(
+      "CONVEX_ADMIN_KEY is required: sports write mutations are internal (WSM-000096) and reject unauthenticated calls.",
+    );
   }
+  (client as unknown as { setAdminAuth: (k: string) => void }).setAdminAuth(adminKey);
   const teams = (await client.query("sports:listTeamsByLeague" as never, { leagueId: LEAGUE_ID } as never)) as { id: string }[];
 
   const rows: { playerId: string; positionGroup: string; attributesJson: string; weightedOverall: number | null }[] = [];

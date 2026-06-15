@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 
 const modules = import.meta.glob("../**/*.*s");
 
@@ -142,9 +142,9 @@ describe("deleteLeagueBatch", () => {
     const t = convexTest(schema, modules);
     const { leagueId } = await seedLeague(t, 1);
     // First drain it, then call again — second call sees no league.
-    await t.mutation(api.sports.deleteLeagueBatch, { leagueId, maxTeams: 5 });
-    await t.mutation(api.sports.deleteLeagueBatch, { leagueId, maxTeams: 5 });
-    const again = await t.mutation(api.sports.deleteLeagueBatch, {
+    await t.mutation(internal.sports.deleteLeagueBatch, { leagueId, maxTeams: 5 });
+    await t.mutation(internal.sports.deleteLeagueBatch, { leagueId, maxTeams: 5 });
+    const again = await t.mutation(internal.sports.deleteLeagueBatch, {
       leagueId,
       maxTeams: 5,
     });
@@ -161,7 +161,7 @@ describe("deleteLeagueBatch", () => {
     let done = false;
     let guard = 0;
     while (!done && guard++ < 50) {
-      const res = await t.mutation(api.sports.deleteLeagueBatch, {
+      const res = await t.mutation(internal.sports.deleteLeagueBatch, {
         leagueId,
         maxTeams: 2,
       });
@@ -193,13 +193,13 @@ describe("deleteLeagueBatch", () => {
     const t = convexTest(schema, modules);
     const { leagueId } = await seedLeague(t, 3);
 
-    const first = await t.mutation(api.sports.deleteLeagueBatch, {
+    const first = await t.mutation(internal.sports.deleteLeagueBatch, {
       leagueId,
       maxTeams: 10,
     });
     expect(first).toEqual({ done: false, teamsDeleted: 3 });
 
-    const second = await t.mutation(api.sports.deleteLeagueBatch, {
+    const second = await t.mutation(internal.sports.deleteLeagueBatch, {
       leagueId,
       maxTeams: 10,
     });

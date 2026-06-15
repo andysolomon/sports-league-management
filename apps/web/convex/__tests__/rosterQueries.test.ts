@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 
 const modules = import.meta.glob("../**/*.*s");
@@ -83,21 +83,21 @@ describe("getRosterBySeasonTeam", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb2,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.rb1,
@@ -123,21 +123,21 @@ describe("getRosterBySeasonTeam", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t);
 
-    const a1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb2,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.updateRosterStatus, {
+    await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: a1.id as Id<"rosterAssignments">,
       newStatus: "ir",
       actorUserId: ACTOR,
@@ -158,7 +158,7 @@ describe("getRosterBySeasonTeam", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.otherSeason,
       teamId: s.team,
       playerId: s.qb1,
@@ -196,7 +196,7 @@ describe("getTeamRosterLimitStatus", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t, 2);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
@@ -220,7 +220,7 @@ describe("getTeamRosterLimitStatus", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t, null);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
@@ -244,14 +244,14 @@ describe("getTeamRosterLimitStatus", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t, 5);
 
-    const a1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.updateRosterStatus, {
+    await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: a1.id as Id<"rosterAssignments">,
       newStatus: "ir",
       actorUserId: ACTOR,
@@ -272,14 +272,14 @@ describe("getRosterAssignmentHistory", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb2,
@@ -303,21 +303,21 @@ describe("getRosterAssignmentHistory", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t);
 
-    const a1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb2,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.updateRosterStatus, {
+    await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: a1.id as Id<"rosterAssignments">,
       newStatus: "ir",
       actorUserId: ACTOR,
@@ -337,14 +337,14 @@ describe("getRosterAssignmentHistory", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.season,
       teamId: s.team,
       playerId: s.qb2,
@@ -366,7 +366,7 @@ describe("getRosterAssignmentHistory", () => {
     const t = convexTest(schema, modules);
     const s = await seed(t);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: s.otherSeason,
       teamId: s.team,
       playerId: s.qb1,

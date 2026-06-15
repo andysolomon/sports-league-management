@@ -64,9 +64,12 @@ type IngestRow = {
 async function main() {
   const client = new ConvexHttpClient(CONVEX_URL!);
   const adminKey = process.env.CONVEX_ADMIN_KEY;
-  if (adminKey) {
-    (client as unknown as { setAdminAuth: (k: string) => void }).setAdminAuth(adminKey);
+  if (!adminKey) {
+    throw new Error(
+      "CONVEX_ADMIN_KEY is required: sports write mutations are internal (WSM-000096) and reject unauthenticated calls.",
+    );
   }
+  (client as unknown as { setAdminAuth: (k: string) => void }).setAdminAuth(adminKey);
   const q = (name: string, args: unknown) =>
     client.query(name as never, args as never) as Promise<unknown>;
   const m = (name: string, args: unknown) =>
