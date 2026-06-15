@@ -89,6 +89,21 @@ void api.e2eSeed.resetRosterFixture;
 // @ts-expect-error createScheduleFixture is internal, not public
 void api.e2eSeed.createScheduleFixture;
 
+// --- Data migrations MUST be internal too (WSM-000079) ---
+// Backfills/migrations write rows; they're run manually with an admin/deploy
+// key (`npx convex run migrations/... --prod`), never from the public API.
+void internal.migrations["20260422_seasonsRosterLocked"]
+  .backfillSeasonsRosterLocked;
+void internal.migrations["20260428_playersPositionGroup"]
+  .backfillPlayersPositionGroup;
+void internal.migrations["20260428_depthChartToRoster"].migrateDepthChartToRoster;
+// @ts-expect-error backfillSeasonsRosterLocked is internal, not public
+void api.migrations["20260422_seasonsRosterLocked"].backfillSeasonsRosterLocked;
+// @ts-expect-error backfillPlayersPositionGroup is internal, not public
+void api.migrations["20260428_playersPositionGroup"].backfillPlayersPositionGroup;
+// @ts-expect-error migrateDepthChartToRoster is internal, not public
+void api.migrations["20260428_depthChartToRoster"].migrateDepthChartToRoster;
+
 describe("sports write mutations are internal (WSM-000096)", () => {
   it("is enforced at compile time (see @ts-expect-error guards above)", () => {
     // Runtime assertion is trivial; the real guard is tsc. The proxy-based
@@ -100,5 +115,14 @@ describe("sports write mutations are internal (WSM-000096)", () => {
 describe("e2e seed mutations are internal (WSM-000139)", () => {
   it("is enforced at compile time (see @ts-expect-error guards above)", () => {
     expect(typeof internal.e2eSeed.createRosterFixture).not.toBe("undefined");
+  });
+});
+
+describe("data migrations are internal (WSM-000079)", () => {
+  it("is enforced at compile time (see @ts-expect-error guards above)", () => {
+    expect(
+      typeof internal.migrations["20260428_depthChartToRoster"]
+        .migrateDepthChartToRoster,
+    ).not.toBe("undefined");
   });
 });
