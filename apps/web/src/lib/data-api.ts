@@ -1,5 +1,6 @@
 import { makeFunctionReference } from "convex/server";
 import type {
+  ConferenceDto,
   CreatePlayerInput,
   CreateTeamInput,
   DepthChartEntryDto,
@@ -98,6 +99,9 @@ const refs = {
   getDivision: queryRef<{ divisionId: string }, DivisionDto | null>(
     "sports:getDivision",
   ),
+  listConferences: queryRef<{ leagueIds: string[] }, ConferenceDto[]>(
+    "sports:listConferences",
+  ),
   listTeams: queryRef<{ leagueIds: string[] }, TeamDto[]>("sports:listTeams"),
   listTeamsByLeague: queryRef<{ leagueId: string }, TeamDto[]>(
     "sports:listTeamsByLeague",
@@ -113,6 +117,24 @@ const refs = {
     { orgId: string; sourceTeamId: string },
     { teamId: string; leagueId: string; created: boolean }
   >("sports:forkTeamToWorkspace"),
+  forkDivisionToWorkspace: mutationRef<
+    { orgId: string; divisionId: string },
+    {
+      leagueId: string;
+      totalTeams: number;
+      forkedTeams: number;
+      alreadyForked: number;
+    }
+  >("sports:forkDivisionToWorkspace"),
+  forkConferenceToWorkspace: mutationRef<
+    { orgId: string; conferenceId: string },
+    {
+      leagueId: string;
+      totalTeams: number;
+      forkedTeams: number;
+      alreadyForked: number;
+    }
+  >("sports:forkConferenceToWorkspace"),
   getOrgForkedSourceTeamIds: queryRef<{ orgId: string }, string[]>(
     "sports:getOrgForkedSourceTeamIds",
   ),
@@ -512,18 +534,22 @@ export async function getPublicLeagues(): Promise<LeagueDto[]> {
 }
 
 /**
- * Teams + divisions for a PUBLIC league's à la carte import tree (WSM-000100).
- * The league id must come from getPublicLeagues — public leagues are browseable
- * for import, so there's no org-access gate here.
+ * Teams + divisions + conferences for a PUBLIC league's à la carte import tree
+ * (WSM-000100 / WSM-000133). The league id must come from getPublicLeagues —
+ * public leagues are browseable for import, so there's no org-access gate here.
+ * Conferences (where present) form the top tier of the discover hierarchy.
  */
-export async function getPublicLeagueImportTree(
-  leagueId: string,
-): Promise<{ teams: TeamDto[]; divisions: DivisionDto[] }> {
-  const [teams, divisions] = await Promise.all([
+export async function getPublicLeagueImportTree(leagueId: string): Promise<{
+  teams: TeamDto[];
+  divisions: DivisionDto[];
+  conferences: ConferenceDto[];
+}> {
+  const [teams, divisions, conferences] = await Promise.all([
     queryConvex(refs.listTeamsByLeague, { leagueId }),
     queryConvex(refs.listDivisions, { leagueIds: [leagueId] }),
+    queryConvex(refs.listConferences, { leagueIds: [leagueId] }),
   ]);
-  return { teams, divisions };
+  return { teams, divisions, conferences };
 }
 
 export async function getLeagueByInviteToken(
@@ -695,6 +721,38 @@ export async function forkTeamToWorkspace(
   sourceTeamId: string,
 ): Promise<{ teamId: string; leagueId: string; created: boolean }> {
   return mutateConvex(refs.forkTeamToWorkspace, { orgId, sourceTeamId });
+}
+
+/**
+ * WSM-000133: fork EVERY team in a reference division into the org's workspace
+ * in one idempotent batch. Raw wrapper — caller MUST verify org admin first.
+ */
+export async function forkDivisionToWorkspace(
+  orgId: string,
+  divisionId: string,
+): Promise<{
+  leagueId: string;
+  totalTeams: number;
+  forkedTeams: number;
+  alreadyForked: number;
+}> {
+  return mutateConvex(refs.forkDivisionToWorkspace, { orgId, divisionId });
+}
+
+/**
+ * WSM-000133: fork every team under a reference conference (all its divisions)
+ * into the org's workspace, idempotently. Raw wrapper — verify org admin first.
+ */
+export async function forkConferenceToWorkspace(
+  orgId: string,
+  conferenceId: string,
+): Promise<{
+  leagueId: string;
+  totalTeams: number;
+  forkedTeams: number;
+  alreadyForked: number;
+}> {
+  return mutateConvex(refs.forkConferenceToWorkspace, { orgId, conferenceId });
 }
 
 /** WSM-000117: reference team ids the org has already forked (for Discover). */

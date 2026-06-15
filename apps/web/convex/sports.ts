@@ -33,7 +33,7 @@ function toLeagueDto(doc: {
   };
 }
 
-function toDivisionDto(doc: {
+function toConferenceDto(doc: {
   _id: string;
   name: string;
   leagueId: string;
@@ -42,6 +42,20 @@ function toDivisionDto(doc: {
     id: doc._id,
     name: doc.name,
     leagueId: doc.leagueId,
+  };
+}
+
+function toDivisionDto(doc: {
+  _id: string;
+  name: string;
+  leagueId: string;
+  conferenceId?: string | null;
+}) {
+  return {
+    id: doc._id,
+    name: doc.name,
+    leagueId: doc.leagueId,
+    conferenceId: doc.conferenceId ?? null,
   };
 }
 
@@ -424,6 +438,7 @@ export const listDivisions = queryGeneric({
       id: v.string(),
       name: v.string(),
       leagueId: v.string(),
+      conferenceId: v.union(v.string(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -446,12 +461,36 @@ export const getDivision = queryGeneric({
       id: v.string(),
       name: v.string(),
       leagueId: v.string(),
+      conferenceId: v.union(v.string(), v.null()),
     }),
     v.null(),
   ),
   handler: async (ctx, args) => {
     const doc = await ctx.db.get(args.divisionId);
     return doc ? toDivisionDto(doc) : null;
+  },
+});
+
+/** Conferences for one or more leagues (WSM-000133). */
+export const listConferences = queryGeneric({
+  args: { leagueIds: v.array(v.id("leagues")) },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      leagueId: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const docs = await Promise.all(
+      args.leagueIds.map((leagueId) =>
+        ctx.db
+          .query("conferences")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+          .collect(),
+      ),
+    );
+    return sortByName(uniqueById(docs.flat().map(toConferenceDto)));
   },
 });
 
@@ -980,12 +1019,14 @@ export const upsertDivision = internalMutationGeneric({
   args: {
     name: v.string(),
     leagueId: v.id("leagues"),
+    conferenceId: v.optional(v.id("conferences")),
   },
   returns: v.object({
     dto: v.object({
       id: v.string(),
       name: v.string(),
       leagueId: v.string(),
+      conferenceId: v.union(v.string(), v.null()),
     }),
     created: v.boolean(),
   }),
@@ -1002,9 +1043,18 @@ export const upsertDivision = internalMutationGeneric({
       return { dto: toDivisionDto(existing), created: false };
     }
 
-    const divisionId = await ctx.db.insert("divisions", args);
+    const divisionId = await ctx.db.insert("divisions", {
+      name: args.name,
+      leagueId: args.leagueId,
+      ...(args.conferenceId ? { conferenceId: args.conferenceId } : {}),
+    });
     return {
-      dto: { id: divisionId, name: args.name, leagueId: args.leagueId },
+      dto: {
+        id: divisionId,
+        name: args.name,
+        leagueId: args.leagueId,
+        conferenceId: args.conferenceId ?? null,
+      },
       created: true,
     };
   },
@@ -1014,7 +1064,12 @@ export const upsertDivision = internalMutationGeneric({
 export const updateDivision = internalMutationGeneric({
   args: { divisionId: v.id("divisions"), name: v.string() },
   returns: v.union(
-    v.object({ id: v.string(), name: v.string(), leagueId: v.string() }),
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      leagueId: v.string(),
+      conferenceId: v.union(v.string(), v.null()),
+    }),
     v.null(),
   ),
   handler: async (ctx, args) => {
@@ -1804,6 +1859,174 @@ export const setLeagueInviteToken = internalMutationGeneric({
  * provenance resolve back to the reference. This replaces the shared-edit
  * claimTeam path under the private-only workspace model (RFC §11).
  */
+/**
+ * Get-or-create the org's PRIVATE workspace league mirroring `refLeague`.
+ * Shared by the single-team and batch (division/conference) fork paths so the
+ * idempotent "one workspace league per reference league per org" rule holds.
+ */
+async function ensureWorkspaceLeague(
+  ctx: MutationCtx,
+  orgId: string,
+  refLeague: { _id: Id<"leagues">; name: string },
+): Promise<Id<"leagues">> {
+  const existing =
+    (
+      await ctx.db
+        .query("leagues")
+        .withIndex("by_orgId", (q) => q.eq("orgId", orgId))
+        .collect()
+    ).find((l) => l.sourceLeagueId === refLeague._id) ?? null;
+  if (existing) return existing._id;
+  return ctx.db.insert("leagues", {
+    name: refLeague.name,
+    orgId,
+    isPublic: false,
+    inviteToken: null,
+    sourceLeagueId: refLeague._id,
+  });
+}
+
+/**
+ * Mirror a reference conference into the workspace (by name), get-or-create.
+ * Returns the workspace conference id, or null when the reference team/division
+ * has no conference. Keeps the workspace hierarchy parallel to the reference.
+ */
+async function ensureWorkspaceConference(
+  ctx: MutationCtx,
+  workspaceLeagueId: Id<"leagues">,
+  refConferenceId: Id<"conferences"> | null | undefined,
+): Promise<Id<"conferences"> | null> {
+  if (!refConferenceId) return null;
+  const refConf = await ctx.db.get(refConferenceId);
+  if (!refConf) return null;
+  const existingConf =
+    (
+      await ctx.db
+        .query("conferences")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", workspaceLeagueId))
+        .collect()
+    ).find((c) => c.name === refConf.name) ?? null;
+  if (existingConf) return existingConf._id;
+  return ctx.db.insert("conferences", {
+    name: refConf.name,
+    leagueId: workspaceLeagueId,
+    sourceConferenceId: refConf._id,
+  });
+}
+
+/**
+ * Mirror a reference division into the workspace (by name), get-or-create,
+ * carrying its conference link. Returns null when the team has no division.
+ */
+async function ensureWorkspaceDivision(
+  ctx: MutationCtx,
+  workspaceLeagueId: Id<"leagues">,
+  refDivisionId: Id<"divisions"> | null | undefined,
+): Promise<Id<"divisions"> | null> {
+  if (!refDivisionId) return null;
+  const refDiv = await ctx.db.get(refDivisionId);
+  if (!refDiv) return null;
+  const existingDiv =
+    (
+      await ctx.db
+        .query("divisions")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", workspaceLeagueId))
+        .collect()
+    ).find((d) => d.name === refDiv.name) ?? null;
+  if (existingDiv) return existingDiv._id;
+  const workspaceConferenceId = await ensureWorkspaceConference(
+    ctx,
+    workspaceLeagueId,
+    refDiv.conferenceId,
+  );
+  return ctx.db.insert("divisions", {
+    name: refDiv.name,
+    leagueId: workspaceLeagueId,
+    ...(workspaceConferenceId ? { conferenceId: workspaceConferenceId } : {}),
+  });
+}
+
+/**
+ * Fork a single reference team (+ roster) into an already-resolved workspace
+ * league. Idempotent per (workspace league, source team). The reference league
+ * forkability check is the CALLER's responsibility. Returns the workspace team
+ * id and whether it was newly created (false = already forked).
+ */
+async function forkOneTeamInto(
+  ctx: MutationCtx,
+  orgId: string,
+  workspaceLeagueId: Id<"leagues">,
+  sourceTeamId: Id<"teams">,
+): Promise<{ teamId: Id<"teams">; created: boolean }> {
+  const refTeam = await ctx.db.get(sourceTeamId);
+  if (!refTeam) throw new Error("Source team not found");
+
+  const existing =
+    (
+      await ctx.db
+        .query("teams")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", workspaceLeagueId))
+        .collect()
+    ).find((t) => t.sourceTeamId === sourceTeamId) ?? null;
+  if (existing) return { teamId: existing._id, created: false };
+
+  const workspaceDivisionId = await ensureWorkspaceDivision(
+    ctx,
+    workspaceLeagueId,
+    refTeam.divisionId,
+  );
+
+  const newTeamId = await ctx.db.insert("teams", {
+    name: refTeam.name,
+    leagueId: workspaceLeagueId,
+    divisionId: workspaceDivisionId,
+    city: refTeam.city,
+    stadium: refTeam.stadium,
+    foundedYear: refTeam.foundedYear,
+    location: refTeam.location,
+    logoUrl: refTeam.logoUrl,
+    rosterLimit: refTeam.rosterLimit,
+    ownerOrgId: orgId,
+    sourceTeamId: sourceTeamId,
+  });
+
+  const refPlayers = await ctx.db
+    .query("players")
+    .withIndex("by_teamId", (q) => q.eq("teamId", sourceTeamId))
+    .collect();
+  for (const p of refPlayers) {
+    await ctx.db.insert("players", {
+      name: p.name,
+      leagueId: workspaceLeagueId,
+      teamId: newTeamId,
+      position: p.position,
+      positionGroup: p.positionGroup,
+      jerseyNumber: p.jerseyNumber,
+      dateOfBirth: p.dateOfBirth,
+      status: p.status,
+      headshotUrl: p.headshotUrl,
+      experienceYears: p.experienceYears,
+      sourcePlayerId: p._id,
+    });
+  }
+
+  return { teamId: newTeamId, created: true };
+}
+
+/** Reference league a team can be forked from, or throw if not forkable. */
+async function requireForkableLeague(
+  ctx: MutationCtx,
+  refLeagueId: Id<"leagues">,
+): Promise<{ _id: Id<"leagues">; name: string }> {
+  const refLeague = await ctx.db.get(refLeagueId);
+  // Forkable = a public reference league we've marked claimable (the curated
+  // "discovery data we allow"). Workspace leagues (private) aren't forkable.
+  if (!refLeague || !refLeague.isPublic || !refLeague.claimable) {
+    throw new Error("Team is not forkable");
+  }
+  return { _id: refLeague._id, name: refLeague.name };
+}
+
 export const forkTeamToWorkspace = internalMutationGeneric({
   args: { orgId: v.string(), sourceTeamId: v.id("teams") },
   returns: v.object({
@@ -1814,112 +2037,134 @@ export const forkTeamToWorkspace = internalMutationGeneric({
   handler: async (ctx, args) => {
     const refTeam = await ctx.db.get(args.sourceTeamId);
     if (!refTeam) throw new Error("Source team not found");
-    const refLeague = await ctx.db.get(refTeam.leagueId);
-    // Forkable = a public reference league we've marked claimable (the curated
-    // "discovery data we allow"). Workspace leagues (private) aren't forkable.
-    if (!refLeague || !refLeague.isPublic || !refLeague.claimable) {
-      throw new Error("Team is not forkable");
-    }
+    const refLeague = await requireForkableLeague(ctx, refTeam.leagueId);
+    const workspaceLeagueId = await ensureWorkspaceLeague(
+      ctx,
+      args.orgId,
+      refLeague,
+    );
+    const { teamId, created } = await forkOneTeamInto(
+      ctx,
+      args.orgId,
+      workspaceLeagueId,
+      args.sourceTeamId,
+    );
+    return {
+      teamId: teamId as string,
+      leagueId: workspaceLeagueId as string,
+      created,
+    };
+  },
+});
 
-    // Get-or-create the org's workspace league for this reference league.
-    let workspaceLeague =
-      (
-        await ctx.db
-          .query("leagues")
-          .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
-          .collect()
-      ).find((l) => l.sourceLeagueId === refLeague._id) ?? null;
-    if (!workspaceLeague) {
-      const id = await ctx.db.insert("leagues", {
-        name: refLeague.name,
-        orgId: args.orgId,
-        isPublic: false,
-        inviteToken: null,
-        sourceLeagueId: refLeague._id,
-      });
-      workspaceLeague = await ctx.db.get(id);
-    }
-    const workspaceLeagueId = workspaceLeague!._id;
+/**
+ * À la carte by division (WSM-000133): fork EVERY team in a reference division
+ * into the org's workspace in one idempotent action. Already-forked teams are
+ * skipped (no duplicates), so re-running over a partially-added division adds
+ * only the remaining teams. Returns per-division counts the UI uses to render
+ * added/partial/all state.
+ */
+export const forkDivisionToWorkspace = internalMutationGeneric({
+  args: { orgId: v.string(), divisionId: v.id("divisions") },
+  returns: v.object({
+    leagueId: v.string(),
+    totalTeams: v.number(),
+    forkedTeams: v.number(),
+    alreadyForked: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const refDiv = await ctx.db.get(args.divisionId);
+    if (!refDiv) throw new Error("Source division not found");
+    const refLeague = await requireForkableLeague(ctx, refDiv.leagueId);
+    const workspaceLeagueId = await ensureWorkspaceLeague(
+      ctx,
+      args.orgId,
+      refLeague,
+    );
 
-    // Idempotent: already forked this team into the workspace?
-    const existing =
-      (
-        await ctx.db
-          .query("teams")
-          .withIndex("by_leagueId", (q) =>
-            q.eq("leagueId", workspaceLeagueId),
-          )
-          .collect()
-      ).find((t) => t.sourceTeamId === args.sourceTeamId) ?? null;
-    if (existing) {
-      return {
-        teamId: existing._id as string,
-        leagueId: workspaceLeagueId as string,
-        created: false,
-      };
-    }
-
-    // Mirror the team's division into the workspace (by name).
-    let workspaceDivisionId: Id<"divisions"> | null = null;
-    if (refTeam.divisionId) {
-      const refDiv = await ctx.db.get(refTeam.divisionId);
-      if (refDiv) {
-        const existingDiv =
-          (
-            await ctx.db
-              .query("divisions")
-              .withIndex("by_leagueId", (q) =>
-                q.eq("leagueId", workspaceLeagueId),
-              )
-              .collect()
-          ).find((d) => d.name === refDiv.name) ?? null;
-        workspaceDivisionId = existingDiv
-          ? existingDiv._id
-          : await ctx.db.insert("divisions", {
-              name: refDiv.name,
-              leagueId: workspaceLeagueId,
-            });
-      }
-    }
-
-    const newTeamId = await ctx.db.insert("teams", {
-      name: refTeam.name,
-      leagueId: workspaceLeagueId,
-      divisionId: workspaceDivisionId,
-      city: refTeam.city,
-      stadium: refTeam.stadium,
-      foundedYear: refTeam.foundedYear,
-      location: refTeam.location,
-      logoUrl: refTeam.logoUrl,
-      rosterLimit: refTeam.rosterLimit,
-      ownerOrgId: args.orgId,
-      sourceTeamId: args.sourceTeamId,
-    });
-
-    const refPlayers = await ctx.db
-      .query("players")
-      .withIndex("by_teamId", (q) => q.eq("teamId", args.sourceTeamId))
+    const refTeams = await ctx.db
+      .query("teams")
+      .withIndex("by_divisionId", (q) => q.eq("divisionId", args.divisionId))
       .collect();
-    for (const p of refPlayers) {
-      await ctx.db.insert("players", {
-        name: p.name,
-        leagueId: workspaceLeagueId,
-        teamId: newTeamId,
-        position: p.position,
-        positionGroup: p.positionGroup,
-        jerseyNumber: p.jerseyNumber,
-        dateOfBirth: p.dateOfBirth,
-        status: p.status,
-        headshotUrl: p.headshotUrl,
-        experienceYears: p.experienceYears,
-        sourcePlayerId: p._id,
-      });
+
+    let forkedTeams = 0;
+    let alreadyForked = 0;
+    for (const t of refTeams) {
+      const { created } = await forkOneTeamInto(
+        ctx,
+        args.orgId,
+        workspaceLeagueId,
+        t._id,
+      );
+      if (created) forkedTeams += 1;
+      else alreadyForked += 1;
     }
 
     return {
-      teamId: newTeamId as string,
       leagueId: workspaceLeagueId as string,
-      created: true,
+      totalTeams: refTeams.length,
+      forkedTeams,
+      alreadyForked,
+    };
+  },
+});
+
+/**
+ * À la carte by conference (WSM-000133, optimal AC): fork every team in every
+ * division under a reference conference. Idempotent — already-forked teams are
+ * skipped. Returns aggregate counts across all the conference's divisions.
+ */
+export const forkConferenceToWorkspace = internalMutationGeneric({
+  args: { orgId: v.string(), conferenceId: v.id("conferences") },
+  returns: v.object({
+    leagueId: v.string(),
+    totalTeams: v.number(),
+    forkedTeams: v.number(),
+    alreadyForked: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const refConf = await ctx.db.get(args.conferenceId);
+    if (!refConf) throw new Error("Source conference not found");
+    const refLeague = await requireForkableLeague(ctx, refConf.leagueId);
+    const workspaceLeagueId = await ensureWorkspaceLeague(
+      ctx,
+      args.orgId,
+      refLeague,
+    );
+
+    const divisions = await ctx.db
+      .query("divisions")
+      .withIndex("by_conferenceId", (q) =>
+        q.eq("conferenceId", args.conferenceId),
+      )
+      .collect();
+
+    let totalTeams = 0;
+    let forkedTeams = 0;
+    let alreadyForked = 0;
+    for (const div of divisions) {
+      const refTeams = await ctx.db
+        .query("teams")
+        .withIndex("by_divisionId", (q) => q.eq("divisionId", div._id))
+        .collect();
+      totalTeams += refTeams.length;
+      for (const t of refTeams) {
+        const { created } = await forkOneTeamInto(
+          ctx,
+          args.orgId,
+          workspaceLeagueId,
+          t._id,
+        );
+        if (created) forkedTeams += 1;
+        else alreadyForked += 1;
+      }
+    }
+
+    return {
+      leagueId: workspaceLeagueId as string,
+      totalTeams,
+      forkedTeams,
+      alreadyForked,
     };
   },
 });

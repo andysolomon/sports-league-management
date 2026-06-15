@@ -31,13 +31,16 @@ export default async function DiscoverPage() {
   ]);
   const forked = new Set(forkedIds);
 
-  // Discover is a catalog of reference leagues you fork teams from (WSM-000117).
+  // Discover is a catalog of reference leagues you fork teams from
+  // (WSM-000117). WSM-000133 surfaces the conference → division → team hierarchy
+  // so coaches can add whole groups, not just individual teams.
   const leagues: DiscoverLeague[] = await Promise.all(
     publicLeagues.map(async (league) => {
-      const [{ teams, divisions }, forkable] = await Promise.all([
+      const [{ teams, divisions, conferences }, forkable] = await Promise.all([
         getPublicLeagueImportTree(league.id).catch(() => ({
           teams: [],
           divisions: [],
+          conferences: [],
         })),
         getLeagueClaimable(league.id).catch(() => false),
       ]);
@@ -45,7 +48,12 @@ export default async function DiscoverPage() {
         id: league.id,
         name: league.name,
         forkable,
-        divisions: divisions.map((d) => ({ id: d.id, name: d.name })),
+        conferences: conferences.map((c) => ({ id: c.id, name: c.name })),
+        divisions: divisions.map((d) => ({
+          id: d.id,
+          name: d.name,
+          conferenceId: d.conferenceId,
+        })),
         teams: teams.map((t) => ({
           id: t.id,
           name: t.name,

@@ -2,6 +2,7 @@ import { z } from "zod";
 import type {
   ApiResponse,
   LeagueDto,
+  ConferenceDto,
   DivisionDto,
   TeamDto,
   PlayerDto,
@@ -24,10 +25,17 @@ export const LeagueDtoSchema = z.object({
   orgId: z.string().nullable(),
 }) satisfies z.ZodType<LeagueDto>;
 
+export const ConferenceDtoSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  leagueId: z.string(),
+}) satisfies z.ZodType<ConferenceDto>;
+
 export const DivisionDtoSchema = z.object({
   id: z.string(),
   name: z.string(),
   leagueId: z.string(),
+  conferenceId: z.string().nullable(),
 }) satisfies z.ZodType<DivisionDto>;
 
 export const TeamDtoSchema = z.object({
