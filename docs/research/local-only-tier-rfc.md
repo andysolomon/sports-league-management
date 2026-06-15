@@ -33,6 +33,16 @@ model ([org-workspace-data-model-rfc](./org-workspace-data-model-rfc.md)), the i
   `<AccountOnly>` upgrade chip and an "Unlock with a free account" panel listing the server-only
   capabilities (cloud backup, public link, roles, Discover) as dashed chips linking to sign-up, so
   the boundary doubles as the upgrade funnel. Presentational; no new tests.
+- **2026-06-15 — Slice 6 shipped (AC #3 met). #258 COMPLETE.** Upgrade-without-data-loss migration.
+  `serializeLocalWorkspace` exports the full local DB (the `{ league, divisions }` head is a valid
+  `LeagueImportPayload`; seasons/fixtures ride alongside, re-keyed by name). On first authed load,
+  `<MigrateLocalPrompt>` (mounted in the dashboard layout) detects a non-empty local DB and offers a
+  one-click import. `POST /api/local/migrate` imports the core via the EXISTING `bulkImportLeague`
+  funnel (org-scoped) then re-creates seasons/fixtures/results via existing mutations mapped by
+  name — **no new Convex functions, no deploy**. On success the local DB is cleared. 4 new tests
+  (serialize incl. Unassigned bucketing + valid-import-head, detect/clear). Total 414.
+  **All three ACs met; #258 closed.** Possible follow-ups: ratings overlay (static snapshot),
+  shared presentational components between `/local` and `/dashboard` to cut duplication.
 
 ## 1. Intent (from product)
 

@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import Sidebar from "./_components/sidebar";
 import MobileHeader from "./_components/mobile-header";
 import { LeagueSwitcher } from "./_components/league-switcher";
+import { MigrateLocalPrompt } from "./_components/migrate-local-prompt";
 import { resolveActiveLeague } from "@/lib/active-league";
 
 export default async function DashboardLayout({
@@ -40,6 +41,7 @@ export default async function DashboardLayout({
         </header>
 
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8">
+          <MigrateLocalPrompt />
           {children}
         </main>
       </div>
