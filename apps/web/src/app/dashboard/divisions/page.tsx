@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getDivisions, getLeagues } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { DivisionsTable } from "./divisions-table";
+import { PageHeader } from "../_components/page-header";
 
 export default async function DivisionsPage() {
   const { userId } = await auth();
@@ -26,7 +27,7 @@ export default async function DivisionsPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-foreground">Divisions</h2>
+      <PageHeader title="Divisions" description="Divisions that group teams in the active league." />
       <DivisionsTable divisions={divisionsWithLeague} />
     </div>
   );

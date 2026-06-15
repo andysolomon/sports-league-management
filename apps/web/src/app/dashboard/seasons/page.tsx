@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/empty-state";
 import { Calendar, Trophy } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { CreateSeasonButton, SeasonRowActions } from "./season-actions";
+import { PageHeader } from "../_components/page-header";
 
 export default async function SeasonsPage() {
   const { userId } = await auth();
@@ -30,7 +31,7 @@ export default async function SeasonsPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-foreground">Seasons</h2>
+      <PageHeader title="Seasons" description="Seasons and their schedules across your leagues." />
 
       {leagues.length === 0 ? (
         <EmptyState
