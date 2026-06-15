@@ -13,6 +13,12 @@ import { getUserRoleInOrg } from "@/lib/org-context";
 
 type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
 
+/** Pages that render division controls and must refresh after a mutation. */
+function revalidateDivisionViews(): void {
+  revalidatePath("/dashboard/leagues");
+  revalidatePath("/dashboard/divisions");
+}
+
 /** Org-admin gate for a division's league. Mirrors leagues/actions.ts. */
 async function requireLeagueAdmin(
   leagueId: string | null,
@@ -37,7 +43,7 @@ export async function createDivisionAction(
   if (!gate.ok) return gate;
   try {
     const { dto } = await createDivision({ name: trimmed, leagueId });
-    revalidatePath("/dashboard/leagues");
+    revalidateDivisionViews();
     return { ok: true, id: dto.id };
   } catch (err) {
     return {
@@ -58,7 +64,7 @@ export async function renameDivisionAction(
   if (!gate.ok) return gate;
   try {
     await updateDivisionMutation({ divisionId, name: trimmed });
-    revalidatePath("/dashboard/leagues");
+    revalidateDivisionViews();
     return { ok: true };
   } catch (err) {
     return {
@@ -70,19 +76,19 @@ export async function renameDivisionAction(
 
 export async function deleteDivisionAction(
   divisionId: string,
-): Promise<Result> {
+): Promise<Result<{ teamCount: number }>> {
   const leagueId = await getDivisionLeagueId(divisionId);
   const gate = await requireLeagueAdmin(leagueId);
   if (!gate.ok) return gate;
-  const res = await deleteDivisionMutation(divisionId);
-  if (!res.ok) {
+  try {
+    // Teams in the division are reassigned to "no division", not deleted.
+    const { teamCount } = await deleteDivisionMutation(divisionId);
+    revalidateDivisionViews();
+    return { ok: true, teamCount };
+  } catch (err) {
     return {
       ok: false,
-      error: `Move or remove its ${res.teamCount} team${
-        res.teamCount === 1 ? "" : "s"
-      } first.`,
+      error: err instanceof Error ? err.message : "Could not delete division.",
     };
   }
-  revalidatePath("/dashboard/leagues");
-  return { ok: true };
 }

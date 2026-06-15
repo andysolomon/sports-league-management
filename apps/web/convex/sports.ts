@@ -1086,17 +1086,20 @@ export const updateDivision = internalMutationGeneric({
  */
 export const deleteDivision = internalMutationGeneric({
   args: { divisionId: v.id("divisions") },
+  // `teamCount` is the number of teams reassigned to "no division" (WSM-000128).
   returns: v.object({ ok: v.boolean(), teamCount: v.number() }),
   handler: async (ctx, args) => {
     const teams = await ctx.db
       .query("teams")
       .withIndex("by_divisionId", (q) => q.eq("divisionId", args.divisionId))
       .collect();
-    if (teams.length > 0) {
-      return { ok: false, teamCount: teams.length };
+    // Reassign teams to "no division" rather than orphaning or deleting them,
+    // then drop the division.
+    for (const team of teams) {
+      await ctx.db.patch(team._id, { divisionId: null });
     }
     await ctx.db.delete(args.divisionId);
-    return { ok: true, teamCount: 0 };
+    return { ok: true, teamCount: teams.length };
   },
 });
 

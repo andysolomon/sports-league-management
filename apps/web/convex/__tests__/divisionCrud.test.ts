@@ -54,19 +54,25 @@ describe("division CRUD (WSM-000132 / WSM-000128)", () => {
     expect(dto?.name).toBe("West");
   });
 
-  it("deleteDivision refuses a non-empty division", async () => {
+  it("deleteDivision reassigns teams to no division, then deletes (WSM-000128)", async () => {
     const t = convexTest(schema, modules);
     const { leagueId, divisionId } = await seedLeague(t);
-    await addTeam(t, leagueId, divisionId);
+    const teamId = await addTeam(t, leagueId, divisionId);
 
     const res = await t.mutation(internal.sports.deleteDivision, {
       divisionId,
     });
-    expect(res.ok).toBe(false);
+    expect(res.ok).toBe(true);
     expect(res.teamCount).toBe(1);
 
-    const stillThere = await t.run((ctx) => ctx.db.get(divisionId));
-    expect(stillThere).not.toBeNull();
+    // Division is gone...
+    const gone = await t.run((ctx) => ctx.db.get(divisionId));
+    expect(gone).toBeNull();
+
+    // ...but its team survives, reassigned to "no division".
+    const team = await t.run((ctx) => ctx.db.get(teamId));
+    expect(team).not.toBeNull();
+    expect(team?.divisionId).toBeNull();
   });
 
   it("deleteDivision removes an empty division", async () => {

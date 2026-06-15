@@ -68,6 +68,7 @@ export function LeaguesAccordion({
                   <DivisionRowActions
                     divisionId={division.id}
                     currentName={division.name}
+                    teamCount={division.teams.length}
                   />
                 ) : null}
               </div>
