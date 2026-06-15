@@ -1,38 +1,109 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getTeam, getPlayersByTeam } from "@/lib/data-api";
+import {
+  getTeam,
+  getPlayersByTeam,
+  getTeamAttributeSnapshots,
+  getTeamMaddenOveralls,
+  getLeagueClaimable,
+} from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { canManageTeam } from "@/lib/authorization";
+import { canManageTeam, canAdministerTeam } from "@/lib/authorization";
+import { playerAttributesV1 } from "@/lib/flags";
+import type { PlayerSnapshot } from "@/lib/attributes/headline-columns";
 import TeamManagement from "./team-management";
+import { ClaimTeamButton } from "./claim-team-button";
 
 export default async function TeamDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { id } = await params;
+  // Back link reflects where the user came from (WSM-000102): a team reached
+  // from the Leagues page should go back to Leagues, not Teams. Linking pages
+  // pass `?from`; default is the Teams list.
+  const { from } = await searchParams;
+  const back =
+    from === "leagues"
+      ? { href: "/dashboard/leagues", label: "Back to Leagues" }
+      : from === "divisions"
+        ? { href: "/dashboard/divisions", label: "Back to Divisions" }
+        : { href: "/dashboard/teams", label: "Back to Teams" };
   const orgContext = await resolveOrgContext(userId);
 
-  const [team, players, canManage] = await Promise.all([
+  // canManage = admin or coach (roster/players/edit); canDelete = admin only
+  // (removing the whole team). WSM-000121 intra-org roles.
+  const [team, players, canManage, canDelete] = await Promise.all([
     getTeam(id, orgContext),
     getPlayersByTeam(id, orgContext),
     canManageTeam(id, userId),
+    canAdministerTeam(id, userId),
   ]);
+
+  // Fork affordance (WSM-000115): a reference team in a forkable league can be
+  // copied into the user's private workspace (editable). Offered whenever the
+  // user can't already manage this (read-only reference) team and the league is
+  // forkable — no org prerequisite (the fork creates one). Degrades to no offer.
+  let offerFork = false;
+  if (!canManage) {
+    offerFork = await getLeagueClaimable(team.leagueId).catch(() => false);
+  }
+
+  // WSM-000090: attribute snapshots feed the SPRT stat columns. Phase 2-gated;
+  // the season is resolved server-side — including workspace forks, which read
+  // their source league's current season (WSM-000122). Failure here must never
+  // take down the roster — columns simply don't render.
+  let snapshots: ReadonlyMap<string, PlayerSnapshot> = new Map();
+  let maddenOveralls: ReadonlyMap<string, number> = new Map();
+  if (await playerAttributesV1()) {
+    snapshots = await getTeamAttributeSnapshots(id, orgContext).catch(
+      () => new Map(),
+    );
+    // WSM-000095: Madden overall per player, shown beside SPRT. Season-agnostic.
+    maddenOveralls = await getTeamMaddenOveralls(id, orgContext).catch(
+      () => new Map(),
+    );
+  }
 
   return (
     <div>
       <Link
-        href="/dashboard/teams"
+        href={back.href}
         className="mb-4 inline-block text-sm text-primary hover:underline"
       >
-        &larr; Back to Teams
+        &larr; {back.label}
       </Link>
 
-      <TeamManagement team={team} players={players} canManage={canManage} />
+      {offerFork && (
+        <div className="mb-4 rounded-md border border-primary/40 bg-primary/5 p-4">
+          <p className="text-sm font-medium text-foreground">Coach here?</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add {team.name} to your teams — you&rsquo;ll get your own private
+            copy to manage (roster, depth chart, stats), separate from everyone
+            else. We&rsquo;ll set up your organization if you don&rsquo;t have
+            one yet.
+          </p>
+          <div className="mt-3">
+            <ClaimTeamButton teamId={team.id} teamName={team.name} />
+          </div>
+        </div>
+      )}
+
+      <TeamManagement
+        team={team}
+        players={players}
+        canManage={canManage}
+        canDelete={canDelete}
+        attributeSnapshots={Object.fromEntries(snapshots)}
+        maddenOveralls={Object.fromEntries(maddenOveralls)}
+      />
     </div>
   );
 }

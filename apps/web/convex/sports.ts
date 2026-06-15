@@ -1,7 +1,7 @@
 import { mutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
 import { computeStandingsPure } from "./lib/standings";
@@ -81,6 +81,7 @@ function toPlayerDto(doc: {
   dateOfBirth: string | null;
   status: string;
   headshotUrl: string | null;
+  experienceYears?: number | null;
 }) {
   return {
     id: doc._id,
@@ -92,6 +93,7 @@ function toPlayerDto(doc: {
     dateOfBirth: doc.dateOfBirth ?? null,
     status: doc.status,
     headshotUrl: doc.headshotUrl ?? null,
+    experienceYears: doc.experienceYears ?? null,
   };
 }
 
@@ -206,6 +208,15 @@ export const getVisibleLeagueContext = queryGeneric({
   returns: v.object({
     visibleLeagueIds: v.array(v.string()),
     subscribedLeagueIds: v.array(v.string()),
+    // À la carte scopes (WSM-000100): one entry per PARTIAL subscription
+    // (teamIds set & non-empty). Full ("import all") subscriptions are omitted
+    // so the consumer treats them as unrestricted.
+    subscriptionScopes: v.array(
+      v.object({
+        leagueId: v.string(),
+        teamIds: v.array(v.string()),
+      }),
+    ),
   }),
   handler: async (ctx, args) => {
     const subscriptionDocs = await ctx.db
@@ -214,6 +225,12 @@ export const getVisibleLeagueContext = queryGeneric({
       .collect();
 
     const subscribedLeagueIds = subscriptionDocs.map((doc) => doc.leagueId);
+    const subscriptionScopes = subscriptionDocs
+      .filter((doc) => doc.teamIds && doc.teamIds.length > 0)
+      .map((doc) => ({
+        leagueId: doc.leagueId as string,
+        teamIds: (doc.teamIds ?? []).map((id: string) => id),
+      }));
     const orgLeagueDocs = await Promise.all(
       args.orgIds.map((orgId) =>
         ctx.db
@@ -223,17 +240,47 @@ export const getVisibleLeagueContext = queryGeneric({
       ),
     );
 
+    // Private-workspace model (WSM-000117): the dashboard shows ONLY the user's
+    // org (workspace) leagues. Reference leagues are reached via Discover, not
+    // a "follow" subscription — so subscriptions no longer grant visibility.
+    // This also removes the dual-presence wart (a followed reference league and
+    // its forked copy both appearing). subscribedLeagueIds is still returned for
+    // back-compat but no longer feeds visibility.
     const visibleLeagueIds = Array.from(
-      new Set([
-        ...subscribedLeagueIds,
-        ...orgLeagueDocs.flat().map((league) => league._id),
-      ]),
+      new Set(orgLeagueDocs.flat().map((league) => league._id)),
     );
 
     return {
       visibleLeagueIds,
       subscribedLeagueIds,
+      subscriptionScopes,
     };
+  },
+});
+
+/**
+ * The set of reference team ids an org has already forked into its workspace
+ * (WSM-000117). Lets Discover mark teams as "Added".
+ */
+export const getOrgForkedSourceTeamIds = queryGeneric({
+  args: { orgId: v.string() },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const workspaceLeagues = await ctx.db
+      .query("leagues")
+      .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const sourceTeamIds: string[] = [];
+    for (const league of workspaceLeagues) {
+      const teams = await ctx.db
+        .query("teams")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", league._id))
+        .collect();
+      for (const t of teams) {
+        if (t.sourceTeamId) sourceTeamIds.push(t.sourceTeamId as string);
+      }
+    }
+    return sourceTeamIds;
   },
 });
 
@@ -485,6 +532,16 @@ export const getTeamLeagueId = queryGeneric({
   },
 });
 
+/** Hybrid fork model (WSM-000109): the org that claimed this team, or null. */
+export const getTeamOwnerOrgId = queryGeneric({
+  args: { teamId: v.id("teams") },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const doc = await ctx.db.get(args.teamId);
+    return doc?.ownerOrgId ?? null;
+  },
+});
+
 export const listPlayers = queryGeneric({
   args: { leagueIds: v.array(v.id("leagues")) },
   returns: v.array(
@@ -498,6 +555,7 @@ export const listPlayers = queryGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -526,6 +584,7 @@ export const listPlayersByTeam = queryGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -550,6 +609,7 @@ export const getPlayer = queryGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
     v.null(),
   ),
@@ -692,6 +752,209 @@ export const upsertLeague = mutationGeneric({
   },
 });
 
+/** Create a new org-owned league (WSM-000118). Name unique within the org. */
+export const createLeague = mutationGeneric({
+  args: { name: v.string(), orgId: v.string() },
+  returns: v.object({ id: v.string(), name: v.string() }),
+  handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (!name) throw new Error("League name is required");
+    const dupe = (
+      await ctx.db
+        .query("leagues")
+        .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+        .collect()
+    ).some((l) => l.name === name);
+    if (dupe) throw new Error("You already have a league with that name");
+    const id = await ctx.db.insert("leagues", {
+      name,
+      orgId: args.orgId,
+      isPublic: false,
+      inviteToken: null,
+    });
+    return { id: id as string, name };
+  },
+});
+
+/** Rename a league (WSM-000118). Auth enforced in the calling server action. */
+export const renameLeague = mutationGeneric({
+  args: { leagueId: v.id("leagues"), name: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const name = args.name.trim();
+    if (!name) throw new Error("League name is required");
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) throw new Error("league_not_found");
+    await ctx.db.patch(args.leagueId, { name });
+    return null;
+  },
+});
+
+/**
+ * Delete a league and everything under it (WSM-000118): subscriptions, audit
+ * log, roster assignments, seasons + fixtures + game results + player
+ * attributes, depth-chart entries, players, teams, divisions. Auth enforced in
+ * the calling server action (org:admin of the league's org).
+ */
+/*
+ * Delete a league in bounded batches (WSM-000122). A forked NFL league carries
+ * ~2,900 players plus their attributes/ratings/assignments — far more than a
+ * single Convex mutation can read/write in one transaction. So each call purges
+ * up to `maxTeams` teams (each via the bounded `purgeTeam` cascade) and reports
+ * whether more remain; once no teams are left it sweeps the league-level rows
+ * (subscriptions, seasons + their fixtures/results/attributes, divisions, audit
+ * log, assignments) and deletes the league itself. The caller loops until
+ * `done`. Idempotent and resumable — a partial delete just continues next call.
+ */
+export const deleteLeagueBatch = mutationGeneric({
+  args: { leagueId: v.id("leagues"), maxTeams: v.optional(v.number()) },
+  returns: v.object({ done: v.boolean(), teamsDeleted: v.number() }),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) return { done: true, teamsDeleted: 0 };
+
+    const limit = Math.max(1, Math.min(args.maxTeams ?? 3, 25));
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .take(limit);
+
+    // Still have teams: purge this batch and ask the caller to come back.
+    if (teams.length > 0) {
+      for (const team of teams) await purgeTeam(ctx as MutationCtx, team._id);
+      return { done: false, teamsDeleted: teams.length };
+    }
+
+    // No teams left — sweep the (now small) league-level rows and the league.
+    for (const s of await ctx.db
+      .query("leagueSubscriptions")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(s._id);
+    for (const a of await ctx.db
+      .query("rosterAuditLog")
+      .withIndex("by_leagueId_createdAt", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(a._id);
+    for (const r of await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_leagueId_seasonId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(r._id);
+
+    const seasons = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    for (const season of seasons) {
+      const fixtures = await ctx.db
+        .query("fixtures")
+        .withIndex("by_seasonId", (q) => q.eq("seasonId", season._id))
+        .collect();
+      for (const f of fixtures) {
+        for (const gr of await ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+          .collect())
+          await ctx.db.delete(gr._id);
+        await ctx.db.delete(f._id);
+      }
+      for (const pa of await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_seasonId_positionGroup", (q) =>
+          q.eq("seasonId", season._id),
+        )
+        .collect())
+        await ctx.db.delete(pa._id);
+      await ctx.db.delete(season._id);
+    }
+
+    for (const d of await ctx.db
+      .query("divisions")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(d._id);
+
+    await ctx.db.delete(args.leagueId);
+    return { done: true, teamsDeleted: 0 };
+  },
+});
+
+/*
+ * @deprecated Single-shot league delete kept for deploy-order compatibility
+ * (the previously-shipped web calls `sports:deleteLeague`). New web loops
+ * `deleteLeagueBatch` instead, which is safe for large forked leagues. Remove
+ * this once the WSM-000122 web release is live everywhere. Fine for small
+ * leagues; a very large one can exceed mutation limits — exactly why the
+ * batched path exists.
+ */
+export const deleteLeague = mutationGeneric({
+  args: { leagueId: v.id("leagues") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) return null;
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    for (const team of teams) await purgeTeam(ctx as MutationCtx, team._id);
+
+    for (const s of await ctx.db
+      .query("leagueSubscriptions")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(s._id);
+    for (const a of await ctx.db
+      .query("rosterAuditLog")
+      .withIndex("by_leagueId_createdAt", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(a._id);
+    for (const r of await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_leagueId_seasonId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(r._id);
+
+    const seasons = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    for (const season of seasons) {
+      const fixtures = await ctx.db
+        .query("fixtures")
+        .withIndex("by_seasonId", (q) => q.eq("seasonId", season._id))
+        .collect();
+      for (const f of fixtures) {
+        for (const gr of await ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+          .collect())
+          await ctx.db.delete(gr._id);
+        await ctx.db.delete(f._id);
+      }
+      for (const pa of await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_seasonId_positionGroup", (q) =>
+          q.eq("seasonId", season._id),
+        )
+        .collect())
+        await ctx.db.delete(pa._id);
+      await ctx.db.delete(season._id);
+    }
+
+    for (const d of await ctx.db
+      .query("divisions")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect())
+      await ctx.db.delete(d._id);
+
+    await ctx.db.delete(args.leagueId);
+    return null;
+  },
+});
+
 export const upsertDivision = mutationGeneric({
   args: {
     name: v.string(),
@@ -820,6 +1083,7 @@ export const upsertPlayer = mutationGeneric({
     dateOfBirth: v.union(v.string(), v.null()),
     status: v.string(),
     headshotUrl: v.union(v.string(), v.null()),
+    experienceYears: v.optional(v.union(v.number(), v.null())),
   },
   returns: v.object({
     dto: v.object({
@@ -832,6 +1096,7 @@ export const upsertPlayer = mutationGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
     created: v.boolean(),
   }),
@@ -852,6 +1117,7 @@ export const upsertPlayer = mutationGeneric({
         dateOfBirth: args.dateOfBirth,
         status: args.status,
         headshotUrl: args.headshotUrl,
+        experienceYears: args.experienceYears ?? null,
       });
       return {
         dto: toPlayerDto({
@@ -862,6 +1128,7 @@ export const upsertPlayer = mutationGeneric({
           dateOfBirth: args.dateOfBirth,
           status: args.status,
           headshotUrl: args.headshotUrl,
+          experienceYears: args.experienceYears ?? null,
         }),
         created: false,
       };
@@ -882,6 +1149,7 @@ export const upsertPlayer = mutationGeneric({
         dateOfBirth: args.dateOfBirth,
         status: args.status,
         headshotUrl: args.headshotUrl,
+        experienceYears: args.experienceYears ?? null,
       },
       created: true,
     };
@@ -999,6 +1267,7 @@ export const createPlayer = mutationGeneric({
     dateOfBirth: v.union(v.string(), v.null()),
     status: v.string(),
     headshotUrl: v.union(v.string(), v.null()),
+    experienceYears: v.optional(v.union(v.number(), v.null())),
   }),
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
@@ -1010,6 +1279,7 @@ export const createPlayer = mutationGeneric({
       ...args,
       leagueId: team.leagueId,
       headshotUrl: null,
+      experienceYears: null,
       positionGroup: null,
     });
 
@@ -1023,6 +1293,7 @@ export const createPlayer = mutationGeneric({
       dateOfBirth: args.dateOfBirth,
       status: args.status,
       headshotUrl: null,
+      experienceYears: null,
     };
   },
 });
@@ -1048,6 +1319,7 @@ export const updatePlayer = mutationGeneric({
       dateOfBirth: v.union(v.string(), v.null()),
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
+      experienceYears: v.union(v.number(), v.null()),
     }),
     v.null(),
   ),
@@ -1087,6 +1359,95 @@ export const deletePlayer = mutationGeneric({
   returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.delete(args.playerId);
+    return null;
+  },
+});
+
+/*
+ * Remove a single team from a league (WSM-000120). Cascades every row that
+ * references the team so no orphans survive:
+ *   players → their playerAttributes / maddenRatings / rosterAssignments
+ *   depthChartEntries (all seasons) · rosterAuditLog
+ *   fixtures (home or away) → their gameResults
+ * Scoped to one team, so it stays comfortably inside mutation limits (unlike a
+ * whole forked-NFL league delete). Idempotent: a missing team is a no-op.
+ */
+/*
+ * Cascade-delete one team and everything that references it: players (and
+ * their playerAttributes / maddenRatings / rosterAssignments), depth-chart
+ * entries across all seasons, roster audit log, and fixtures (home or away)
+ * with their gameResults. One team is bounded (~a roster's worth of rows), so
+ * this stays well inside Convex mutation limits — which is why whole-league
+ * deletion batches over teams rather than purging everything in one shot.
+ * Idempotent: a missing team is a no-op.
+ */
+async function purgeTeam(ctx: MutationCtx, teamId: Id<"teams">): Promise<void> {
+  const team = await ctx.db.get(teamId);
+  if (!team) return;
+
+  const players = await ctx.db
+    .query("players")
+    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+    .collect();
+  for (const player of players) {
+    const attributes = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_playerId_seasonId", (q) => q.eq("playerId", player._id))
+      .collect();
+    for (const row of attributes) await ctx.db.delete(row._id);
+
+    const madden = await ctx.db
+      .query("maddenRatings")
+      .withIndex("by_playerId", (q) => q.eq("playerId", player._id))
+      .collect();
+    for (const row of madden) await ctx.db.delete(row._id);
+
+    const assignments = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_playerId", (q) => q.eq("playerId", player._id))
+      .collect();
+    for (const row of assignments) await ctx.db.delete(row._id);
+
+    await ctx.db.delete(player._id);
+  }
+
+  const depthEntries = await ctx.db
+    .query("depthChartEntries")
+    .withIndex("by_team_season", (q) => q.eq("teamId", teamId))
+    .collect();
+  for (const row of depthEntries) await ctx.db.delete(row._id);
+
+  const auditRows = await ctx.db
+    .query("rosterAuditLog")
+    .withIndex("by_teamId_createdAt", (q) => q.eq("teamId", teamId))
+    .collect();
+  for (const row of auditRows) await ctx.db.delete(row._id);
+
+  const homeFixtures = await ctx.db
+    .query("fixtures")
+    .withIndex("by_homeTeamId", (q) => q.eq("homeTeamId", teamId))
+    .collect();
+  const awayFixtures = await ctx.db
+    .query("fixtures")
+    .withIndex("by_awayTeamId", (q) => q.eq("awayTeamId", teamId))
+    .collect();
+  for (const fixture of [...homeFixtures, ...awayFixtures]) {
+    const results = await ctx.db
+      .query("gameResults")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fixture._id))
+      .collect();
+    for (const row of results) await ctx.db.delete(row._id);
+    await ctx.db.delete(fixture._id);
+  }
+
+  await ctx.db.delete(teamId);
+}
+
+export const deleteTeam = mutationGeneric({
+  args: { teamId: v.id("teams") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await purgeTeam(ctx as MutationCtx, args.teamId);
     return null;
   },
 });
@@ -1170,52 +1531,131 @@ export const setLeagueInviteToken = mutationGeneric({
   },
 });
 
-export const subscribeToLeague = mutationGeneric({
-  args: {
-    userId: v.string(),
-    leagueId: v.id("leagues"),
-  },
-  returns: v.null(),
+/**
+ * Fork a reference team into an org's PRIVATE workspace (WSM-000114). Creates
+ * (or reuses) the org's workspace league for the source league, then copies the
+ * team + its roster into it — `orgId`-owned, isolated from the reference and
+ * other orgs. Idempotent per (org, sourceTeam). Source links let ratings +
+ * provenance resolve back to the reference. This replaces the shared-edit
+ * claimTeam path under the private-only workspace model (RFC §11).
+ */
+export const forkTeamToWorkspace = mutationGeneric({
+  args: { orgId: v.string(), sourceTeamId: v.id("teams") },
+  returns: v.object({
+    teamId: v.string(),
+    leagueId: v.string(),
+    created: v.boolean(),
+  }),
   handler: async (ctx, args) => {
-    const league = await ctx.db.get(args.leagueId);
-    if (!league || !league.isPublic) {
-      throw new Error("League not found or not public");
+    const refTeam = await ctx.db.get(args.sourceTeamId);
+    if (!refTeam) throw new Error("Source team not found");
+    const refLeague = await ctx.db.get(refTeam.leagueId);
+    // Forkable = a public reference league we've marked claimable (the curated
+    // "discovery data we allow"). Workspace leagues (private) aren't forkable.
+    if (!refLeague || !refLeague.isPublic || !refLeague.claimable) {
+      throw new Error("Team is not forkable");
     }
 
+    // Get-or-create the org's workspace league for this reference league.
+    let workspaceLeague =
+      (
+        await ctx.db
+          .query("leagues")
+          .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+          .collect()
+      ).find((l) => l.sourceLeagueId === refLeague._id) ?? null;
+    if (!workspaceLeague) {
+      const id = await ctx.db.insert("leagues", {
+        name: refLeague.name,
+        orgId: args.orgId,
+        isPublic: false,
+        inviteToken: null,
+        sourceLeagueId: refLeague._id,
+      });
+      workspaceLeague = await ctx.db.get(id);
+    }
+    const workspaceLeagueId = workspaceLeague!._id;
+
+    // Idempotent: already forked this team into the workspace?
     const existing =
       (
         await ctx.db
-          .query("leagueSubscriptions")
-          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .query("teams")
+          .withIndex("by_leagueId", (q) =>
+            q.eq("leagueId", workspaceLeagueId),
+          )
           .collect()
-      ).find((subscription) => subscription.leagueId === args.leagueId) ?? null;
-
-    if (!existing) {
-      await ctx.db.insert("leagueSubscriptions", args);
-    }
-    return null;
-  },
-});
-
-export const unsubscribeFromLeague = mutationGeneric({
-  args: {
-    userId: v.string(),
-    leagueId: v.id("leagues"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const existing =
-      (
-        await ctx.db
-          .query("leagueSubscriptions")
-          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-          .collect()
-      ).find((subscription) => subscription.leagueId === args.leagueId) ?? null;
-
+      ).find((t) => t.sourceTeamId === args.sourceTeamId) ?? null;
     if (existing) {
-      await ctx.db.delete(existing._id);
+      return {
+        teamId: existing._id as string,
+        leagueId: workspaceLeagueId as string,
+        created: false,
+      };
     }
-    return null;
+
+    // Mirror the team's division into the workspace (by name).
+    let workspaceDivisionId: Id<"divisions"> | null = null;
+    if (refTeam.divisionId) {
+      const refDiv = await ctx.db.get(refTeam.divisionId);
+      if (refDiv) {
+        const existingDiv =
+          (
+            await ctx.db
+              .query("divisions")
+              .withIndex("by_leagueId", (q) =>
+                q.eq("leagueId", workspaceLeagueId),
+              )
+              .collect()
+          ).find((d) => d.name === refDiv.name) ?? null;
+        workspaceDivisionId = existingDiv
+          ? existingDiv._id
+          : await ctx.db.insert("divisions", {
+              name: refDiv.name,
+              leagueId: workspaceLeagueId,
+            });
+      }
+    }
+
+    const newTeamId = await ctx.db.insert("teams", {
+      name: refTeam.name,
+      leagueId: workspaceLeagueId,
+      divisionId: workspaceDivisionId,
+      city: refTeam.city,
+      stadium: refTeam.stadium,
+      foundedYear: refTeam.foundedYear,
+      location: refTeam.location,
+      logoUrl: refTeam.logoUrl,
+      rosterLimit: refTeam.rosterLimit,
+      ownerOrgId: args.orgId,
+      sourceTeamId: args.sourceTeamId,
+    });
+
+    const refPlayers = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.sourceTeamId))
+      .collect();
+    for (const p of refPlayers) {
+      await ctx.db.insert("players", {
+        name: p.name,
+        leagueId: workspaceLeagueId,
+        teamId: newTeamId,
+        position: p.position,
+        positionGroup: p.positionGroup,
+        jerseyNumber: p.jerseyNumber,
+        dateOfBirth: p.dateOfBirth,
+        status: p.status,
+        headshotUrl: p.headshotUrl,
+        experienceYears: p.experienceYears,
+        sourcePlayerId: p._id,
+      });
+    }
+
+    return {
+      teamId: newTeamId as string,
+      leagueId: workspaceLeagueId as string,
+      created: true,
+    };
   },
 });
 
@@ -1821,6 +2261,85 @@ export const ingestPlayerAttributes = mutationGeneric({
 });
 
 /*
+ * WSM-000090 — bulk form of ingestPlayerAttributes for whole-league
+ * ratings loads (a per-row CLI loop takes ~75 min for an NFL-sized
+ * league; this does it in a handful of calls). Same upsert semantics
+ * per row as the single mutation; rows are independent, so one bad
+ * playerId fails the whole batch atomically (Convex mutation = one
+ * transaction) — callers should pre-validate ids.
+ */
+/*
+ * WSM-000091 — clear all attribute snapshots for a season. Used by the
+ * SPRT ingest to drop stale/synthetic rows before loading real ratings,
+ * so players without a computed rating fall back to "no snapshot" (em
+ * dash) rather than showing leftover values. Idempotent.
+ */
+export const clearSeasonPlayerAttributes = mutationGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.object({ deleted: v.number() }),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_seasonId_positionGroup", (q) =>
+        q.eq("seasonId", args.seasonId),
+      )
+      .collect();
+    for (const row of rows) await ctx.db.delete(row._id);
+    return { deleted: rows.length };
+  },
+});
+
+export const ingestPlayerAttributesBatch = mutationGeneric({
+  args: {
+    seasonId: v.id("seasons"),
+    rows: v.array(
+      v.object({
+        playerId: v.id("players"),
+        positionGroup: v.string(),
+        attributesJson: v.string(),
+        weightedOverall: v.union(v.number(), v.null()),
+      }),
+    ),
+  },
+  returns: v.object({ created: v.number(), updated: v.number() }),
+  handler: async (ctx, args) => {
+    const ingestedAt = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    for (const row of args.rows) {
+      const candidates = await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_playerId_seasonId", (q) =>
+          q.eq("playerId", row.playerId),
+        )
+        .collect();
+      const existing =
+        candidates.find((r) => r.seasonId === args.seasonId) ?? null;
+      const payload = {
+        playerId: row.playerId,
+        seasonId: args.seasonId,
+        positionGroup: row.positionGroup,
+        attributesJson: row.attributesJson,
+        pffSourceJson: null,
+        maddenSourceJson: null,
+        pffWeight: 0,
+        maddenWeight: 1,
+        weightedOverall: row.weightedOverall,
+        ingestedAt,
+      };
+      if (existing) {
+        await ctx.db.replace(existing._id, payload);
+        updated += 1;
+      } else {
+        await ctx.db.insert("playerAttributes", payload);
+        created += 1;
+      }
+    }
+    return { created, updated };
+  },
+});
+
+/*
  * Phase 2 — Read API (Sprint 6B / WSM-000058).
  */
 
@@ -1856,10 +2375,14 @@ export const getPlayerDevelopment = queryGeneric({
   args: { playerId: v.id("players") },
   returns: v.array(playerDevelopmentRowValidator),
   handler: async (ctx, args) => {
+    // Workspace fork (WSM-000116): development history lives on the reference
+    // player, so resolve through sourcePlayerId when present.
+    const player = await ctx.db.get(args.playerId);
+    const developmentPlayerId = player?.sourcePlayerId ?? args.playerId;
     const rows = await ctx.db
       .query("playerAttributes")
       .withIndex("by_playerId_seasonId", (q) =>
-        q.eq("playerId", args.playerId),
+        q.eq("playerId", developmentPlayerId),
       )
       .collect();
 
@@ -1961,6 +2484,242 @@ export const getSeasonAttributesByPosition = queryGeneric({
 });
 
 /*
+ * WSM-000090 — per-team attribute snapshots for the Madden-style
+ * roster stat columns. One row per team player that has a snapshot
+ * for the given season; players without one are simply absent (the
+ * UI renders an em dash). Access control lives in the data-api layer
+ * (league visibility), matching getPlayersByTeam.
+ */
+/*
+ * WSM-000093 — single-player attribute snapshot for the profile rating
+ * breakdown. Point read via by_playerId_seasonId. Access control lives
+ * in the data-api layer, matching getPlayer.
+ */
+/*
+ * The season whose attributes represent a league's "current" SPRT ratings —
+ * the active season, else whichever exists first. Matches the convention the
+ * dashboard pages used to apply caller-side; centralized here so workspace
+ * forks (whose own league has no seasons) resolve against their SOURCE league.
+ */
+async function currentSeasonId(
+  ctx: QueryCtx,
+  leagueId: Id<"leagues">,
+): Promise<Id<"seasons"> | null> {
+  const seasons = await ctx.db
+    .query("seasons")
+    .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+    .collect();
+  const chosen =
+    seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+  return chosen ? chosen._id : null;
+}
+
+/*
+ * The league whose seasons + players carry a team's SPRT attributes. A forked
+ * workspace team (WSM-000122) holds no attributes of its own — they live on the
+ * source reference team's players/season — so resolve through `sourceTeamId`.
+ */
+async function attributeLeagueId(
+  ctx: QueryCtx,
+  team: { leagueId: Id<"leagues">; sourceTeamId?: Id<"teams"> },
+): Promise<Id<"leagues">> {
+  if (team.sourceTeamId) {
+    const source = await ctx.db.get(team.sourceTeamId);
+    if (source) return source.leagueId;
+  }
+  return team.leagueId;
+}
+
+export const getPlayerSeasonAttributes = queryGeneric({
+  args: {
+    playerId: v.id("players"),
+    // Optional + ignored now that the season is self-resolved (WSM-000122) —
+    // kept so a previously-deployed web passing it still validates.
+    seasonId: v.optional(v.id("seasons")),
+  },
+  returns: v.union(
+    v.object({
+      weightedOverall: v.union(v.number(), v.null()),
+      attributes: v.record(v.string(), v.number()),
+      positionGroup: v.string(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const player = await ctx.db.get(args.playerId);
+    if (!player) return null;
+    // Workspace fork: attributes live on the source player, keyed by the source
+    // league's current season — so resolve both from the source (WSM-000122).
+    const attrPlayer = player.sourcePlayerId
+      ? ((await ctx.db.get(player.sourcePlayerId)) ?? player)
+      : player;
+    const seasonId = await currentSeasonId(ctx as QueryCtx, attrPlayer.leagueId);
+    if (!seasonId) return null;
+    const candidates = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_playerId_seasonId", (q) =>
+        q.eq("playerId", attrPlayer._id),
+      )
+      .collect();
+    const row = candidates.find((r) => r.seasonId === seasonId);
+    if (!row) return null;
+    return {
+      weightedOverall: row.weightedOverall,
+      attributes: safeParseAttributes(row.attributesJson),
+      positionGroup: row.positionGroup,
+    };
+  },
+});
+
+export const getTeamAttributeSnapshots = queryGeneric({
+  args: {
+    teamId: v.id("teams"),
+    // Optional + ignored now that the season is self-resolved (WSM-000122).
+    seasonId: v.optional(v.id("seasons")),
+  },
+  returns: v.array(
+    v.object({
+      playerId: v.string(),
+      weightedOverall: v.union(v.number(), v.null()),
+      attributes: v.record(v.string(), v.number()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) return [];
+
+    // For a forked team this is the source reference league's current season;
+    // for a native team, its own. Both source players' attributes are keyed by
+    // this season (WSM-000122).
+    const seasonId = await currentSeasonId(
+      ctx as QueryCtx,
+      await attributeLeagueId(ctx as QueryCtx, team),
+    );
+    if (!seasonId) return [];
+
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+
+    const snapshots = [];
+    for (const player of players) {
+      const attrPlayerId = player.sourcePlayerId ?? player._id;
+      // Leading-field index form — see ingestPlayerAttributes for why.
+      const candidates = await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_playerId_seasonId", (q) =>
+          q.eq("playerId", attrPlayerId),
+        )
+        .collect();
+      const row = candidates.find((r) => r.seasonId === seasonId);
+      if (!row) continue;
+      snapshots.push({
+        playerId: player._id as string,
+        weightedOverall: row.weightedOverall,
+        attributes: safeParseAttributes(row.attributesJson),
+      });
+    }
+    return snapshots;
+  },
+});
+
+/*
+ * Madden ratings (WSM-000095) — ingest + reads. One row per player; the
+ * ingest upserts by playerId so a re-run refreshes in place.
+ */
+export const ingestMaddenRatingsBatch = mutationGeneric({
+  args: {
+    rows: v.array(
+      v.object({
+        playerId: v.id("players"),
+        overall: v.number(),
+        position: v.string(),
+        attributesJson: v.string(),
+        portraitUrl: v.union(v.string(), v.null()),
+        teamLogoUrl: v.union(v.string(), v.null()),
+      }),
+    ),
+  },
+  returns: v.object({ created: v.number(), updated: v.number() }),
+  handler: async (ctx, args) => {
+    const ingestedAt = new Date().toISOString();
+    let created = 0;
+    let updated = 0;
+    for (const row of args.rows) {
+      const existing = await ctx.db
+        .query("maddenRatings")
+        .withIndex("by_playerId", (q) => q.eq("playerId", row.playerId))
+        .unique();
+      const payload = { ...row, ingestedAt };
+      if (existing) {
+        await ctx.db.replace(existing._id, payload);
+        updated += 1;
+      } else {
+        await ctx.db.insert("maddenRatings", payload);
+        created += 1;
+      }
+    }
+    return { created, updated };
+  },
+});
+
+const maddenRatingValidator = v.object({
+  overall: v.number(),
+  position: v.string(),
+  attributes: v.record(v.string(), v.number()),
+  portraitUrl: v.union(v.string(), v.null()),
+  teamLogoUrl: v.union(v.string(), v.null()),
+});
+
+export const getPlayerMaddenRating = queryGeneric({
+  args: { playerId: v.id("players") },
+  returns: v.union(maddenRatingValidator, v.null()),
+  handler: async (ctx, args) => {
+    // Workspace fork (WSM-000116): ratings live on the reference player, so
+    // resolve through sourcePlayerId when present.
+    const player = await ctx.db.get(args.playerId);
+    const ratingPlayerId = player?.sourcePlayerId ?? args.playerId;
+    const row = await ctx.db
+      .query("maddenRatings")
+      .withIndex("by_playerId", (q) => q.eq("playerId", ratingPlayerId))
+      .unique();
+    if (!row) return null;
+    return {
+      overall: row.overall,
+      position: row.position,
+      attributes: safeParseAttributes(row.attributesJson),
+      portraitUrl: row.portraitUrl,
+      teamLogoUrl: row.teamLogoUrl,
+    };
+  },
+});
+
+export const getTeamMaddenOveralls = queryGeneric({
+  args: { teamId: v.id("teams") },
+  returns: v.array(
+    v.object({ playerId: v.string(), overall: v.number() }),
+  ),
+  handler: async (ctx, args) => {
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    const out: Array<{ playerId: string; overall: number }> = [];
+    for (const player of players) {
+      // Workspace fork (WSM-000116): resolve ratings via the source player.
+      const ratingPlayerId = player.sourcePlayerId ?? player._id;
+      const row = await ctx.db
+        .query("maddenRatings")
+        .withIndex("by_playerId", (q) => q.eq("playerId", ratingPlayerId))
+        .unique();
+      if (row) out.push({ playerId: player._id as string, overall: row.overall });
+    }
+    return out;
+  },
+});
+
+/*
  * Phase 2 — Public read primitives (Sprint 6B / WSM-000059).
  *
  * The public viewer in WSM-000061 hits these without a Clerk session.
@@ -1988,6 +2747,113 @@ export const setLeaguePublic = mutationGeneric({
     const league = await ctx.db.get(args.leagueId);
     if (!league) throw new Error("league_not_found");
     await ctx.db.patch(args.leagueId, { isPublic: args.isPublic });
+    return null;
+  },
+});
+
+/** Whether a league's teams can be claimed by coaches (WSM-000109). */
+export const getLeagueClaimable = queryGeneric({
+  args: { leagueId: v.id("leagues") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    return league?.claimable === true;
+  },
+});
+
+/*
+ * Intra-org capability roles (WSM-000121). The Clerk admin bit and membership
+ * are the source of truth; these functions only persist the coach/viewer split
+ * for org:member users. A missing row means "viewer".
+ */
+// Compound-index `.eq().eq()` chaining doesn't type-check under the generic ctx
+// (the second `.eq` sees an IndexRange), so query the orgId prefix and pick the
+// user in JS — the same pattern used elsewhere in this file.
+export const getOrgMemberRole = queryGeneric({
+  args: { orgId: v.string(), userId: v.string() },
+  returns: v.union(v.literal("coach"), v.literal("viewer"), v.null()),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const row = rows.find((r) => r.userId === args.userId);
+    if (!row) return null;
+    return row.role === "coach" ? "coach" : "viewer";
+  },
+});
+
+export const listOrgMemberRoles = queryGeneric({
+  args: { orgId: v.string() },
+  returns: v.array(
+    v.object({
+      userId: v.string(),
+      role: v.union(v.literal("coach"), v.literal("viewer")),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    return rows.map((r) => ({
+      userId: r.userId,
+      role: (r.role === "coach" ? "coach" : "viewer") as "coach" | "viewer",
+    }));
+  },
+});
+
+export const setOrgMemberRole = mutationGeneric({
+  args: {
+    orgId: v.string(),
+    userId: v.string(),
+    role: v.union(v.literal("coach"), v.literal("viewer")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const existing = rows.find((r) => r.userId === args.userId);
+    if (existing) {
+      await ctx.db.patch(existing._id, { role: args.role });
+    } else {
+      await ctx.db.insert("orgMemberRoles", {
+        orgId: args.orgId,
+        userId: args.userId,
+        role: args.role,
+      });
+    }
+    return null;
+  },
+});
+
+export const deleteOrgMemberRole = mutationGeneric({
+  args: { orgId: v.string(), userId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("orgMemberRoles")
+      .withIndex("by_orgId_userId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const existing = rows.find((r) => r.userId === args.userId);
+    if (existing) await ctx.db.delete(existing._id);
+    return null;
+  },
+});
+
+/** Mark a (public template) league's teams claimable by coaches (WSM-000109). */
+export const setLeagueClaimable = mutationGeneric({
+  args: {
+    leagueId: v.id("leagues"),
+    claimable: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) throw new Error("league_not_found");
+    await ctx.db.patch(args.leagueId, { claimable: args.claimable });
     return null;
   },
 });

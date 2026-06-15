@@ -10,7 +10,17 @@ const isPublicRoute = createRouteMatcher([
   "/api/health",
   "/api/stripe/webhook",
   "/api/webhooks/clerk",
+  // Vercel Cron routes carry no Clerk session — they authenticate via a
+  // CRON_SECRET bearer check inside each handler. Without this, Clerk's
+  // auth.protect() blocks the invocation before that check runs.
+  "/api/cron/(.*)",
   "/join(.*)",
+  // Visual-regression harnesses (WSM-000082) render pure presentational
+  // components with fixed data and no session. They 404 in production via the
+  // route handler; here they just bypass Clerk so Playwright can screenshot.
+  "/dev/visual/(.*)",
+  // Design-system kitchen sink (WSM-000136) — presentational only, no session.
+  "/dev/ui",
   // Public viewer routes (Phase 2 / WSM-000061). Per-league opt-in via
   // `leagues.isPublic`; the route handlers enforce visibility through
   // publicLeagueGuard. Middleware just doesn't gate them on Clerk auth.

@@ -7,6 +7,7 @@ const PlayerImportSchema = z.object({
   dateOfBirth: z.string().nullable().optional(),
   status: z.string().min(1).optional().default("Active"),
   headshotUrl: z.string().url().nullable().optional(),
+  experienceYears: z.number().int().min(0).nullable().optional(),
 });
 
 const TeamImportSchema = z.object({

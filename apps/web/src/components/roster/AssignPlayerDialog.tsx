@@ -10,16 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/8bit/dialog";
-import { Button } from "@/components/ui/8bit/button";
-import { Label } from "@/components/ui/8bit/label";
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/8bit/select";
+} from "@/components/ui/select";
 import { assignPlayerToRosterAction } from "@/app/dashboard/teams/[id]/roster/actions";
 
 export interface AssignPlayerDialogProps {

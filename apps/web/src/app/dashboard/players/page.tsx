@@ -1,15 +1,16 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getPlayers } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import { resolveActiveLeague } from "@/lib/active-league";
 import { PlayersTable } from "./players-table";
 
 export default async function PlayersPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const orgContext = await resolveOrgContext(userId);
-  const players = await getPlayers(orgContext.visibleLeagueIds);
+  // Active league (WSM-000103).
+  const { activeLeagueId } = await resolveActiveLeague(userId);
+  const players = activeLeagueId ? await getPlayers([activeLeagueId]) : [];
 
   return (
     <div>

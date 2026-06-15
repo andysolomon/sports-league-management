@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/8bit/button";
+import { Button } from "@/components/ui/button";
 import { setRosterLockedAction } from "@/app/dashboard/teams/[id]/depth-chart/actions";
 
 interface LockBannerProps {
@@ -53,7 +53,7 @@ export default function LockBanner({
     <div
       className={`mb-4 flex items-center justify-between rounded-md border p-3 ${
         optimisticLocked
-          ? "border-amber-300 bg-amber-50"
+          ? "border-amber-500/30 bg-amber-500/10"
           : "border-border bg-card"
       }`}
     >

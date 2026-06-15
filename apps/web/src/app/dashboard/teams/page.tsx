@@ -2,14 +2,15 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getTeams } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import { resolveActiveLeague } from "@/lib/active-league";
 
 export default async function TeamsPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const orgContext = await resolveOrgContext(userId);
-  const teams = await getTeams(orgContext.visibleLeagueIds);
+  // Scoped to the active league (WSM-000103).
+  const { activeLeagueId } = await resolveActiveLeague(userId);
+  const teams = activeLeagueId ? await getTeams([activeLeagueId]) : [];
 
   return (
     <div>
@@ -19,7 +20,7 @@ export default async function TeamsPage() {
           <Link
             key={team.id}
             href={`/dashboard/teams/${team.id}`}
-            className="rounded-lg border border-border bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+            className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
           >
             <h3 className="text-lg font-semibold text-foreground">{team.name}</h3>
             <dl className="mt-3 space-y-1 text-sm text-muted-foreground">

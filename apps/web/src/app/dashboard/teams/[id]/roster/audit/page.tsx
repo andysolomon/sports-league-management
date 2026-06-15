@@ -33,6 +33,7 @@ export default async function RosterAuditPage({
     orgIds: [],
     visibleLeagueIds: [leagueId],
     subscribedLeagueIds: [],
+    subscriptionTeamScopes: {},
   }).catch(() => null);
   if (!team) notFound();
 
@@ -67,6 +68,7 @@ export default async function RosterAuditPage({
       orgIds: [orgId],
       visibleLeagueIds: [team.leagueId],
       subscribedLeagueIds: [],
+      subscriptionTeamScopes: {},
     }),
     getRosterAssignmentHistory({
       teamId,

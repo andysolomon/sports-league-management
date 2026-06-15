@@ -53,6 +53,7 @@ export const PlayerDtoSchema = z.object({
   dateOfBirth: z.string().nullable(),
   status: z.string(),
   headshotUrl: z.string().nullable(),
+  experienceYears: z.number().nullable(),
 }) satisfies z.ZodType<PlayerDto>;
 
 export const RosterAssignmentDtoSchema = z.object({

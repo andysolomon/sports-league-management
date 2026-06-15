@@ -24,6 +24,9 @@ export interface RosterBoardProps {
     rosterLimit: number | null;
     remaining: number | null;
   };
+  /** Admin or coach: can edit the roster. Viewers see it read-only
+   *  (WSM-000121). Defaults true to preserve existing callers. */
+  canManage?: boolean;
 }
 
 const NON_ACTIVE_STATUSES = ["ir", "suspended", "released"] as const;
@@ -34,6 +37,7 @@ export default function RosterBoard({
   players,
   assignments,
   limitStatus,
+  canManage = true,
 }: RosterBoardProps) {
   const router = useRouter();
   const [statusFilter, setStatusFilter] =
@@ -120,7 +124,7 @@ export default function RosterBoard({
             leagueId={team.leagueId}
             eligiblePlayers={eligiblePlayers}
             onAssigned={handleMutated}
-            disabled={atLimit || season.rosterLocked}
+            disabled={!canManage || atLimit || season.rosterLocked}
           />
         </div>
       </header>
@@ -128,7 +132,7 @@ export default function RosterBoard({
       {season.rosterLocked ? (
         <div
           role="status"
-          className="mb-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900"
+          className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-300"
         >
           This season is locked. Roster changes are disabled until an admin
           unlocks it.
@@ -155,7 +159,7 @@ export default function RosterBoard({
                 teamId={team.id}
                 seasonId={season.id}
                 leagueId={team.leagueId}
-                disabled={season.rosterLocked}
+                disabled={!canManage || season.rosterLocked}
                 onChanged={handleMutated}
               />
             ))}
@@ -192,7 +196,7 @@ export default function RosterBoard({
           teamId={team.id}
           seasonId={season.id}
           leagueId={team.leagueId}
-          disabled={season.rosterLocked || atLimit}
+          disabled={!canManage || season.rosterLocked || atLimit}
           onChanged={handleMutated}
         />
       </section>

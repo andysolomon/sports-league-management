@@ -61,11 +61,12 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
+      {/* dark-first (WSM-000136); light theme retained for a future toggle. */}
       <html
         lang="en"
-        className={`${GeistSans.variable} ${GeistMono.variable} ${pixelifySans.variable}`}
+        className={`dark ${GeistSans.variable} ${GeistMono.variable} ${pixelifySans.variable}`}
       >
-        <body className="font-sans antialiased">
+        <body className="bg-background text-foreground font-sans antialiased">
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

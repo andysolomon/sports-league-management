@@ -1,12 +1,23 @@
 import { cache } from "react";
 import { clerkClient } from "@clerk/nextjs/server";
-import { getVisibleLeagueContext as getVisibleLeagueContextFromConvex } from "./data-api";
+import {
+  getVisibleLeagueContext as getVisibleLeagueContextFromConvex,
+  getOrgMemberRole,
+} from "./data-api";
+import type { OrgRole } from "./permissions";
 
 export interface OrgContext {
   userId: string;
   orgIds: string[];
   visibleLeagueIds: string[];
   subscribedLeagueIds: string[];
+  /**
+   * À la carte import scopes (WSM-000100): leagueId → the team ids the user
+   * imported from that league. Only present for PARTIAL subscriptions; a
+   * league absent from this map means "all teams". A display filter for the
+   * Teams/Players lists — not an access boundary.
+   */
+  subscriptionTeamScopes: Record<string, string[]>;
 }
 
 /**
@@ -47,10 +58,23 @@ export const resolveOrgContext = cache(
     // Single Convex query resolves both visible-league fan-out (via the
     // `leagues.by_orgId` index for each org the user belongs to) and the
     // subscribed-league set (via `leagueSubscriptions.by_userId`).
-    const { visibleLeagueIds, subscribedLeagueIds } =
+    const { visibleLeagueIds, subscribedLeagueIds, subscriptionScopes } =
       await getVisibleLeagueContextFromConvex(userId, orgIds);
 
-    return { userId, orgIds, visibleLeagueIds, subscribedLeagueIds };
+    // `?? []` keeps this resilient if the web deploys ahead of the Convex
+    // function that adds subscriptionScopes — no scopes just means "import all".
+    const subscriptionTeamScopes: Record<string, string[]> = {};
+    for (const scope of subscriptionScopes ?? []) {
+      subscriptionTeamScopes[scope.leagueId] = scope.teamIds;
+    }
+
+    return {
+      userId,
+      orgIds,
+      visibleLeagueIds,
+      subscribedLeagueIds,
+      subscriptionTeamScopes,
+    };
   },
 );
 
@@ -90,8 +114,10 @@ export async function requireOrgAdmin(
 }
 
 /**
- * Returns the user's role within a specific Clerk Organization,
- * or null if they are not a member.
+ * Returns the user's raw Clerk role within a specific Organization, or null if
+ * they are not a member. Prefer `resolveOrgRole` for capability decisions — this
+ * is the low-level Clerk read, used where the literal org:admin/org:member value
+ * is needed (e.g. the members admin API).
  */
 export async function getUserRoleInOrg(
   orgId: string,
@@ -106,5 +132,47 @@ export async function getUserRoleInOrg(
   );
   if (!membership) return null;
   return membership.role as "org:admin" | "org:member";
+}
+
+/**
+ * Resolves a user's effective capability role (admin/coach/viewer) in one org
+ * (WSM-000121). Clerk `org:admin` → admin. An `org:member` is split via the
+ * Convex `orgMemberRoles` sub-role, defaulting to viewer when no row exists.
+ * Returns null if the user is not a member of the org.
+ */
+export async function resolveOrgRole(
+  orgId: string,
+  userId: string,
+): Promise<OrgRole | null> {
+  const clerkRole = await getUserRoleInOrg(orgId, userId);
+  if (clerkRole === null) return null;
+  if (clerkRole === "org:admin") return "admin";
+  // org:member — coach unless explicitly stored, else viewer.
+  const subRole = await getOrgMemberRole(orgId, userId).catch(() => null);
+  return subRole === "coach" ? "coach" : "viewer";
+}
+
+const ROLE_RANK: Record<OrgRole, number> = { admin: 3, coach: 2, viewer: 1 };
+
+/**
+ * Resolves the STRONGEST capability role a user holds across several candidate
+ * orgs (e.g. a team's league org and its workspace owner org). Returns null if
+ * the user is a member of none. Used by team-level authorization.
+ */
+export async function resolveBestOrgRole(
+  orgIds: Array<string | null | undefined>,
+  userId: string,
+): Promise<OrgRole | null> {
+  const unique = Array.from(
+    new Set(orgIds.filter((id): id is string => Boolean(id))),
+  );
+  let best: OrgRole | null = null;
+  for (const orgId of unique) {
+    const role = await resolveOrgRole(orgId, userId);
+    if (role && (best === null || ROLE_RANK[role] > ROLE_RANK[best])) {
+      best = role;
+    }
+  }
+  return best;
 }
 

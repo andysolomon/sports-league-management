@@ -1,4 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock("../analytics", () => ({
+  trackFlagExposure: vi.fn(() => Promise.resolve()),
+}));
 
 vi.mock("flags/next", () => ({
   flag: <T,>(def: {
@@ -68,6 +72,48 @@ describe("schedulesStandingsV1 flag declaration", () => {
     expect(schedulesStandingsV1.description).toMatch(
       /schedule|standing|fixture/i,
     );
+  });
+});
+
+describe("env override resolution (WSM-000079)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('returns true when the flag env var is "on"', async () => {
+    vi.stubEnv("FLAG_DEPTH_CHART_V1", "on");
+    expect(await depthChartV1()).toBe(true);
+  });
+
+  it('returns false when the flag env var is "off"', async () => {
+    vi.stubEnv("FLAG_DEPTH_CHART_V1", "off");
+    expect(await depthChartV1()).toBe(false);
+  });
+
+  it("falls back to the VERCEL_ENV default when unset (on outside production)", async () => {
+    // Test env has no VERCEL_ENV, so defaultOn = true.
+    expect(await depthChartV1()).toBe(true);
+  });
+
+  it("ignores unrecognized values and uses the default", async () => {
+    vi.stubEnv("FLAG_DEPTH_CHART_V1", "true");
+    expect(await depthChartV1()).toBe(true);
+  });
+
+  it('"on" overrides the production-off default', async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("FLAG_ROSTER_SNAPSHOTS_V1", "on");
+    vi.resetModules();
+    const flags = await import("../flags");
+    expect(await flags.rosterSnapshotsV1()).toBe(true);
+    expect(await flags.depthChartV1()).toBe(false); // unset stays dark in prod
+  });
+
+  it("each flag reads its own env key", async () => {
+    vi.stubEnv("FLAG_PLAYER_ATTRIBUTES_V1", "off");
+    expect(await playerAttributesV1()).toBe(false);
+    expect(await schedulesStandingsV1()).toBe(true);
   });
 });
 

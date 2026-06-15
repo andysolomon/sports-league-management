@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/8bit/button";
-import { Input } from "@/components/ui/8bit/input";
-import { Label } from "@/components/ui/8bit/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function InviteForm({ orgId }: { orgId: string }) {
   const [email, setEmail] = useState("");
@@ -41,8 +41,11 @@ export default function InviteForm({ orgId }: { orgId: string }) {
   return (
     <div>
       <h3 className="mb-3 text-sm font-semibold text-foreground">Invite Member</h3>
-      <form onSubmit={handleSubmit} className="flex items-end gap-3">
-        <div className="flex-1">
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-3 sm:flex-row sm:items-end"
+      >
+        <div className="min-w-0 flex-1">
           <Label htmlFor="invite-email">Email address</Label>
           <Input
             id="invite-email"
@@ -53,13 +56,13 @@ export default function InviteForm({ orgId }: { orgId: string }) {
             required
           />
         </div>
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting} className="shrink-0">
           {submitting ? "Sending..." : "Send Invite"}
         </Button>
       </form>
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
       {success && (
-        <p className="mt-2 text-sm text-accent">Invitation sent successfully!</p>
+        <p className="mt-2 text-sm text-green-500">Invitation sent successfully!</p>
       )}
     </div>
   );

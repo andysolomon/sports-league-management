@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/8bit/button";
+import { Button } from "@/components/ui/button";
 import { Copy, Link2, Trash2 } from "lucide-react";
 
 export default function InviteLinkSection({ orgId }: { orgId: string }) {
@@ -63,8 +63,8 @@ export default function InviteLinkSection({ orgId }: { orgId: string }) {
     <div>
       <h3 className="mb-3 text-sm font-semibold text-foreground">Invite Link</h3>
       {linkUrl ? (
-        <div className="flex items-center gap-2">
-          <code className="flex-1 rounded bg-card px-3 py-2 text-sm text-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="min-w-0 flex-1 break-all rounded bg-card px-3 py-2 text-sm text-foreground">
             {linkUrl}
           </code>
           <Button size="sm" variant="outline" onClick={handleCopy}>

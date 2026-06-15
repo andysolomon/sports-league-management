@@ -3,10 +3,11 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getLeagues, getDivisions, getTeams } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { Trophy, Layers, Users } from "lucide-react";
+import { CreateLeagueButton, DeleteLeagueButton } from "./leagues-actions";
 
 export default async function LeaguesPage() {
   const { userId } = await auth();
@@ -37,13 +38,16 @@ export default async function LeaguesPage() {
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-foreground">Leagues</h2>
+      <div className="mb-6 flex items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold text-foreground">Leagues</h2>
+        <CreateLeagueButton />
+      </div>
 
       {leagues.length === 0 ? (
         <EmptyState
           icon={Trophy}
-          title="No leagues found"
-          description="Leagues will appear here once created in the system."
+          title="No leagues yet"
+          description="Create a league, or add teams from Discover, to get started."
         />
       ) : (
         <div className="space-y-6">
@@ -53,17 +57,26 @@ export default async function LeaguesPage() {
             return (
               <Card key={league.id}>
                 <CardHeader>
-                  <div className="flex items-center gap-3">
-                    <Trophy className="h-5 w-5 text-primary" />
-                    <CardTitle>
-                      <Link href={`/dashboard/leagues/${league.id}`} className="hover:underline">
-                        {league.name}
-                      </Link>
-                    </CardTitle>
-                    <Badge variant="secondary">
-                      {leagueDivisions.length} division
-                      {leagueDivisions.length !== 1 ? "s" : ""}
-                    </Badge>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Trophy className="h-5 w-5 shrink-0 text-primary" />
+                      <CardTitle className="truncate">
+                        <Link
+                          href={`/dashboard/leagues/${league.id}`}
+                          className="hover:underline"
+                        >
+                          {league.name}
+                        </Link>
+                      </CardTitle>
+                      <Badge variant="secondary" className="shrink-0">
+                        {leagueDivisions.length} division
+                        {leagueDivisions.length !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                    <DeleteLeagueButton
+                      leagueId={league.id}
+                      leagueName={league.name}
+                    />
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -94,7 +107,7 @@ export default async function LeaguesPage() {
                                 {divTeams.map((team) => (
                                   <Link
                                     key={team.id}
-                                    href={`/dashboard/teams/${team.id}`}
+                                    href={`/dashboard/teams/${team.id}?from=leagues`}
                                     className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-card"
                                   >
                                     <Users className="h-3.5 w-3.5 text-muted-foreground" />

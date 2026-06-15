@@ -12,6 +12,8 @@
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed",
     "test:e2e:report": "playwright test --config e2e/playwright.config.ts --reporter=html && playwright show-report",
+    "test:visual": "playwright test --config e2e/playwright.config.ts --project visual",
+    "test:visual:update": "playwright test --config e2e/playwright.config.ts --project visual --update-snapshots",
     "test:unit": "vitest run"
   },
   "dependencies": {
@@ -28,6 +30,7 @@
     "@sports-management/api-contracts": "workspace:*",
     "@sports-management/shared-types": "workspace:*",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/functions": "^3.7.1",
     "@vercel/og": "^0.11.1",
     "@vercel/speed-insights": "^2.0.0",
     "class-variance-authority": "^0.7.1",

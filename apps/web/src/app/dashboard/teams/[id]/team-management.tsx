@@ -7,22 +7,38 @@ import PlayerForm from "../../_components/player-form";
 import TeamEditForm from "../../_components/team-edit-form";
 import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
-import { StatusBadge } from "@/components/status-badge";
+import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
+import { orderByDepth } from "@/lib/roster/depth-order";
+import { abbreviateName } from "@/lib/position-group";
+import {
+  lookupAttribute,
+  presentHeadlineKeys,
+  type PlayerSnapshot,
+} from "@/lib/attributes/headline-columns";
 import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/8bit/button";
-import { Card, CardContent } from "@/components/ui/8bit/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { UserCircle, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface TeamManagementProps {
   team: TeamDto;
   players: PlayerDto[];
+  /** Admin or coach: edit team, manage players/roster (WSM-000121). */
   canManage: boolean;
+  /** Admin only: remove the whole team (WSM-000121). */
+  canDelete?: boolean;
+  /** WSM-000090: playerId → attribute snapshot; empty when Phase 2 is
+      dark or the season has no ingested attributes. */
+  attributeSnapshots?: Record<string, PlayerSnapshot>;
+  /** WSM-000095: playerId → Madden overall; empty when none ingested. */
+  maddenOveralls?: Record<string, number>;
 }
 
 type ModalState =
   | { type: "none" }
   | { type: "editTeam" }
+  | { type: "deleteTeam" }
   | { type: "addPlayer" }
   | { type: "editPlayer"; player: PlayerDto }
   | { type: "deletePlayer"; player: PlayerDto };
@@ -31,7 +47,12 @@ export default function TeamManagement({
   team,
   players,
   canManage,
+  canDelete = false,
+  attributeSnapshots = {},
+  maddenOveralls = {},
 }: TeamManagementProps) {
+  const snapshots = new Map(Object.entries(attributeSnapshots));
+  const madden = new Map(Object.entries(maddenOveralls));
   const router = useRouter();
   const [modal, setModal] = useState<ModalState>({ type: "none" });
   const [isDeleting, setIsDeleting] = useState(false);
@@ -61,38 +82,174 @@ export default function TeamManagement({
     }
   }
 
-  const columns: Column<PlayerDto & Record<string, unknown>>[] = [
-    { key: "name", header: "Name", sortable: true },
-    { key: "position", header: "Position", sortable: true },
-    {
-      key: "jerseyNumber",
-      header: "Jersey #",
-      sortable: true,
-      render: (p) => p.jerseyNumber ?? "\u2014",
-    },
-    {
-      key: "status",
-      header: "Status",
-      sortable: true,
-      render: (p) => <StatusBadge status={p.status} />,
-    },
-  ];
+  async function handleDeleteTeam() {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/teams/${team.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error ?? "Failed to remove team");
+      }
+      toast.success(`${team.name} removed`);
+      // The team no longer exists — return to its league rather than refresh.
+      router.push(`/dashboard/leagues/${team.leagueId}`);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to remove team";
+      toast.error(message);
+      setIsDeleting(false);
+    }
+  }
+
+  // Madden-style compact depth chart columns (WSM-000088). `slot` is the
+  // player's depth-order index within the active position-group tab \u2014
+  // attached to the row before render so it survives user re-sorting.
+  type RosterRow = PlayerDto & { slot?: number } & Record<string, unknown>;
+
+  // Headline attribute columns render only for keys at least one
+  // player on the team actually has (WSM-000090).
+  const statKeys = presentHeadlineKeys(
+    snapshots,
+    players.map((p) => p.id),
+  );
+
+  // Depth order for a position group (slot 1 = starter) keyed off SPRT OVR.
+  const depthOvr = (p: PlayerDto) =>
+    snapshots.get(p.id)?.weightedOverall ?? null;
+
+  function buildColumns(withSlot: boolean): Column<RosterRow>[] {
+    return [
+      ...(withSlot
+        ? [
+            {
+              key: "slot",
+              header: "Slot",
+              sortable: true,
+              render: (p: RosterRow) => (
+                <span className="font-mono text-muted-foreground">
+                  {p.slot}.
+                </span>
+              ),
+            } satisfies Column<RosterRow>,
+          ]
+        : []),
+      {
+        key: "name",
+        header: "Player",
+        sortable: true,
+        render: (p) => (
+          <span className="font-medium">{abbreviateName(p.name)}</span>
+        ),
+      },
+      { key: "position", header: "Pos", sortable: true },
+      {
+        key: "jerseyNumber",
+        header: "#",
+        sortable: true,
+        render: (p) => p.jerseyNumber ?? "\u2014",
+      },
+      // Madden stat columns (WSM-000090) — only when snapshots exist.
+      ...(snapshots.size > 0
+        ? [
+            {
+              key: "ovr",
+              header: "SPRT",
+              sortable: true,
+              accessor: (p: RosterRow) =>
+                snapshots.get(p.id as string)?.weightedOverall ?? null,
+              render: (p: RosterRow) => {
+                const ovr = snapshots.get(p.id as string)?.weightedOverall;
+                return ovr != null ? (
+                  <span className="font-mono font-semibold text-green-500">
+                    {Math.round(ovr)}
+                  </span>
+                ) : (
+                  "—"
+                );
+              },
+            } satisfies Column<RosterRow>,
+            ...statKeys.map(
+              (key) =>
+                ({
+                  key: `attr_${key}`,
+                  header: key,
+                  sortable: true,
+                  accessor: (p: RosterRow) =>
+                    lookupAttribute(snapshots.get(p.id as string), key),
+                  render: (p: RosterRow) => {
+                    const value = lookupAttribute(
+                      snapshots.get(p.id as string),
+                      key,
+                    );
+                    return value != null ? (
+                      <span className="font-mono">{Math.round(value)}</span>
+                    ) : (
+                      "—"
+                    );
+                  },
+                }) satisfies Column<RosterRow>,
+            ),
+          ]
+        : []),
+      // Madden overall (WSM-000095) — independent of SPRT, shown side by side.
+      ...(madden.size > 0
+        ? [
+            {
+              key: "mad",
+              header: "MAD",
+              sortable: true,
+              accessor: (p: RosterRow) => madden.get(p.id as string) ?? null,
+              render: (p: RosterRow) => {
+                const ovr = madden.get(p.id as string);
+                return ovr != null ? (
+                  <span className="font-mono font-semibold text-primary">
+                    {ovr}
+                  </span>
+                ) : (
+                  "—"
+                );
+              },
+            } satisfies Column<RosterRow>,
+          ]
+        : []),
+      // Status column dropped for now (WSM-000097 follow-up) — it ate width for
+      // little signal. A future story will surface injury/inactive state as an
+      // icon/asterisk with a popover for the designation, not a full column.
+    ];
+  }
 
   return (
     <>
       <Card className="mb-8">
         <CardContent className="pt-6">
-          <div className="flex items-start justify-between">
-            <h2 className="text-2xl font-bold text-foreground">{team.name}</h2>
-            {canManage && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setModal({ type: "editTeam" })}
-              >
-                <Pencil className="mr-1 h-3 w-3" />
-                Edit Team
-              </Button>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h2 className="min-w-0 break-words text-2xl font-bold text-foreground">
+              {team.name}
+            </h2>
+            {(canManage || canDelete) && (
+              <div className="flex shrink-0 flex-wrap gap-2">
+                {canManage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setModal({ type: "editTeam" })}
+                  >
+                    <Pencil className="mr-1 h-3 w-3" />
+                    Edit Team
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => setModal({ type: "deleteTeam" })}
+                  >
+                    <Trash2 className="mr-1 h-3 w-3" />
+                    Remove Team
+                  </Button>
+                )}
+              </div>
             )}
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
@@ -135,46 +292,68 @@ export default function TeamManagement({
         )}
       </div>
 
+      {(snapshots.size > 0 || madden.size > 0) && (
+        <p className="mb-3 text-xs text-muted-foreground">
+          SPRT is our own rating from open NFL data (nflverse); MAD is the
+          Madden NFL 26 overall (EA Sports). Players without enough recent
+          snaps are unrated.
+        </p>
+      )}
+
       {players.length > 0 ? (
-        <DataTable
-          data={players as (PlayerDto & Record<string, unknown>)[]}
-          columns={columns}
-          searchPlaceholder="Search players..."
-          searchKeys={["name", "position", "status"]}
-          actions={
-            canManage
-              ? (player) => (
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setModal({
-                          type: "editPlayer",
-                          player: player as unknown as PlayerDto,
-                        })
-                      }
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() =>
-                        setModal({
-                          type: "deletePlayer",
-                          player: player as unknown as PlayerDto,
-                        })
-                      }
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )
-              : undefined
-          }
-        />
+        <PositionGroupTabs players={players}>
+          {(groupPlayers, activeTab) => (
+            <DataTable
+              data={
+                (activeTab === "All"
+                  ? groupPlayers
+                  : orderByDepth(groupPlayers, depthOvr).map((p, i) => ({
+                      ...p,
+                      slot: i + 1,
+                    }))) as RosterRow[]
+              }
+              columns={buildColumns(activeTab !== "All")}
+              searchPlaceholder="Search players..."
+              searchKeys={["name", "position", "status"]}
+              onRowClick={(p) =>
+                router.push(`/dashboard/players/${(p as RosterRow).id}`)
+              }
+              actions={
+                canManage
+                  ? (player) => (
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setModal({
+                              type: "editPlayer",
+                              player: player as unknown as PlayerDto,
+                            })
+                          }
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() =>
+                            setModal({
+                              type: "deletePlayer",
+                              player: player as unknown as PlayerDto,
+                            })
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )
+                  : undefined
+              }
+            />
+          )}
+        </PositionGroupTabs>
       ) : (
         <EmptyState
           icon={UserCircle}
@@ -200,6 +379,9 @@ export default function TeamManagement({
       <PlayerForm
         mode="create"
         teamId={team.id}
+        existingJerseyNumbers={players
+          .map((p) => p.jerseyNumber)
+          .filter((n): n is number => n != null)}
         open={modal.type === "addPlayer"}
         onOpenChange={(open) => !open && setModal({ type: "none" })}
         onSuccess={handleSuccess}
@@ -210,6 +392,10 @@ export default function TeamManagement({
           mode="edit"
           teamId={team.id}
           player={modal.player}
+          existingJerseyNumbers={players
+            .filter((p) => p.id !== modal.player.id)
+            .map((p) => p.jerseyNumber)
+            .filter((n): n is number => n != null)}
           open
           onOpenChange={(open) => !open && setModal({ type: "none" })}
           onSuccess={handleSuccess}
@@ -223,6 +409,19 @@ export default function TeamManagement({
           isOpen
           isDeleting={isDeleting}
           onConfirm={() => handleDeletePlayer(modal.player.id)}
+          onCancel={() => setModal({ type: "none" })}
+        />
+      )}
+
+      {modal.type === "deleteTeam" && (
+        <DeleteConfirm
+          title="Remove Team"
+          message={`Remove ${team.name} and its ${players.length} player${
+            players.length === 1 ? "" : "s"
+          } from this league? This also deletes the team's depth charts and schedule. This action cannot be undone.`}
+          isOpen
+          isDeleting={isDeleting}
+          onConfirm={handleDeleteTeam}
           onCancel={() => setModal({ type: "none" })}
         />
       )}

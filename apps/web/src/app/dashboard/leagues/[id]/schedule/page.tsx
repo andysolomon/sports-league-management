@@ -10,8 +10,9 @@ import {
   getTeamsByLeague,
   listFixturesBySeason,
 } from "@/lib/data-api";
-import { resolveOrgContext, getUserRoleInOrg } from "@/lib/org-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/8bit/card";
+import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
+import { canManageRoster } from "@/lib/permissions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 
@@ -31,10 +32,11 @@ export default async function LeagueSchedulePage({
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
 
-  // Admin gate (only admins see "New fixture" + "Record result").
+  // Manager gate: admins and coaches see "New fixture" + "Record result"
+  // (coaches run schedules/results, WSM-000121).
   const orgId = await getLeagueOrgId(leagueId);
-  const role = orgId ? await getUserRoleInOrg(orgId, userId) : null;
-  const isAdmin = role === "org:admin";
+  const role = orgId ? await resolveOrgRole(orgId, userId) : null;
+  const isAdmin = canManageRoster(role);
 
   // Pick the active season — fall back to whichever exists if none flagged active.
   const allSeasons = await getSeasons([leagueId]);

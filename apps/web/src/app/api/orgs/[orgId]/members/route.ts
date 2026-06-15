@@ -1,6 +1,12 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgAdmin } from "@/lib/org-context";
+import {
+  listOrgMemberRoles,
+  setOrgMemberRole,
+  deleteOrgMemberRole,
+} from "@/lib/data-api";
+import { isOrgRole, type OrgRole } from "@/lib/permissions";
 import { handleApiError } from "@/lib/api-error";
 
 export async function GET(
@@ -23,15 +29,27 @@ export async function GET(
         organizationId: orgId,
       });
 
-    const data = memberships.data.map((m) => ({
-      userId: m.publicUserData?.userId ?? "",
-      email: m.publicUserData?.identifier ?? "",
-      firstName: m.publicUserData?.firstName ?? "",
-      lastName: m.publicUserData?.lastName ?? "",
-      imageUrl: m.publicUserData?.imageUrl ?? "",
-      role: m.role,
-      createdAt: m.createdAt,
-    }));
+    // Layer the Convex coach/viewer sub-role onto Clerk membership: org:admin
+    // → admin; org:member → stored sub-role, defaulting to viewer (WSM-000121).
+    const subRoles = await listOrgMemberRoles(orgId).catch(() => []);
+    const subRoleByUser = new Map(subRoles.map((r) => [r.userId, r.role]));
+
+    const data = memberships.data.map((m) => {
+      const memberUserId = m.publicUserData?.userId ?? "";
+      const role: OrgRole =
+        m.role === "org:admin"
+          ? "admin"
+          : (subRoleByUser.get(memberUserId) ?? "viewer");
+      return {
+        userId: memberUserId,
+        email: m.publicUserData?.identifier ?? "",
+        firstName: m.publicUserData?.firstName ?? "",
+        lastName: m.publicUserData?.lastName ?? "",
+        imageUrl: m.publicUserData?.imageUrl ?? "",
+        role,
+        createdAt: m.createdAt,
+      };
+    });
 
     return NextResponse.json(data);
   } catch (error) {
@@ -59,16 +77,17 @@ export async function PATCH(
 
     const { memberUserId, role } = await request.json();
 
-    if (!memberUserId || !role || !["org:admin", "org:member"].includes(role)) {
+    if (!memberUserId || !isOrgRole(role)) {
       return NextResponse.json(
-        { error: "Valid memberUserId and role required" },
+        { error: "Valid memberUserId and role (admin/coach/viewer) required" },
         { status: 400 },
       );
     }
 
-    // Prevent demoting last admin
-    if (role === "org:member") {
-      const client = await clerkClient();
+    const client = await clerkClient();
+
+    // Prevent demoting the last admin off the admin role.
+    if (role !== "admin") {
       const memberships =
         await client.organizations.getOrganizationMembershipList({
           organizationId: orgId,
@@ -91,12 +110,22 @@ export async function PATCH(
       }
     }
 
-    const client = await clerkClient();
-    await client.organizations.updateOrganizationMembership({
-      organizationId: orgId,
-      userId: memberUserId,
-      role,
-    });
+    // Clerk owns the admin bit; Convex stores the coach/viewer split for members.
+    if (role === "admin") {
+      await client.organizations.updateOrganizationMembership({
+        organizationId: orgId,
+        userId: memberUserId,
+        role: "org:admin",
+      });
+      await deleteOrgMemberRole(orgId, memberUserId);
+    } else {
+      await client.organizations.updateOrganizationMembership({
+        organizationId: orgId,
+        userId: memberUserId,
+        role: "org:member",
+      });
+      await setOrgMemberRole(orgId, memberUserId, role);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -157,6 +186,8 @@ export async function DELETE(
       organizationId: orgId,
       userId: memberUserId,
     });
+    // Drop any coach/viewer sub-role so a re-add starts clean (WSM-000121).
+    await deleteOrgMemberRole(orgId, memberUserId).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error) {

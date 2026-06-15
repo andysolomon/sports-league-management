@@ -67,7 +67,11 @@ function mutationRef<Args extends object, Return>(name: string) {
 const refs = {
   getVisibleLeagueContext: queryRef<
     { orgIds: string[]; userId: string },
-    { visibleLeagueIds: string[]; subscribedLeagueIds: string[] }
+    {
+      visibleLeagueIds: string[];
+      subscribedLeagueIds: string[];
+      subscriptionScopes: Array<{ leagueId: string; teamIds: string[] }>;
+    }
   >("sports:getVisibleLeagueContext"),
   listPublicLeagues: queryRef<Record<string, never>, LeagueDto[]>(
     "sports:listPublicLeagues",
@@ -102,6 +106,38 @@ const refs = {
   getTeamLeagueId: queryRef<{ teamId: string }, string | null>(
     "sports:getTeamLeagueId",
   ),
+  getTeamOwnerOrgId: queryRef<{ teamId: string }, string | null>(
+    "sports:getTeamOwnerOrgId",
+  ),
+  forkTeamToWorkspace: mutationRef<
+    { orgId: string; sourceTeamId: string },
+    { teamId: string; leagueId: string; created: boolean }
+  >("sports:forkTeamToWorkspace"),
+  getOrgForkedSourceTeamIds: queryRef<{ orgId: string }, string[]>(
+    "sports:getOrgForkedSourceTeamIds",
+  ),
+  setLeagueClaimable: mutationRef<
+    { leagueId: string; claimable: boolean },
+    null
+  >("sports:setLeagueClaimable"),
+  getLeagueClaimable: queryRef<{ leagueId: string }, boolean>(
+    "sports:getLeagueClaimable",
+  ),
+  getOrgMemberRole: queryRef<
+    { orgId: string; userId: string },
+    "coach" | "viewer" | null
+  >("sports:getOrgMemberRole"),
+  listOrgMemberRoles: queryRef<
+    { orgId: string },
+    Array<{ userId: string; role: "coach" | "viewer" }>
+  >("sports:listOrgMemberRoles"),
+  setOrgMemberRole: mutationRef<
+    { orgId: string; userId: string; role: "coach" | "viewer" },
+    null
+  >("sports:setOrgMemberRole"),
+  deleteOrgMemberRole: mutationRef<{ orgId: string; userId: string }, null>(
+    "sports:deleteOrgMemberRole",
+  ),
   listPlayers: queryRef<{ leagueIds: string[] }, PlayerDto[]>("sports:listPlayers"),
   listPlayersByTeam: queryRef<{ teamId: string }, PlayerDto[]>(
     "sports:listPlayersByTeam",
@@ -127,6 +163,33 @@ const refs = {
     { name: string; orgId: string | null },
     { dto: LeagueDto; created: boolean }
   >("sports:upsertLeague"),
+  createLeague: mutationRef<
+    { name: string; orgId: string },
+    { id: string; name: string }
+  >("sports:createLeague"),
+  renameLeague: mutationRef<{ leagueId: string; name: string }, null>(
+    "sports:renameLeague",
+  ),
+  deleteLeagueBatch: mutationRef<
+    { leagueId: string; maxTeams?: number },
+    { done: boolean; teamsDeleted: number }
+  >("sports:deleteLeagueBatch"),
+  clearSeasonPlayerAttributes: mutationRef<
+    { seasonId: string },
+    { deleted: number }
+  >("sports:clearSeasonPlayerAttributes"),
+  ingestPlayerAttributesBatch: mutationRef<
+    {
+      seasonId: string;
+      rows: Array<{
+        playerId: string;
+        positionGroup: string;
+        attributesJson: string;
+        weightedOverall: number | null;
+      }>;
+    },
+    { created: number; updated: number }
+  >("sports:ingestPlayerAttributesBatch"),
   upsertDivision: mutationRef<
     { name: string; leagueId: string },
     { dto: DivisionDto; created: boolean }
@@ -152,6 +215,7 @@ const refs = {
       dateOfBirth: string | null;
       status: string;
       headshotUrl: string | null;
+      experienceYears: number | null;
     },
     { dto: PlayerDto; created: boolean }
   >("sports:upsertPlayer"),
@@ -169,12 +233,6 @@ const refs = {
     { leagueId: string; token: string | null },
     null
   >("sports:setLeagueInviteToken"),
-  subscribeToLeague: mutationRef<{ userId: string; leagueId: string }, null>(
-    "sports:subscribeToLeague",
-  ),
-  unsubscribeFromLeague: mutationRef<{ userId: string; leagueId: string }, null>(
-    "sports:unsubscribeFromLeague",
-  ),
   createTeam: mutationRef<CreateTeamInput, TeamDto>("sports:createTeam"),
   updateTeam: mutationRef<
     { teamId: string } & UpdateTeamInput,
@@ -186,6 +244,7 @@ const refs = {
     PlayerDto | null
   >("sports:updatePlayer"),
   deletePlayer: mutationRef<{ playerId: string }, null>("sports:deletePlayer"),
+  deleteTeam: mutationRef<{ teamId: string }, null>("sports:deleteTeam"),
   setSyncEnabled: mutationRef<{ enabled: boolean }, null>("sports:setSyncEnabled"),
   writeSyncReport: mutationRef<{ reportJson: string }, null>(
     "sports:writeSyncReport",
@@ -229,6 +288,36 @@ const refs = {
       ingestedAt: string;
     }>
   >("sports:getSeasonAttributesByPosition"),
+  getPlayerSeasonAttributes: queryRef<
+    { playerId: string },
+    {
+      weightedOverall: number | null;
+      attributes: Record<string, number>;
+      positionGroup: string;
+    } | null
+  >("sports:getPlayerSeasonAttributes"),
+  getTeamAttributeSnapshots: queryRef<
+    { teamId: string },
+    Array<{
+      playerId: string;
+      weightedOverall: number | null;
+      attributes: Record<string, number>;
+    }>
+  >("sports:getTeamAttributeSnapshots"),
+  getPlayerMaddenRating: queryRef<
+    { playerId: string },
+    {
+      overall: number;
+      position: string;
+      attributes: Record<string, number>;
+      portraitUrl: string | null;
+      teamLogoUrl: string | null;
+    } | null
+  >("sports:getPlayerMaddenRating"),
+  getTeamMaddenOveralls: queryRef<
+    { teamId: string },
+    Array<{ playerId: string; overall: number }>
+  >("sports:getTeamMaddenOveralls"),
   getLeagueVisibility: queryRef<
     { leagueId: string },
     { isPublic: boolean } | null
@@ -401,6 +490,21 @@ export async function getPublicLeagues(): Promise<LeagueDto[]> {
   return queryConvex(refs.listPublicLeagues, {});
 }
 
+/**
+ * Teams + divisions for a PUBLIC league's à la carte import tree (WSM-000100).
+ * The league id must come from getPublicLeagues — public leagues are browseable
+ * for import, so there's no org-access gate here.
+ */
+export async function getPublicLeagueImportTree(
+  leagueId: string,
+): Promise<{ teams: TeamDto[]; divisions: DivisionDto[] }> {
+  const [teams, divisions] = await Promise.all([
+    queryConvex(refs.listTeamsByLeague, { leagueId }),
+    queryConvex(refs.listDivisions, { leagueIds: [leagueId] }),
+  ]);
+  return { teams, divisions };
+}
+
 export async function getLeagueByInviteToken(
   token: string,
 ): Promise<{ leagueId: string; orgId: string | null; name: string } | null> {
@@ -422,6 +526,41 @@ export async function setLeagueInviteToken(
 
 export async function getLeagueOrgId(leagueId: string): Promise<string | null> {
   return queryConvex(refs.getLeagueOrgId, { leagueId });
+}
+
+/** WSM-000118: league CRUD. Auth enforced in the calling server actions. */
+export async function createLeague(
+  name: string,
+  orgId: string,
+): Promise<{ id: string; name: string }> {
+  return mutateConvex(refs.createLeague, { name, orgId });
+}
+
+export async function renameLeague(
+  leagueId: string,
+  name: string,
+): Promise<void> {
+  await mutateConvex(refs.renameLeague, { leagueId, name });
+}
+
+/**
+ * Delete a league, batching the cascade over teams so a large forked league
+ * (NFL ~2,900 players) stays inside Convex mutation limits (WSM-000122). Loops
+ * until the backend reports `done`; a generous iteration cap guards against an
+ * unexpected non-terminating response.
+ */
+export async function deleteLeague(leagueId: string): Promise<void> {
+  // ~10 teams/batch keeps each transaction comfortably bounded (a forked
+  // 32-team league finishes in ~4 round trips); the cap (400) covers leagues
+  // far larger than anything real before it would ever trip.
+  for (let i = 0; i < 400; i++) {
+    const { done } = await mutateConvex(refs.deleteLeagueBatch, {
+      leagueId,
+      maxTeams: 10,
+    });
+    if (done) return;
+  }
+  throw new Error("deleteLeague did not complete within the batch limit");
 }
 
 export async function getLeagues(visibleLeagueIds: string[]): Promise<LeagueDto[]> {
@@ -489,6 +628,72 @@ export async function getTeamLeagueId(teamId: string): Promise<string> {
   return leagueId;
 }
 
+/** WSM-000109: the org that claimed this team, or null if unclaimed. */
+export async function getTeamOwnerOrgId(
+  teamId: string,
+): Promise<string | null> {
+  return queryConvex(refs.getTeamOwnerOrgId, { teamId });
+}
+
+/**
+ * WSM-000114: fork a reference team into the org's private workspace. Raw
+ * wrapper — caller MUST verify org admin first (see forkTeamForOrg).
+ */
+export async function forkTeamToWorkspace(
+  orgId: string,
+  sourceTeamId: string,
+): Promise<{ teamId: string; leagueId: string; created: boolean }> {
+  return mutateConvex(refs.forkTeamToWorkspace, { orgId, sourceTeamId });
+}
+
+/** WSM-000117: reference team ids the org has already forked (for Discover). */
+export async function getOrgForkedSourceTeamIds(
+  orgId: string,
+): Promise<string[]> {
+  return queryConvex(refs.getOrgForkedSourceTeamIds, { orgId });
+}
+
+export async function setLeagueClaimable(
+  leagueId: string,
+  claimable: boolean,
+): Promise<void> {
+  await mutateConvex(refs.setLeagueClaimable, { leagueId, claimable });
+}
+
+/** WSM-000109: whether a league's teams can be claimed by coaches. */
+export async function getLeagueClaimable(leagueId: string): Promise<boolean> {
+  return queryConvex(refs.getLeagueClaimable, { leagueId });
+}
+
+/** WSM-000121: a member's coach/viewer sub-role (null = viewer default). */
+export async function getOrgMemberRole(
+  orgId: string,
+  userId: string,
+): Promise<"coach" | "viewer" | null> {
+  return queryConvex(refs.getOrgMemberRole, { orgId, userId });
+}
+
+export async function listOrgMemberRoles(
+  orgId: string,
+): Promise<Array<{ userId: string; role: "coach" | "viewer" }>> {
+  return queryConvex(refs.listOrgMemberRoles, { orgId });
+}
+
+export async function setOrgMemberRole(
+  orgId: string,
+  userId: string,
+  role: "coach" | "viewer",
+): Promise<void> {
+  await mutateConvex(refs.setOrgMemberRole, { orgId, userId, role });
+}
+
+export async function deleteOrgMemberRole(
+  orgId: string,
+  userId: string,
+): Promise<void> {
+  await mutateConvex(refs.deleteOrgMemberRole, { orgId, userId });
+}
+
 export async function getPlayers(
   visibleLeagueIds: string[],
 ): Promise<PlayerDto[]> {
@@ -515,6 +720,72 @@ export async function getPlayersByTeam(
   const teamLeagueId = await getTeamLeagueId(teamId);
   requireLeagueAccessLocal(teamLeagueId, orgContext);
   return queryConvex(refs.listPlayersByTeam, { teamId });
+}
+
+/** WSM-000093: one player's SPRT snapshot for the profile breakdown. The
+ *  season is resolved server-side (the source season for workspace forks),
+ *  so callers no longer pass one (WSM-000122). */
+export async function getPlayerSeasonAttributes(
+  playerId: string,
+  orgContext: OrgContext,
+): Promise<{
+  weightedOverall: number | null;
+  attributes: Record<string, number>;
+  positionGroup: string;
+} | null> {
+  const player = await queryConvex(refs.getPlayer, { playerId });
+  if (!player) return null;
+  const teamLeagueId = await getTeamLeagueId(player.teamId);
+  requireLeagueAccessLocal(teamLeagueId, orgContext);
+  return queryConvex(refs.getPlayerSeasonAttributes, { playerId });
+}
+
+/** WSM-000090: playerId → snapshot map for the roster stat columns. Season
+ *  resolved server-side, including workspace forks (WSM-000122). */
+export async function getTeamAttributeSnapshots(
+  teamId: string,
+  orgContext: OrgContext,
+): Promise<
+  Map<string, { weightedOverall: number | null; attributes: Record<string, number> }>
+> {
+  const teamLeagueId = await getTeamLeagueId(teamId);
+  requireLeagueAccessLocal(teamLeagueId, orgContext);
+  const rows = await queryConvex(refs.getTeamAttributeSnapshots, { teamId });
+  return new Map(
+    rows.map((r) => [
+      r.playerId,
+      { weightedOverall: r.weightedOverall, attributes: r.attributes },
+    ]),
+  );
+}
+
+/** WSM-000095: one player's Madden snapshot for the profile card. */
+export async function getPlayerMaddenRating(
+  playerId: string,
+  orgContext: OrgContext,
+): Promise<{
+  overall: number;
+  position: string;
+  attributes: Record<string, number>;
+  portraitUrl: string | null;
+  teamLogoUrl: string | null;
+} | null> {
+  const player = await queryConvex(refs.getPlayer, { playerId });
+  if (!player) return null;
+  const teamLeagueId = await getTeamLeagueId(player.teamId);
+  requireLeagueAccessLocal(teamLeagueId, orgContext);
+  return queryConvex(refs.getPlayerMaddenRating, { playerId });
+}
+
+/** WSM-000095: playerId → Madden overall map for the roster MAD column. */
+export async function getTeamMaddenOveralls(
+  teamId: string,
+  orgContext: OrgContext,
+): Promise<Map<string, number>> {
+  const teamLeagueId = await getTeamLeagueId(teamId);
+  requireLeagueAccessLocal(teamLeagueId, orgContext);
+  const rows = await queryConvex(refs.getTeamMaddenOveralls, { teamId });
+  return new Map(rows.map((r) => [r.playerId, r.overall]));
 }
 
 export async function getSeasons(
@@ -554,6 +825,10 @@ export async function deletePlayer(id: string): Promise<null> {
   return mutateConvex(refs.deletePlayer, { playerId: id });
 }
 
+export async function deleteTeam(id: string): Promise<null> {
+  return mutateConvex(refs.deleteTeam, { teamId: id });
+}
+
 export async function createTeam(input: CreateTeamInput): Promise<TeamDto> {
   return mutateConvex(refs.createTeam, input);
 }
@@ -578,20 +853,6 @@ export async function upsertSeason(input: {
   status: string;
 }): Promise<{ dto: SeasonDto; created: boolean }> {
   return mutateConvex(refs.upsertSeason, input);
-}
-
-export async function subscribeToLeague(
-  userId: string,
-  leagueId: string,
-): Promise<void> {
-  await mutateConvex(refs.subscribeToLeague, { userId, leagueId });
-}
-
-export async function unsubscribeFromLeague(
-  userId: string,
-  leagueId: string,
-): Promise<void> {
-  await mutateConvex(refs.unsubscribeFromLeague, { userId, leagueId });
 }
 
 export async function readSyncConfig(): Promise<SyncConfig> {
@@ -734,6 +995,7 @@ export async function bulkImportLeague(
             dateOfBirth: player.dateOfBirth ?? null,
             status: player.status ?? "Active",
             headshotUrl: player.headshotUrl ?? null,
+            experienceYears: player.experienceYears ?? null,
           });
           if (playerResult.created) created.players++;
           else updated.players++;

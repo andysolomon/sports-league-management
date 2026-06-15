@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/nfl-sync",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/sprt-refresh",
+      "schedule": "0 9 * * 2"
     }
   ]
 }

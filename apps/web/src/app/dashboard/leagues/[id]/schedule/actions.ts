@@ -10,7 +10,8 @@ import {
   getLeagueOrgId,
   recordGameResult,
 } from "@/lib/data-api";
-import { getUserRoleInOrg, resolveOrgContext } from "@/lib/org-context";
+import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
+import { canManageRoster } from "@/lib/permissions";
 import {
   trackFixtureCreated,
   trackResultRecorded,
@@ -31,9 +32,10 @@ interface CreateFixtureActionInput {
  *   1. flag enabled
  *   2. Clerk session present
  *   3. league visible to the user (resolveOrgContext)
- *   4. caller is org:admin of the league's org
+ *   4. caller can manage rosters (admin or coach) of the league's org —
+ *      coaches run schedules/results (WSM-000121)
  */
-async function authorizeAdminAction(
+async function authorizeManagerAction(
   leagueId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const enabled = await schedulesStandingsV1();
@@ -49,8 +51,8 @@ async function authorizeAdminAction(
   const orgId = await getLeagueOrgId(leagueId);
   if (!orgId) return { ok: false, error: "league_not_owned" };
 
-  const role = await getUserRoleInOrg(orgId, userId);
-  if (role !== "org:admin") return { ok: false, error: "not_admin" };
+  const role = await resolveOrgRole(orgId, userId);
+  if (!canManageRoster(role)) return { ok: false, error: "not_authorized" };
 
   return { ok: true };
 }
@@ -58,7 +60,7 @@ async function authorizeAdminAction(
 export async function createFixtureAction(
   input: CreateFixtureActionInput,
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
-  const guard = await authorizeAdminAction(input.leagueId);
+  const guard = await authorizeManagerAction(input.leagueId);
   if (!guard.ok) return guard;
 
   if (input.homeTeamId === input.awayTeamId) {
@@ -101,7 +103,7 @@ interface RecordResultActionInput {
 export async function recordGameResultAction(
   input: RecordResultActionInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const guard = await authorizeAdminAction(input.leagueId);
+  const guard = await authorizeManagerAction(input.leagueId);
   if (!guard.ok) return guard;
 
   const { userId } = await auth();
@@ -147,7 +149,7 @@ interface DeleteFixtureActionInput {
 export async function deleteFixtureAction(
   input: DeleteFixtureActionInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const guard = await authorizeAdminAction(input.leagueId);
+  const guard = await authorizeManagerAction(input.leagueId);
   if (!guard.ok) return guard;
 
   try {
