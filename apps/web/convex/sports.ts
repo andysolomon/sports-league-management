@@ -1,6 +1,6 @@
-import { mutationGeneric, queryGeneric } from "convex/server";
+import { internalMutationGeneric, queryGeneric } from "convex/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
@@ -711,7 +711,7 @@ export const healthSummary = queryGeneric({
   },
 });
 
-export const upsertLeague = mutationGeneric({
+export const upsertLeague = internalMutationGeneric({
   args: {
     name: v.string(),
     orgId: v.union(v.string(), v.null()),
@@ -753,7 +753,7 @@ export const upsertLeague = mutationGeneric({
 });
 
 /** Create a new org-owned league (WSM-000118). Name unique within the org. */
-export const createLeague = mutationGeneric({
+export const createLeague = internalMutationGeneric({
   args: { name: v.string(), orgId: v.string() },
   returns: v.object({ id: v.string(), name: v.string() }),
   handler: async (ctx, args) => {
@@ -777,7 +777,7 @@ export const createLeague = mutationGeneric({
 });
 
 /** Rename a league (WSM-000118). Auth enforced in the calling server action. */
-export const renameLeague = mutationGeneric({
+export const renameLeague = internalMutationGeneric({
   args: { leagueId: v.id("leagues"), name: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -806,7 +806,7 @@ export const renameLeague = mutationGeneric({
  * log, assignments) and deletes the league itself. The caller loops until
  * `done`. Idempotent and resumable — a partial delete just continues next call.
  */
-export const deleteLeagueBatch = mutationGeneric({
+export const deleteLeagueBatch = internalMutationGeneric({
   args: { leagueId: v.id("leagues"), maxTeams: v.optional(v.number()) },
   returns: v.object({ done: v.boolean(), teamsDeleted: v.number() }),
   handler: async (ctx, args) => {
@@ -888,7 +888,7 @@ export const deleteLeagueBatch = mutationGeneric({
  * leagues; a very large one can exceed mutation limits — exactly why the
  * batched path exists.
  */
-export const deleteLeague = mutationGeneric({
+export const deleteLeague = internalMutationGeneric({
   args: { leagueId: v.id("leagues") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -955,7 +955,7 @@ export const deleteLeague = mutationGeneric({
   },
 });
 
-export const upsertDivision = mutationGeneric({
+export const upsertDivision = internalMutationGeneric({
   args: {
     name: v.string(),
     leagueId: v.id("leagues"),
@@ -989,7 +989,7 @@ export const upsertDivision = mutationGeneric({
   },
 });
 
-export const upsertTeam = mutationGeneric({
+export const upsertTeam = internalMutationGeneric({
   args: {
     name: v.string(),
     city: v.string(),
@@ -1073,7 +1073,7 @@ export const upsertTeam = mutationGeneric({
   },
 });
 
-export const upsertPlayer = mutationGeneric({
+export const upsertPlayer = internalMutationGeneric({
   args: {
     name: v.string(),
     leagueId: v.id("leagues"),
@@ -1156,7 +1156,7 @@ export const upsertPlayer = mutationGeneric({
   },
 });
 
-export const createTeam = mutationGeneric({
+export const createTeam = internalMutationGeneric({
   args: {
     name: v.string(),
     leagueId: v.id("leagues"),
@@ -1202,7 +1202,7 @@ export const createTeam = mutationGeneric({
   },
 });
 
-export const updateTeam = mutationGeneric({
+export const updateTeam = internalMutationGeneric({
   args: {
     teamId: v.id("teams"),
     name: v.optional(v.string()),
@@ -1248,7 +1248,7 @@ export const updateTeam = mutationGeneric({
   },
 });
 
-export const createPlayer = mutationGeneric({
+export const createPlayer = internalMutationGeneric({
   args: {
     name: v.string(),
     teamId: v.id("teams"),
@@ -1298,7 +1298,7 @@ export const createPlayer = mutationGeneric({
   },
 });
 
-export const updatePlayer = mutationGeneric({
+export const updatePlayer = internalMutationGeneric({
   args: {
     playerId: v.id("players"),
     name: v.optional(v.string()),
@@ -1354,7 +1354,7 @@ export const updatePlayer = mutationGeneric({
   },
 });
 
-export const deletePlayer = mutationGeneric({
+export const deletePlayer = internalMutationGeneric({
   args: { playerId: v.id("players") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -1443,7 +1443,7 @@ async function purgeTeam(ctx: MutationCtx, teamId: Id<"teams">): Promise<void> {
   await ctx.db.delete(teamId);
 }
 
-export const deleteTeam = mutationGeneric({
+export const deleteTeam = internalMutationGeneric({
   args: { teamId: v.id("teams") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -1452,7 +1452,7 @@ export const deleteTeam = mutationGeneric({
   },
 });
 
-export const upsertSeason = mutationGeneric({
+export const upsertSeason = internalMutationGeneric({
   args: {
     name: v.string(),
     leagueId: v.id("leagues"),
@@ -1517,7 +1517,7 @@ export const upsertSeason = mutationGeneric({
   },
 });
 
-export const setLeagueInviteToken = mutationGeneric({
+export const setLeagueInviteToken = internalMutationGeneric({
   args: {
     leagueId: v.id("leagues"),
     token: v.union(v.string(), v.null()),
@@ -1539,7 +1539,7 @@ export const setLeagueInviteToken = mutationGeneric({
  * provenance resolve back to the reference. This replaces the shared-edit
  * claimTeam path under the private-only workspace model (RFC §11).
  */
-export const forkTeamToWorkspace = mutationGeneric({
+export const forkTeamToWorkspace = internalMutationGeneric({
   args: { orgId: v.string(), sourceTeamId: v.id("teams") },
   returns: v.object({
     teamId: v.string(),
@@ -1659,7 +1659,7 @@ export const forkTeamToWorkspace = mutationGeneric({
   },
 });
 
-export const setSyncEnabled = mutationGeneric({
+export const setSyncEnabled = internalMutationGeneric({
   args: { enabled: v.boolean() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -1683,7 +1683,7 @@ export const setSyncEnabled = mutationGeneric({
   },
 });
 
-export const writeSyncReport = mutationGeneric({
+export const writeSyncReport = internalMutationGeneric({
   args: {
     reportJson: v.string(),
   },
@@ -1751,7 +1751,7 @@ export const getDepthChartByTeamSeason = query({
   },
 });
 
-export const reorderDepthChart = mutation({
+export const reorderDepthChart = internalMutation({
   args: {
     teamId: v.id("teams"),
     seasonId: v.id("seasons"),
@@ -1817,7 +1817,7 @@ export const reorderDepthChart = mutation({
   },
 });
 
-export const setRosterLocked = mutation({
+export const setRosterLocked = internalMutation({
   args: {
     seasonId: v.id("seasons"),
     locked: v.boolean(),
@@ -1836,7 +1836,7 @@ export const setRosterLocked = mutation({
   },
 });
 
-export const assignPlayerToRoster = mutation({
+export const assignPlayerToRoster = internalMutation({
   args: {
     seasonId: v.id("seasons"),
     teamId: v.id("teams"),
@@ -1959,7 +1959,7 @@ async function compactSlotRanks(
   );
 }
 
-export const removePlayerFromRoster = mutation({
+export const removePlayerFromRoster = internalMutation({
   args: {
     assignmentId: v.id("rosterAssignments"),
     actorUserId: v.string(),
@@ -2001,7 +2001,7 @@ export const removePlayerFromRoster = mutation({
   },
 });
 
-export const updateRosterStatus = mutation({
+export const updateRosterStatus = internalMutation({
   args: {
     assignmentId: v.id("rosterAssignments"),
     newStatus: v.string(),
@@ -2206,7 +2206,7 @@ export const getRosterAssignmentHistory = query({
  *   weightedOverall — already computed at the wrapper layer (null if
  *                     neither source carried an "OVR"/"overall" attribute).
  */
-export const ingestPlayerAttributes = mutationGeneric({
+export const ingestPlayerAttributes = internalMutationGeneric({
   args: {
     playerId: v.id("players"),
     seasonId: v.id("seasons"),
@@ -2274,7 +2274,7 @@ export const ingestPlayerAttributes = mutationGeneric({
  * so players without a computed rating fall back to "no snapshot" (em
  * dash) rather than showing leftover values. Idempotent.
  */
-export const clearSeasonPlayerAttributes = mutationGeneric({
+export const clearSeasonPlayerAttributes = internalMutationGeneric({
   args: { seasonId: v.id("seasons") },
   returns: v.object({ deleted: v.number() }),
   handler: async (ctx, args) => {
@@ -2289,7 +2289,7 @@ export const clearSeasonPlayerAttributes = mutationGeneric({
   },
 });
 
-export const ingestPlayerAttributesBatch = mutationGeneric({
+export const ingestPlayerAttributesBatch = internalMutationGeneric({
   args: {
     seasonId: v.id("seasons"),
     rows: v.array(
@@ -2628,7 +2628,7 @@ export const getTeamAttributeSnapshots = queryGeneric({
  * Madden ratings (WSM-000095) — ingest + reads. One row per player; the
  * ingest upserts by playerId so a re-run refreshes in place.
  */
-export const ingestMaddenRatingsBatch = mutationGeneric({
+export const ingestMaddenRatingsBatch = internalMutationGeneric({
   args: {
     rows: v.array(
       v.object({
@@ -2737,7 +2737,7 @@ export const getLeagueVisibility = queryGeneric({
   },
 });
 
-export const setLeaguePublic = mutationGeneric({
+export const setLeaguePublic = internalMutationGeneric({
   args: {
     leagueId: v.id("leagues"),
     isPublic: v.boolean(),
@@ -2803,7 +2803,7 @@ export const listOrgMemberRoles = queryGeneric({
   },
 });
 
-export const setOrgMemberRole = mutationGeneric({
+export const setOrgMemberRole = internalMutationGeneric({
   args: {
     orgId: v.string(),
     userId: v.string(),
@@ -2829,7 +2829,7 @@ export const setOrgMemberRole = mutationGeneric({
   },
 });
 
-export const deleteOrgMemberRole = mutationGeneric({
+export const deleteOrgMemberRole = internalMutationGeneric({
   args: { orgId: v.string(), userId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -2844,7 +2844,7 @@ export const deleteOrgMemberRole = mutationGeneric({
 });
 
 /** Mark a (public template) league's teams claimable by coaches (WSM-000109). */
-export const setLeagueClaimable = mutationGeneric({
+export const setLeagueClaimable = internalMutationGeneric({
   args: {
     leagueId: v.id("leagues"),
     claimable: v.boolean(),
@@ -2942,7 +2942,7 @@ const fixtureDtoValidator = v.object({
   createdBy: v.string(),
 });
 
-export const createFixture = mutationGeneric({
+export const createFixture = internalMutationGeneric({
   args: {
     seasonId: v.id("seasons"),
     homeTeamId: v.id("teams"),
@@ -3001,7 +3001,7 @@ export const createFixture = mutationGeneric({
   },
 });
 
-export const updateFixture = mutationGeneric({
+export const updateFixture = internalMutationGeneric({
   args: {
     fixtureId: v.id("fixtures"),
     scheduledAt: v.optional(v.union(v.string(), v.null())),
@@ -3043,7 +3043,7 @@ export const updateFixture = mutationGeneric({
   },
 });
 
-export const deleteFixture = mutationGeneric({
+export const deleteFixture = internalMutationGeneric({
   args: { fixtureId: v.id("fixtures") },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -3140,7 +3140,7 @@ const gameResultDtoValidator = v.object({
   recordedBy: v.string(),
 });
 
-export const recordGameResult = mutationGeneric({
+export const recordGameResult = internalMutationGeneric({
   args: {
     fixtureId: v.id("fixtures"),
     homeScore: v.number(),

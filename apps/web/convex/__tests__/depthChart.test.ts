@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 
 const modules = import.meta.glob("../**/*.*s");
 
@@ -97,7 +97,7 @@ describe("reorderDepthChart", () => {
     const t = convexTest(schema, modules);
     const seed = await seedBaseline(t);
 
-    const result = await t.mutation(api.sports.reorderDepthChart, {
+    const result = await t.mutation(internal.sports.reorderDepthChart, {
       teamId: seed.teamA,
       seasonId: seed.season,
       positionSlot: "QB",
@@ -112,13 +112,13 @@ describe("reorderDepthChart", () => {
     const t = convexTest(schema, modules);
     const seed = await seedBaseline(t);
 
-    await t.mutation(api.sports.reorderDepthChart, {
+    await t.mutation(internal.sports.reorderDepthChart, {
       teamId: seed.teamA,
       seasonId: seed.season,
       positionSlot: "QB",
       playerIds: [seed.p1, seed.p2, seed.p3],
     });
-    await t.mutation(api.sports.reorderDepthChart, {
+    await t.mutation(internal.sports.reorderDepthChart, {
       teamId: seed.teamA,
       seasonId: seed.season,
       positionSlot: "QB",
@@ -138,13 +138,13 @@ describe("reorderDepthChart", () => {
     const t = convexTest(schema, modules);
     const seed = await seedBaseline(t);
 
-    await t.mutation(api.sports.setRosterLocked, {
+    await t.mutation(internal.sports.setRosterLocked, {
       seasonId: seed.season,
       locked: true,
     });
 
     await expect(
-      t.mutation(api.sports.reorderDepthChart, {
+      t.mutation(internal.sports.reorderDepthChart, {
         teamId: seed.teamA,
         seasonId: seed.season,
         positionSlot: "QB",
@@ -158,7 +158,7 @@ describe("reorderDepthChart", () => {
     const seed = await seedBaseline(t);
 
     await expect(
-      t.mutation(api.sports.reorderDepthChart, {
+      t.mutation(internal.sports.reorderDepthChart, {
         teamId: seed.teamA,
         seasonId: seed.season,
         positionSlot: "QB",
@@ -173,13 +173,13 @@ describe("setRosterLocked", () => {
     const t = convexTest(schema, modules);
     const seed = await seedBaseline(t);
 
-    const locked = await t.mutation(api.sports.setRosterLocked, {
+    const locked = await t.mutation(internal.sports.setRosterLocked, {
       seasonId: seed.season,
       locked: true,
     });
     expect(locked.rosterLocked).toBe(true);
 
-    const unlocked = await t.mutation(api.sports.setRosterLocked, {
+    const unlocked = await t.mutation(internal.sports.setRosterLocked, {
       seasonId: seed.season,
       locked: false,
     });

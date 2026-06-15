@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 
 const modules = import.meta.glob("../**/*.*s");
@@ -78,7 +78,7 @@ describe("assignPlayerToRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    const first = await t.mutation(api.sports.assignPlayerToRoster, {
+    const first = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
@@ -88,7 +88,7 @@ describe("assignPlayerToRoster", () => {
     expect(first.depthRank).toBe(1);
     expect(first.status).toBe("active");
 
-    const second = await t.mutation(api.sports.assignPlayerToRoster, {
+    const second = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb2,
@@ -102,7 +102,7 @@ describe("assignPlayerToRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
@@ -123,13 +123,13 @@ describe("assignPlayerToRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    await t.mutation(api.sports.setRosterLocked, {
+    await t.mutation(internal.sports.setRosterLocked, {
       seasonId: seed1.season,
       locked: true,
     });
 
     await expect(
-      t.mutation(api.sports.assignPlayerToRoster, {
+      t.mutation(internal.sports.assignPlayerToRoster, {
         seasonId: seed1.season,
         teamId: seed1.teamA,
         playerId: seed1.qb1,
@@ -143,14 +143,14 @@ describe("assignPlayerToRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t, 2);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb2,
@@ -159,7 +159,7 @@ describe("assignPlayerToRoster", () => {
     });
 
     await expect(
-      t.mutation(api.sports.assignPlayerToRoster, {
+      t.mutation(internal.sports.assignPlayerToRoster, {
         seasonId: seed1.season,
         teamId: seed1.teamA,
         playerId: seed1.qb3,
@@ -173,14 +173,14 @@ describe("assignPlayerToRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t, null);
 
-    const r1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const r1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    const r2 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const r2 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb2,
@@ -195,7 +195,7 @@ describe("assignPlayerToRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
@@ -204,7 +204,7 @@ describe("assignPlayerToRoster", () => {
     });
 
     await expect(
-      t.mutation(api.sports.assignPlayerToRoster, {
+      t.mutation(internal.sports.assignPlayerToRoster, {
         seasonId: seed1.season,
         teamId: seed1.teamA,
         playerId: seed1.qb1,
@@ -219,7 +219,7 @@ describe("assignPlayerToRoster", () => {
     const seed1 = await seed(t);
 
     await expect(
-      t.mutation(api.sports.assignPlayerToRoster, {
+      t.mutation(internal.sports.assignPlayerToRoster, {
         seasonId: seed1.season,
         teamId: seed1.teamA,
         playerId: seed1.qbB,
@@ -235,21 +235,21 @@ describe("removePlayerFromRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    const a1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    const a2 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a2 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb2,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb3,
@@ -257,7 +257,7 @@ describe("removePlayerFromRoster", () => {
       actorUserId: ACTOR,
     });
 
-    await t.mutation(api.sports.removePlayerFromRoster, {
+    await t.mutation(internal.sports.removePlayerFromRoster, {
       assignmentId: asAssignmentId(a1.id),
       actorUserId: ACTOR,
     });
@@ -279,21 +279,21 @@ describe("removePlayerFromRoster", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    const a = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.updateRosterStatus, {
+    await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: asAssignmentId(a.id),
       newStatus: "ir",
       actorUserId: ACTOR,
     });
 
     await expect(
-      t.mutation(api.sports.removePlayerFromRoster, {
+      t.mutation(internal.sports.removePlayerFromRoster, {
         assignmentId: asAssignmentId(a.id),
         actorUserId: ACTOR,
       }),
@@ -306,14 +306,14 @@ describe("updateRosterStatus", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    const a1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    const a2 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a2 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb2,
@@ -321,7 +321,7 @@ describe("updateRosterStatus", () => {
       actorUserId: ACTOR,
     });
 
-    const updated = await t.mutation(api.sports.updateRosterStatus, {
+    const updated = await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: asAssignmentId(a1.id),
       newStatus: "ir",
       actorUserId: ACTOR,
@@ -339,7 +339,7 @@ describe("updateRosterStatus", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    const a = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
@@ -348,7 +348,7 @@ describe("updateRosterStatus", () => {
     });
 
     await expect(
-      t.mutation(api.sports.updateRosterStatus, {
+      t.mutation(internal.sports.updateRosterStatus, {
         assignmentId: asAssignmentId(a.id),
         newStatus: "bogus",
         actorUserId: ACTOR,
@@ -360,14 +360,14 @@ describe("updateRosterStatus", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t, 2);
 
-    const a1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb2,
@@ -375,14 +375,14 @@ describe("updateRosterStatus", () => {
       actorUserId: ACTOR,
     });
 
-    await t.mutation(api.sports.updateRosterStatus, {
+    await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: asAssignmentId(a1.id),
       newStatus: "ir",
       actorUserId: ACTOR,
     });
 
     // With rosterLimit 2 and one remaining active, we can reactivate a1.
-    const back = await t.mutation(api.sports.updateRosterStatus, {
+    const back = await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: asAssignmentId(a1.id),
       newStatus: "active",
       actorUserId: ACTOR,
@@ -395,14 +395,14 @@ describe("updateRosterStatus", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t, 2);
 
-    const a1 = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a1 = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb2,
@@ -410,14 +410,14 @@ describe("updateRosterStatus", () => {
       actorUserId: ACTOR,
     });
 
-    await t.mutation(api.sports.updateRosterStatus, {
+    await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: asAssignmentId(a1.id),
       newStatus: "ir",
       actorUserId: ACTOR,
     });
 
     // Fill the freed slot with qb3.
-    await t.mutation(api.sports.assignPlayerToRoster, {
+    await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb3,
@@ -426,7 +426,7 @@ describe("updateRosterStatus", () => {
     });
 
     await expect(
-      t.mutation(api.sports.updateRosterStatus, {
+      t.mutation(internal.sports.updateRosterStatus, {
         assignmentId: asAssignmentId(a1.id),
         newStatus: "active",
         actorUserId: ACTOR,
@@ -438,14 +438,14 @@ describe("updateRosterStatus", () => {
     const t = convexTest(schema, modules);
     const seed1 = await seed(t);
 
-    const a = await t.mutation(api.sports.assignPlayerToRoster, {
+    const a = await t.mutation(internal.sports.assignPlayerToRoster, {
       seasonId: seed1.season,
       teamId: seed1.teamA,
       playerId: seed1.qb1,
       positionSlot: "QB",
       actorUserId: ACTOR,
     });
-    await t.mutation(api.sports.updateRosterStatus, {
+    await t.mutation(internal.sports.updateRosterStatus, {
       assignmentId: asAssignmentId(a.id),
       newStatus: "suspended",
       actorUserId: ACTOR,
