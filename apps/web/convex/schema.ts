@@ -54,6 +54,11 @@ export default defineSchema({
     // Org workspace (WSM-000114): a workspace team's link to the reference team
     // it was forked from. Ratings + provenance resolve through it.
     sourceTeamId: v.optional(v.id("teams")),
+    // Jersey policy (WSM-000125): when false, the player create/update mutations
+    // block a jersey number that's already on another active player. When true
+    // or undefined, duplicates are allowed (the historical default) — the UI
+    // still surfaces an inline duplicate alert.
+    allowDuplicateJerseys: v.optional(v.boolean()),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_divisionId", ["divisionId"])

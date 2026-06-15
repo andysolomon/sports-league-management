@@ -428,6 +428,7 @@ export default function TeamManagement({
         existingJerseyNumbers={players
           .map((p) => p.jerseyNumber)
           .filter((n): n is number => n != null)}
+        allowDuplicateJerseys={team.allowDuplicateJerseys}
         open={modal.type === "addPlayer"}
         onOpenChange={(open) => !open && setModal({ type: "none" })}
         onSuccess={handleSuccess}
@@ -442,6 +443,7 @@ export default function TeamManagement({
             .filter((p) => p.id !== modal.player.id)
             .map((p) => p.jerseyNumber)
             .filter((n): n is number => n != null)}
+          allowDuplicateJerseys={team.allowDuplicateJerseys}
           open
           onOpenChange={(open) => !open && setModal({ type: "none" })}
           onSuccess={handleSuccess}

@@ -59,6 +59,9 @@ const POSITION_OPTIONS = [
   "ATH",
 ];
 
+// Jersey numbers 0–99 (WSM-000125). Picker, not free text.
+const JERSEY_OPTIONS = Array.from({ length: 100 }, (_, n) => n);
+
 interface PlayerFormProps {
   mode: "create" | "edit";
   teamId: string;
@@ -66,6 +69,9 @@ interface PlayerFormProps {
   /** Jersey numbers already on the roster (excluding this player) — for the
       duplicate warning (WSM-000119). Duplicates are allowed (e.g. college). */
   existingJerseyNumbers?: number[];
+  /** Team policy (WSM-000125): when false, a duplicate is blocked server-side,
+      so the inline alert is an error rather than a soft warning. */
+  allowDuplicateJerseys?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
@@ -76,6 +82,7 @@ export default function PlayerForm({
   teamId,
   player,
   existingJerseyNumbers = [],
+  allowDuplicateJerseys = true,
   open,
   onOpenChange,
   onSuccess,
@@ -110,7 +117,10 @@ export default function PlayerForm({
         status,
       };
 
-      if (jerseyTaken) {
+      // When duplicates are allowed, a clash is a soft warning (saved anyway).
+      // When blocked, we still attempt the save — the server returns a 409 that
+      // surfaces below — so we don't pre-empt with a misleading toast.
+      if (jerseyTaken && allowDuplicateJerseys) {
         toast.warning(
           `#${jerseyNumber} is already used on this roster — saved anyway.`,
         );
@@ -210,19 +220,36 @@ export default function PlayerForm({
 
           <div className="space-y-2">
             <Label htmlFor="player-jersey">Jersey Number</Label>
-            <Input
-              id="player-jersey"
-              type="number"
-              min={0}
-              max={99}
-              value={jerseyNumber}
-              onChange={(e) => setJerseyNumber(e.target.value)}
-              aria-invalid={jerseyTaken}
-            />
+            <Select
+              value={jerseyNumber === "" ? "none" : jerseyNumber}
+              onValueChange={(val) =>
+                setJerseyNumber(val === "none" ? "" : val)
+              }
+            >
+              <SelectTrigger id="player-jersey" aria-invalid={jerseyTaken}>
+                <SelectValue placeholder="Select a number" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {JERSEY_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {jerseyTaken && (
-              <p className="text-xs text-yellow-600 dark:text-yellow-500">
-                #{jerseyNumber} is already on this roster — allowed, but it&rsquo;s
-                a duplicate.
+              <p
+                role="alert"
+                className={
+                  allowDuplicateJerseys
+                    ? "text-xs text-yellow-600 dark:text-yellow-500"
+                    : "text-xs text-destructive"
+                }
+              >
+                {allowDuplicateJerseys
+                  ? `#${jerseyNumber} is already on this roster — allowed, but it’s a duplicate.`
+                  : `#${jerseyNumber} is already on this roster. This team blocks duplicate numbers — pick another.`}
               </p>
             )}
           </div>

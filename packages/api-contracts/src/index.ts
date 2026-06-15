@@ -44,6 +44,7 @@ export const TeamDtoSchema = z.object({
   teamName: z.string().nullable(),
   primaryColor: z.string().nullable(),
   secondaryColor: z.string().nullable(),
+  allowDuplicateJerseys: z.boolean(),
 }) satisfies z.ZodType<TeamDto>;
 
 export const PlayerDtoSchema = z.object({
@@ -152,6 +153,7 @@ export const UpdateTeamInputSchema = z.object({
   logoUrl: z.string().url("Enter a valid URL").nullable().optional(),
   primaryColor: hexColor.nullable().optional(),
   secondaryColor: hexColor.nullable().optional(),
+  allowDuplicateJerseys: z.boolean().optional(),
 }) satisfies z.ZodType<UpdateTeamInput>;
 
 // --- Import schema ---

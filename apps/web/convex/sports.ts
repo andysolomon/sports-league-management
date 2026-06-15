@@ -59,6 +59,7 @@ function toTeamDto(doc: {
   teamName?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
+  allowDuplicateJerseys?: boolean;
 }) {
   return {
     id: doc._id,
@@ -74,6 +75,8 @@ function toTeamDto(doc: {
     teamName: doc.teamName ?? null,
     primaryColor: doc.primaryColor ?? null,
     secondaryColor: doc.secondaryColor ?? null,
+    // Default true preserves the historical allow-by-default behavior.
+    allowDuplicateJerseys: doc.allowDuplicateJerseys ?? true,
   };
 }
 
@@ -468,6 +471,7 @@ export const listTeams = queryGeneric({
       teamName: v.union(v.string(), v.null()),
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
+      allowDuplicateJerseys: v.boolean(),
       rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
@@ -500,6 +504,7 @@ export const listTeamsByLeague = queryGeneric({
       teamName: v.union(v.string(), v.null()),
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
+      allowDuplicateJerseys: v.boolean(),
       rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
@@ -528,6 +533,7 @@ export const getTeam = queryGeneric({
       teamName: v.union(v.string(), v.null()),
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
+      allowDuplicateJerseys: v.boolean(),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
@@ -1062,6 +1068,7 @@ export const upsertTeam = internalMutationGeneric({
       teamName: v.union(v.string(), v.null()),
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
+      allowDuplicateJerseys: v.boolean(),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     created: v.boolean(),
@@ -1123,6 +1130,7 @@ export const upsertTeam = internalMutationGeneric({
         teamName: null,
         primaryColor: null,
         secondaryColor: null,
+        allowDuplicateJerseys: true,
       },
       created: true,
     };
@@ -1232,6 +1240,7 @@ export const createTeam = internalMutationGeneric({
     teamName: v.union(v.string(), v.null()),
     primaryColor: v.union(v.string(), v.null()),
     secondaryColor: v.union(v.string(), v.null()),
+    allowDuplicateJerseys: v.boolean(),
     rosterLimit: v.union(v.number(), v.null()),
   }),
   handler: async (ctx, args) => {
@@ -1260,6 +1269,7 @@ export const createTeam = internalMutationGeneric({
       teamName: null,
       primaryColor: null,
       secondaryColor: null,
+      allowDuplicateJerseys: true,
     };
   },
 });
@@ -1277,6 +1287,7 @@ export const updateTeam = internalMutationGeneric({
     logoUrl: v.optional(v.union(v.string(), v.null())),
     primaryColor: v.optional(v.union(v.string(), v.null())),
     secondaryColor: v.optional(v.union(v.string(), v.null())),
+    allowDuplicateJerseys: v.optional(v.boolean()),
   },
   returns: v.union(
     v.object({
@@ -1292,6 +1303,7 @@ export const updateTeam = internalMutationGeneric({
       teamName: v.union(v.string(), v.null()),
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
+      allowDuplicateJerseys: v.boolean(),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
@@ -1315,6 +1327,9 @@ export const updateTeam = internalMutationGeneric({
       ...(args.secondaryColor !== undefined
         ? { secondaryColor: args.secondaryColor }
         : {}),
+      ...(args.allowDuplicateJerseys !== undefined
+        ? { allowDuplicateJerseys: args.allowDuplicateJerseys }
+        : {}),
     };
     await ctx.db.patch(args.teamId, patch);
 
@@ -1324,6 +1339,32 @@ export const updateTeam = internalMutationGeneric({
     });
   },
 });
+
+/*
+ * Jersey policy enforcement (WSM-000125). When a team's `allowDuplicateJerseys`
+ * is false (it defaults to true / undefined), the player create/update mutations
+ * reject a jersey number already worn by another ACTIVE player on the same team.
+ * Returns true if the number is taken (and should be blocked). A null jersey is
+ * never a conflict. `excludePlayerId` skips the player being edited.
+ */
+async function jerseyNumberTakenOnTeam(
+  ctx: MutationCtx,
+  teamId: Id<"teams">,
+  jerseyNumber: number | null,
+  excludePlayerId?: Id<"players">,
+): Promise<boolean> {
+  if (jerseyNumber === null) return false;
+  const roster = await ctx.db
+    .query("players")
+    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+    .collect();
+  return roster.some(
+    (p) =>
+      p._id !== excludePlayerId &&
+      p.jerseyNumber === jerseyNumber &&
+      p.status.toLowerCase() === "active",
+  );
+}
 
 export const createPlayer = internalMutationGeneric({
   args: {
@@ -1350,6 +1391,18 @@ export const createPlayer = internalMutationGeneric({
     const team = await ctx.db.get(args.teamId);
     if (!team) {
       throw new Error("Team not found");
+    }
+
+    const allowDuplicates = team.allowDuplicateJerseys ?? true;
+    if (
+      !allowDuplicates &&
+      (await jerseyNumberTakenOnTeam(
+        ctx as MutationCtx,
+        args.teamId,
+        args.jerseyNumber,
+      ))
+    ) {
+      throw new Error(`duplicate_jersey:${args.jerseyNumber}`);
     }
 
     const playerId = await ctx.db.insert("players", {
@@ -1405,12 +1458,35 @@ export const updatePlayer = internalMutationGeneric({
     if (!existing) return null;
 
     let leagueId = existing.leagueId;
+    const targetTeamId = args.teamId ?? existing.teamId;
+    const targetTeam = await ctx.db.get(targetTeamId);
     if (args.teamId !== undefined) {
-      const team = await ctx.db.get(args.teamId);
-      if (!team) {
+      if (!targetTeam) {
         throw new Error("Team not found");
       }
-      leagueId = team.leagueId;
+      leagueId = targetTeam.leagueId;
+    }
+
+    // Jersey policy (WSM-000125): re-check on any jersey or team change.
+    if (
+      (args.jerseyNumber !== undefined || args.teamId !== undefined) &&
+      targetTeam &&
+      !(targetTeam.allowDuplicateJerseys ?? true)
+    ) {
+      const targetJersey =
+        args.jerseyNumber !== undefined
+          ? args.jerseyNumber
+          : existing.jerseyNumber;
+      if (
+        await jerseyNumberTakenOnTeam(
+          ctx as MutationCtx,
+          targetTeamId,
+          targetJersey,
+          existing._id,
+        )
+      ) {
+        throw new Error(`duplicate_jersey:${targetJersey}`);
+      }
     }
 
     const patch = {

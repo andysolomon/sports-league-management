@@ -33,6 +33,12 @@ export interface TeamDto {
   /** Optional brand colors (hex, e.g. "#1e3a8a"). */
   primaryColor: string | null;
   secondaryColor: string | null;
+  /**
+   * Jersey policy (WSM-000125): when false, the server blocks duplicate jersey
+   * numbers on the roster. When true (the default), duplicates are allowed and
+   * only surfaced as an inline alert.
+   */
+  allowDuplicateJerseys: boolean;
 }
 
 export interface PlayerDto {
@@ -146,6 +152,7 @@ export interface UpdateTeamInput {
   logoUrl?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
+  allowDuplicateJerseys?: boolean;
 }
 
 // --- Import types ---

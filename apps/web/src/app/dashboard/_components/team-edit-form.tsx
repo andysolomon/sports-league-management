@@ -46,6 +46,9 @@ export default function TeamEditForm({
   const [secondaryColor, setSecondaryColor] = useState(
     team.secondaryColor ?? "#64748b",
   );
+  const [allowDuplicateJerseys, setAllowDuplicateJerseys] = useState(
+    team.allowDuplicateJerseys,
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,6 +68,7 @@ export default function TeamEditForm({
         logoUrl: logoUrl.trim() || null,
         primaryColor: useColors ? primaryColor : null,
         secondaryColor: useColors ? secondaryColor : null,
+        allowDuplicateJerseys,
       };
 
       const parsed = UpdateTeamInputSchema.safeParse(data);
@@ -226,6 +230,22 @@ export default function TeamEditForm({
                 </div>
               </div>
             ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={allowDuplicateJerseys}
+                onChange={(e) => setAllowDuplicateJerseys(e.target.checked)}
+              />
+              Allow duplicate jersey numbers
+            </label>
+            <p className="text-xs text-muted-foreground">
+              {allowDuplicateJerseys
+                ? "Players may share a number — duplicates are flagged but allowed."
+                : "Saving a number already on the roster is blocked."}
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-2">
