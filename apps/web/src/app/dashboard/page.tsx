@@ -10,9 +10,11 @@ import {
   listFixturesBySeason,
   getResultByFixture,
   computeStandings,
+  listOrgMemberRoles,
 } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import { resolveOrgContext, resolveBestOrgRole } from "@/lib/org-context";
 import { resolveActiveLeague } from "@/lib/active-league";
+import { canManageOrgSettings, roleLabel } from "@/lib/permissions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,6 +24,8 @@ import {
   Calendar,
   Layers,
   CalendarClock,
+  ShieldCheck,
+  ArrowRight,
 } from "lucide-react";
 import {
   BentoCard,
@@ -69,6 +73,17 @@ export default async function DashboardPage() {
   const { activeLeagueId } = await resolveActiveLeague(userId);
   const activeLeague =
     leagues.find((l) => l.id === activeLeagueId) ?? leagues[0] ?? null;
+
+  // Role-aware bento (WSM-000136 P4): an admin of the active league's org gets
+  // an extra org/members widget; coaches & viewers get the team-and-season view.
+  const role = await resolveBestOrgRole([activeLeague?.orgId ?? null], userId);
+  const isAdmin = canManageOrgSettings(role);
+  const memberRoleCounts = { coach: 0, viewer: 0 };
+  if (isAdmin && activeLeague?.orgId) {
+    for (const r of await listOrgMemberRoles(activeLeague.orgId)) {
+      memberRoleCounts[r.role] += 1;
+    }
+  }
 
   // League-scoped slices for the bento (P4 is league-wide; coach/team tailoring
   // is a follow-up slice).
@@ -167,6 +182,7 @@ export default async function DashboardPage() {
               {activeLeague.name}
             </span>
             {activeSeason && <Badge variant="secondary">{activeSeason.name}</Badge>}
+            {role && <Badge variant="outline">{roleLabel(role)}</Badge>}
           </div>
         )}
       </div>
@@ -257,6 +273,45 @@ export default async function DashboardPage() {
               />
             </div>
           </BentoCard>
+
+          {/* Admin-only: org & members */}
+          {isAdmin && (
+            <BentoCard
+              title="League admin"
+              className="lg:col-span-4"
+              action={<ShieldCheck className="h-4 w-4 text-muted-foreground" />}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    {memberRoleCounts.coach}
+                  </span>{" "}
+                  coach{memberRoleCounts.coach === 1 ? "" : "es"} ·{" "}
+                  <span className="font-medium text-foreground">
+                    {memberRoleCounts.viewer}
+                  </span>{" "}
+                  viewer{memberRoleCounts.viewer === 1 ? "" : "s"} assigned. New
+                  members default to viewer.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/dashboard/leagues/${activeLeague!.id}/members`}
+                    className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:border-primary"
+                  >
+                    Members
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                  <Link
+                    href="/dashboard/roles"
+                    className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:border-primary"
+                  >
+                    Roles & permissions
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </div>
+            </BentoCard>
+          )}
 
           {/* Standings */}
           <BentoCard
