@@ -9,6 +9,7 @@ import type {
   TeamDto,
 } from "@sports-management/shared-types";
 import { useLocalProvider } from "@/lib/local/use-local-provider";
+import { AccountOnly } from "./_components/account-only";
 import { ensureLocalWorkspace } from "@/lib/local/local-workspace";
 import type { LocalWorkspaceProvider } from "@/lib/local/local-workspace-provider";
 import {
@@ -254,6 +255,40 @@ export default function LocalHomePage() {
               {savingDiv ? "Adding…" : "Add"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Account-only boundary (AC #2) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Unlock more with a free account
+          </CardTitle>
+          <CardDescription>
+            Local mode keeps everything in this browser. A free account adds the
+            things that need a server — and your local workspace comes with you.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <AccountOnly
+            feature="Back up & sync across devices"
+            description="Saved to the cloud, not just this browser."
+          />
+          <AccountOnly
+            feature="Share a public schedule & standings link"
+            description="A read-only link for players and parents."
+          />
+          <AccountOnly
+            feature="Invite coaches and assign roles"
+            description="Multiple people, with permissions."
+          />
+          <AccountOnly
+            feature="Discover & add reference teams"
+            description="Fork curated leagues into your workspace."
+          />
+          <Button asChild className="mt-2">
+            <Link href="/sign-up">Create a free account</Link>
+          </Button>
         </CardContent>
       </Card>
     </div>
