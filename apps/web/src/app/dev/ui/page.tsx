@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function Section({
   title,
@@ -56,13 +57,17 @@ export default function UiKitchenSinkPage() {
   return (
     <div className="min-h-screen px-6 py-10 font-sans">
       <div className="mx-auto max-w-4xl space-y-12">
-        <header className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Design system — professional theme
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            WSM-000136 · standard shadcn/ui · dark-first.
-          </p>
+        <header className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              Design system — professional theme
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              WSM-000136 · standard shadcn/ui · dark-first. Toggle to review the
+              light theme →
+            </p>
+          </div>
+          <ThemeToggle />
         </header>
 
         <Section title="Buttons">

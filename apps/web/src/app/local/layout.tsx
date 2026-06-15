@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { LocalModeBanner } from "./_components/local-mode-banner";
 
 /**
@@ -19,9 +20,12 @@ export default function LocalLayout({
         <Link href="/local" className="text-sm font-semibold text-foreground">
           sprtsmng <span className="text-muted-foreground">· local</span>
         </Link>
-        <Button asChild size="sm">
-          <Link href="/sign-up">Create a free account</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button asChild size="sm">
+            <Link href="/sign-up">Create a free account</Link>
+          </Button>
+        </div>
       </header>
       <LocalModeBanner />
       <main className="mx-auto max-w-4xl px-4 py-8">{children}</main>

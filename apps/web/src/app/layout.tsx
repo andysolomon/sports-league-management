@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -61,18 +62,26 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      {/* dark-first (WSM-000136); light theme retained for a future toggle. */}
+      {/* dark-first (WSM-000136); next-themes sets the class, light via toggle. */}
       <html
         lang="en"
-        className={`dark ${GeistSans.variable} ${GeistMono.variable} ${pixelifySans.variable}`}
+        suppressHydrationWarning
+        className={`${GeistSans.variable} ${GeistMono.variable} ${pixelifySans.variable}`}
       >
         <body className="bg-background text-foreground font-sans antialiased">
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
           />
-          {children}
-          <Toaster position="bottom-right" richColors closeButton />
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster position="bottom-right" richColors closeButton />
+          </ThemeProvider>
           <Analytics />
           <SpeedInsights />
         </body>

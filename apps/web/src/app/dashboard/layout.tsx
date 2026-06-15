@@ -4,6 +4,7 @@ import Sidebar from "./_components/sidebar";
 import MobileHeader from "./_components/mobile-header";
 import { LeagueSwitcher } from "./_components/league-switcher";
 import { MigrateLocalPrompt } from "./_components/migrate-local-prompt";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { resolveActiveLeague } from "@/lib/active-league";
 
 export default async function DashboardLayout({
@@ -37,7 +38,10 @@ export default async function DashboardLayout({
         {/* Desktop header — the league switcher is the focus anchor (WSM-000103) */}
         <header className="hidden items-center justify-between border-b border-border px-8 py-4 lg:flex">
           <LeagueSwitcher leagues={leagues} activeLeagueId={activeLeagueId} />
-          <UserButton />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <UserButton />
+          </div>
         </header>
 
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8">

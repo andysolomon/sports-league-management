@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Sidebar from "./sidebar";
 import { LeagueSwitcher } from "./league-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface LeagueOption {
   id: string;
@@ -39,7 +40,10 @@ export default function MobileHeader({
       ) : (
         <h1 className="text-lg font-semibold text-foreground">Dashboard</h1>
       )}
-      <UserButton />
+      <div className="flex items-center gap-1">
+        <ThemeToggle />
+        <UserButton />
+      </div>
     </header>
   );
 }
