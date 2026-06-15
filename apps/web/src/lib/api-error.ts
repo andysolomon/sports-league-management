@@ -44,6 +44,17 @@ export function classifyError(error: unknown): ClassifiedError {
 
   const message = error instanceof Error ? error.message : String(error);
 
+  // Jersey policy (WSM-000125): the player create/update mutations throw
+  // `duplicate_jersey:<n>` when a team disallows duplicates and the chosen
+  // number is already worn. Surface a clear 409 the form can show inline.
+  const jerseyMatch = message.match(/duplicate_jersey:(\d+)/);
+  if (jerseyMatch) {
+    return {
+      statusCode: 409,
+      userMessage: `Jersey #${jerseyMatch[1]} is already taken on this roster. This team blocks duplicate numbers.`,
+    };
+  }
+
   if (SF_CONNECTION_PATTERNS.some((p) => message.includes(p))) {
     return { statusCode: 503, userMessage: "Service temporarily unavailable" };
   }
