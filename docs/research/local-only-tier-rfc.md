@@ -23,6 +23,11 @@ model ([org-workspace-data-model-rfc](./org-workspace-data-model-rfc.md)), the i
   local and synced standings cannot drift — the §11 risk is closed by sharing the one function, not
   porting it. Division create/assign UI added. `/local/schedule` page (season picker, fixtures,
   result entry, standings table). 9 new unit tests incl. an end-to-end standings computation.
+- **2026-06-15 — Slice 4 shipped.** CSV/JSON seed into local: `importLeagueIntoLocal` writes a
+  validated `LeagueImportPayload` (the SAME shape `csvToLeagueImport` #248 produces) into the local
+  provider, merging by name. `/local/import` page reuses the #248 drop-zone + `LeagueImportSchema`.
+  3 unit tests through the full CSV→payload→local chain (seed, idempotent re-import, merge). One
+  payload shape now serves server import + local seed; Slice 6 adds the third use (local→server).
 
 ## 1. Intent (from product)
 
