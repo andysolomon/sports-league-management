@@ -75,10 +75,30 @@ void api.sports.listPublicLeagues;
 void api.sports.computeStandingsPublic;
 void api.sports.getPlayerDevelopmentPublic;
 
+// --- e2e seed mutations MUST be internal too (WSM-000139) ---
+// Same vuln class as the sports.ts writes above: they create/destroy real
+// rows, so they must never be reachable by an anonymous client. The env gate
+// (CONVEX_ENABLE_E2E_SEED) is defense-in-depth, not the boundary.
+void internal.e2eSeed.createRosterFixture;
+void internal.e2eSeed.resetRosterFixture;
+void internal.e2eSeed.createScheduleFixture;
+// @ts-expect-error createRosterFixture is internal, not public
+void api.e2eSeed.createRosterFixture;
+// @ts-expect-error resetRosterFixture is internal, not public
+void api.e2eSeed.resetRosterFixture;
+// @ts-expect-error createScheduleFixture is internal, not public
+void api.e2eSeed.createScheduleFixture;
+
 describe("sports write mutations are internal (WSM-000096)", () => {
   it("is enforced at compile time (see @ts-expect-error guards above)", () => {
     // Runtime assertion is trivial; the real guard is tsc. The proxy-based
     // `internal` object always returns a reference, so this just documents intent.
     expect(typeof internal.sports.createTeam).not.toBe("undefined");
+  });
+});
+
+describe("e2e seed mutations are internal (WSM-000139)", () => {
+  it("is enforced at compile time (see @ts-expect-error guards above)", () => {
+    expect(typeof internal.e2eSeed.createRosterFixture).not.toBe("undefined");
   });
 });
