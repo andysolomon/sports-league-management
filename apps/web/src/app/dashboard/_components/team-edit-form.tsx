@@ -29,12 +29,23 @@ export default function TeamEditForm({
   onSuccess,
 }: TeamEditFormProps) {
   const [name, setName] = useState(team.name);
+  const [teamName, setTeamName] = useState(team.teamName ?? "");
   const [city, setCity] = useState(team.city);
   const [stadium, setStadium] = useState(team.stadium);
   const [foundedYear, setFoundedYear] = useState(
     team.foundedYear?.toString() ?? "",
   );
   const [location, setLocation] = useState(team.location);
+  const [logoUrl, setLogoUrl] = useState(team.logoUrl ?? "");
+  const [useColors, setUseColors] = useState(
+    team.primaryColor != null || team.secondaryColor != null,
+  );
+  const [primaryColor, setPrimaryColor] = useState(
+    team.primaryColor ?? "#1e293b",
+  );
+  const [secondaryColor, setSecondaryColor] = useState(
+    team.secondaryColor ?? "#64748b",
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -50,6 +61,10 @@ export default function TeamEditForm({
         stadium,
         foundedYear: foundedYear ? Number(foundedYear) : null,
         location,
+        teamName: teamName.trim() || null,
+        logoUrl: logoUrl.trim() || null,
+        primaryColor: useColors ? primaryColor : null,
+        secondaryColor: useColors ? secondaryColor : null,
       };
 
       const parsed = UpdateTeamInputSchema.safeParse(data);
@@ -98,13 +113,28 @@ export default function TeamEditForm({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="team-name">Name</Label>
+            <Label htmlFor="team-name">School / Organization name</Label>
             <Input
               id="team-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team-teamname">Team name / mascot</Label>
+            <Input
+              id="team-teamname"
+              type="text"
+              value={teamName}
+              placeholder="e.g. Buccaneers (optional)"
+              onChange={(e) => setTeamName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown as &ldquo;{name || "School"}
+              {teamName.trim() ? ` — ${teamName.trim()}` : ""}&rdquo;.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -145,6 +175,57 @@ export default function TeamEditForm({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team-logo">Logo URL</Label>
+            <Input
+              id="team-logo"
+              type="url"
+              inputMode="url"
+              value={logoUrl}
+              placeholder="https://… (optional)"
+              onChange={(e) => setLogoUrl(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={useColors}
+                onChange={(e) => setUseColors(e.target.checked)}
+              />
+              Custom team colors
+            </label>
+            {useColors ? (
+              <div className="flex flex-wrap gap-4 pt-1">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="team-primary" className="text-xs">
+                    Primary
+                  </Label>
+                  <input
+                    id="team-primary"
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="h-8 w-12 cursor-pointer rounded border border-input bg-background"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="team-secondary" className="text-xs">
+                    Secondary
+                  </Label>
+                  <input
+                    id="team-secondary"
+                    type="color"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="h-8 w-12 cursor-pointer rounded border border-input bg-background"
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

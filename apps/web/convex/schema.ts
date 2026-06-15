@@ -40,6 +40,13 @@ export default defineSchema({
     location: v.string(),
     logoUrl: v.union(v.string(), v.null()),
     rosterLimit: v.union(v.number(), v.null()),
+    // Team identity (WSM-000134): the team's own name/mascot, distinct from the
+    // school name in `name` (e.g. school "Allatoona", teamName "Buccaneers"),
+    // plus optional brand colors (hex). All optional; absent = fall back to
+    // `name` and a neutral theme.
+    teamName: v.optional(v.union(v.string(), v.null())),
+    primaryColor: v.optional(v.union(v.string(), v.null())),
+    secondaryColor: v.optional(v.union(v.string(), v.null())),
     // Hybrid fork model (WSM-000109): the Clerk org that CLAIMED this team in a
     // claimable league. null/undefined = unclaimed. An admin of this org can
     // edit the team + its roster even though the league itself is shared.

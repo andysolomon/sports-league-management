@@ -41,6 +41,9 @@ export const TeamDtoSchema = z.object({
   divisionId: z.string(),
   logoUrl: z.string().nullable(),
   rosterLimit: z.number().nullable(),
+  teamName: z.string().nullable(),
+  primaryColor: z.string().nullable(),
+  secondaryColor: z.string().nullable(),
 }) satisfies z.ZodType<TeamDto>;
 
 export const PlayerDtoSchema = z.object({
@@ -134,6 +137,10 @@ export const UpdatePlayerInputSchema = z.object({
   status: z.string().min(1).optional(),
 }) satisfies z.ZodType<UpdatePlayerInput>;
 
+const hexColor = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #1e3a8a");
+
 export const UpdateTeamInputSchema = z.object({
   name: z.string().min(1).optional(),
   city: z.string().min(1).optional(),
@@ -141,6 +148,10 @@ export const UpdateTeamInputSchema = z.object({
   foundedYear: z.number().nullable().optional(),
   location: z.string().min(1).optional(),
   divisionId: z.string().min(1).optional(),
+  teamName: z.string().max(100).nullable().optional(),
+  logoUrl: z.string().url("Enter a valid URL").nullable().optional(),
+  primaryColor: hexColor.nullable().optional(),
+  secondaryColor: hexColor.nullable().optional(),
 }) satisfies z.ZodType<UpdateTeamInput>;
 
 // --- Import schema ---

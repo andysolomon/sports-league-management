@@ -28,6 +28,11 @@ export interface TeamDto {
   divisionId: string;
   logoUrl: string | null;
   rosterLimit: number | null;
+  /** Team's own name/mascot, distinct from the school name in `name`. */
+  teamName: string | null;
+  /** Optional brand colors (hex, e.g. "#1e3a8a"). */
+  primaryColor: string | null;
+  secondaryColor: string | null;
 }
 
 export interface PlayerDto {
@@ -137,6 +142,10 @@ export interface UpdateTeamInput {
   foundedYear?: number | null;
   location?: string;
   divisionId?: string;
+  teamName?: string | null;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
 }
 
 // --- Import types ---

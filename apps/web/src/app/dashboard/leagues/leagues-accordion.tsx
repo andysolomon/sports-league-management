@@ -14,7 +14,13 @@ import { CreateDivisionButton, DivisionRowActions } from "./division-controls";
 export interface AccordionDivision {
   id: string;
   name: string;
-  teams: Array<{ id: string; name: string; city: string | null }>;
+  teams: Array<{
+    id: string;
+    name: string;
+    teamName: string | null;
+    city: string | null;
+    logoUrl: string | null;
+  }>;
 }
 
 export function LeaguesAccordion({
@@ -86,11 +92,24 @@ export function LeaguesAccordion({
                           href={`/dashboard/teams/${team.id}?from=leagues`}
                           className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm transition-colors hover:bg-muted"
                         >
-                          <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          {team.logoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={team.logoUrl}
+                              alt=""
+                              className="h-5 w-5 shrink-0 rounded bg-muted object-contain"
+                            />
+                          ) : (
+                            <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          )}
                           <span className="truncate font-medium text-foreground">
                             {team.name}
                           </span>
-                          {team.city ? (
+                          {team.teamName ? (
+                            <span className="truncate text-muted-foreground">
+                              &mdash; {team.teamName}
+                            </span>
+                          ) : team.city ? (
                             <span className="truncate text-muted-foreground">
                               &mdash; {team.city}
                             </span>

@@ -56,6 +56,9 @@ function toTeamDto(doc: {
   divisionId: string | null;
   logoUrl: string | null;
   rosterLimit?: number | null;
+  teamName?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
 }) {
   return {
     id: doc._id,
@@ -68,6 +71,9 @@ function toTeamDto(doc: {
     divisionId: doc.divisionId ?? "",
     logoUrl: doc.logoUrl ?? null,
     rosterLimit: doc.rosterLimit ?? null,
+    teamName: doc.teamName ?? null,
+    primaryColor: doc.primaryColor ?? null,
+    secondaryColor: doc.secondaryColor ?? null,
   };
 }
 
@@ -459,6 +465,9 @@ export const listTeams = queryGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      teamName: v.union(v.string(), v.null()),
+      primaryColor: v.union(v.string(), v.null()),
+      secondaryColor: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
@@ -488,6 +497,9 @@ export const listTeamsByLeague = queryGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      teamName: v.union(v.string(), v.null()),
+      primaryColor: v.union(v.string(), v.null()),
+      secondaryColor: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
@@ -513,6 +525,9 @@ export const getTeam = queryGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      teamName: v.union(v.string(), v.null()),
+      primaryColor: v.union(v.string(), v.null()),
+      secondaryColor: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
@@ -1044,6 +1059,9 @@ export const upsertTeam = internalMutationGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      teamName: v.union(v.string(), v.null()),
+      primaryColor: v.union(v.string(), v.null()),
+      secondaryColor: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     created: v.boolean(),
@@ -1102,6 +1120,9 @@ export const upsertTeam = internalMutationGeneric({
         divisionId: args.divisionId ?? "",
         logoUrl: args.logoUrl,
         rosterLimit: 53,
+        teamName: null,
+        primaryColor: null,
+        secondaryColor: null,
       },
       created: true,
     };
@@ -1208,6 +1229,9 @@ export const createTeam = internalMutationGeneric({
     location: v.string(),
     divisionId: v.string(),
     logoUrl: v.union(v.string(), v.null()),
+    teamName: v.union(v.string(), v.null()),
+    primaryColor: v.union(v.string(), v.null()),
+    secondaryColor: v.union(v.string(), v.null()),
     rosterLimit: v.union(v.number(), v.null()),
   }),
   handler: async (ctx, args) => {
@@ -1233,6 +1257,9 @@ export const createTeam = internalMutationGeneric({
       divisionId: "",
       logoUrl: null,
       rosterLimit: 53,
+      teamName: null,
+      primaryColor: null,
+      secondaryColor: null,
     };
   },
 });
@@ -1246,6 +1273,10 @@ export const updateTeam = internalMutationGeneric({
     foundedYear: v.optional(v.union(v.number(), v.null())),
     location: v.optional(v.string()),
     divisionId: v.optional(v.id("divisions")),
+    teamName: v.optional(v.union(v.string(), v.null())),
+    logoUrl: v.optional(v.union(v.string(), v.null())),
+    primaryColor: v.optional(v.union(v.string(), v.null())),
+    secondaryColor: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.union(
     v.object({
@@ -1258,6 +1289,9 @@ export const updateTeam = internalMutationGeneric({
       location: v.string(),
       divisionId: v.string(),
       logoUrl: v.union(v.string(), v.null()),
+      teamName: v.union(v.string(), v.null()),
+      primaryColor: v.union(v.string(), v.null()),
+      secondaryColor: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
@@ -1273,6 +1307,14 @@ export const updateTeam = internalMutationGeneric({
       ...(args.foundedYear !== undefined ? { foundedYear: args.foundedYear } : {}),
       ...(args.location !== undefined ? { location: args.location } : {}),
       ...(args.divisionId !== undefined ? { divisionId: args.divisionId } : {}),
+      ...(args.teamName !== undefined ? { teamName: args.teamName } : {}),
+      ...(args.logoUrl !== undefined ? { logoUrl: args.logoUrl } : {}),
+      ...(args.primaryColor !== undefined
+        ? { primaryColor: args.primaryColor }
+        : {}),
+      ...(args.secondaryColor !== undefined
+        ? { secondaryColor: args.secondaryColor }
+        : {}),
     };
     await ctx.db.patch(args.teamId, patch);
 

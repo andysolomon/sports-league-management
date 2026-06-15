@@ -54,7 +54,13 @@ export default async function LeaguesPage() {
   const teamsByDivision = new Map<string, AccordionDivision["teams"]>();
   for (const team of teams) {
     const arr = teamsByDivision.get(team.divisionId) ?? [];
-    arr.push({ id: team.id, name: team.name, city: team.city ?? null });
+    arr.push({
+      id: team.id,
+      name: team.name,
+      teamName: team.teamName ?? null,
+      city: team.city ?? null,
+      logoUrl: team.logoUrl ?? null,
+    });
     teamsByDivision.set(team.divisionId, arr);
   }
 
