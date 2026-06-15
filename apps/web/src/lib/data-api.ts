@@ -229,6 +229,19 @@ const refs = {
     },
     { dto: SeasonDto; created: boolean }
   >("sports:upsertSeason"),
+  updateSeason: mutationRef<
+    {
+      seasonId: string;
+      name: string;
+      startDate: string | null;
+      endDate: string | null;
+    },
+    SeasonDto | null
+  >("sports:updateSeason"),
+  setActiveSeason: mutationRef<{ seasonId: string }, null>(
+    "sports:setActiveSeason",
+  ),
+  deleteSeason: mutationRef<{ seasonId: string }, null>("sports:deleteSeason"),
   setLeagueInviteToken: mutationRef<
     { leagueId: string; token: string | null },
     null
@@ -853,6 +866,33 @@ export async function upsertSeason(input: {
   status: string;
 }): Promise<{ dto: SeasonDto; created: boolean }> {
   return mutateConvex(refs.upsertSeason, input);
+}
+
+export async function updateSeason(input: {
+  seasonId: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
+}): Promise<SeasonDto> {
+  const dto = await mutateConvex(refs.updateSeason, input);
+  if (!dto) throw new Error("Season not found");
+  return dto;
+}
+
+export async function setActiveSeason(seasonId: string): Promise<null> {
+  return mutateConvex(refs.setActiveSeason, { seasonId });
+}
+
+export async function deleteSeason(seasonId: string): Promise<null> {
+  return mutateConvex(refs.deleteSeason, { seasonId });
+}
+
+/** Resolve a season's league for authorization, without an org-access gate. */
+export async function getSeasonLeagueId(
+  seasonId: string,
+): Promise<string | null> {
+  const season = await queryConvex(refs.getSeason, { seasonId });
+  return season?.leagueId ?? null;
 }
 
 export async function readSyncConfig(): Promise<SyncConfig> {

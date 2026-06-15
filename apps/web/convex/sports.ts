@@ -1517,6 +1517,118 @@ export const upsertSeason = internalMutationGeneric({
   },
 });
 
+/**
+ * Update a season's name and dates by id (WSM-000126). Rename + edit; the
+ * active status is managed separately via setActiveSeason.
+ */
+export const updateSeason = internalMutationGeneric({
+  args: {
+    seasonId: v.id("seasons"),
+    name: v.string(),
+    startDate: v.union(v.string(), v.null()),
+    endDate: v.union(v.string(), v.null()),
+  },
+  returns: v.union(
+    v.object({
+      id: v.string(),
+      name: v.string(),
+      leagueId: v.string(),
+      startDate: v.union(v.string(), v.null()),
+      endDate: v.union(v.string(), v.null()),
+      status: v.string(),
+      rosterLocked: v.boolean(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.seasonId);
+    if (!existing) return null;
+    await ctx.db.patch(args.seasonId, {
+      name: args.name,
+      startDate: args.startDate,
+      endDate: args.endDate,
+    });
+    return toSeasonDto({
+      ...existing,
+      name: args.name,
+      startDate: args.startDate,
+      endDate: args.endDate,
+    });
+  },
+});
+
+/**
+ * Make a season its league's single active season (WSM-000126). Sets the target
+ * to "active" and demotes any other active season in the same league to
+ * "completed", preserving the exactly-one-active invariant that roster /
+ * attribute / standings views resolve against.
+ */
+export const setActiveSeason = internalMutationGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const target = await ctx.db.get(args.seasonId);
+    if (!target) return null;
+    const siblings = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", target.leagueId))
+      .collect();
+    for (const s of siblings) {
+      if (s._id === args.seasonId) continue;
+      if (s.status === "active") {
+        await ctx.db.patch(s._id, { status: "completed" });
+      }
+    }
+    await ctx.db.patch(args.seasonId, { status: "active" });
+    return null;
+  },
+});
+
+/**
+ * Delete a season and cascade its season-scoped rows (WSM-000126): fixtures and
+ * their game results, player attributes, and roster assignments. (rosterAuditLog
+ * has no by-season index and is cleaned on league delete — left as harmless
+ * history here. Mirrors the per-season cascade in deleteLeague.)
+ */
+export const deleteSeason = internalMutationGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) return null;
+
+    const fixtures = await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+    for (const f of fixtures) {
+      for (const gr of await ctx.db
+        .query("gameResults")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+        .collect())
+        await ctx.db.delete(gr._id);
+      await ctx.db.delete(f._id);
+    }
+
+    for (const pa of await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_seasonId_positionGroup", (q) =>
+        q.eq("seasonId", args.seasonId),
+      )
+      .collect())
+      await ctx.db.delete(pa._id);
+
+    for (const ra of await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) => q.eq("seasonId", args.seasonId))
+      .collect())
+      await ctx.db.delete(ra._id);
+
+    await ctx.db.delete(args.seasonId);
+    return null;
+  },
+});
+
 export const setLeagueInviteToken = internalMutationGeneric({
   args: {
     leagueId: v.id("leagues"),
