@@ -33,6 +33,7 @@ import {
   Sparkline,
   WeekHeatmap,
 } from "./_components/bento/bento-widgets";
+import { LeagueMap } from "./_components/bento/league-map";
 
 const statCards = [
   { label: "Leagues", href: "/dashboard/leagues", key: "leagues", icon: Trophy },
@@ -412,6 +413,11 @@ export default async function DashboardPage() {
           {/* Heatmap */}
           <BentoCard title="Games played by week" className="lg:col-span-2">
             <WeekHeatmap counts={perWeekGames} />
+          </BentoCard>
+
+          {/* League geography */}
+          <BentoCard title="Where your teams are" className="lg:col-span-4">
+            <LeagueMap teams={leagueTeams} />
           </BentoCard>
         </div>
       )}
