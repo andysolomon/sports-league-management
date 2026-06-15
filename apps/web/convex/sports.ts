@@ -2058,6 +2058,39 @@ export const forkTeamToWorkspace = internalMutationGeneric({
 });
 
 /**
+ * Reverse of forkTeamToWorkspace (WSM-000129): un-add a team by deleting the
+ * org's PRIVATE workspace fork of a reference team. Scans the org's workspace
+ * leagues for the fork whose `sourceTeamId` matches and purges it (roster +
+ * dependents, via purgeTeam). Idempotent — `removed: false` when the org holds
+ * no fork of that source team. Admin authorization is the caller's job (the
+ * /unclaim route resolves the org from the caller's admin memberships, and
+ * forks only ever live in orgs the caller admins).
+ */
+export const unforkTeamFromWorkspace = internalMutationGeneric({
+  args: { orgId: v.string(), sourceTeamId: v.id("teams") },
+  returns: v.object({ removed: v.boolean() }),
+  handler: async (ctx, args) => {
+    const workspaceLeagues = await ctx.db
+      .query("leagues")
+      .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    for (const league of workspaceLeagues) {
+      const fork = (
+        await ctx.db
+          .query("teams")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", league._id))
+          .collect()
+      ).find((t) => t.sourceTeamId === args.sourceTeamId);
+      if (fork) {
+        await purgeTeam(ctx, fork._id);
+        return { removed: true };
+      }
+    }
+    return { removed: false };
+  },
+});
+
+/**
  * À la carte by division (WSM-000133): fork EVERY team in a reference division
  * into the org's workspace in one idempotent action. Already-forked teams are
  * skipped (no duplicates), so re-running over a partially-added division adds

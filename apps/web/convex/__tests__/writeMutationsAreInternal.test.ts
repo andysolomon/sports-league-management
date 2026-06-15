@@ -43,6 +43,7 @@ void internal.sports.assignPlayerToRoster;
 void internal.sports.forkTeamToWorkspace;
 void internal.sports.forkDivisionToWorkspace;
 void internal.sports.forkConferenceToWorkspace;
+void internal.sports.unforkTeamFromWorkspace;
 
 // --- Writes MUST NOT be on the public API (each access must be a type error) ---
 // @ts-expect-error createTeam is internal, not public
@@ -63,6 +64,8 @@ void api.sports.setOrgMemberRole;
 void api.sports.forkDivisionToWorkspace;
 // @ts-expect-error forkConferenceToWorkspace is internal, not public
 void api.sports.forkConferenceToWorkspace;
+// @ts-expect-error unforkTeamFromWorkspace is internal, not public
+void api.sports.unforkTeamFromWorkspace;
 
 // --- Public READ queries must remain public (these must exist on api) ---
 void api.sports.listTeams;
