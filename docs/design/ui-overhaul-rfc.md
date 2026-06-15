@@ -154,3 +154,54 @@ Feature work already queued (seasons, scheduling, divisions, branding, imports)
 proceeds independently; this RFC is purely the visual/system layer and the
 shell. Team branding (WSM-000134) and the leagues accordion (WSM-000132) should
 land *on top of* the new primitives where timing allows.
+
+## 11. Scoping update — code audit (2026-06-15)
+
+A full audit of the current code (before starting P1) found the **8bit-migration
+premise is largely already resolved**, which significantly re-sizes the epic.
+Verified facts:
+
+- **No `ui/8bit/*` directory. Zero imports from `8bit`. No `retro.css`.** (§2's
+  "~55 importers / delete ui/8bit + retro.css" describes a state that no longer
+  exists — the token migration was already done.)
+- The app already runs **`src/components/ui/*` shadcn primitives** (16: accordion,
+  alert-dialog, badge, button, card, dialog, dropdown-menu, input, label, select,
+  separator, sheet, skeleton, table, textarea, tooltip).
+- Tokens in `globals.css` are **already monochrome dark** (oklch, all hue 0 except
+  a red `destructive`) and **dark-first** (`<html className="dark">`); a light
+  token set is defined. This *is* the §3 target, modulo fine-tuning the ramp.
+- Fonts are already **Geist + Geist Mono** (the §3 target typeface).
+- Sidebar + mobile drawer are already token-driven and **not retro**.
+
+**Actual 8bit residue (trivial):** one `@8bitcn` registry line in
+`components.json`; the `Pixelify_Sans` font in `layout.tsx`; and `PixelLineChart`
+(used by 2 player-development pages + 1 visual harness, with 4 Playwright
+baselines). That's the entire "migration" — folds into P1, not its own phase.
+
+**Missing deps for the net-new work:** `next-themes` (toggle), `cmdk` (palette),
+a chart lib e.g. `recharts` (bento), `react-simple-maps` + `cobe` (geo) — all
+absent. **Teams have no `lat`/`lng`** (only text `city`/`location`), so the map
+(P5) carries a real data prerequisite.
+
+### Re-sized phase plan
+
+The work is **mostly polish + net-new signature features**, not a migration:
+
+| Phase | Re-scoped reality | Size |
+| --- | --- | --- |
+| **P1 — Tokens, theme toggle, de-retro, kitchen sink** | Tune the existing oklch ramp to §3; add `next-themes` + a light/dark toggle (light tokens exist, no toggle yet); remove `@8bitcn` line; decide `PixelLineChart` (restyle monochrome) + Pixelify font; flesh out `/dev/ui`; rebaseline the 4 visual snapshots. Absorbs the old **P6** (nothing to delete). | **S** |
+| **P2 — Command palette + breadcrumb** | Net-new: install `cmdk`, build ⌘K jump-to; add a breadcrumb/context switcher with status dot. Sidebar/drawer already fine (light restyle only). | **M** |
+| **P3 — Core-page density pass** | A visual refresh (hairline borders, spacing, mono numerals) across ~24 dashboard pages + ~72 `ui/*` importers — **not** a re-theme. Pairs with accordion #250. | **M** |
+| **P4 — Bento dashboard** | Net-new role-aware widget grid; needs a chart approach (hand-rolled SVG or `recharts`); activity feed reads `rosterAuditLog` + `gameResults`. Biggest feature. | **L** |
+| **P5 — Geo map** | Net-new **and data-blocked**: add `lat`/`lng` to the teams schema + geocode + seed (sub-task), then `react-simple-maps` map + optional `cobe` globe. | **L** |
+| **P6 — (removed)** | No standalone migration; the trivial residue folds into P1. | — |
+| **P7 — Polish** | Empty states, skeletons (exist), motion (`framer-motion`), a11y/contrast AA, ≥16px mobile inputs (#185). | **S–M** |
+
+**Recommended sequence:** P1 (small, low-risk, rebaselines specs and lands the
+toggle) → P2 (first visible "Vercel feel" win) → P3 (density polish) → P4 (bento)
+→ P5 (map; do its data sub-task first) → P7 (polish). Each remains an independent,
+shippable PR. The dominant "migration" effort in the original framing is ~zero.
+
+> Decision §9.4 ("retire `ui/8bit/*` + `retro.css`") is **moot** — those don't
+> exist. Restated: the only cleanup is the `@8bitcn` line + Pixelify/PixelLineChart,
+> folded into P1.
