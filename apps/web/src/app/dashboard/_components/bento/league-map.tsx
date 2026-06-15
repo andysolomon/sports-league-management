@@ -1,19 +1,21 @@
-import { geocodedPoints, teamRegions, type TeamLoc } from "@/lib/geo";
+import { teamRegions, type TeamLoc } from "@/lib/geo";
+import { buildBasemap } from "@/lib/geo-basemap";
 
 const W = 320;
 const H = 200;
 
 /**
- * League geography (WSM-000136 P5): a dot scatter of teams positioned by their
- * city (via the bundled coordinate lookup) over a US-aspect frame, beside a
- * Vercel-style regions list (teams per state/metro). Teams whose city we can't
- * geocode still count in the regions list and the "unmapped" note. Pure,
- * server-rendered; no map library.
+ * League geography (WSM-000136 P5-b): a real US basemap (AlbersUSA state
+ * outlines, via d3-geo + a bundled topojson) with team markers placed by their
+ * city (the bundled coordinate lookup), beside a Vercel-style regions list
+ * (teams per state/metro). Teams whose city we can't geocode still count in the
+ * regions list and the "unmapped" note. Pure, server-rendered; d3-geo runs
+ * server-side fine, so no client component needed.
  */
 export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
-  const points = geocodedPoints(teams, W, H);
+  const { statePaths, markers } = buildBasemap(teams, W, H);
   const regions = teamRegions(teams);
-  const unmapped = teams.length - points.length;
+  const unmapped = teams.length - markers.length;
   const maxRegion = Math.max(1, ...regions.map((r) => r.count));
 
   if (teams.length === 0) {
@@ -26,15 +28,24 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
-      {/* Dot map */}
+      {/* Basemap */}
       <div className="flex-1">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full rounded-lg border border-border bg-muted/30"
           role="img"
-          aria-label="Map of team locations"
+          aria-label="Map of team locations across the United States"
         >
-          {points.map((p, i) => (
+          <g
+            className="fill-foreground/[0.04] stroke-foreground/20"
+            strokeWidth={0.5}
+            strokeLinejoin="round"
+          >
+            {statePaths.map((d, i) => (
+              <path key={i} d={d} />
+            ))}
+          </g>
+          {markers.map((p, i) => (
             <g key={`${p.name}-${i}`}>
               <circle cx={p.x} cy={p.y} r={6} className="fill-foreground/10" />
               <circle cx={p.x} cy={p.y} r={2.5} className="fill-foreground">
@@ -46,7 +57,7 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
           ))}
         </svg>
         <p className="mt-2 text-xs text-muted-foreground">
-          {points.length} of {teams.length} team
+          {markers.length} of {teams.length} team
           {teams.length === 1 ? "" : "s"} mapped
           {unmapped > 0 ? ` · ${unmapped} without a known city` : ""}.
         </p>
