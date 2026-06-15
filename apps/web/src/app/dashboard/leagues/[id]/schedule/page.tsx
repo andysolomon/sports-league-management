@@ -15,6 +15,8 @@ import { canManageRoster } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
+import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
+import { Button } from "@/components/ui/button";
 
 export default async function LeagueSchedulePage({
   params,
@@ -107,9 +109,14 @@ export default async function LeagueSchedulePage({
 
       {!activeSeason ? (
         <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            No seasons in this league yet. Create a season before scheduling
-            fixtures.
+          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Scheduling needs a season. Create one to add fixtures and record
+              results.
+            </p>
+            <Button asChild size="sm">
+              <Link href="/dashboard/seasons">Go to Seasons</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : weekKeys.length === 0 ? (
@@ -179,15 +186,23 @@ export default async function LeagueSchedulePage({
                           </td>
                           {isAdmin ? (
                             <td className="px-4 py-2">
-                              <RecordResultDialog
-                                leagueId={leagueId}
-                                fixtureId={fixture.id}
-                                homeTeamName={fixture.homeTeamName}
-                                awayTeamName={fixture.awayTeamName}
-                                initialHomeScore={result?.homeScore ?? null}
-                                initialAwayScore={result?.awayScore ?? null}
-                                triggerLabel={result ? "Edit result" : "Record result"}
-                              />
+                              <div className="flex items-center gap-1">
+                                <RecordResultDialog
+                                  leagueId={leagueId}
+                                  fixtureId={fixture.id}
+                                  homeTeamName={fixture.homeTeamName}
+                                  awayTeamName={fixture.awayTeamName}
+                                  initialHomeScore={result?.homeScore ?? null}
+                                  initialAwayScore={result?.awayScore ?? null}
+                                  triggerLabel={result ? "Edit result" : "Record result"}
+                                />
+                                <DeleteFixtureButton
+                                  leagueId={leagueId}
+                                  fixtureId={fixture.id}
+                                  homeTeamName={fixture.homeTeamName}
+                                  awayTeamName={fixture.awayTeamName}
+                                />
+                              </div>
                             </td>
                           ) : null}
                         </tr>
