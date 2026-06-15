@@ -63,4 +63,31 @@ test.describe("Team Detail Page", () => {
     await page.getByRole("link", { name: /Back to Teams/ }).click();
     await expect(page).toHaveURL("/dashboard/teams");
   });
+
+  // WSM-000098: the wide Status column was replaced by a compact per-row
+  // indicator. Non-active players get an icon + popover; active players stay
+  // clean.
+  test("non-active player shows a status indicator, active player does not", async ({
+    page,
+  }) => {
+    const tbody = page.locator("tbody");
+
+    // Micah Parsons is seeded as "Injured" → indicator with an accessible label.
+    const parsonsRow = tbody.locator("tr", { hasText: PLAYERS.PARSONS.name });
+    const indicator = parsonsRow.getByRole("button", {
+      name: /Status: Injured/i,
+    });
+    await expect(indicator).toBeVisible();
+
+    // Opening it reveals the designation in a dismissable popover.
+    await indicator.click();
+    await expect(page.getByText("Injured")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Dak Prescott is "Active" → no indicator in his row.
+    const prescottRow = tbody.locator("tr", { hasText: PLAYERS.PRESCOTT.name });
+    await expect(
+      prescottRow.getByRole("button", { name: /Status:/i }),
+    ).toHaveCount(0);
+  });
 });

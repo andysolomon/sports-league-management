@@ -8,6 +8,7 @@ import TeamEditForm from "../../_components/team-edit-form";
 import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
 import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
+import { RosterStatusIndicator } from "@/components/roster/RosterStatusIndicator";
 import { orderByDepth } from "@/lib/roster/depth-order";
 import { abbreviateName } from "@/lib/position-group";
 import {
@@ -138,7 +139,10 @@ export default function TeamManagement({
         header: "Player",
         sortable: true,
         render: (p) => (
-          <span className="font-medium">{abbreviateName(p.name)}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="font-medium">{abbreviateName(p.name)}</span>
+            <RosterStatusIndicator status={p.status} />
+          </span>
         ),
       },
       { key: "position", header: "Pos", sortable: true },
