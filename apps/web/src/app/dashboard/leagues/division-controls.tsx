@@ -74,9 +74,12 @@ export function CreateDivisionButton({ leagueId }: { leagueId: string }) {
 export function DivisionRowActions({
   divisionId,
   currentName,
+  teamCount = 0,
 }: {
   divisionId: string;
   currentName: string;
+  /** Teams currently in this division; they're moved to No Division on delete. */
+  teamCount?: number;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -102,12 +105,24 @@ export function DivisionRowActions({
   }
 
   async function remove() {
-    if (!window.confirm(`Delete division "${currentName}"?`)) return;
+    const warning =
+      teamCount > 0
+        ? `Delete division "${currentName}"? Its ${teamCount} team${
+            teamCount === 1 ? "" : "s"
+          } will be moved to No Division.`
+        : `Delete division "${currentName}"?`;
+    if (!window.confirm(warning)) return;
     setBusy(true);
     const res = await deleteDivisionAction(divisionId);
     setBusy(false);
     if (res.ok) {
-      toast.success(`Deleted ${currentName}.`);
+      toast.success(
+        res.teamCount > 0
+          ? `Deleted ${currentName}. Moved ${res.teamCount} team${
+              res.teamCount === 1 ? "" : "s"
+            } to No Division.`
+          : `Deleted ${currentName}.`,
+      );
       router.refresh();
     } else {
       toast.error(errorText(res.error));
