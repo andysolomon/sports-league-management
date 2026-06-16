@@ -63,13 +63,6 @@ export default async function DashboardPage() {
     getSeasons(ids),
     getDivisions(ids),
   ]);
-  const counts: Record<string, number> = {
-    leagues: leagues.length,
-    teams: teams.length,
-    players: players.length,
-    seasons: seasons.length,
-    divisions: divisions.length,
-  };
 
   const { activeLeagueId } = await resolveActiveLeague(userId);
   const activeLeague =
@@ -103,6 +96,22 @@ export default async function DashboardPage() {
     : [];
   const activeSeason =
     leagueSeasons.find((s) => s.status === "active") ?? leagueSeasons[0] ?? null;
+
+  const leagueDivisions = activeLeague
+    ? divisions.filter((d) => d.leagueId === activeLeague.id)
+    : [];
+
+  // The quick-nav stat strip is scoped to the SELECTED league, matching the rest
+  // of the bento (which is already league-scoped). "Leagues" stays a portfolio-
+  // wide total — it's the one count where "all" is meaningful (scoping it would
+  // always be 1). Teams/Players/Seasons/Divisions reflect the active league only.
+  const counts: Record<string, number> = {
+    leagues: leagues.length,
+    teams: leagueTeams.length,
+    players: leaguePlayers.length,
+    seasons: leagueSeasons.length,
+    divisions: leagueDivisions.length,
+  };
 
   // Active-season schedule, results and standings (existing wrappers only).
   let fixturesTotal = 0;
