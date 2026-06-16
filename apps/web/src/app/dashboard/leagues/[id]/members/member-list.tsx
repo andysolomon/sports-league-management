@@ -108,27 +108,34 @@ export default function MemberList({ orgId }: { orgId: string }) {
         return (
           <div
             key={member.userId}
-            className="flex items-center justify-between rounded-lg border border-border px-4 py-3"
+            className="flex flex-col gap-3 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               {member.imageUrl && (
                 // Clerk-hosted avatar URL; next/image would need a host allowlist.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={member.imageUrl}
                   alt=""
-                  className="h-8 w-8 rounded-full"
+                  className="h-8 w-8 shrink-0 rounded-full"
                 />
               )}
-              <div>
-                <p className="text-sm font-medium text-foreground">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
                   {displayName}
                 </p>
-                <p className="text-xs text-muted-foreground">{member.email}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {member.email}
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={member.role === "admin" ? "default" : "secondary"}>
+            <div className="flex items-center gap-2 sm:shrink-0">
+              {/* Role is already shown by the Select; the badge is redundant on
+                  narrow screens, so reserve it for sm+ to save width. */}
+              <Badge
+                variant={member.role === "admin" ? "default" : "secondary"}
+                className="hidden shrink-0 sm:inline-flex"
+              >
                 {roleLabel(member.role)}
               </Badge>
               <Select
@@ -138,7 +145,10 @@ export default function MemberList({ orgId }: { orgId: string }) {
                 }
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-[120px]" aria-label="Member role">
+                <SelectTrigger
+                  className="min-w-0 flex-1 sm:w-[150px] sm:flex-none"
+                  aria-label="Member role"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -154,7 +164,7 @@ export default function MemberList({ orgId }: { orgId: string }) {
                 variant="outline"
                 disabled={isLoading}
                 onClick={() => handleRemove(member.userId)}
-                className="text-destructive hover:text-destructive"
+                className="shrink-0 text-destructive hover:text-destructive"
               >
                 Remove
               </Button>

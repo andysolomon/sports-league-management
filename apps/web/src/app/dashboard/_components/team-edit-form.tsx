@@ -101,6 +101,8 @@ export default function TeamEditForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* DialogContent caps height + scrolls (base); the footer below is pinned
+          (sticky) so Save is always reachable on a short mobile viewport. */}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Team</DialogTitle>
@@ -248,7 +250,7 @@ export default function TeamEditForm({
             </p>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-3 border-t border-border bg-background px-6 py-4">
             <Button
               type="button"
               variant="outline"
