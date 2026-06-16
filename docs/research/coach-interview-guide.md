@@ -94,6 +94,39 @@ Do **not** describe our streaming idea._
 _(Resolves RFC §7 open questions for `docs/design/live-streaming-rfc.md`: is in-app streaming
 worth the metered spend, or is the school's existing stream good enough?)_
 
+## Block F — Girls flag football (expansion-lane validation)
+
+_Ask **flag-football coaches/stat-keepers** (a partly different audience — start with the Cobb
+flag coaches in [flag-football-cobb-research.md](./flag-football-cobb-research.md): Kevin
+Fraser/Pope, Jake Burgdorf/McEachern). **Blocks A–D apply directly** with flag framing — flag
+coaches keep stats and have a MaxPreps relationship too — so run those first, then add these
+flag-specific probes. Same rules: past behavior, no pitching. We're testing whether flag is a
+**wider-open** version of the same wedge, not whether flag coaches like the idea of an app._
+
+17. Walk me through what happened with **stats after your last flag game** — who kept them
+    during the game, what did they write them on, and what happened to them afterward? _(The
+    literal chore. Flag's box score is passing/rushing/receiving + **flag pulls / sacks / picks**
+    on defense — listen for whether defense gets recorded at all or just gets lost.)_
+18. What's riding on **MaxPreps** for your flag program — do you have to put anything in, and
+    does your **playoff seeding / power ranking** actually depend on it? _(This is the key
+    unknown from the research: is the MaxPreps mandate as real for flag as it is for tackle? If
+    seeding rides on it, the "chore lever" is just as strong.)_
+19. What did you actually **use to keep stats last season** — clipboard, spreadsheet, an app?
+    Walk me through it. _(Don't prompt names. If they raise GameChanger/MaxPreps/a flag app:)_
+    What did it do well, and **what didn't fit flag** — flag pulls, 7-on-7, no-run zones? _(Tests
+    the "tackle-built tools break for flag" thesis from their real experience, not ours.)_
+20. Your players getting **college flag interest** now — what stats or film do recruiters ask
+    for, and how do you produce that today? _(Flag is an NCAA emerging sport + 2028 Olympic
+    sport; recruiting may be a new stat-keeping driver unique to flag's growth. Real pain = "I
+    cobble it together by hand.")_
+21. _(Switching, adapt of Q10:)_ What would have to be true for you to keep your flag
+    roster/stats somewhere new — and what would make it a **non-starter**? _(Listen for: must
+    feed MaxPreps, must be free, must be flag-correct, must work on my phone on the sideline.)_
+
+_(Resolves the open questions in `flag-football-cobb-research.md` §6: is the MaxPreps mandate
+real for flag, what do flag coaches use today, is the flag-stat-model misfit a felt pain, and
+is recruiting a stat-keeping driver?)_
+
 ## Wrap (commitment + referral)
 
 - Would you be up for trying an early version and telling me where it sucks? _(Time commitment
@@ -119,6 +152,10 @@ worth the metered spend, or is the school's existing stream good enough?)_
 | Pays to watch today? (NFHS Network / booster / none) | |
 | Score-on-video gap felt? (asked "what's the score?") | |
 | Who actually runs the camera | |
+| _(flag coaches)_ Flag stat chore: who / on what / defense recorded? | |
+| _(flag coaches)_ MaxPreps mandate real for flag? (seeding rides on it?) | |
+| _(flag coaches)_ Tool used + what didn't fit flag (pulls/7v7/no-run) | |
+| _(flag coaches)_ Recruiting as a stat driver? (college flag interest) | |
 | Commitment given (time / intro / $) | |
 
 ## After ~8 interviews — decide
@@ -136,3 +173,13 @@ worth the metered spend, or is the school's existing stream good enough?)_
 - **Defer or kill #225 →** the school already streams via NFHS Network / Hudl and it's "good
   enough," **or** nobody reliably runs a camera, **or** families don't actually watch. Don't
   commit metered video spend on an abstract "yes." Record the verdict in the streaming RFC.
+
+### Flag-football expansion gate — decide separately
+
+- **Pursue flag as an expansion lane →** flag coaches keep stats with the same (or worse)
+  friction as tackle, the MaxPreps mandate/seeding is real for flag, **and** existing tools
+  visibly misfit flag (pulls/7v7) or recruiting forces hand-cobbled stats. The wider incumbent
+  gap (GameChanger unconfirmed for flag) makes this attractive.
+- **Don't prioritize flag →** flag stat-keeping is casual/low-stakes, MaxPreps isn't required
+  for flag seeding, or coaches are content with what they use. Record the verdict in
+  `flag-football-cobb-research.md` §6.
