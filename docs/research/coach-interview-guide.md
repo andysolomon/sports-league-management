@@ -22,6 +22,88 @@ Target **8–10** of: HS head coaches, offensive/defensive coordinators, and **t
 actually enters stats/maintains the roster** (often a coordinator, GA, team mom, or AD). The
 stat-keeper is gold — they live the pain. Start from the 16 Cobb County schools already seeded.
 
+## Outreach templates (recruiting the interview)
+
+**Principles:** keep it short; **don't pitch** (the email earns the call — it doesn't describe
+a product, or the call's data is contaminated); lead with *specific, verified* homework about
+their program (specificity is the open rate — a coach smells a mail-merge); make "yes" cheap
+(15–20 min, phone or video, on their schedule); the off-season (Dec–July for fall flag) is the
+right time. Always end the coach call by asking **"who actually keeps your stats?"** — that
+referral is the warm intro to the gold-source stat-keeper. No reply in ~5 days → one-line nudge,
+not a resend.
+
+### A. Head coach — example: Kevin Fraser (Pope)
+
+> **Subject:** Learning from Pope's flag football program — 15 min?
+>
+> Coach Fraser,
+>
+> Congratulations on the three-peat — going back-to-back-to-back, and that 14–13 comeback over
+> McEachern in December, is one of the best runs in the state, and the National Coach of the
+> Year nod is well earned.
+>
+> I'm doing research on how high school flag coaches actually manage their team's stats and game
+> data week to week — what tools you use, what's a pain, what you wish existed. I'm not selling
+> anything; I'm trying to understand the real workflow from the people who do it best before I
+> build the wrong thing.
+>
+> You'd be near the top of anyone's list to learn from. Could I borrow **15–20 minutes** by
+> phone or video in the next couple of weeks? I'll work entirely around your schedule.
+>
+> Either way, thank you for what you've built for those girls.
+>
+> Best, Andrew Solomon · *[phone] · building tools for high school coaches*
+
+### A. Head coach — example: Jake Burgdorf (McEachern)
+
+> **Subject:** Learning from McEachern's flag program — 15 min?
+>
+> Coach Burgdorf,
+>
+> Congratulations on McEachern's run — an unbeaten state-title season and the Cobb Coach of the
+> Year honor, then back to the final again in 2025. Building a program to that level that fast
+> is rare.
+>
+> I'm doing research on how high school flag coaches actually manage their team's stats and game
+> data through a season — the tools you use, what's tedious, what you wish existed. I'm not
+> selling anything; I just want to understand the real workflow from coaches who do it at the
+> highest level before building the wrong thing.
+>
+> You'd be exactly the kind of coach I'd want to learn from. Could I borrow **15–20 minutes** by
+> phone or video over the next couple of weeks? Totally on your schedule.
+>
+> Either way, congratulations on everything you've built at McEachern.
+>
+> Best, Andrew Solomon · *[phone] · building tools for high school coaches*
+
+_(Personalize the first line per coach — verified accomplishments only. Burgdorf's record is
+written as "unbeaten state-title season" on purpose: sources split 28-0 vs 29-0.)_
+
+### B. Stat-keeper (the gold source) — referral-warm
+
+_Best sent **after** a coach points you to them ("Coach Fraser mentioned you're the one who
+actually keeps the stats"). They live the pain but rarely get asked — so the ask is even humbler
+and more flattering of the unglamorous work. If you only have a cold contact, drop the referral
+line and open with "I'm researching how flag programs keep their stats…"._
+
+> **Subject:** The person who actually keeps {School}'s stats — 15 min?
+>
+> Hi {Name},
+>
+> Coach {Coach} pointed me your way — they said you're the one who really knows how {School}'s
+> stats and box scores actually get done each week. That's exactly who I'm trying to learn from.
+>
+> I'm doing research on how high school flag programs manage their stats and game data — who
+> enters what, from film or memory, how long it takes, and where it gets painful. I'm not
+> selling anything; I just want to understand the real workflow from the people who live it,
+> before building the wrong thing.
+>
+> Could I borrow **15–20 minutes** by phone or video, whenever suits you? You'd be doing me a
+> genuine favor — the people who keep the stats see things the coaches don't.
+>
+> Thanks for considering it,
+> Andrew Solomon · *[phone] · building tools for high school coaches*
+
 ## Warm-up (2 min)
 
 1. What's your role with the team, and how long have you been doing it?
