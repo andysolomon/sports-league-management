@@ -28,35 +28,38 @@ test.describe("Team Detail Page", () => {
     await expect(rosterHeading).toBeVisible();
   });
 
-  test("roster table has correct columns", async ({ page }) => {
-    const headers = page.locator("thead th");
-    await expect(headers.nth(0)).toHaveText("Name");
-    await expect(headers.nth(1)).toHaveText("Position");
-    await expect(headers.nth(2)).toHaveText("Jersey #");
-    await expect(headers.nth(3)).toHaveText("Status");
+  test("roster table shows the compact columns (no wide Status column)", async ({
+    page,
+  }) => {
+    // The roster table uses compact headers (Player / Pos / #) plus optional
+    // ratings columns. WSM-000097 removed the dedicated wide Status column;
+    // status is now a per-row indicator (WSM-000098), so it must NOT be a header.
+    const headerText = await page.locator("thead th").allInnerTexts();
+    expect(headerText).toEqual(expect.arrayContaining(["Player", "Pos", "#"]));
+    expect(headerText).not.toContain("Status");
   });
 
   test("known Cowboys players are present with correct data", async ({ page }) => {
     const tbody = page.locator("tbody");
 
-    // Dak Prescott
-    const prescottRow = tbody.locator("tr", { hasText: PLAYERS.PRESCOTT.name });
+    // The Player column renders abbreviated names (e.g. "D. Prescott" via
+    // abbreviateName), so match rows on the surname, which is preserved.
+    const prescottRow = tbody.locator("tr", { hasText: "Prescott" });
     await expect(prescottRow).toBeVisible();
     await expect(prescottRow).toContainText(PLAYERS.PRESCOTT.position);
     await expect(prescottRow).toContainText(String(PLAYERS.PRESCOTT.jersey));
 
-    // CeeDee Lamb
-    const lambRow = tbody.locator("tr", { hasText: PLAYERS.LAMB.name });
+    const lambRow = tbody.locator("tr", { hasText: "Lamb" });
     await expect(lambRow).toBeVisible();
     await expect(lambRow).toContainText(PLAYERS.LAMB.position);
     await expect(lambRow).toContainText(String(PLAYERS.LAMB.jersey));
 
-    // Micah Parsons
-    const parsonsRow = tbody.locator("tr", { hasText: PLAYERS.PARSONS.name });
+    const parsonsRow = tbody.locator("tr", { hasText: "Parsons" });
     await expect(parsonsRow).toBeVisible();
     await expect(parsonsRow).toContainText(PLAYERS.PARSONS.position);
     await expect(parsonsRow).toContainText(String(PLAYERS.PARSONS.jersey));
-    await expect(parsonsRow).toContainText(PLAYERS.PARSONS.status);
+    // Status is no longer a column — it's the WSM-000098 indicator, asserted
+    // in its own test below.
   });
 
   test("Back to Teams link navigates back", async ({ page }) => {
@@ -72,8 +75,9 @@ test.describe("Team Detail Page", () => {
   }) => {
     const tbody = page.locator("tbody");
 
+    // Names render abbreviated (e.g. "M. Parsons"), so match rows on the surname.
     // Micah Parsons is seeded as "Injured" → indicator with an accessible label.
-    const parsonsRow = tbody.locator("tr", { hasText: PLAYERS.PARSONS.name });
+    const parsonsRow = tbody.locator("tr", { hasText: "Parsons" });
     const indicator = parsonsRow.getByRole("button", {
       name: /Status: Injured/i,
     });
@@ -85,7 +89,7 @@ test.describe("Team Detail Page", () => {
     await page.keyboard.press("Escape");
 
     // Dak Prescott is "Active" → no indicator in his row.
-    const prescottRow = tbody.locator("tr", { hasText: PLAYERS.PRESCOTT.name });
+    const prescottRow = tbody.locator("tr", { hasText: "Prescott" });
     await expect(
       prescottRow.getByRole("button", { name: /Status:/i }),
     ).toHaveCount(0);
