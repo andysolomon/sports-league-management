@@ -24,6 +24,10 @@ stat-keeper is gold — they live the pain. Start from the 16 Cobb County school
 
 ## Outreach templates (recruiting the interview)
 
+_Track who's been contacted and their status in
+[coach-outreach-contacts.md](./coach-outreach-contacts.md) (status only — no personal PII in
+this public repo)._
+
 **Principles:** keep it short; **don't pitch** (the email earns the call — it doesn't describe
 a product, or the call's data is contaminated); lead with *specific, verified* homework about
 their program (specificity is the open rate — a coach smells a mail-merge); make "yes" cheap
