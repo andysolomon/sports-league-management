@@ -14,33 +14,33 @@ import {
   buildLevel,
   type LevelView,
 } from "@/lib/geo-drilldown";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const W = 320;
 const H = 220;
 
-type Drill =
-  | { level: "us" }
-  | { level: "state"; stateId: string; stateName: string }
-  | {
-      level: "county";
-      stateId: string;
-      stateName: string;
-      countyId: string;
-      countyName: string;
-    };
+const ALL = "all"; // sentinel: "United States" / "All counties" (Radix forbids "")
 
 type Counties = FeatureCollection<Geometry, { name?: string }>;
 
 /**
- * League geography (WSM-000148): an interactive drill-down map. Click a state to
- * break it into counties, click a county to see its team-cities. The US state
- * geometry is bundled (default view); county geometry is lazy-fetched from
- * /public on the first drill, so it never bloats the initial bundle. Team→region
- * placement is point-in-polygon (geoContains) on each team's city coordinate.
- * Beside it, the Vercel-style regions list (unchanged).
+ * League geography (WSM-000148): a drill-down map driven by two PICK LISTS, not
+ * by clicking the map. Choose a state → the map zooms to its counties; choose a
+ * county → it zooms to that county's team-cities. The map is a reactive,
+ * read-only visualization. The lists only offer states/counties that actually
+ * contain teams (so it's short and relevant). State geometry is bundled; county
+ * geometry lazy-loads from /public on the first state pick, so it never bloats
+ * the initial bundle. Placement is point-in-polygon on each team's coordinate.
  */
 export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
-  const [drill, setDrill] = useState<Drill>({ level: "us" });
+  const [stateValue, setStateValue] = useState<string>(ALL);
+  const [countyValue, setCountyValue] = useState<string>(ALL);
   const [counties, setCounties] = useState<Counties | null>(null);
   const [loadingCounties, setLoadingCounties] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -50,9 +50,42 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
   const maxRegion = Math.max(1, ...regions.map((r) => r.count));
   const unmapped = teams.length - located.length;
 
-  // Lazy-load county geometry on the first drill into a state. Triggered from
-  // the click handler (not an effect) so the fetch + setState live in an event
-  // callback — the idiomatic place for it.
+  // Only states that actually contain teams (keeps the pick list short).
+  const statesWithTeams = useMemo(
+    () =>
+      statesAsRegions()
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          count: teamsInFeature(located, s.feature).length,
+        }))
+        .filter((s) => s.count > 0)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [located],
+  );
+
+  // Counties of the selected state that contain teams (needs counties loaded).
+  const countyOptions = useMemo(() => {
+    if (stateValue === ALL || !counties) return [];
+    return countiesForState(counties, stateValue)
+      .map((c) => ({
+        id: c.id,
+        name: c.name,
+        count: teamsInFeature(located, c.feature).length,
+      }))
+      .filter((c) => c.count > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [stateValue, counties, located]);
+
+  const stateName = useMemo(
+    () => (stateValue === ALL ? null : (findState(stateValue)?.name ?? null)),
+    [stateValue],
+  );
+  const countyName =
+    countyValue === ALL
+      ? null
+      : (countyOptions.find((c) => c.id === countyValue)?.name ?? null);
+
   async function ensureCounties() {
     if (counties || loadingCounties) return;
     setLoadingCounties(true);
@@ -66,19 +99,25 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
     }
   }
 
-  // Compute the current level's outline paths + markers.
+  function onStateChange(value: string) {
+    setStateValue(value);
+    setCountyValue(ALL);
+    if (value !== ALL) void ensureCounties();
+  }
+
+  // The map reacts to the pick-list selections.
   const view: LevelView | null = useMemo(() => {
-    if (drill.level === "us") {
+    if (stateValue === ALL) {
       return buildLevel(statesAsRegions(), STATES, located, W, H, true);
     }
     if (!counties) return null;
-    const state = findState(drill.stateId);
+    const state = findState(stateValue);
     if (!state) return null;
 
-    if (drill.level === "state") {
+    if (countyValue === ALL) {
       const inState = teamsInFeature(located, state.feature);
       return buildLevel(
-        countiesForState(counties, drill.stateId),
+        countiesForState(counties, stateValue),
         state.feature,
         inState,
         W,
@@ -86,40 +125,19 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
         false,
       );
     }
-
-    // county level
-    const county = countiesForState(counties, drill.stateId).find(
-      (c) => c.id === drill.countyId,
+    const county = countiesForState(counties, stateValue).find(
+      (c) => c.id === countyValue,
     );
     if (!county) return null;
     const inCounty = teamsInFeature(located, county.feature);
     return buildLevel([county], county.feature, inCounty, W, H, false);
-  }, [drill, counties, located]);
+  }, [stateValue, countyValue, counties, located]);
 
+  const level =
+    stateValue === ALL ? "us" : countyValue === ALL ? "state" : "county";
   const maxCount = Math.max(1, ...(view?.paths.map((p) => p.count) ?? [1]));
-
-  function regionFill(count: number): number {
-    return count === 0 ? 0.04 : 0.15 + 0.5 * (count / maxCount);
-  }
-
-  function onRegionClick(id: string, name: string) {
-    if (drill.level === "us") {
-      setDrill({ level: "state", stateId: id, stateName: name });
-      void ensureCounties();
-    } else if (drill.level === "state") {
-      setDrill({
-        level: "county",
-        stateId: drill.stateId,
-        stateName: drill.stateName,
-        countyId: id,
-        countyName: name,
-      });
-    }
-    // county level: leaf — clicking a county does nothing further.
-  }
-
-  const isLeaf = drill.level === "county";
-  const showCityLabels = drill.level === "county";
+  const regionFill = (count: number) =>
+    count === 0 ? 0.04 : 0.15 + 0.5 * (count / maxCount);
 
   if (teams.length === 0) {
     return (
@@ -132,88 +150,68 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
       <div className="flex-1">
-        {/* Breadcrumb */}
-        <nav
-          aria-label="Map drill-down"
-          className="mb-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground"
-        >
-          <Crumb
-            label="United States"
-            active={drill.level === "us"}
-            onClick={() => setDrill({ level: "us" })}
-          />
-          {drill.level !== "us" && (
-            <>
-              <span aria-hidden>›</span>
-              <Crumb
-                label={drill.stateName}
-                active={drill.level === "state"}
-                onClick={() =>
-                  setDrill({
-                    level: "state",
-                    stateId: drill.stateId,
-                    stateName: drill.stateName,
-                  })
-                }
+        {/* Pick-list controls — these drive the map. */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Select value={stateValue} onValueChange={onStateChange}>
+            <SelectTrigger className="w-[180px]" aria-label="State">
+              <SelectValue placeholder="United States" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>United States (all)</SelectItem>
+              {statesWithTeams.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name} ({s.count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={countyValue}
+            onValueChange={setCountyValue}
+            disabled={stateValue === ALL || loadingCounties}
+          >
+            <SelectTrigger className="w-[180px]" aria-label="County">
+              <SelectValue
+                placeholder={loadingCounties ? "Loading counties…" : "All counties"}
               />
-            </>
-          )}
-          {drill.level === "county" && (
-            <>
-              <span aria-hidden>›</span>
-              <Crumb label={`${drill.countyName} County`} active onClick={() => {}} />
-            </>
-          )}
-        </nav>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>
+                {stateName ? `All of ${stateName}` : "All counties"}
+              </SelectItem>
+              {countyOptions.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name} County ({c.count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full rounded-lg border border-border bg-muted/30"
           role="img"
           aria-label={
-            drill.level === "us"
-              ? "Map of team locations across the United States. Select a state to drill in."
-              : drill.level === "state"
-                ? `Counties of ${drill.stateName}. Select a county to drill in.`
-                : `${drill.countyName} County — team cities.`
+            level === "us"
+              ? "Map of team locations across the United States."
+              : level === "state"
+                ? `Counties of ${stateName}, shaded by team count.`
+                : `${countyName} County — team cities.`
           }
         >
           <g strokeLinejoin="round">
-            {view?.paths.map((p) => {
-              const clickable = !isLeaf;
-              return (
-                <path
-                  key={p.id}
-                  d={p.d}
-                  className={`stroke-foreground/25 ${
-                    clickable ? "cursor-pointer focus:outline-none" : ""
-                  }`}
-                  fill="currentColor"
-                  fillOpacity={regionFill(p.count)}
-                  strokeWidth={drill.level === "us" ? 0.5 : 0.4}
-                  role={clickable ? "button" : undefined}
-                  tabIndex={clickable ? 0 : undefined}
-                  aria-label={
-                    clickable
-                      ? `${p.name} — ${p.count} team${p.count === 1 ? "" : "s"}, drill in`
-                      : undefined
-                  }
-                  onClick={
-                    clickable ? () => onRegionClick(p.id, p.name) : undefined
-                  }
-                  onKeyDown={
-                    clickable
-                      ? (e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            onRegionClick(p.id, p.name);
-                          }
-                        }
-                      : undefined
-                  }
-                />
-              );
-            })}
+            {view?.paths.map((p) => (
+              <path
+                key={p.id}
+                d={p.d}
+                className="stroke-foreground/25"
+                fill="currentColor"
+                fillOpacity={regionFill(p.count)}
+                strokeWidth={level === "us" ? 0.5 : 0.4}
+              />
+            ))}
           </g>
 
           {view?.markers.map((m, i) => (
@@ -224,7 +222,7 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
                   {m.name} · {m.city}
                 </title>
               </circle>
-              {showCityLabels && (
+              {level === "county" && (
                 <text
                   x={m.x}
                   y={m.y - 6}
@@ -239,15 +237,13 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
         </svg>
 
         <p className="mt-2 text-xs text-muted-foreground" aria-live="polite">
-          {loadingCounties
-            ? "Loading counties…"
-            : loadError
-              ? "Couldn’t load county map — try again."
-              : drill.level === "us"
-                ? `${located.length} of ${teams.length} team${teams.length === 1 ? "" : "s"} mapped${unmapped > 0 ? ` · ${unmapped} without a known city` : ""}. Select a state to drill in.`
-                : drill.level === "state"
-                  ? `${drill.stateName} · select a county.`
-                  : `${drill.countyName} County · ${view?.markers.length ?? 0} team-cit${(view?.markers.length ?? 0) === 1 ? "y" : "ies"}.`}
+          {loadError
+            ? "Couldn’t load county map — try again."
+            : level === "us"
+              ? `${located.length} of ${teams.length} team${teams.length === 1 ? "" : "s"} mapped${unmapped > 0 ? ` · ${unmapped} without a known city` : ""}. Pick a state to zoom in.`
+              : level === "state"
+                ? `${stateName} · pick a county to zoom in.`
+                : `${countyName} County · ${view?.markers.length ?? 0} team-cit${(view?.markers.length ?? 0) === 1 ? "y" : "ies"}.`}
         </p>
       </div>
 
@@ -276,28 +272,5 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
         </ul>
       </div>
     </div>
-  );
-}
-
-function Crumb({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  if (active) {
-    return <span className="font-medium text-foreground">{label}</span>;
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-primary hover:underline"
-    >
-      {label}
-    </button>
   );
 }
