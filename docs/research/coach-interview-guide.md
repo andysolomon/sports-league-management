@@ -107,10 +107,11 @@ flag-specific probes. Same rules: past behavior, no pitching. We're testing whet
     during the game, what did they write them on, and what happened to them afterward? _(The
     literal chore. Flag's box score is passing/rushing/receiving + **flag pulls / sacks / picks**
     on defense — listen for whether defense gets recorded at all or just gets lost.)_
-18. What's riding on **MaxPreps** for your flag program — do you have to put anything in, and
-    does your **playoff seeding / power ranking** actually depend on it? _(This is the key
-    unknown from the research: is the MaxPreps mandate as real for flag as it is for tackle? If
-    seeding rides on it, the "chore lever" is just as strong.)_
+18. What's riding on **MaxPreps** for your flag program — what do you put in, and why? _(We've
+    confirmed flag is NOT MaxPreps-mandated and not power-ranked — seeding is by area standings,
+    stats only "encouraged." So don't ask "is it required"; listen for whether they keep stats
+    anyway, and **why** — pride, leaderboards, recruiting? That voluntary pull is now the wedge,
+    since the compliance lever is gone.)_
 19. What did you actually **use to keep stats last season** — clipboard, spreadsheet, an app?
     Walk me through it. _(Don't prompt names. If they raise GameChanger/MaxPreps/a flag app:)_
     What did it do well, and **what didn't fit flag** — flag pulls, 7-on-7, no-run zones? _(Tests
@@ -176,10 +177,15 @@ is recruiting a stat-keeping driver?)_
 
 ### Flag-football expansion gate — decide separately
 
-- **Pursue flag as an expansion lane →** flag coaches keep stats with the same (or worse)
-  friction as tackle, the MaxPreps mandate/seeding is real for flag, **and** existing tools
-  visibly misfit flag (pulls/7v7) or recruiting forces hand-cobbled stats. The wider incumbent
-  gap (GameChanger unconfirmed for flag) makes this attractive.
-- **Don't prioritize flag →** flag stat-keeping is casual/low-stakes, MaxPreps isn't required
-  for flag seeding, or coaches are content with what they use. Record the verdict in
+_Note (verified 2026-06-16): flag is **not** MaxPreps-mandated or power-ranked, so — unlike
+tackle — there is **no compliance lever**. This is a *voluntary-pull* play; the gate turns on
+whether coaches *want* it badly enough, not whether they're forced. GameChanger is confirmed to
+lack individual flag stats (no flag pulls) but is encroaching._
+
+- **Pursue flag as an expansion lane →** flag coaches keep (or wish they could keep) stats
+  despite no mandate — driven by pride, leaderboards, or **college recruiting** — **and**
+  existing tools visibly misfit flag (pulls/7v7) so they cobble it by hand. The verified
+  incumbent gap makes it buildable; the voluntary pull makes it worth it.
+- **Don't prioritize flag →** flag stat-keeping is casual/low-stakes, coaches don't care about
+  the box score absent a mandate, or they're content with what they use. Record the verdict in
   `flag-football-cobb-research.md` §6.
