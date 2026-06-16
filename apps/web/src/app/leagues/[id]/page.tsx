@@ -8,6 +8,8 @@ import {
   getPlayers,
   getPublicLeagueImportTree,
   getPublicLeagues,
+  getPublicLeagueSchedule,
+  type PublicScheduleRow,
 } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
 import {
@@ -71,6 +73,24 @@ export default async function PublicLeagueLandingPage({
     playerAttributesV1(),
   ]);
 
+  // Schedule shares the schedules_standings_v1 flag with standings. Surfacing
+  // it here is what makes the per-game viewer (WSM-000143) discoverable.
+  let schedule: { seasonName: string; rows: PublicScheduleRow[] } | null = null;
+  if (standingsOn) {
+    schedule = await getPublicLeagueSchedule(leagueId);
+  }
+  const scheduleRows = (schedule?.rows ?? [])
+    .slice()
+    .sort((a, b) => {
+      const wa = a.fixture.week ?? Number.POSITIVE_INFINITY;
+      const wb = b.fixture.week ?? Number.POSITIVE_INFINITY;
+      if (wa !== wb) return wa - wb;
+      return (a.fixture.scheduledAt ?? "").localeCompare(
+        b.fixture.scheduledAt ?? "",
+      );
+    });
+  const hasSchedule = scheduleRows.length > 0;
+
   // Player development directory — only when the viewer's flag is on. Teams
   // come from the public import tree (no org-access gate), players from the
   // ungated league query; both are safe post-guard since the league is public.
@@ -123,6 +143,19 @@ export default async function PublicLeagueLandingPage({
           </Link>
         ) : null}
 
+        {hasSchedule ? (
+          <a href="#schedule" className="group">
+            <Card className="h-full transition-colors group-hover:border-primary">
+              <CardHeader>
+                <CardTitle>Schedule</CardTitle>
+                <CardDescription>
+                  Fixtures and final scores for {schedule?.seasonName}.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </a>
+        ) : null}
+
         {hasDevelopment ? (
           <a href="#player-development" className="group">
             <Card className="h-full transition-colors group-hover:border-primary">
@@ -136,6 +169,40 @@ export default async function PublicLeagueLandingPage({
           </a>
         ) : null}
       </div>
+
+      {hasSchedule ? (
+        <section id="schedule" className="mt-10">
+          <h2 className="mb-4 text-xl font-semibold text-foreground">
+            Schedule
+          </h2>
+          <ul className="divide-y divide-border rounded-md border border-border">
+            {scheduleRows.map(({ fixture, result }) => (
+              <li key={fixture.id}>
+                <Link
+                  href={`/leagues/${leagueId}/games/${fixture.id}`}
+                  className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-muted/50"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-foreground">
+                      {fixture.homeTeamName} vs {fixture.awayTeamName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {fixture.week !== null ? `Week ${fixture.week}` : "TBD"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
+                    {fixture.status === "final" && result !== null
+                      ? `${result.homeScore} – ${result.awayScore}`
+                      : fixture.status === "cancelled"
+                        ? "Cancelled"
+                        : "Scheduled"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {hasDevelopment ? (
         <section id="player-development" className="mt-10">
@@ -171,7 +238,7 @@ export default async function PublicLeagueLandingPage({
         </section>
       ) : null}
 
-      {!standingsOn && !hasDevelopment ? (
+      {!standingsOn && !hasSchedule && !hasDevelopment ? (
         <p className="text-sm text-muted-foreground">
           Public viewers for this league aren&rsquo;t available yet.
         </p>

@@ -145,6 +145,22 @@ test.describe.serial(
       await expect(
         page.getByRole("link", { name: /Standings/ }),
       ).toBeVisible();
+
+      // Schedule section (WSM-000143) lists the game and links to its public
+      // viewer; the viewer shows the final score for the matchup.
+      const gameLink = page.getByRole("link", {
+        name: /E2E Home Hawks vs E2E Away Owls/,
+      });
+      await expect(gameLink).toBeVisible();
+      await gameLink.click();
+
+      await expect(page).toHaveURL(/\/leagues\/[^/]+\/games\/[^/]+$/);
+      await expect(
+        page.getByRole("heading", {
+          name: /E2E Home Hawks vs E2E Away Owls/,
+        }),
+      ).toBeVisible();
+      await expect(page.getByText("Final")).toBeVisible();
     });
   },
 );
