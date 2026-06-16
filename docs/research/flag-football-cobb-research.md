@@ -12,22 +12,30 @@ could not confirm them — **do not treat UNVERIFIED items as fact; confirm befo
 Girls flag football is the **fastest-growing high-school sport in the country**, and Cobb
 County — our existing beachhead — is one of its **powerhouses** (4 state titles in the
 sport's first 5 GHSA seasons; an all-Cobb state final in 2025). Strategically it is a
-**near-exact rerun of our coach-platform wedge, only with a wider tooling gap**:
+**partial rerun of our coach-platform wedge — wider tooling gap, but WITHOUT the regulatory
+"mandate" lever** (verified 2026-06-16, see §3–4):
 
-- **MaxPreps is the GHSA-mandated system of record** (Official Statistician + playoff
-  power-ranking source) — the same "reporting chore" dynamic we're already exploiting.
-- **GameChanger** — the *loved* tool in our football thesis — has **not confirmed
-  flag-football-native stat tracking** (its Dec 2025 play/stat-tracking launch was tackle
-  football and explicitly deferred flag). So the incumbent gap is **even wider** here.
-- The flag-native stat tools that exist (StatHawk, PrestoStats, TurboStats) are
-  **fragmented, youth-skewed point solutions**, not a GHSA-grade incumbent.
+- **The MaxPreps "mandated chore" lever does NOT exist for flag.** ⚠️ *Correction from this
+  doc's first pass.* Verified against the GHSA constitution: flag football is **explicitly
+  excluded from GHSA's PSR power-ranking formula**, and individual-stat submission is only
+  "**encouraged**," not required — flag playoff seeding is by **area standings + tiebreakers**,
+  not MaxPreps data. (Schools *must* enter schedules/rosters/**results** — W-L only — for
+  standings/media.) So unlike tackle football, there is **no captive compliance audience**;
+  the flag wedge must win on *voluntary value*, not a regulatory gun-to-the-head. (§4)
+- **The tooling gap is real and still open:** GameChanger does flag **scorekeeping + streaming
+  + clips but NOT individual flag box scores** — no passing/receiving lines, and crucially **no
+  flag pulls** (the core defensive stat). Verified as of its Dec 10, 2025 play-tracking launch,
+  which shipped for tackle and explicitly deferred flag. The gap is open but **GC is
+  encroaching** and could close it. Flag-native tools (StatHawk, PrestoStats, TurboStats) are
+  fragmented, youth-skewed point solutions. (§3)
 - Cobb's flag coaches are an **organized, reachable community** — they vote on county
-  Player/Coach of the Year (via the Marietta Daily Journal), which is a ready-made
-  interview funnel.
+  Player/Coach of the Year (via the Marietta Daily Journal), a ready-made interview funnel.
 
-**Bottom line:** the keystone we're already designing (fast box-score capture → MaxPreps
-export) maps onto girls flag football with *less competition* and *faster-growing demand*.
-Worth validating alongside — not instead of — the tackle-football coach thesis.
+**Bottom line:** flag football offers a *wider tooling gap and faster-growing demand* than
+tackle, but **loses the mandate lever** that makes the tackle thesis sticky — it would have to
+win on coaches *wanting* easier flag-correct stat-keeping + a MaxPreps/recruiting export, not
+on compliance. Worth validating alongside (not instead of) the tackle thesis — but the
+weaker "must-use" pull lowers it from "near-exact rerun" to "promising-but-voluntary."
 
 ---
 
@@ -98,30 +106,41 @@ breakups, defensive TDs. [[StriveOn stat sheet]](https://joinstriveon.com/blog/f
 | Tool | Flag support | Note |
 |---|---|---|
 | **MaxPreps** | ✅ Robust | GHSA's hosted scores/standings/stat leaders incl. flag pulls. **Reporting/publishing layer — not a live sideline capture tool.** |
-| **GameChanger** | ⚠️ `UNVERIFIED` | Markets to flag coaches, but full play/stat tracking shipped **tackle-first (Dec 2025)** and **did not confirm flag** stat depth. [[GC launch]](https://gc.com/post/track-and-clip-every-football-play) |
+| **GameChanger** | ⚠️ Scoreboard-only for flag (verified 2026-06-16) | Flag = scorekeeping + streaming + clips + roster/messaging, but **NO individual flag box scores** — no passing/receiving lines and **no flag pulls**. Its play-tracking shipped **tackle-first (Dec 10, 2025)** and explicitly deferred flag ("look out for…more…flag football updates"). Gap open but **encroaching**. [[GC flag]](https://gc.com/flag-football) [[GC launch]](https://gc.com/post/track-and-clip-every-football-play) |
 | **NFL FLAG app** | ⚠️ league ops | Rosters/schedules; robust individual box scores `UNVERIFIED`. |
 | **Hudl / QwikCut** | film | Video, not live stat entry. QwikCut markets flag film. |
 | **StatHawk / PrestoStats / TurboStats** | ✅ flag-native | Purpose-built but small, fragmented, youth-skewed. |
 | Manual clipboard/PDF | common | Accuracy/labor pain. |
 
-**The gap (strategic):** the category leader (GameChanger) is tackle/baseball-DNA and has
-**not confirmed flag-native stat tracking**; the mandated public destination (MaxPreps) is a
+**The gap (strategic):** the category leader (GameChanger) is tackle/baseball-DNA and does
+**not track individual flag box scores** (no flag pulls — verified, §3 table); MaxPreps is a
 *publishing* layer that assumes the coach already produced a clean box score; the flag-native
-apps are fragmented point solutions. **There is no GHSA-grade, flag-correct, fast sideline
-capture tool that exports cleanly to MaxPreps.** That seam — flag-rules-correct capture
-(no-run zones, 7v7 girls format, flag pulls as the core defensive metric) → MaxPreps export —
-is the same wedge as our football keystone, with a weaker incumbent.
+apps are fragmented point solutions. **There is no flag-correct, fast sideline capture tool
+that exports cleanly to MaxPreps.** That seam — flag-rules-correct capture (no-run zones, 7v7
+girls format, flag pulls as the core defensive metric) → MaxPreps/recruiting export — is a real
+wedge. **Caveat (§4):** unlike tackle, it's *not* backed by a reporting mandate, so it must win
+on voluntary value rather than compliance.
 
-## 4. MaxPreps ↔ GHSA connection
+## 4. MaxPreps ↔ GHSA connection — VERIFIED 2026-06-16
 
-- GHSA named **MaxPreps its "Official Statistician and Digital Media Partner"** and **requires
-  coaches to submit box-score information to MaxPreps to power post-season qualification**;
-  MaxPreps drives the **power-ranking/playoff-seeding** system. [[GHSA–MaxPreps agreement]](https://www.ghsa.net/ghsa-and-maxpreps-sign-multi-year-agreement)
-- **`UNVERIFIED`:** the binding "required box score → playoff qualification" clause explicitly
-  names Football/Basketball/Softball/Baseball; whether the *mandate* formally extends to flag
-  football is unconfirmed (flag standings + stat leaders are clearly *hosted* on MaxPreps).
-  **This is a key question for the interviews** — if flag playoff seeding is MaxPreps-driven,
-  the "mandated chore" lever is just as strong here.
+**The mandate does NOT extend to flag football** (resolved; this was the doc's top open
+question). Tackle football's "mandated chore" lever is **absent** for flag:
+
+- GHSA's MaxPreps box-score **mandate names only Football, Basketball, Softball, Baseball** —
+  flag is not in it. MaxPreps is the "official source for leaderboards across all GHSA sports,"
+  so flag stats are *published/hosted* there, but that's the soft clause, not a gate. [[GHSA–MaxPreps agreement]](https://www.ghsa.net/ghsa-and-maxpreps-sign-multi-year-agreement)
+- The flag constitution **requires** schools to "enter team schedules, rosters and weekly
+  game/meet **results**" (i.e., W-L scores for standings/media) but only **"encourages"**
+  maintaining **team/individual statistics** — box scores are explicitly *not* required. [[GHSA flag constitution 2025-26]](https://www.ghsa.net/constitution-section-2025-2026-flag-football)
+- **Decisive:** flag football is **explicitly excluded from GHSA's PSR (Post-Season Ranking)
+  power-ranking formula** — the very mechanism that makes stat/results submission gate playoffs
+  for the named sports. Flag seeding = **top 4 per Area + tiebreakers**, not MaxPreps data. [[GHSA PSR formula]](https://www.ghsa.net/constitution-section-2025-2026-appendix-psr-post-season-ranking-formula)
+
+**Implication:** no captive compliance audience for flag. The wedge can't lean on "you must
+report this anyway" — it has to win on *voluntary* value: easier flag-correct stat-keeping +
+the export coaches *want* (MaxPreps leaderboards, **recruiting** — flag is now an NCAA emerging
++ 2028 Olympic sport). Confidence ~90%; residual = whether any Area uses MaxPreps-published
+stats as an informal tiebreaker.
 
 ## 5. Marietta Daily Journal coverage
 
@@ -146,19 +165,27 @@ cobbk12.org press releases.
 
 ## 6. Strategic assessment & what to validate next
 
-**Fit:** Strong. Same mandated-reporting + fragmented-tooling dynamic as the tackle-football
-thesis, but with a **weaker incumbent (GameChanger unconfirmed for flag)**, **faster growth**
-(fastest-growing HS sport; NCAA/Olympic tailwind), and an **already-organized Cobb coaching
-community** we can reach. Cobb is simultaneously our beachhead and a state power.
+**Fit:** Mixed-but-promising. The **fragmented-tooling gap is real and verified** (GameChanger
+has no individual flag box scores / no flag pulls), with **faster growth** (fastest-growing HS
+sport; NCAA/Olympic tailwind) and an **already-organized Cobb coaching community** we can reach.
+**But the "mandated reporting" pillar of the tackle thesis is absent here** (§4): flag isn't
+MaxPreps-gated, so the wedge must win on voluntary value (easier flag-correct stat-keeping +
+recruiting/leaderboard export coaches *want*), not compliance. Net: a genuine opportunity, but
+a *pull* play rather than a *push* one.
 
 **Risks / open questions to validate (do NOT build on these assumptions):**
-1. Is **MaxPreps reporting mandatory for flag** playoff seeding (the "chore" lever)? §4 `UNVERIFIED`.
+1. ~~Is MaxPreps reporting mandatory for flag?~~ **RESOLVED 2026-06-16: NO** — flag is excluded
+   from the PSR power-ranking; stats only "encouraged." No mandate lever. (§4)
 2. What do Cobb flag coaches **actually use** to keep stats today — MaxPreps direct, a
-   clipboard, GameChanger, a flag-native app? (The whole wedge hinges on this.)
-3. Does **GameChanger** in fact support flag box scores yet? (Moving target — re-check.)
-4. Is the **flag-pull / 7v7-girls** stat model enough of a misfit in tackle-built tools to be
-   a felt pain, or do coaches not care?
-5. Verify the `UNVERIFIED` coaches/records before any outreach.
+   clipboard, GameChanger, a flag-native app? (The whole wedge hinges on this — interview Q.)
+3. ~~Does GameChanger support flag box scores yet?~~ **RESOLVED 2026-06-16: NO** (scoreboard +
+   streaming only, no flag pulls, as of Dec 2025) — but **encroaching**, so re-check before building. (§3)
+4. Given no mandate, **is the voluntary pull strong enough** — do flag coaches *want* better
+   stat-keeping badly enough (for pride, leaderboards, or college recruiting) to adopt? This is
+   now the central validation question, replacing the (disproven) mandate assumption.
+5. Is the **flag-pull / 7v7-girls** stat model enough of a misfit in tackle-built tools to be a
+   felt pain, or do coaches not care?
+6. Verify the `UNVERIFIED` coaches/records before any outreach.
 
 **Recommended next step:** fold a short flag-football track into the coach-interview round
 (field-research tracker #309) — start with **Kevin Fraser (Pope)** and **Jake Burgdorf
