@@ -74,6 +74,22 @@ export const US_CITIES: Record<string, { lat: number; lng: number }> = {
   "st. louis": { lat: 38.63, lng: -90.2 },
   "st louis": { lat: 38.63, lng: -90.2 },
   "salt lake city": { lat: 40.76, lng: -111.89 },
+  // Metro Atlanta / Cobb County (WSM-000136) — the real HS-league footprint
+  // (Marietta/Kennesaw/etc.), which the original NFL-metro list didn't cover.
+  marietta: { lat: 33.95, lng: -84.55 },
+  kennesaw: { lat: 34.02, lng: -84.62 },
+  "powder springs": { lat: 33.86, lng: -84.68 },
+  acworth: { lat: 34.07, lng: -84.68 },
+  austell: { lat: 33.81, lng: -84.63 },
+  mableton: { lat: 33.82, lng: -84.58 },
+  smyrna: { lat: 33.88, lng: -84.51 },
+  vinings: { lat: 33.86, lng: -84.47 },
+  roswell: { lat: 34.02, lng: -84.36 },
+  "sandy springs": { lat: 33.92, lng: -84.38 },
+  alpharetta: { lat: 34.07, lng: -84.29 },
+  "johns creek": { lat: 34.03, lng: -84.2 },
+  duluth: { lat: 34.0, lng: -84.14 },
+  douglasville: { lat: 33.75, lng: -84.75 },
 };
 
 /** Continental-US bounding box used by the projection (P5). */
