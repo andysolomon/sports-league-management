@@ -2,15 +2,18 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { cache } from "react";
-import { schedulesStandingsV1 } from "@/lib/flags";
+import { schedulesStandingsV1, liveStreamingV1 } from "@/lib/flags";
 import {
   getFixture,
   getPublicLeagues,
   getPublicSeason,
   getResultByFixture,
+  getStreamByFixture,
 } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import GameStreamPlayer from "@/components/games/GameStreamPlayer";
 
 /*
  * Public game viewer route (WSM-000143, child of the streaming epic #225).
@@ -102,6 +105,15 @@ export default async function PublicGamePage({
   const view = await getGameView(leagueId, gameId);
   if (!view) notFound();
 
+  // Live streaming is a TRUE dark flag — OFF in every env unless opted in. When
+  // off, the stream read is skipped and the page renders exactly as before.
+  const streamingEnabled = await liveStreamingV1();
+  const stream = streamingEnabled ? await getStreamByFixture(gameId) : null;
+  const liveActive = stream?.status === "active";
+  const hasReplay = stream?.status === "ended" && stream.vodAssetId !== null;
+  const streamEndedNoReplay =
+    stream?.status === "ended" && stream.vodAssetId === null;
+
   const { fixture, result, seasonName } = view;
   const isFinal = fixture.status === "final" && result !== null;
   const isCancelled = fixture.status === "cancelled";
@@ -126,6 +138,36 @@ export default async function PublicGamePage({
           {fixture.homeTeamName} vs {fixture.awayTeamName}
         </h1>
       </header>
+
+      {liveActive || hasReplay ? (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {liveActive ? (
+                <>
+                  <Badge variant="destructive">LIVE</Badge>
+                  <span>Watch live</span>
+                </>
+              ) : (
+                <span>Replay</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <GameStreamPlayer
+              playbackId={stream!.muxPlaybackId}
+              live={liveActive}
+              title={`${fixture.homeTeamName} vs ${fixture.awayTeamName}`}
+            />
+          </CardContent>
+        </Card>
+      ) : streamEndedNoReplay ? (
+        <Card className="mb-6">
+          <CardContent className="p-6 text-center text-sm text-muted-foreground">
+            The live stream has ended.
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

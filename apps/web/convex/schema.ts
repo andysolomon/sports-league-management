@@ -274,4 +274,27 @@ export default defineSchema({
     recordedAt: v.string(),
     recordedBy: v.string(),
   }).index("by_fixtureId", ["fixtureId"]),
+
+  /*
+   * One live stream per fixture (WSM-000144, streaming epic #225). The Mux
+   * stream KEY is never stored — Mux holds it; we keep only the live-stream id
+   * (server-side) and the public HLS playback id. Public reads project to
+   * status/playbackId/vodAssetId only; the key + live-stream id never transit a
+   * public query (see getStreamByFixture).
+   */
+  gameStreams: defineTable({
+    fixtureId: v.id("fixtures"),
+    muxLiveStreamId: v.string(), // server-side; never returned by a public read
+    muxPlaybackId: v.string(), // public HLS id
+    status: v.string(), // "idle" | "active" | "ended"
+    vodAssetId: v.union(v.string(), v.null()),
+    startedBy: v.string(),
+    startedAt: v.string(),
+    endedAt: v.union(v.string(), v.null()),
+    maxDurationMinutes: v.number(),
+  })
+    .index("by_fixtureId", ["fixtureId"])
+    .index("by_status", ["status"])
+    // Mux webhooks identify the stream by its Mux live-stream id, not fixtureId.
+    .index("by_muxLiveStreamId", ["muxLiveStreamId"]),
 });

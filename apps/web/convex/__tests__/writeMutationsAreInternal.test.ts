@@ -44,6 +44,8 @@ void internal.sports.forkTeamToWorkspace;
 void internal.sports.forkDivisionToWorkspace;
 void internal.sports.forkConferenceToWorkspace;
 void internal.sports.unforkTeamFromWorkspace;
+void internal.sports.createGameStream;
+void internal.sports.updateGameStreamStatus;
 
 // --- Writes MUST NOT be on the public API (each access must be a type error) ---
 // @ts-expect-error createTeam is internal, not public
@@ -66,6 +68,10 @@ void api.sports.forkDivisionToWorkspace;
 void api.sports.forkConferenceToWorkspace;
 // @ts-expect-error unforkTeamFromWorkspace is internal, not public
 void api.sports.unforkTeamFromWorkspace;
+// @ts-expect-error createGameStream is internal, not public
+void api.sports.createGameStream;
+// @ts-expect-error updateGameStreamStatus is internal, not public
+void api.sports.updateGameStreamStatus;
 
 // --- Public READ queries must remain public (these must exist on api) ---
 void api.sports.listTeams;
@@ -113,11 +119,13 @@ type AllowedPublicSportsReads =
   | "getPlayerDevelopmentPublic"
   | "getPlayerMaddenRating"
   | "getPlayerSeasonAttributes"
+  | "getActiveStreamCountForLeague"
   | "getResultByFixture"
   | "getRosterAssignmentHistory"
   | "getRosterBySeasonTeam"
   | "getSeason"
   | "getSeasonAttributesByPosition"
+  | "getStreamByFixture"
   | "getSyncConfig"
   | "getTeam"
   | "getTeamAttributeSnapshots"

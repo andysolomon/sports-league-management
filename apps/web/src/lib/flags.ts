@@ -79,6 +79,32 @@ export const schedulesStandingsV1 = flag<boolean>({
   },
 });
 
+/*
+ * `live_streaming_v1` is a TRUE DARK FLAG (WSM-000144 / streaming epic #225).
+ *
+ * Unlike the flags above, it must default OFF in EVERY environment — including
+ * preview/dev — because flipping it on provisions real Mux live streams that
+ * cost money. It therefore does NOT use `resolveFlag` (which defaults ON when
+ * `VERCEL_ENV !== "production"`). The only way it turns on is an explicit
+ * `FLAG_LIVE_STREAMING_V1=on` per pilot env. Demand validation gates enabling
+ * it; the code can ship dark with zero exposure and zero cost until then.
+ */
+export const liveStreamingV1 = flag<boolean>({
+  key: "live_streaming_v1",
+  description:
+    "DARK — Phase 1 video-only live game streaming (Mux). OFF in every env unless FLAG_LIVE_STREAMING_V1=on.",
+  defaultValue: false,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = process.env.FLAG_LIVE_STREAMING_V1 === "on";
+    void trackFlagExposure("live_streaming_v1", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {

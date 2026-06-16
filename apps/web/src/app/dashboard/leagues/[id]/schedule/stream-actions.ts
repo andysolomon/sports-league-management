@@ -1,0 +1,141 @@
+"use server";
+
+import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
+import { liveStreamingV1 } from "@/lib/flags";
+import {
+  getFixture,
+  getPublicSeason,
+  createGameStream,
+  updateGameStreamStatus,
+  getActiveStreamCountForLeague,
+  getStreamAdminByFixture,
+} from "@/lib/data-api";
+import { canAdministerTeam } from "@/lib/authorization";
+import { createMuxLiveStream, disableMuxLiveStream } from "@/lib/mux";
+
+/*
+ * Live-stream start/stop server actions (WSM-000144, dark behind
+ * `live_streaming_v1`). Watch is public (the #300 game page); START/MANAGE is
+ * authenticated and lives here in the dashboard, because the RTMP key must never
+ * touch a public surface. The Mux stream key is returned in-memory to the
+ * starting admin only — it is never persisted and never read back.
+ *
+ * Cost posture (decided 2026-06-16): absorbed + capped. No billing/entitlement
+ * gate; guardrails bound the spend — a Mux max-duration auto-stop (set at
+ * stream-create) plus the per-league concurrent cap below. The TODO marks the
+ * clean seam where an entitlement check drops in for a later paid tier.
+ */
+
+const MAX_STREAM_DURATION_MINUTES = 180; // 3h hard cap → Mux max_continuous_duration
+const PER_LEAGUE_CONCURRENT_CAP = 3; // bound blast radius for a pilot
+
+type StartResult =
+  | { ok: true; rtmpUrl: string; streamKey: string; playbackId: string }
+  | { ok: false; error: string };
+
+type StopResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Shared auth chain: dark flag on → Clerk session → caller administers EITHER
+ * the home or away team (WSM-000121 team ownership) → fixture's season actually
+ * belongs to the league in the URL (cross-league guard, mirrors the public page).
+ * Returns the resolved leagueId for cap-checking + revalidation.
+ */
+async function authorizeStreamAction(
+  leagueId: string,
+  fixtureId: string,
+): Promise<
+  { ok: true; userId: string } | { ok: false; error: string }
+> {
+  const enabled = await liveStreamingV1();
+  if (!enabled) return { ok: false, error: "flag_disabled" };
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const fixture = await getFixture(fixtureId);
+  if (!fixture) return { ok: false, error: "fixture_not_found" };
+
+  // Cross-league guard: the fixture's season must live in THIS league.
+  const season = await getPublicSeason(fixture.seasonId);
+  if (!season || season.leagueId !== leagueId) {
+    return { ok: false, error: "fixture_not_in_league" };
+  }
+
+  const [canHome, canAway] = await Promise.all([
+    canAdministerTeam(fixture.homeTeamId, userId),
+    canAdministerTeam(fixture.awayTeamId, userId),
+  ]);
+  if (!canHome && !canAway) return { ok: false, error: "not_authorized" };
+
+  return { ok: true, userId };
+}
+
+export async function startGameStream(
+  leagueId: string,
+  fixtureId: string,
+): Promise<StartResult> {
+  const guard = await authorizeStreamAction(leagueId, fixtureId);
+  if (!guard.ok) return guard;
+
+  // Concurrent-stream cap — bounds the absorbed cost for a pilot league.
+  // TODO(streaming paid tier): replace/augment with an entitlement check here.
+  const activeCount = await getActiveStreamCountForLeague(leagueId);
+  if (activeCount >= PER_LEAGUE_CONCURRENT_CAP) {
+    return { ok: false, error: "stream_cap_reached" };
+  }
+
+  try {
+    const mux = await createMuxLiveStream(MAX_STREAM_DURATION_MINUTES);
+    await createGameStream({
+      fixtureId,
+      muxLiveStreamId: mux.liveStreamId,
+      muxPlaybackId: mux.playbackId,
+      startedBy: guard.userId,
+      maxDurationMinutes: MAX_STREAM_DURATION_MINUTES,
+    });
+
+    revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
+    revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
+
+    // Key returned to the starting admin ONLY — never persisted, never re-read.
+    return {
+      ok: true,
+      rtmpUrl: mux.rtmpUrl,
+      streamKey: mux.streamKey,
+      playbackId: mux.playbackId,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
+export async function stopGameStream(
+  leagueId: string,
+  fixtureId: string,
+): Promise<StopResult> {
+  const guard = await authorizeStreamAction(leagueId, fixtureId);
+  if (!guard.ok) return guard;
+
+  try {
+    const stream = await getStreamAdminByFixture(fixtureId);
+    if (!stream) return { ok: false, error: "stream_not_found" };
+
+    await disableMuxLiveStream(stream.muxLiveStreamId);
+    // Reflect the stop immediately; the webhook also flips this idempotently.
+    await updateGameStreamStatus({
+      muxLiveStreamId: stream.muxLiveStreamId,
+      status: "ended",
+      endedAt: new Date().toISOString(),
+    });
+
+    revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
+    revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
