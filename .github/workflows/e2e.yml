@@ -1,0 +1,94 @@
+name: E2E
+
+# Playwright end-to-end suite for apps/web (WSM-000141).
+#
+# Safe-by-default: the suite needs a seedable Convex dev deployment + a Clerk
+# test instance, so this job is GATED on repo secrets. When they're absent the
+# "Check e2e secrets" step skips the rest and the job still succeeds — it can
+# never falsely block a PR. Add the secrets/variables below (Settings →
+# Secrets and variables → Actions) to turn the suite on.
+#
+# Required repo SECRETS:
+#   CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+#   CONVEX_ADMIN_KEY (the DEV deployment's admin/deploy key — used to seed),
+#   E2E_CLERK_USER_ID, E2E_CLERK_USER_ID_B, E2E_CLERK_ORG_ID, E2E_CLERK_ORG_ID_B
+# Required repo VARIABLES (non-secret):
+#   NEXT_PUBLIC_CONVEX_URL, NEXT_PUBLIC_CONVEX_SITE_URL, CONVEX_DEPLOYMENT
+# Also: set CONVEX_ENABLE_E2E_SEED=1 on the target Convex DEV deployment so the
+# internal e2eSeed mutations accept fixture calls.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: Playwright (apps/web)
+    runs-on: ubuntu-latest
+    env:
+      # Dev server + specs read these from the process env (see e2e helpers).
+      NEXT_PUBLIC_CONVEX_URL: ${{ vars.NEXT_PUBLIC_CONVEX_URL }}
+      NEXT_PUBLIC_CONVEX_SITE_URL: ${{ vars.NEXT_PUBLIC_CONVEX_SITE_URL }}
+      CONVEX_DEPLOYMENT: ${{ vars.CONVEX_DEPLOYMENT }}
+      CONVEX_ADMIN_KEY: ${{ secrets.CONVEX_ADMIN_KEY }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      E2E_CLERK_USER_ID: ${{ secrets.E2E_CLERK_USER_ID }}
+      E2E_CLERK_USER_ID_B: ${{ secrets.E2E_CLERK_USER_ID_B }}
+      E2E_CLERK_ORG_ID: ${{ secrets.E2E_CLERK_ORG_ID }}
+      E2E_CLERK_ORG_ID_B: ${{ secrets.E2E_CLERK_ORG_ID_B }}
+
+    steps:
+      - name: Check e2e secrets
+        id: secrets
+        run: |
+          if [ -z "${CLERK_SECRET_KEY}" ] || [ -z "${NEXT_PUBLIC_CONVEX_URL}" ]; then
+            echo "::notice::e2e secrets not configured (CLERK_SECRET_KEY / NEXT_PUBLIC_CONVEX_URL). Skipping the Playwright suite — see WSM-000141 for the required repo secrets and variables."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.secrets.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        if: steps.secrets.outputs.run == 'true'
+        run: corepack enable
+
+      - name: Setup Node.js
+        if: steps.secrets.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/web exec playwright install --with-deps chromium
+
+      - name: Run e2e (apps/web)
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/web test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ always() && steps.secrets.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
