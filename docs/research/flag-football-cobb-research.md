@@ -118,8 +118,11 @@ breakups, defensive TDs. [[StriveOn stat sheet]](https://joinstriveon.com/blog/f
 apps are fragmented point solutions. **There is no flag-correct, fast sideline capture tool
 that exports cleanly to MaxPreps.** That seam — flag-rules-correct capture (no-run zones, 7v7
 girls format, flag pulls as the core defensive metric) → MaxPreps/recruiting export — is a real
-wedge. **Caveat (§4):** unlike tackle, it's *not* backed by a reporting mandate, so it must win
-on voluntary value rather than compliance.
+wedge. And the export target is **confirmed buildable**: MaxPreps has a **dedicated flag import
+schema with flag pulls as first-class fields** ([maxpreps-import-format.md](./maxpreps-import-format.md)
+§2b) — the schema *exists*; the incumbents just don't fill it for flag. **Caveat (§4):** unlike
+tackle, it's *not* backed by a reporting mandate, so it must win on voluntary value rather than
+compliance.
 
 ## 4. MaxPreps ↔ GHSA connection — VERIFIED 2026-06-16
 

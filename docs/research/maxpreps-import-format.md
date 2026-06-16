@@ -94,6 +94,37 @@ then POST those plus `ctl00$Related_Content$selSport=Football`, `…$selGender=B
 parse the `StatGroupName` / `StatSubGroupHeader` blocks. Swap `selSport=Flag Football` or
 `selGender=Girls` for those variants — same mechanism, no auth._
 
+## 2b. Exact flag football import field names (verbatim, Girls = Boys)
+
+**MaxPreps has a dedicated flag schema.** `Flag Football` is its own `selSport` value (distinct
+from `Football`), and **Girls and Boys flag return byte-for-byte the same field list**.
+Critically, **flag pulls are first-class import fields** — this answers the open question from
+[flag-football-cobb-research.md](./flag-football-cobb-research.md) §3. Retrieved 2026-06-16 from
+the public spec page (`selSport=Flag Football`, `selGender=Girls`).
+
+| Group | Field names (verbatim) |
+|---|---|
+| **Rushing** | `RushingNum` `RushingYards` `RushingLong` |
+| **Receiving** | `ReceivingNum` `ReceivingYards` `ReceivingLong` |
+| **Passing** | `PassingComp` `PassingAtt` `PassingInt` `PassingYards` `PassingTD` `PassingLong` |
+| **Def. — Flag Pulls** | `FlagPulls` `Assists` `TotalFlagPulls` `FlagPullsForLoss` |
+| **Def. — Sacks** | `Sacks` `SacksYardsLost` `QBHurries` |
+| **Def. — Pass Defense** | `INTs` `INTYards` `PassesDefensed` |
+| **Punt returns / punts** | `PuntReturnNum` `PuntReturnYards` `PuntReturnLong` `PuntReturnFairCatches` · `PuntNum` `PuntYards` `PuntLong` `PuntInside20` |
+| **Scoring — TDs** | `RushingTDNum` `ReceivingTDNum` `IntReturnedTDNum` `PuntReturnedTDNum` `TotalTDNum` |
+| **Scoring — Tries / XP / FG / etc.** | `TryMade1Pt` `TryMade2Pt` `TryMade3Pt` `TotalTryPoints` · `ExtraPointsMade` `ExtraPointsAttempted` · `FieldGoalsMade` `FieldGoalsAttempted` · `Safeties` `TotalPoints` |
+
+**Diff vs Football/Boys (§2a):** identical *except* the defensive **Tackles** subgroup is
+replaced by the **Flag Pulls** subgroup (`Tackles`→`FlagPulls`, `TotalTackles`→`TotalFlagPulls`,
+`TacklesForLoss`→`FlagPullsForLoss`; `Assists` reused, now meaning flag-pull assists). Offense,
+sacks, pass-defense, returns, and scoring are the same. No fumbles subgroup in the flag set.
+Scoring adds flag-style 1/2/3-pt **Tries**.
+
+**Build note:** most flag rulesets have no punting/kicking, so the realistic flag export uses
+**Jersey + Offensive + Flag-Pulls + Pass-Defense + Scoring(TD/Try/Pts)** columns and leaves the
+`Sacks`/`Punts`/`FieldGoals` carryovers blank. The export must select the **`Flag Football`**
+schema explicitly — it is NOT the same as `Football`.
+
 ## 3. The football stat field set (categories)
 
 Verified from the official MaxPreps football stat-sheet PDF
@@ -109,9 +140,8 @@ this is the *schema* our capture model must produce (field-name strings TBD per 
 - **Scoring:** TDs (run/rec/misc), PAT, conversions, field goals (made/att/longest), safety
 - **Team:** first downs, penalty yards
 
-_(Flag football's set is the §3 offense plus **flag pulls**-centric defense — see
-[flag-football-cobb-research.md](./flag-football-cobb-research.md) §3. Whether MaxPreps exposes
-flag-specific import fields is unconfirmed.)_
+_(Flag football has its **own dedicated MaxPreps import schema** — flag pulls are first-class
+fields. See §2b for the verbatim flag field list.)_
 
 ## 4. How rival tools push to MaxPreps (validates the path)
 
@@ -151,8 +181,8 @@ _(Recall: this mandate covers **tackle football**, not flag — see flag researc
 2. **Stat Supplier ID** — the only true blocker left, and it's a **build-time credential**, not a
    research item: register a MaxPreps account as a Stat Supplier to get the 32-char ID for Line 1.
    Account/identity-bound → the team obtains it when building the export.
-3. **Flag-football / Girls field set** — not yet pulled, but trivially obtainable via the same
-   public POST (`selSport=Flag Football` / `selGender=Girls`). Worth grabbing before the flag lane builds.
+3. ~~Flag-football / Girls field set~~ **RESOLVED 2026-06-16** — see §2b. Dedicated flag schema;
+   **flag pulls are first-class** (`FlagPulls`/`TotalFlagPulls`/`FlagPullsForLoss`); Girls = Boys.
 4. Whether the "Save & Import Stats" screen strictly validates the format (likely yes) — confirm at build with a real upload.
 5. Exact GHSA per-game submission deadline/penalty wording (2025 Football Coaches Manual didn't load).
 
