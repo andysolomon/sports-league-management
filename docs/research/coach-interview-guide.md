@@ -145,11 +145,13 @@ line and open with "I'm researching how flag programs keep their stats…"._
 ## Block D — Export format (technical, ask the stat-keeper or AD)
 
 - When you (or a partner tool) get stats **into** MaxPreps, what's the exact path — typing it
-  in, or uploading a file? If a file: **what format/columns**, and can you send me a sample?
+  in, or uploading a file? **If a file, can you send me a sample `.txt`?**
 - Does your state/GHSA require a specific stat submission, and by when after each game?
 
-_(This nails the "exact MaxPreps import-file format" open question without scraping — coaches
-have the real upload screens and sample files.)_
+_(Mostly answered by desk research — see [maxpreps-import-format.md](./maxpreps-import-format.md):
+the import is a public pipe-delimited `.txt` spec. The **only** thing still worth getting from a
+coach is a **real football export sample**, which would reveal the exact field-name strings — or
+just register as a MaxPreps Stat Supplier to read them directly. Lower priority now.)_
 
 ## Block E — Game video & streaming (validation gate for #225)
 

@@ -100,7 +100,8 @@ Team-level: score by quarter, total; (W/L derives from the existing standings la
 ## 9. MaxPreps export
 
 - From a completed game (or a season) → **"Export for MaxPreps"** → download a file in
-  MaxPreps' accepted **manual stat-upload** format (CSV/columns TBD from research).
+  MaxPreps' accepted **manual stat-upload** format: a **pipe-delimited `.txt`** (Supplier ID +
+  `Jersey|<fields>` header + one row per player — see [maxpreps-import-format.md](./maxpreps-import-format.md)).
 - Carries **our roster identities + stats together**, so there's no "did you also add them on
   MaxPreps?" mismatch (the GameChanger failure mode).
 - v1 = manual download + upload by the coach (same path Hudl uses). A contracted MaxPreps
@@ -144,7 +145,10 @@ at HS. Reuses the rating pipeline; swaps nflverse inputs for `playerGameStats` a
 
 ## 13. Risks & open questions
 
-- **Exact MaxPreps import format** — _blocker for the export; resolve via interviews (Block D)._
+- **MaxPreps import format** — ~~blocker~~ **largely resolved** ([maxpreps-import-format.md](./maxpreps-import-format.md)):
+  it's a public pipe-delimited `.txt` spec (Line 1 = 32-char Supplier ID, Line 2 = `Jersey|<fields>`,
+  one row per player), coach-uploadable via "Save & Import Stats." Build a TXT-export generator.
+  _Residual:_ exact football field-name strings (register as a Stat Supplier or read one real export).
 - **Will coaches enter stats here vs. their existing flow?** — the core demand question the
   interviews must answer; if "no," this whole keystone is wrong.
 - **Entry speed** — if it's slower than typing into MaxPreps, it fails. Usability-test the
