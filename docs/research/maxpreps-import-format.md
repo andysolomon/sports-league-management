@@ -11,10 +11,11 @@ stance). Login-gated areas were not accessed._
 MaxPreps stat ingest is **not an API** — it's a public, documented **pipe-delimited `.txt`
 file spec**. A coach uploads the file via **Save & Import Stats** on their MaxPreps Coach Admin,
 or an approved partner pushes it automatically. **So the keystone's "MaxPreps export" is a
-concrete, buildable `.txt` generator, not a reverse-engineering project.** The single remaining
-unknown is the *exact football field-name strings* (gated behind a JS dropdown / supplier
-registration) — narrow enough to close by registering as a Stat Supplier or reading one real
-export. Spec: https://www.maxpreps.com/utility/stat_import/field_specs.aspx
+concrete, buildable `.txt` generator, not a reverse-engineering project.** The **exact
+Football/Boys field names are now captured verbatim** (§2a, from the public spec page). The only
+thing left is a **build-time credential** — the 32-char Stat Supplier ID, obtained by registering
+a MaxPreps account (account-bound, so the team's to get at build time). Spec:
+https://www.maxpreps.com/utility/stat_import/field_specs.aspx
 
 ## 1. How stats get into MaxPreps (football)
 
@@ -50,11 +51,48 @@ From the public **Export Field Specifications** (https://www.maxpreps.com/utilit
   12|3|2|1|0|2
   ```
 - **Getting a Supplier ID:** register as a "Stat Supplier" from a MaxPreps account → fill
-  general info → issued the 32-char ID. Self-serve. [[Stat Import Partners]](https://support.maxpreps.com/hc/en-us/articles/202266384-Stat-Import-Partners)
-- **`UNVERIFIED` (the one gap):** the **exact football field-name strings** (the real MaxPreps
-  names for rushing yards, passing TDs, tackles, sacks, etc.). The spec page exposes them only
-  through a JavaScript "available fields for [sport]" dropdown that static fetches can't render.
-  Closeable by registering as a supplier or inspecting one real football export.
+  general info → issued the 32-char ID. Self-serve. **This is the one remaining build-time
+  step** — the ID is account/identity-bound, so it's the team's to obtain when building/shipping
+  the export. [[Stat Import Partners]](https://support.maxpreps.com/hc/en-us/articles/202266384-Stat-Import-Partners)
+- **Exact football field names — RESOLVED 2026-06-16** (see §2a). The spec page exposes fields
+  per sport via an ASP.NET form POST (not a static GET); the **Football/Boys** field list was
+  retrieved verbatim from the live public page (no login — same POST a browser makes on "GO").
+
+## 2a. Exact football import field names (verbatim, Football/Boys)
+
+Header row = `Jersey|<fields>` — **`Jersey` is required and must be first**; all others optional,
+any order; names must match **exactly**; omit zeros unless genuinely zero. Retrieved from
+https://www.maxpreps.com/utility/stat_import/field_specs.aspx (Football/Boys).
+
+| Group | Field names (verbatim) |
+|---|---|
+| **Rushing** | `RushingNum` `RushingYards` `RushingLong` |
+| **Receiving** | `ReceivingNum` `ReceivingYards` `ReceivingLong` |
+| **Passing** | `PassingComp` `PassingAtt` `PassingInt` `PassingYards` `PassingTD` `PassingLong` |
+| **Off. fumbles / O-line** | `OffensiveFumbles` `OffensiveFumblesLost` `PancakeBlocks` |
+| **Def. tackles** | `Tackles` (solo) `Assists` `TotalTackles` `TacklesForLoss` |
+| **Def. sacks** | `Sacks` `SacksYardsLost` `QBHurries` |
+| **Def. pass** | `INTs` `INTYards` `PassesDefensed` |
+| **Def. blocks / fumbles** | `BlockedPunts` `BlockedFG` `FumbleRecoveries` `FumbleRecoveryYards` `CausedFumbles` |
+| **Punt returns** | `PuntReturnNum` `PuntReturnYards` `PuntReturnLong` `PuntReturnFairCatches` |
+| **Kick returns** | `KickoffReturnNum` `KickoffReturnYards` `KickoffReturnLong` `TotalReturnYards` |
+| **Punts** | `PuntNum` `PuntYards` `PuntLong` `PuntInside20` |
+| **Kickoffs** | `KickoffNum` `KickoffYards` `KickoffLong` `KickoffTouchbacks` |
+| **Scoring TDs** | `RushingTDNum` `ReceivingTDNum` `FumbleReturnedTDNum` `IntReturnedTDNum` `PuntReturnedTDNum` `KickoffReturnedTDNum` `TotalTDNum` |
+| **PAT / conversions** | `PATKickingMade` `PATKickingAtt` `PATKickingPoints` `PATRushingNum` `PATReceivingNum` `TotalConversionPoints` |
+| **Field goals / safeties / points** | `FGMade` `FGAttempted` `FGLong` `Safeties` `TotalPoints` |
+
+**Example football header + one row:**
+```
+<32-char-supplier-id>
+Jersey|RushingNum|RushingYards|RushingTDNum|PassingComp|PassingAtt|PassingYards|PassingTD|PassingInt|ReceivingNum|ReceivingYards|ReceivingTDNum|Tackles|Assists|Sacks|INTs
+12|14|92|2|0|0|0|0|0|3|41|1|5|2|1|0
+```
+
+_Method (reproducible, public): GET the page to read `__VIEWSTATE` + `__VIEWSTATEGENERATOR`,
+then POST those plus `ctl00$Related_Content$selSport=Football`, `…$selGender=Boys`, `submit=GO`;
+parse the `StatGroupName` / `StatSubGroupHeader` blocks. Swap `selSport=Flag Football` or
+`selGender=Girls` for those variants — same mechanism, no auth._
 
 ## 3. The football stat field set (categories)
 
@@ -107,14 +145,16 @@ _(Recall: this mandate covers **tackle football**, not flag — see flag researc
   2025). Our differentiation stays the *capture* experience + the **flag** angle (where the
   tooling gap is wider), not "we can export to MaxPreps" alone.
 
-## 7. Residual open questions (much narrower now)
+## 7. Residual open questions (now minimal)
 
-1. **Exact football field-name strings** for the `.txt` header (§2) — get by registering as a
-   Stat Supplier (self-serve) or reading one real export. **This is the precise, bounded task
-   that remains** — far narrower than the original "what's the format?"
-2. Whether MaxPreps exposes **flag-football-specific** import fields (flag pulls etc.).
-3. Whether the "Save & Import Stats" screen strictly validates the partner format (likely yes).
-4. Exact GHSA per-game submission deadline/penalty wording (2025 Football Coaches Manual didn't load).
+1. ~~Exact football field-name strings~~ **RESOLVED 2026-06-16** — see §2a (Football/Boys, verbatim).
+2. **Stat Supplier ID** — the only true blocker left, and it's a **build-time credential**, not a
+   research item: register a MaxPreps account as a Stat Supplier to get the 32-char ID for Line 1.
+   Account/identity-bound → the team obtains it when building the export.
+3. **Flag-football / Girls field set** — not yet pulled, but trivially obtainable via the same
+   public POST (`selSport=Flag Football` / `selGender=Girls`). Worth grabbing before the flag lane builds.
+4. Whether the "Save & Import Stats" screen strictly validates the format (likely yes) — confirm at build with a real upload.
+5. Exact GHSA per-game submission deadline/penalty wording (2025 Football Coaches Manual didn't load).
 
 **Note on sourcing:** `support.maxpreps.com` and `help.gc.com` article bodies returned HTTP 403
 to direct fetch; findings there are reconstructed from search snippets + state-association
