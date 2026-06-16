@@ -1496,3 +1496,59 @@ export async function computeStandingsPublic(
 ): Promise<{ seasonName: string; rows: Standing[] } | null> {
   return queryConvex(refs.computeStandingsPublic, { leagueId });
 }
+
+// --- Public game viewer (WSM-000143) — ungated reads for /leagues/[id]/games ---
+
+/**
+ * Ungated season lookup for public viewer routes. Unlike `getSeason`, this does
+ * NOT enforce `requireLeagueAccessLocal`, so it's callable without an org
+ * session. Used by the public game page to verify a fixture's season actually
+ * belongs to the public league in the URL (a cross-league leak guard — a
+ * fixture id from a PRIVATE league must not render under a public league's
+ * path). Always pair the returned `leagueId` with `publicLeagueGuard`.
+ */
+export async function getPublicSeason(
+  seasonId: string,
+): Promise<SeasonDto | null> {
+  return queryConvex(refs.getSeason, { seasonId });
+}
+
+export interface PublicScheduleRow {
+  fixture: FixtureDto;
+  result: GameResultDto | null;
+}
+
+/**
+ * The active season's fixtures for a public league, enriched with final scores.
+ *
+ * Mirrors `computeStandingsPublic`'s season selection (status "active", else the
+ * first season) so the public Schedule and Standings always agree on which
+ * season they're showing. Composed entirely from ungated reads; call only after
+ * `publicLeagueGuard` has confirmed the league is public. Returns null when the
+ * league has no seasons.
+ */
+export async function getPublicLeagueSchedule(leagueId: string): Promise<{
+  seasonName: string;
+  rows: PublicScheduleRow[];
+} | null> {
+  const seasons = await queryConvex(refs.listSeasons, {
+    leagueIds: [leagueId],
+  });
+  if (seasons.length === 0) return null;
+
+  const season = seasons.find((s) => s.status === "active") ?? seasons[0];
+  const fixtures = await listFixturesBySeason(season.id);
+
+  // Pull final scores only for completed games (others have no result row).
+  const rows = await Promise.all(
+    fixtures.map(async (fixture) => ({
+      fixture,
+      result:
+        fixture.status === "final"
+          ? await getResultByFixture(fixture.id)
+          : null,
+    })),
+  );
+
+  return { seasonName: season.name, rows };
+}
