@@ -65,6 +65,35 @@ stat-keeper is gold — they live the pain. Start from the 16 Cobb County school
 _(This nails the "exact MaxPreps import-file format" open question without scraping — coaches
 have the real upload screens and sample files.)_
 
+## Block E — Game video & streaming (validation gate for #225)
+
+_Ask this **last**, after the keystone blocks, and keep it light. Streaming is a shiny feature
+everyone says "yes" to in the abstract — so **only past behavior counts here**. We are testing
+whether the school's existing video is already "good enough," not whether video sounds nice.
+Do **not** describe our streaming idea._
+
+11. Was last Friday's game **recorded or streamed** at all? Walk me through what actually
+    happened — who ran it, on what device/app, and who watched. _(If nothing: "When's the last
+    time one of your games was on video for families, and what was that like?")_
+12. When families can't make it to a game, how do they **follow along in real time** right now?
+    _(Texts? Someone posting the score? A stream? Nothing? — this is the real job: follow-along.
+    Don't prompt "would a stream help.")_
+13. The last time a game was streamed — what **annoyed people or went wrong**? _(Listen for: no
+    one to run the camera, couldn't tell the score from the video, paywall, buffering, bad
+    angle. Real pain has a story.)_
+14. Do families ever **pay** for anything to watch your games — NFHS Network, a booster stream,
+    anything? Tell me about that. _(Past-behavior proxy for cost tolerance AND the "good enough"
+    incumbent. NFHS Network mandates are the main kill-signal for #225.)_
+15. When a game is on video, can viewers see the **live score on the screen**, or just the
+    picture? Has anyone ever asked "what's the score" while watching? _(The overlay is our
+    specific bet — test whether the score-on-video gap is felt, or nobody cares.)_
+16. The times a game *has* been filmed/streamed — **who ended up running the camera**? _(The
+    labor reality: managed streaming still needs a human to aim and start it. If the answer is
+    "nobody reliably," that's a red flag regardless of demand.)_
+
+_(Resolves RFC §7 open questions for `docs/design/live-streaming-rfc.md`: is in-app streaming
+worth the metered spend, or is the school's existing stream good enough?)_
+
 ## Wrap (commitment + referral)
 
 - Would you be up for trying an early version and telling me where it sucks? _(Time commitment
@@ -84,6 +113,12 @@ have the real upload screens and sample files.)_
 | Sync/dual-roster pain (if raised) | |
 | What would make them switch / non-starters | |
 | MaxPreps import format (file? columns? sample?) | |
+| Game video today: streamed/recorded? by whom, what tool? | |
+| How families follow along when absent | |
+| Streaming pain (specific story) / "good enough" incumbent (NFHS/Hudl?) | |
+| Pays to watch today? (NFHS Network / booster / none) | |
+| Score-on-video gap felt? (asked "what's the score?") | |
+| Who actually runs the camera | |
 | Commitment given (time / intro / $) | |
 
 ## After ~8 interviews — decide
@@ -92,3 +127,12 @@ have the real upload screens and sample files.)_
   MaxPreps-format export) on the Hybrid fork model.
 - **Pain is mild / mandate is weak / nobody would switch →** rethink the wedge before writing code.
 - Record the verdict back in the teardown doc.
+
+### Streaming gate (#225) — decide separately from the keystone
+
+- **Build the video MVP (#301) →** games rarely get streamed today *or* the existing option is
+  paywalled / score-less / unreliable, families clearly want to follow along, **and** there's a
+  real person who would run the camera each week.
+- **Defer or kill #225 →** the school already streams via NFHS Network / Hudl and it's "good
+  enough," **or** nobody reliably runs a camera, **or** families don't actually watch. Don't
+  commit metered video spend on an abstract "yes." Record the verdict in the streaming RFC.
