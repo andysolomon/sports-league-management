@@ -1,4 +1,8 @@
-import { internalMutationGeneric, queryGeneric } from "convex/server";
+import {
+  internalMutationGeneric,
+  internalQueryGeneric,
+  queryGeneric,
+} from "convex/server";
 import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -3965,5 +3969,175 @@ export const computeStandingsPublic = query({
     });
 
     return { seasonName: activeSeason.name, rows };
+  },
+});
+
+/*
+ * Phase 1 live game streaming (WSM-000144, streaming epic #225).
+ *
+ * One Mux live stream per fixture. The stream KEY is never persisted (Mux holds
+ * it; the server action returns it in-memory to the starting admin only). Writes
+ * are internalMutation — only trusted server code (data-api.ts holding the admin
+ * key) can call them. The public read projects to public fields ONLY, so the Mux
+ * live-stream id (server-side) and key never transit a public query.
+ */
+
+// Public projection — what an unauthenticated viewer is allowed to see.
+const publicStreamDtoValidator = v.union(
+  v.object({
+    status: v.string(),
+    muxPlaybackId: v.string(),
+    vodAssetId: v.union(v.string(), v.null()),
+  }),
+  v.null(),
+);
+
+export const createGameStream = internalMutationGeneric({
+  args: {
+    fixtureId: v.id("fixtures"),
+    muxLiveStreamId: v.string(),
+    muxPlaybackId: v.string(),
+    startedBy: v.string(),
+    maxDurationMinutes: v.number(),
+  },
+  returns: v.object({
+    id: v.string(),
+    fixtureId: v.string(),
+    status: v.string(),
+    muxPlaybackId: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+
+    const payload = {
+      fixtureId: args.fixtureId,
+      muxLiveStreamId: args.muxLiveStreamId,
+      muxPlaybackId: args.muxPlaybackId,
+      status: "idle",
+      vodAssetId: null,
+      startedBy: args.startedBy,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      maxDurationMinutes: args.maxDurationMinutes,
+    };
+
+    // One stream per fixture: replace any prior (e.g. ended) stream in place so
+    // a coach can re-go-live on the same game.
+    const existing = await ctx.db
+      .query("gameStreams")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+
+    let id: string;
+    if (existing) {
+      await ctx.db.replace(existing._id, payload);
+      id = existing._id;
+    } else {
+      id = await ctx.db.insert("gameStreams", payload);
+    }
+
+    return {
+      id,
+      fixtureId: args.fixtureId,
+      status: payload.status,
+      muxPlaybackId: args.muxPlaybackId,
+    };
+  },
+});
+
+export const updateGameStreamStatus = internalMutationGeneric({
+  args: {
+    muxLiveStreamId: v.string(),
+    // Optional so a `video.asset.ready` webhook can attach the VOD id without
+    // changing status (the stream has already ended by then).
+    status: v.optional(v.string()),
+    vodAssetId: v.optional(v.union(v.string(), v.null())),
+    endedAt: v.optional(v.union(v.string(), v.null())),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("gameStreams")
+      .withIndex("by_muxLiveStreamId", (q) =>
+        q.eq("muxLiveStreamId", args.muxLiveStreamId),
+      )
+      .first();
+    // Idempotent: an unknown stream id (or a duplicate webhook delivery) is a
+    // no-op, not an error — Mux retries on non-2xx and may deliver out of order.
+    if (!row) return false;
+
+    const patch: {
+      status?: string;
+      vodAssetId?: string | null;
+      endedAt?: string | null;
+    } = {};
+    if (args.status !== undefined) patch.status = args.status;
+    if (args.vodAssetId !== undefined) patch.vodAssetId = args.vodAssetId;
+    if (args.endedAt !== undefined) patch.endedAt = args.endedAt;
+
+    await ctx.db.patch(row._id, patch);
+    return true;
+  },
+});
+
+export const getStreamByFixture = queryGeneric({
+  args: { fixtureId: v.id("fixtures") },
+  returns: publicStreamDtoValidator,
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("gameStreams")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) return null;
+    // PUBLIC PROJECTION ONLY — never return muxLiveStreamId (server-side) here.
+    return {
+      status: row.status,
+      muxPlaybackId: row.muxPlaybackId,
+      vodAssetId: row.vodAssetId,
+    };
+  },
+});
+
+/*
+ * INTERNAL read — returns the server-side Mux live-stream id for a fixture so a
+ * trusted server action (holding the admin key) can disable/transition it. This
+ * is internalQueryGeneric, so it is NOT on the public `api` object and can never
+ * be called by an anonymous client — that's why it's allowed to expose the
+ * live-stream id (which getStreamByFixture intentionally hides from the public).
+ */
+export const getStreamAdminByFixture = internalQueryGeneric({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.union(
+    v.object({ muxLiveStreamId: v.string(), status: v.string() }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("gameStreams")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) return null;
+    return { muxLiveStreamId: row.muxLiveStreamId, status: row.status };
+  },
+});
+
+export const getActiveStreamCountForLeague = queryGeneric({
+  args: { leagueId: v.id("leagues") },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const active = await ctx.db
+      .query("gameStreams")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+
+    let count = 0;
+    for (const stream of active) {
+      const fixture = await ctx.db.get(stream.fixtureId);
+      if (!fixture) continue;
+      const season = await ctx.db.get(fixture.seasonId);
+      if (season && season.leagueId === args.leagueId) count += 1;
+    }
+    return count;
   },
 });

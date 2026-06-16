@@ -1,22 +1,26 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { schedulesStandingsV1 } from "@/lib/flags";
+import { schedulesStandingsV1, liveStreamingV1 } from "@/lib/flags";
 import {
   getLeague,
   getLeagueOrgId,
   getSeasons,
   getResultByFixture,
+  getStreamByFixture,
   getTeamsByLeague,
   listFixturesBySeason,
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
-import { canManageRoster } from "@/lib/permissions";
+import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
+import GoLiveControl from "@/components/schedule/GoLiveControl";
 import { Button } from "@/components/ui/button";
+
+type StreamStatus = "idle" | "active" | "ended";
 
 export default async function LeagueSchedulePage({
   params,
@@ -39,6 +43,12 @@ export default async function LeagueSchedulePage({
   const orgId = await getLeagueOrgId(leagueId);
   const role = orgId ? await resolveOrgRole(orgId, userId) : null;
   const isAdmin = canManageRoster(role);
+  // Live streaming is a dark flag (default OFF everywhere). The "Go live"
+  // control is admin-only — it maps to the action's `canAdministerTeam` gate, so
+  // coaches (who can manage rosters but not administer) never see a button that
+  // would just 403.
+  const streamingEnabled = await liveStreamingV1();
+  const canStream = streamingEnabled && canManageOrgSettings(role);
 
   // Pick the active season — fall back to whichever exists if none flagged active.
   const allSeasons = await getSeasons([leagueId]);
@@ -59,6 +69,18 @@ export default async function LeagueSchedulePage({
       return { fixture: f, result };
     }),
   );
+
+  // Per-fixture live-stream status — only fetched when the dark flag is on for
+  // an admin, so the default (flag off) path adds zero reads.
+  const streamStatuses = new Map<string, StreamStatus | null>();
+  if (canStream) {
+    await Promise.all(
+      fixtures.map(async (f) => {
+        const stream = await getStreamByFixture(f.id);
+        streamStatuses.set(f.id, (stream?.status as StreamStatus) ?? null);
+      }),
+    );
+  }
 
   // Group by week (null week → "Unscheduled" bucket at the end).
   const buckets = new Map<number | null, typeof fixturesWithResults>();
@@ -202,6 +224,15 @@ export default async function LeagueSchedulePage({
                                   homeTeamName={fixture.homeTeamName}
                                   awayTeamName={fixture.awayTeamName}
                                 />
+                                {canStream ? (
+                                  <GoLiveControl
+                                    leagueId={leagueId}
+                                    fixtureId={fixture.id}
+                                    homeTeamName={fixture.homeTeamName}
+                                    awayTeamName={fixture.awayTeamName}
+                                    status={streamStatuses.get(fixture.id) ?? null}
+                                  />
+                                ) : null}
                               </div>
                             </td>
                           ) : null}

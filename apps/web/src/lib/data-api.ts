@@ -501,6 +501,37 @@ const refs = {
     { leagueId: string },
     { seasonName: string; rows: Standing[] } | null
   >("sports:computeStandingsPublic"),
+  createGameStream: mutationRef<
+    {
+      fixtureId: string;
+      muxLiveStreamId: string;
+      muxPlaybackId: string;
+      startedBy: string;
+      maxDurationMinutes: number;
+    },
+    { id: string; fixtureId: string; status: string; muxPlaybackId: string }
+  >("sports:createGameStream"),
+  updateGameStreamStatus: mutationRef<
+    {
+      muxLiveStreamId: string;
+      status?: string;
+      vodAssetId?: string | null;
+      endedAt?: string | null;
+    },
+    boolean
+  >("sports:updateGameStreamStatus"),
+  getStreamByFixture: queryRef<
+    { fixtureId: string },
+    PublicGameStream | null
+  >("sports:getStreamByFixture"),
+  getActiveStreamCountForLeague: queryRef<{ leagueId: string }, number>(
+    "sports:getActiveStreamCountForLeague",
+  ),
+  // Internal query (not on public api) — admin-keyed server code only.
+  getStreamAdminByFixture: queryRef<
+    { fixtureId: string },
+    { muxLiveStreamId: string; status: string } | null
+  >("sports:getStreamAdminByFixture"),
 };
 
 function requireLeagueAccessLocal(leagueId: string, orgContext: OrgContext): void {
@@ -1476,6 +1507,65 @@ export async function getResultByFixture(
   fixtureId: string,
 ): Promise<GameResultDto | null> {
   return queryConvex(refs.getResultByFixture, { fixtureId });
+}
+
+// --- Phase 1 live streaming wrappers (WSM-000144) ---
+
+/** Public projection of a game stream — what an unauthenticated viewer sees.
+ *  Never carries the Mux live-stream id or stream key. */
+export interface PublicGameStream {
+  status: string; // "idle" | "active" | "ended"
+  muxPlaybackId: string;
+  vodAssetId: string | null;
+}
+
+export interface CreateGameStreamInput {
+  fixtureId: string;
+  muxLiveStreamId: string;
+  muxPlaybackId: string;
+  startedBy: string;
+  maxDurationMinutes: number;
+}
+
+export async function createGameStream(
+  input: CreateGameStreamInput,
+): Promise<{
+  id: string;
+  fixtureId: string;
+  status: string;
+  muxPlaybackId: string;
+}> {
+  return mutateConvex(refs.createGameStream, input);
+}
+
+export async function updateGameStreamStatus(input: {
+  muxLiveStreamId: string;
+  status?: string;
+  vodAssetId?: string | null;
+  endedAt?: string | null;
+}): Promise<boolean> {
+  return mutateConvex(refs.updateGameStreamStatus, input);
+}
+
+/** Public read — projects to public fields only (status/playbackId/vodAssetId). */
+export async function getStreamByFixture(
+  fixtureId: string,
+): Promise<PublicGameStream | null> {
+  return queryConvex(refs.getStreamByFixture, { fixtureId });
+}
+
+export async function getActiveStreamCountForLeague(
+  leagueId: string,
+): Promise<number> {
+  return queryConvex(refs.getActiveStreamCountForLeague, { leagueId });
+}
+
+/** Internal admin read — returns the server-side Mux live-stream id so a server
+ *  action can disable/transition it. Admin-keyed; not a public projection. */
+export async function getStreamAdminByFixture(
+  fixtureId: string,
+): Promise<{ muxLiveStreamId: string; status: string } | null> {
+  return queryConvex(refs.getStreamAdminByFixture, { fixtureId });
 }
 
 // --- Phase 3 — standings wrappers ---
