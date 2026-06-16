@@ -282,12 +282,14 @@ Three sprints completed across 17 user stories and 24 merged PRs:
 - Notification system (email/push for game reminders, roster changes)
 - Mobile-responsive optimization pass
 - AppExchange security review submission
+- **Live game streaming — video MVP** (BYO-RTMP → Mux, in-app HLS viewer + LIVE badge; epic #225, fully scoped). _Validation-gated:_ build only after coach-interview validation confirms demand + the metered-cost model. The public game-viewer prerequisite (#300) has already shipped.
 
 ### Long-Term (Q4 2026 - Q1 2027) — Scale
 
 - Additional sport modules (basketball, baseball, soccer)
 - Payment collection for registration fees and dues (Stripe Connect)
 - Statistics tracking and analytics dashboards
+- **Live-score overlay + streaming polish** (the GameChanger "video + live score in one screen" hook — #302/#303). Depends on the live-scorekeeping keystone (provides realtime game-state) on top of the Q3 video MVP; polish covers VOD replay, clips, and low-latency.
 - AppExchange listing goes live
 - Public API for third-party integrations
 - Venue management and facility scheduling
