@@ -1,7 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { schedulesStandingsV1, liveStreamingV1 } from "@/lib/flags";
+import { ClipboardList } from "lucide-react";
+import { schedulesStandingsV1, liveStreamingV1, statKeepingV1 } from "@/lib/flags";
 import {
   getLeague,
   getLeagueOrgId,
@@ -49,6 +50,9 @@ export default async function LeagueSchedulePage({
   // would just 403.
   const streamingEnabled = await liveStreamingV1();
   const canStream = streamingEnabled && canManageOrgSettings(role);
+  // Box-score entry (WSM-000112): a league admin/coach can enter either team's
+  // stats; the entry page re-checks canManageTeam for the specific team.
+  const statsEnabled = await statKeepingV1();
 
   // Pick the active season — fall back to whichever exists if none flagged active.
   const allSeasons = await getSeasons([leagueId]);
@@ -208,7 +212,7 @@ export default async function LeagueSchedulePage({
                           </td>
                           {isAdmin ? (
                             <td className="px-4 py-2">
-                              <div className="flex items-center gap-1">
+                              <div className="flex flex-wrap items-center gap-1">
                                 <RecordResultDialog
                                   leagueId={leagueId}
                                   fixtureId={fixture.id}
@@ -232,6 +236,24 @@ export default async function LeagueSchedulePage({
                                     awayTeamName={fixture.awayTeamName}
                                     status={streamStatuses.get(fixture.id) ?? null}
                                   />
+                                ) : null}
+                                {statsEnabled ? (
+                                  <span className="flex items-center gap-1 text-xs">
+                                    <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Link
+                                      href={`/dashboard/teams/${fixture.homeTeamId}/games/${fixture.id}/stats`}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {fixture.homeTeamName}
+                                    </Link>
+                                    <span className="text-muted-foreground">/</span>
+                                    <Link
+                                      href={`/dashboard/teams/${fixture.awayTeamId}/games/${fixture.id}/stats`}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {fixture.awayTeamName}
+                                    </Link>
+                                  </span>
                                 ) : null}
                               </div>
                             </td>
