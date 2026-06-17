@@ -10,6 +10,11 @@ import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
 import { computeStandingsPure } from "./lib/standings";
 import { aggregateStatLines, parseStatLine } from "./lib/playerStats";
+import {
+  computeHsSprtRatings,
+  positionToRatingGroup,
+  type HsRatingInput,
+} from "./lib/hsSprt";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -4255,5 +4260,68 @@ export const getPlayerSeasonTotals = query({
       .collect();
     const totals = aggregateStatLines(rows.map((r) => parseStatLine(r.statsJson)));
     return { statsJson: JSON.stringify(totals), gameCount: rows.length };
+  },
+});
+
+/*
+ * HS SPRT ratings for a season, computed on-read from entered game stats
+ * (WSM-000112, PR5). Aggregates each player's playerGameStats rows, maps their
+ * roster position to a rating group, and z-scores within the season cohort (see
+ * lib/hsSprt.ts). Returns only qualified, rated players — a player profile picks
+ * its own id out of the list. Public read (allow-listed in the #210 backstop).
+ */
+export const computeSeasonSprt = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(
+    v.object({
+      playerId: v.string(),
+      positionGroup: v.string(),
+      overall: v.number(),
+      attributesJson: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerGameStats")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+
+    const byPlayer = new Map<string, string[]>();
+    for (const r of rows) {
+      const arr = byPlayer.get(r.playerId) ?? [];
+      arr.push(r.statsJson);
+      byPlayer.set(r.playerId, arr);
+    }
+
+    const inputs: HsRatingInput[] = [];
+    for (const [playerId, jsons] of byPlayer) {
+      const player = await ctx.db.get(playerId as Id<"players">);
+      if (!player) continue;
+      const group = positionToRatingGroup(player.position);
+      if (!group) continue;
+      inputs.push({
+        id: playerId,
+        group,
+        totals: aggregateStatLines(jsons.map(parseStatLine)),
+        games: jsons.length,
+      });
+    }
+
+    const ratings = computeHsSprtRatings(inputs);
+    const out: Array<{
+      playerId: string;
+      positionGroup: string;
+      overall: number;
+      attributesJson: string;
+    }> = [];
+    for (const [playerId, r] of ratings) {
+      out.push({
+        playerId,
+        positionGroup: r.positionGroup,
+        overall: r.overall,
+        attributesJson: JSON.stringify(r.attributes),
+      });
+    }
+    return out;
   },
 });

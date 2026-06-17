@@ -10,6 +10,7 @@
 
 import type * as e2eSeed from "../e2eSeed.js";
 import type * as lib_auditLog from "../lib/auditLog.js";
+import type * as lib_hsSprt from "../lib/hsSprt.js";
 import type * as lib_playerStats from "../lib/playerStats.js";
 import type * as lib_standings from "../lib/standings.js";
 import type * as migrations_20260422_seasonsRosterLocked from "../migrations/20260422_seasonsRosterLocked.js";
@@ -26,6 +27,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   e2eSeed: typeof e2eSeed;
   "lib/auditLog": typeof lib_auditLog;
+  "lib/hsSprt": typeof lib_hsSprt;
   "lib/playerStats": typeof lib_playerStats;
   "lib/standings": typeof lib_standings;
   "migrations/20260422_seasonsRosterLocked": typeof migrations_20260422_seasonsRosterLocked;

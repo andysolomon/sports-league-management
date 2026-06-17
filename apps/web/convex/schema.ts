@@ -317,5 +317,6 @@ export default defineSchema({
     .index("by_fixtureId", ["fixtureId"]) // a game's entered lines (entry/review)
     .index("by_fixtureId_playerId", ["fixtureId", "playerId"]) // upsert key
     .index("by_playerId_seasonId", ["playerId", "seasonId"]) // season totals
-    .index("by_teamId_seasonId", ["teamId", "seasonId"]), // team season view
+    .index("by_teamId_seasonId", ["teamId", "seasonId"]) // team season view
+    .index("by_seasonId", ["seasonId"]), // whole-season cohort (SPRT ratings)
 });

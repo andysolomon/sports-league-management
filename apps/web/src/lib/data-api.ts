@@ -558,6 +558,15 @@ const refs = {
     { playerId: string; seasonId: string },
     { statsJson: string; gameCount: number }
   >("sports:getPlayerSeasonTotals"),
+  computeSeasonSprt: queryRef<
+    { seasonId: string },
+    Array<{
+      playerId: string;
+      positionGroup: string;
+      overall: number;
+      attributesJson: string;
+    }>
+  >("sports:computeSeasonSprt"),
 };
 
 /** Raw playerGameStats row as returned by Convex (statsJson unparsed). */
@@ -1668,6 +1677,35 @@ export async function getPlayerSeasonTotals(
 ): Promise<{ stats: PlayerGameStatLine; gameCount: number }> {
   const res = await queryConvex(refs.getPlayerSeasonTotals, { playerId, seasonId });
   return { stats: parseStatLine(res.statsJson), gameCount: res.gameCount };
+}
+
+export interface HsSprtRating {
+  playerId: string;
+  positionGroup: string;
+  overall: number;
+  attributes: Record<string, number>;
+}
+
+/** Season-wide HS SPRT ratings from entered game stats (rated players only). */
+export async function computeSeasonSprt(
+  seasonId: string,
+): Promise<HsSprtRating[]> {
+  const rows = await queryConvex(refs.computeSeasonSprt, { seasonId });
+  return rows.map((r) => {
+    let attributes: Record<string, number> = {};
+    try {
+      const parsed = JSON.parse(r.attributesJson);
+      if (parsed && typeof parsed === "object") attributes = parsed;
+    } catch {
+      // leave empty
+    }
+    return {
+      playerId: r.playerId,
+      positionGroup: r.positionGroup,
+      overall: r.overall,
+      attributes,
+    };
+  });
 }
 
 // --- Phase 3 — standings wrappers ---
