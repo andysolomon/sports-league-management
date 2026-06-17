@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { TeamDto } from "@sports-management/shared-types";
 import { UpdateTeamInputSchema } from "@sports-management/api-contracts";
 import {
@@ -10,9 +10,23 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseState } from "@/lib/geo";
+import {
+  US_STATES,
+  loadCities,
+  citiesForState,
+  type CitiesByState,
+} from "@/lib/us-cities";
 import { toast } from "sonner";
 
 interface TeamEditFormProps {
@@ -30,12 +44,18 @@ export default function TeamEditForm({
 }: TeamEditFormProps) {
   const [name, setName] = useState(team.name);
   const [teamName, setTeamName] = useState(team.teamName ?? "");
-  const [city, setCity] = useState(team.city);
+  // Location is now a State + City pick list. Seed from the team's existing
+  // values: state from a "City, ST" location if present, city from team.city.
+  const [stateValue, setStateValue] = useState(
+    () => parseState(team.location) ?? "",
+  );
+  const [cityValue, setCityValue] = useState(team.city ?? "");
+  const [cities, setCities] = useState<CitiesByState | null>(null);
+  const [loadingCities, setLoadingCities] = useState(false);
   const [stadium, setStadium] = useState(team.stadium);
   const [foundedYear, setFoundedYear] = useState(
     team.foundedYear?.toString() ?? "",
   );
-  const [location, setLocation] = useState(team.location);
   const [logoUrl, setLogoUrl] = useState(team.logoUrl ?? "");
   const [useColors, setUseColors] = useState(
     team.primaryColor != null || team.secondaryColor != null,
@@ -52,15 +72,52 @@ export default function TeamEditForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Lazy-load the ~1.4 MB cities dataset on first interaction with the pickers
+  // (from a handler, not an effect) — served from /public, cached per session.
+  async function ensureCities() {
+    if (cities || loadingCities) return;
+    setLoadingCities(true);
+    try {
+      setCities(await loadCities());
+    } catch {
+      // Non-fatal: the selects still work for the seeded current value.
+    } finally {
+      setLoadingCities(false);
+    }
+  }
+
+  // City options for the chosen state, always including the current value so an
+  // existing team's city shows selected even before the dataset loads.
+  const cityOptions = useMemo(() => {
+    const names = new Set<string>();
+    if (cities && stateValue) {
+      for (const c of citiesForState(cities, stateValue)) names.add(c.n);
+    }
+    if (cityValue) names.add(cityValue);
+    return Array.from(names).sort((a, b) => a.localeCompare(b));
+  }, [cities, stateValue, cityValue]);
+
+  function onStateChange(value: string) {
+    setStateValue(value);
+    setCityValue(""); // the previous city won't belong to the new state
+    void ensureCities();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!cityValue) {
+      setError("Pick a city for this team.");
+      return;
+    }
     setSubmitting(true);
 
     try {
+      const location = stateValue ? `${cityValue}, ${stateValue}` : cityValue;
       const data = {
         name,
-        city,
+        city: cityValue,
         stadium,
         foundedYear: foundedYear ? Number(foundedYear) : null,
         location,
@@ -143,14 +200,60 @@ export default function TeamEditForm({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="team-city">City</Label>
-            <Input
-              id="team-city"
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            />
+          {/* State + City pick lists — real, mappable places (no free text). */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="team-state">State</Label>
+              <Select value={stateValue} onValueChange={onStateChange}>
+                <SelectTrigger
+                  id="team-state"
+                  className="w-full"
+                  onPointerDown={() => void ensureCities()}
+                >
+                  <SelectValue placeholder="Select a state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {US_STATES.map((s) => (
+                    <SelectItem key={s.code} value={s.code}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="team-city">City</Label>
+              <Select
+                value={cityValue}
+                onValueChange={setCityValue}
+                disabled={!stateValue && cityOptions.length === 0}
+              >
+                <SelectTrigger
+                  id="team-city"
+                  className="w-full"
+                  onPointerDown={() => void ensureCities()}
+                  aria-label="City"
+                >
+                  <SelectValue
+                    placeholder={
+                      loadingCities
+                        ? "Loading cities…"
+                        : stateValue
+                          ? "Select a city"
+                          : "Pick a state first"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {cityOptions.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -170,16 +273,6 @@ export default function TeamEditForm({
               type="number"
               value={foundedYear}
               onChange={(e) => setFoundedYear(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="team-location">Location</Label>
-            <Input
-              id="team-location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
             />
           </div>
 

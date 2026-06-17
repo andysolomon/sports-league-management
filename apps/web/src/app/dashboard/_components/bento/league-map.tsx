@@ -1,8 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FeatureCollection, Geometry } from "geojson";
-import { teamRegions, type TeamLoc } from "@/lib/geo";
+import { teamRegions, lookupCoords, type TeamLoc } from "@/lib/geo";
+import {
+  loadCities,
+  cityCoords,
+  type CitiesByState,
+} from "@/lib/us-cities";
 import {
   STATES,
   statesAsRegions,
@@ -45,7 +50,38 @@ export function LeagueMap({ teams }: { teams: TeamLoc[] }) {
   const [loadingCounties, setLoadingCounties] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  const located = useMemo(() => locateTeams(teams), [teams]);
+  // Full cities dataset for placing teams whose city isn't in the bundled metro
+  // set. Only fetched when actually needed (some team can't be placed by the
+  // bundled lookup) — for an all-metro league it never loads.
+  const [cities, setCities] = useState<CitiesByState | null>(null);
+  const needCities = useMemo(
+    () => teams.some((t) => t.city && !lookupCoords(t.city)),
+    [teams],
+  );
+  useEffect(() => {
+    if (!needCities || cities) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await loadCities();
+        if (!cancelled) setCities(data);
+      } catch {
+        // Non-fatal: bundled metro lookup still places known cities.
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [needCities, cities]);
+
+  const located = useMemo(
+    () =>
+      locateTeams(teams, (city, state) =>
+        cities && state ? cityCoords(cities, state, city) : null,
+      ),
+    [teams, cities],
+  );
   const regions = useMemo(() => teamRegions(teams), [teams]);
   const maxRegion = Math.max(1, ...regions.map((r) => r.count));
   const unmapped = teams.length - located.length;
