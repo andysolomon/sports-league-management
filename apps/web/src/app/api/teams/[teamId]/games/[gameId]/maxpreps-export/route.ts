@@ -67,7 +67,12 @@ export async function GET(
       stats: statsByPlayer.get(p.id)!,
     }));
 
-  const supplierId = process.env.MAXPREPS_SUPPLIER_ID || SUPPLIER_ID_PLACEHOLDER;
+  // Prefer the team's own (coach-entered) Supplier ID; fall back to a global
+  // env value, then a clearly-marked placeholder the coach edits before upload.
+  const supplierId =
+    team.maxprepsSupplierId?.trim() ||
+    process.env.MAXPREPS_SUPPLIER_ID ||
+    SUPPLIER_ID_PLACEHOLDER;
   const { text } = generateMaxPrepsTxt(supplierId, rows);
 
   // MaxPreps filename must not contain quotes or parentheses.

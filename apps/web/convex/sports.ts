@@ -84,6 +84,7 @@ function toTeamDto(doc: {
   primaryColor?: string | null;
   secondaryColor?: string | null;
   allowDuplicateJerseys?: boolean;
+  maxprepsSupplierId?: string | null;
 }) {
   return {
     id: doc._id,
@@ -101,6 +102,7 @@ function toTeamDto(doc: {
     secondaryColor: doc.secondaryColor ?? null,
     // Default true preserves the historical allow-by-default behavior.
     allowDuplicateJerseys: doc.allowDuplicateJerseys ?? true,
+    maxprepsSupplierId: doc.maxprepsSupplierId ?? null,
   };
 }
 
@@ -521,6 +523,7 @@ export const listTeams = queryGeneric({
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
       allowDuplicateJerseys: v.boolean(),
+      maxprepsSupplierId: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
@@ -554,6 +557,7 @@ export const listTeamsByLeague = queryGeneric({
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
       allowDuplicateJerseys: v.boolean(),
+      maxprepsSupplierId: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
   ),
@@ -583,6 +587,7 @@ export const getTeam = queryGeneric({
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
       allowDuplicateJerseys: v.boolean(),
+      maxprepsSupplierId: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
@@ -1137,6 +1142,7 @@ export const upsertTeam = internalMutationGeneric({
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
       allowDuplicateJerseys: v.boolean(),
+      maxprepsSupplierId: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     created: v.boolean(),
@@ -1199,6 +1205,7 @@ export const upsertTeam = internalMutationGeneric({
         primaryColor: null,
         secondaryColor: null,
         allowDuplicateJerseys: true,
+        maxprepsSupplierId: null,
       },
       created: true,
     };
@@ -1309,6 +1316,7 @@ export const createTeam = internalMutationGeneric({
     primaryColor: v.union(v.string(), v.null()),
     secondaryColor: v.union(v.string(), v.null()),
     allowDuplicateJerseys: v.boolean(),
+    maxprepsSupplierId: v.union(v.string(), v.null()),
     rosterLimit: v.union(v.number(), v.null()),
   }),
   handler: async (ctx, args) => {
@@ -1338,6 +1346,7 @@ export const createTeam = internalMutationGeneric({
       primaryColor: null,
       secondaryColor: null,
       allowDuplicateJerseys: true,
+      maxprepsSupplierId: null,
     };
   },
 });
@@ -1356,6 +1365,7 @@ export const updateTeam = internalMutationGeneric({
     primaryColor: v.optional(v.union(v.string(), v.null())),
     secondaryColor: v.optional(v.union(v.string(), v.null())),
     allowDuplicateJerseys: v.optional(v.boolean()),
+    maxprepsSupplierId: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.union(
     v.object({
@@ -1372,6 +1382,7 @@ export const updateTeam = internalMutationGeneric({
       primaryColor: v.union(v.string(), v.null()),
       secondaryColor: v.union(v.string(), v.null()),
       allowDuplicateJerseys: v.boolean(),
+      maxprepsSupplierId: v.union(v.string(), v.null()),
       rosterLimit: v.union(v.number(), v.null()),
     }),
     v.null(),
@@ -1397,6 +1408,9 @@ export const updateTeam = internalMutationGeneric({
         : {}),
       ...(args.allowDuplicateJerseys !== undefined
         ? { allowDuplicateJerseys: args.allowDuplicateJerseys }
+        : {}),
+      ...(args.maxprepsSupplierId !== undefined
+        ? { maxprepsSupplierId: args.maxprepsSupplierId }
         : {}),
     };
     await ctx.db.patch(args.teamId, patch);

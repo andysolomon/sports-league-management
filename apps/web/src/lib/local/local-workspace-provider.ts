@@ -127,6 +127,7 @@ export class LocalWorkspaceProvider implements WorkspaceDataProvider {
       primaryColor: null,
       secondaryColor: null,
       allowDuplicateJerseys: true,
+      maxprepsSupplierId: null,
     };
     await this.db.teams.add(team);
     return team;

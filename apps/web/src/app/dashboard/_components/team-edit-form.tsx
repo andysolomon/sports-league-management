@@ -57,6 +57,9 @@ export default function TeamEditForm({
     team.foundedYear?.toString() ?? "",
   );
   const [logoUrl, setLogoUrl] = useState(team.logoUrl ?? "");
+  const [maxprepsSupplierId, setMaxprepsSupplierId] = useState(
+    team.maxprepsSupplierId ?? "",
+  );
   const [useColors, setUseColors] = useState(
     team.primaryColor != null || team.secondaryColor != null,
   );
@@ -126,6 +129,7 @@ export default function TeamEditForm({
         primaryColor: useColors ? primaryColor : null,
         secondaryColor: useColors ? secondaryColor : null,
         allowDuplicateJerseys,
+        maxprepsSupplierId: maxprepsSupplierId.trim() || null,
       };
 
       const parsed = UpdateTeamInputSchema.safeParse(data);
@@ -286,6 +290,21 @@ export default function TeamEditForm({
               placeholder="https://… (optional)"
               onChange={(e) => setLogoUrl(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="team-maxpreps">MaxPreps Supplier ID</Label>
+            <Input
+              id="team-maxpreps"
+              type="text"
+              value={maxprepsSupplierId}
+              placeholder="e.g. 12345678-1234-1234-123456789012 (optional)"
+              onChange={(e) => setMaxprepsSupplierId(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              From your MaxPreps account (register as a Stat Supplier). Used as
+              line 1 of the stat export so it&apos;s ready to upload.
+            </p>
           </div>
 
           <div className="space-y-2">

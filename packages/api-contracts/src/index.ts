@@ -53,6 +53,7 @@ export const TeamDtoSchema = z.object({
   primaryColor: z.string().nullable(),
   secondaryColor: z.string().nullable(),
   allowDuplicateJerseys: z.boolean(),
+  maxprepsSupplierId: z.string().nullable(),
 }) satisfies z.ZodType<TeamDto>;
 
 export const PlayerDtoSchema = z.object({
@@ -162,6 +163,12 @@ export const UpdateTeamInputSchema = z.object({
   primaryColor: hexColor.nullable().optional(),
   secondaryColor: hexColor.nullable().optional(),
   allowDuplicateJerseys: z.boolean().optional(),
+  maxprepsSupplierId: z
+    .string()
+    .trim()
+    .max(64, "Supplier ID looks too long")
+    .nullable()
+    .optional(),
 }) satisfies z.ZodType<UpdateTeamInput>;
 
 // --- Stat-keeping keystone (WSM-000112) — box-score stat line ---
