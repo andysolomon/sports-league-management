@@ -297,4 +297,25 @@ export default defineSchema({
     .index("by_status", ["status"])
     // Mux webhooks identify the stream by its Mux live-stream id, not fixtureId.
     .index("by_muxLiveStreamId", ["muxLiveStreamId"]),
+
+  /*
+   * Stat-keeping keystone (WSM-000112). One row per player per game — the
+   * player's box-score line, stored as typed JSON (`statsJson`, validated at the
+   * edge like playerAttributes). Supersedes the reserved gameResults.player-
+   * StatsJson hook for queryability. Season totals = aggregation over a player's
+   * rows; also feeds SPRT at the HS level.
+   */
+  playerGameStats: defineTable({
+    fixtureId: v.id("fixtures"),
+    playerId: v.id("players"),
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    statsJson: v.string(),
+    enteredBy: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_fixtureId", ["fixtureId"]) // a game's entered lines (entry/review)
+    .index("by_fixtureId_playerId", ["fixtureId", "playerId"]) // upsert key
+    .index("by_playerId_seasonId", ["playerId", "seasonId"]) // season totals
+    .index("by_teamId_seasonId", ["teamId", "seasonId"]), // team season view
 });

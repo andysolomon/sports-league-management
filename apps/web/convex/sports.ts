@@ -9,6 +9,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
 import { computeStandingsPure } from "./lib/standings";
+import { aggregateStatLines, parseStatLine } from "./lib/playerStats";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -4139,5 +4140,120 @@ export const getActiveStreamCountForLeague = queryGeneric({
       if (season && season.leagueId === args.leagueId) count += 1;
     }
     return count;
+  },
+});
+
+/*
+ * Stat-keeping keystone (WSM-000112) — per-player box-score lines.
+ *
+ * Writes are internalMutation (only the admin-keyed server reaches them). One
+ * row per (fixture, player); `statsJson` is the typed box-score line validated
+ * at the edge before it gets here. Season totals are computed-on-read by
+ * aggregating a player's rows (pure helper in lib/playerStats.ts).
+ */
+
+const playerGameStatsRowValidator = v.object({
+  id: v.string(),
+  fixtureId: v.string(),
+  playerId: v.string(),
+  teamId: v.string(),
+  seasonId: v.string(),
+  statsJson: v.string(),
+  enteredBy: v.string(),
+  updatedAt: v.string(),
+});
+
+export const upsertPlayerGameStats = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    playerId: v.id("players"),
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    statsJson: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: v.object({ id: v.string() }),
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+
+    const payload = {
+      fixtureId: args.fixtureId,
+      playerId: args.playerId,
+      teamId: args.teamId,
+      seasonId: args.seasonId,
+      statsJson: args.statsJson,
+      enteredBy: args.actorUserId,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // One row per (fixture, player) — re-entry replaces the line in place.
+    const existing = await ctx.db
+      .query("playerGameStats")
+      .withIndex("by_fixtureId_playerId", (q) =>
+        q.eq("fixtureId", args.fixtureId).eq("playerId", args.playerId),
+      )
+      .first();
+
+    let id: string;
+    if (existing) {
+      await ctx.db.replace(existing._id, payload);
+      id = existing._id;
+    } else {
+      id = await ctx.db.insert("playerGameStats", payload);
+    }
+    return { id };
+  },
+});
+
+export const deletePlayerGameStats = internalMutation({
+  args: { fixtureId: v.id("fixtures"), playerId: v.id("players") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("playerGameStats")
+      .withIndex("by_fixtureId_playerId", (q) =>
+        q.eq("fixtureId", args.fixtureId).eq("playerId", args.playerId),
+      )
+      .first();
+    if (!row) return false;
+    await ctx.db.delete(row._id);
+    return true;
+  },
+});
+
+export const getPlayerGameStatsByFixture = query({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.array(playerGameStatsRowValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerGameStats")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .collect();
+    return rows.map((r) => ({
+      id: r._id,
+      fixtureId: r.fixtureId,
+      playerId: r.playerId,
+      teamId: r.teamId,
+      seasonId: r.seasonId,
+      statsJson: r.statsJson,
+      enteredBy: r.enteredBy,
+      updatedAt: r.updatedAt,
+    }));
+  },
+});
+
+export const getPlayerSeasonTotals = query({
+  args: { playerId: v.id("players"), seasonId: v.id("seasons") },
+  returns: v.object({ statsJson: v.string(), gameCount: v.number() }),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerGameStats")
+      .withIndex("by_playerId_seasonId", (q) =>
+        q.eq("playerId", args.playerId).eq("seasonId", args.seasonId),
+      )
+      .collect();
+    const totals = aggregateStatLines(rows.map((r) => parseStatLine(r.statsJson)));
+    return { statsJson: JSON.stringify(totals), gameCount: rows.length };
   },
 });
