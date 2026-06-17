@@ -106,6 +106,7 @@ void api.sports.getPlayerDevelopmentPublic;
  */
 type AllowedPublicSportsReads =
   | "computeDivisionStandings"
+  | "computeSeasonSprt"
   | "computeStandings"
   | "computeStandingsPublic"
   | "getDepthChartByTeamSeason"

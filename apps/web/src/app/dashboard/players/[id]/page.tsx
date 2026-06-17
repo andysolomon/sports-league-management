@@ -9,6 +9,7 @@ import {
   getPlayerMaddenRating,
   getSeasons,
   getPlayerSeasonTotals,
+  computeSeasonSprt,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { derivePositionGroup } from "@/lib/position-group";
@@ -16,6 +17,7 @@ import { orderedComponents } from "@/lib/ratings/component-labels";
 import { orderedMaddenAttributes } from "@/lib/madden/attributes";
 import { playerAttributesV1, statKeepingV1 } from "@/lib/flags";
 import { SeasonStatsCard } from "@/components/stats/SeasonStatsCard";
+import { HsRatingCard } from "@/components/stats/HsRatingCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
@@ -91,16 +93,25 @@ export default async function PlayerProfilePage({
     gameCount: number;
     seasonName: string;
   } | null = null;
+  let gameRating: {
+    overall: number;
+    attributes: Record<string, number>;
+  } | null = null;
   if ((await statKeepingV1()) && team) {
     const seasons = await getSeasons([team.leagueId]).catch(() => []);
     const activeSeason =
       seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
     if (activeSeason) {
-      const totals = await getPlayerSeasonTotals(playerId, activeSeason.id).catch(
-        () => null,
-      );
+      const [totals, sprt] = await Promise.all([
+        getPlayerSeasonTotals(playerId, activeSeason.id).catch(() => null),
+        computeSeasonSprt(activeSeason.id).catch(() => []),
+      ]);
       if (totals && totals.gameCount > 0) {
         seasonStats = { ...totals, seasonName: activeSeason.name };
+      }
+      const mine = sprt.find((r) => r.playerId === playerId);
+      if (mine) {
+        gameRating = { overall: mine.overall, attributes: mine.attributes };
       }
     }
   }
@@ -198,6 +209,13 @@ export default async function PlayerProfilePage({
           stats={seasonStats.stats}
           gameCount={seasonStats.gameCount}
           seasonName={seasonStats.seasonName}
+        />
+      )}
+
+      {gameRating && (
+        <HsRatingCard
+          overall={gameRating.overall}
+          attributes={gameRating.attributes}
         />
       )}
 
