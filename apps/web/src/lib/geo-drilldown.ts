@@ -8,7 +8,7 @@ import {
 import { feature } from "topojson-client";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 
-import { lookupCoords, type TeamLoc } from "./geo";
+import { lookupCoords, parseState, type TeamLoc } from "./geo";
 import statesTopo from "./geo/us-states-10m.json";
 
 /*
@@ -98,11 +98,28 @@ export interface LocatedTeam {
   lat: number;
 }
 
-/** Teams whose city resolves to a coordinate (the only ones that can be drawn). */
-export function locateTeams(teams: TeamLoc[]): LocatedTeam[] {
+/** Resolve a (city, state) to coordinates — e.g. backed by the full US cities
+ *  dataset. Returns null when unknown, so locateTeams falls back to the bundled
+ *  metro lookup. */
+export type CoordsResolver = (
+  city: string,
+  state: string | null,
+) => { lat: number; lng: number } | null;
+
+/**
+ * Teams whose city resolves to a coordinate (the only ones that can be drawn).
+ * An optional `resolve` (the full cities dataset) is tried first, keyed by the
+ * team's city + parsed state; the bundled metro lookup is the fallback so the
+ * map still renders before the full dataset loads.
+ */
+export function locateTeams(
+  teams: TeamLoc[],
+  resolve?: CoordsResolver,
+): LocatedTeam[] {
   const out: LocatedTeam[] = [];
   for (const t of teams) {
-    const c = lookupCoords(t.city);
+    const state = parseState(t.location);
+    const c = (resolve ? resolve(t.city, state) : null) ?? lookupCoords(t.city);
     if (c) out.push({ name: t.name, city: t.city, lng: c.lng, lat: c.lat });
   }
   return out;
