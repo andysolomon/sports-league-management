@@ -1,7 +1,10 @@
 # PRD — Football Stat-Keeping Keystone (WSM-000112)
 
-**Status:** Draft · **gated** on coach-interview validation ([coach-interview-guide.md](./coach-interview-guide.md)).
-Do not start the build until interviews confirm the MaxPreps pain + the export format.
+**Status:** **v1 SHIPPED (2026-06-17), behind the `stat_keeping_v1` flag** (on in
+preview/dev, off in prod until enabled). The validation gate was **lifted** by
+product decision — we build to demand directly, not interview-gated (#309 closed). v1 landed across five PRs:
+PR1 data layer (#330), PR2 box-score entry UX (#331), PR3 season totals (#332),
+PR4 MaxPreps export (#333), PR5 SPRT-from-game-stats (#334).
 Pairs with [coach-platform-competitive-teardown.md](./coach-platform-competitive-teardown.md).
 
 ## 1. Problem & goal
@@ -41,8 +44,10 @@ export** — eliminating the dual-roster maintenance that breaks GameChanger's s
    avoid play-by-play — totals are the fastest path to the mandate.
 3. **Roster-driven.** The team's roster (already in the app) pre-populates the entry form —
    no re-typing names/numbers. This is the anti-dual-maintenance advantage.
-4. **Owner-edits-only.** Only an admin of the team's owner org (Hybrid fork) can enter/edit a
-   team's stats — fixes MaxPreps' "parents can manipulate scores" integrity gap.
+4. **Owner-edits-only.** Only a **coach or admin** of the team's league/owner org can
+   enter/edit a team's stats (shipped as `canManageTeam`, matching the stat-keeper persona +
+   the "coaches run game ops" stance, WSM-000121) — keeps random parents out, fixing
+   MaxPreps' "parents can manipulate scores" integrity gap.
 
 ## 5. Scope
 
@@ -145,23 +150,25 @@ at HS. Reuses the rating pipeline; swaps nflverse inputs for `playerGameStats` a
 
 ## 13. Risks & open questions
 
-- **MaxPreps import format** — ~~blocker~~ **largely resolved** ([maxpreps-import-format.md](./maxpreps-import-format.md)):
-  it's a public pipe-delimited `.txt` spec (Line 1 = 32-char Supplier ID, Line 2 = `Jersey|<fields>`,
-  one row per player), coach-uploadable via "Save & Import Stats." Build a TXT-export generator.
-  _Residual:_ exact football field-name strings (register as a Stat Supplier or read one real export).
-- **Will coaches enter stats here vs. their existing flow?** — the core demand question the
-  interviews must answer; if "no," this whole keystone is wrong.
+- **MaxPreps import format** — ~~blocker~~ **RESOLVED & built** ([maxpreps-import-format.md](./maxpreps-import-format.md)):
+  exact Football/Boys field names captured; TXT-export generator shipped (PR4, #333).
+  _Residual:_ the 32-char Stat Supplier ID — a build-time, account-bound credential
+  (`MAXPREPS_SUPPLIER_ID`); a placeholder line ships until it's set.
+- **Will coaches enter stats here vs. their existing flow?** — the demand question. Per the
+  no-validation-gate decision, we answer it by **shipping and watching usage** (success
+  metrics below), not by gating on interviews.
 - **Entry speed** — if it's slower than typing into MaxPreps, it fails. Usability-test the
-  entry form with a real book.
-- **Accuracy/trust** — owner-only editing helps, but bad data kills credibility; consider a
-  "stats final" lock + edit history.
+  shipped entry form with a real book.
+- **Accuracy/trust** — owner-edit auth helps (coach/admin only); bad data kills credibility.
+  Follow-up: a "stats final" lock + edit history (not in v1).
 
 ## 14. Dependencies
 
 - ✅ Hybrid fork / team ownership (#226–228) — coaches own + edit their team.
 - ✅ Schedules / fixtures + game results — the "game" to attach stats to.
-- ✅ SPRT engine — reused for HS ratings.
-- 🔬 Coach-interview validation (WSM-000107) — **gates the go decision + the export format.**
+- ✅ SPRT engine — reused for HS ratings (PR5 added a box-score-only HS model).
+- ~~🔬 Coach-interview validation~~ — **removed** as a gate (2026-06-17 product decision).
+  Build to demand directly.
 
 ## 15. Success metrics (post-launch)
 
