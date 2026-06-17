@@ -7,12 +7,15 @@ import {
   getTeam,
   getPlayerSeasonAttributes,
   getPlayerMaddenRating,
+  getSeasons,
+  getPlayerSeasonTotals,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { derivePositionGroup } from "@/lib/position-group";
 import { orderedComponents } from "@/lib/ratings/component-labels";
 import { orderedMaddenAttributes } from "@/lib/madden/attributes";
-import { playerAttributesV1 } from "@/lib/flags";
+import { playerAttributesV1, statKeepingV1 } from "@/lib/flags";
+import { SeasonStatsCard } from "@/components/stats/SeasonStatsCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
@@ -80,6 +83,27 @@ export default async function PlayerProfilePage({
   const maddenAttributes = madden
     ? orderedMaddenAttributes(madden.attributes)
     : [];
+
+  // Season box-score totals (WSM-000112) — aggregated from entered game stats
+  // for the team's active season. Flag-gated; never blocks the page.
+  let seasonStats: {
+    stats: Awaited<ReturnType<typeof getPlayerSeasonTotals>>["stats"];
+    gameCount: number;
+    seasonName: string;
+  } | null = null;
+  if ((await statKeepingV1()) && team) {
+    const seasons = await getSeasons([team.leagueId]).catch(() => []);
+    const activeSeason =
+      seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+    if (activeSeason) {
+      const totals = await getPlayerSeasonTotals(playerId, activeSeason.id).catch(
+        () => null,
+      );
+      if (totals && totals.gameCount > 0) {
+        seasonStats = { ...totals, seasonName: activeSeason.name };
+      }
+    }
+  }
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -168,6 +192,14 @@ export default async function PlayerProfilePage({
           )}
         </CardContent>
       </Card>
+
+      {seasonStats && (
+        <SeasonStatsCard
+          stats={seasonStats.stats}
+          gameCount={seasonStats.gameCount}
+          seasonName={seasonStats.seasonName}
+        />
+      )}
 
       {rating && (
         <Card className="mt-6">
