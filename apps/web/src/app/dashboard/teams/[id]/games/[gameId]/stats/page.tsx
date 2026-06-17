@@ -1,7 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import type { PlayerGameStatLine } from "@sports-management/shared-types";
+import { Button } from "@/components/ui/button";
 import { statKeepingV1 } from "@/lib/flags";
 import {
   getTeam,
@@ -60,12 +62,21 @@ export default async function StatsEntryPage({
         &larr; Back to Schedule
       </Link>
 
-      <header className="mb-6">
-        <h2 className="text-2xl font-bold text-foreground">Enter stats</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {team.name} {homeAway} {opponent}
-          {fixture.week !== null ? ` · Week ${fixture.week}` : ""}
-        </p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Enter stats</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {team.name} {homeAway} {opponent}
+            {fixture.week !== null ? ` · Week ${fixture.week}` : ""}
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          {/* Plain anchor → the route returns the file as an attachment. */}
+          <a href={`/api/teams/${teamId}/games/${gameId}/maxpreps-export`}>
+            <Download className="mr-1 h-4 w-4" />
+            Export for MaxPreps
+          </a>
+        </Button>
       </header>
 
       <StatsEntry
