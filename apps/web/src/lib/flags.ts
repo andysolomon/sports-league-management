@@ -105,6 +105,22 @@ export const liveStreamingV1 = flag<boolean>({
   },
 });
 
+export const statKeepingV1 = flag<boolean>({
+  key: "stat_keeping_v1",
+  description:
+    "Stat-keeping keystone: per-game box-score entry, season totals, MaxPreps export (WSM-000112)",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_STAT_KEEPING_V1");
+    void trackFlagExposure("stat_keeping_v1", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {
