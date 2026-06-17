@@ -47,6 +47,8 @@ export interface TeamDto {
    * only surfaced as an inline alert.
    */
   allowDuplicateJerseys: boolean;
+  /** The team's MaxPreps Stat Supplier ID (coach-entered) for stat export. */
+  maxprepsSupplierId: string | null;
 }
 
 export interface PlayerDto {
@@ -161,6 +163,7 @@ export interface UpdateTeamInput {
   primaryColor?: string | null;
   secondaryColor?: string | null;
   allowDuplicateJerseys?: boolean;
+  maxprepsSupplierId?: string | null;
 }
 
 // --- Import types ---

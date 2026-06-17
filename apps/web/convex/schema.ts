@@ -78,6 +78,10 @@ export default defineSchema({
     // or undefined, duplicates are allowed (the historical default) — the UI
     // still surfaces an inline duplicate alert.
     allowDuplicateJerseys: v.optional(v.boolean()),
+    // MaxPreps export (WSM-000112): the team's own 32-char Stat Supplier ID,
+    // entered by the coach (account-bound to their MaxPreps account). Used as
+    // line 1 of the export file; absent = fall back to env / placeholder.
+    maxprepsSupplierId: v.optional(v.union(v.string(), v.null())),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_divisionId", ["divisionId"])
