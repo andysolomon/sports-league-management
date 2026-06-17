@@ -164,6 +164,92 @@ export const UpdateTeamInputSchema = z.object({
   allowDuplicateJerseys: z.boolean().optional(),
 }) satisfies z.ZodType<UpdateTeamInput>;
 
+// --- Stat-keeping keystone (WSM-000112) — box-score stat line ---
+// Each group is optional (a player only has the groups relevant to their
+// snaps); within a group every field is an optional non-negative integer that
+// defaults to 0 when aggregated. Validated at the edge before persisting.
+
+const statCount = z.number().int().min(0);
+
+export const PlayerGameStatLineSchema = z
+  .object({
+    passing: z
+      .object({
+        comp: statCount,
+        att: statCount,
+        yards: z.number().int(),
+        td: statCount,
+        int: statCount,
+        sacked: statCount,
+      })
+      .partial()
+      .optional(),
+    rushing: z
+      .object({
+        carries: statCount,
+        yards: z.number().int(),
+        td: statCount,
+        long: z.number().int(),
+      })
+      .partial()
+      .optional(),
+    receiving: z
+      .object({
+        rec: statCount,
+        yards: z.number().int(),
+        td: statCount,
+        long: z.number().int(),
+        targets: statCount,
+      })
+      .partial()
+      .optional(),
+    defense: z
+      .object({
+        tacklesSolo: statCount,
+        tacklesAst: statCount,
+        tfl: statCount,
+        sacks: z.number().min(0),
+        int: statCount,
+        passDef: statCount,
+        ff: statCount,
+        fr: statCount,
+        defTd: statCount,
+      })
+      .partial()
+      .optional(),
+    kicking: z
+      .object({
+        fgMade: statCount,
+        fgAtt: statCount,
+        xpMade: statCount,
+        xpAtt: statCount,
+      })
+      .partial()
+      .optional(),
+    punting: z
+      .object({ punts: statCount, yards: z.number().int(), long: z.number().int() })
+      .partial()
+      .optional(),
+    returns: z
+      .object({
+        krCount: statCount,
+        krYards: z.number().int(),
+        krTd: statCount,
+        prCount: statCount,
+        prYards: z.number().int(),
+        prTd: statCount,
+      })
+      .partial()
+      .optional(),
+    ballSecurity: z
+      .object({ fumbles: statCount, fumblesLost: statCount })
+      .partial()
+      .optional(),
+  })
+  .strict();
+
+export type PlayerGameStatLineInput = z.infer<typeof PlayerGameStatLineSchema>;
+
 // --- Import schema ---
 
 export {

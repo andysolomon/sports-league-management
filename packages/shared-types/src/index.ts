@@ -248,6 +248,90 @@ export interface GameResultDto {
   recordedBy: string;
 }
 
+// --- Stat-keeping keystone (WSM-000112) — football box-score stat model (§6) ---
+// One player's game line, grouped. Only the groups relevant to a player's snaps
+// need be present; within a group, fields default to 0 when absent. This is the
+// "typed shape validated at the edge" stored as playerGameStats.statsJson.
+
+export interface StatPassing {
+  comp?: number;
+  att?: number;
+  yards?: number;
+  td?: number;
+  int?: number;
+  sacked?: number;
+}
+export interface StatRushing {
+  carries?: number;
+  yards?: number;
+  td?: number;
+  long?: number;
+}
+export interface StatReceiving {
+  rec?: number;
+  yards?: number;
+  td?: number;
+  long?: number;
+  targets?: number;
+}
+export interface StatDefense {
+  tacklesSolo?: number;
+  tacklesAst?: number;
+  tfl?: number;
+  sacks?: number;
+  int?: number;
+  passDef?: number;
+  ff?: number;
+  fr?: number;
+  defTd?: number;
+}
+export interface StatKicking {
+  fgMade?: number;
+  fgAtt?: number;
+  xpMade?: number;
+  xpAtt?: number;
+}
+export interface StatPunting {
+  punts?: number;
+  yards?: number;
+  long?: number;
+}
+export interface StatReturns {
+  krCount?: number;
+  krYards?: number;
+  krTd?: number;
+  prCount?: number;
+  prYards?: number;
+  prTd?: number;
+}
+export interface StatBallSecurity {
+  fumbles?: number;
+  fumblesLost?: number;
+}
+
+export interface PlayerGameStatLine {
+  passing?: StatPassing;
+  rushing?: StatRushing;
+  receiving?: StatReceiving;
+  defense?: StatDefense;
+  kicking?: StatKicking;
+  punting?: StatPunting;
+  returns?: StatReturns;
+  ballSecurity?: StatBallSecurity;
+}
+
+/** A player's entered stat line for one game (statsJson parsed into `stats`). */
+export interface PlayerGameStatsDto {
+  id: string;
+  fixtureId: string;
+  playerId: string;
+  teamId: string;
+  seasonId: string;
+  stats: PlayerGameStatLine;
+  enteredBy: string;
+  updatedAt: string;
+}
+
 export interface Standing {
   teamId: string;
   teamName: string;

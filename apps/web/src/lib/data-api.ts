@@ -11,6 +11,8 @@ import type {
   ImportResult,
   LeagueDto,
   PlayerDto,
+  PlayerGameStatLine,
+  PlayerGameStatsDto,
   RosterAssignmentDto,
   RosterAuditLogDto,
   SeasonDto,
@@ -532,7 +534,43 @@ const refs = {
     { fixtureId: string },
     { muxLiveStreamId: string; status: string } | null
   >("sports:getStreamAdminByFixture"),
+  // Stat-keeping keystone (WSM-000112)
+  upsertPlayerGameStats: mutationRef<
+    {
+      fixtureId: string;
+      playerId: string;
+      teamId: string;
+      seasonId: string;
+      statsJson: string;
+      actorUserId: string;
+    },
+    { id: string }
+  >("sports:upsertPlayerGameStats"),
+  deletePlayerGameStats: mutationRef<
+    { fixtureId: string; playerId: string },
+    boolean
+  >("sports:deletePlayerGameStats"),
+  getPlayerGameStatsByFixture: queryRef<
+    { fixtureId: string },
+    PlayerGameStatsRow[]
+  >("sports:getPlayerGameStatsByFixture"),
+  getPlayerSeasonTotals: queryRef<
+    { playerId: string; seasonId: string },
+    { statsJson: string; gameCount: number }
+  >("sports:getPlayerSeasonTotals"),
 };
+
+/** Raw playerGameStats row as returned by Convex (statsJson unparsed). */
+interface PlayerGameStatsRow {
+  id: string;
+  fixtureId: string;
+  playerId: string;
+  teamId: string;
+  seasonId: string;
+  statsJson: string;
+  enteredBy: string;
+  updatedAt: string;
+}
 
 function requireLeagueAccessLocal(leagueId: string, orgContext: OrgContext): void {
   if (!orgContext.visibleLeagueIds.includes(leagueId)) {
@@ -1566,6 +1604,70 @@ export async function getStreamAdminByFixture(
   fixtureId: string,
 ): Promise<{ muxLiveStreamId: string; status: string } | null> {
   return queryConvex(refs.getStreamAdminByFixture, { fixtureId });
+}
+
+// --- Stat-keeping keystone wrappers (WSM-000112) ---
+
+function parseStatLine(json: string): PlayerGameStatLine {
+  try {
+    const v = JSON.parse(json);
+    return v && typeof v === "object" ? (v as PlayerGameStatLine) : {};
+  } catch {
+    return {};
+  }
+}
+
+export interface UpsertPlayerGameStatsInput {
+  fixtureId: string;
+  playerId: string;
+  teamId: string;
+  seasonId: string;
+  stats: PlayerGameStatLine;
+  actorUserId: string;
+}
+
+export async function upsertPlayerGameStats(
+  input: UpsertPlayerGameStatsInput,
+): Promise<{ id: string }> {
+  return mutateConvex(refs.upsertPlayerGameStats, {
+    fixtureId: input.fixtureId,
+    playerId: input.playerId,
+    teamId: input.teamId,
+    seasonId: input.seasonId,
+    statsJson: JSON.stringify(input.stats),
+    actorUserId: input.actorUserId,
+  });
+}
+
+export async function deletePlayerGameStats(
+  fixtureId: string,
+  playerId: string,
+): Promise<boolean> {
+  return mutateConvex(refs.deletePlayerGameStats, { fixtureId, playerId });
+}
+
+export async function getPlayerGameStatsByFixture(
+  fixtureId: string,
+): Promise<PlayerGameStatsDto[]> {
+  const rows = await queryConvex(refs.getPlayerGameStatsByFixture, { fixtureId });
+  return rows.map((r) => ({
+    id: r.id,
+    fixtureId: r.fixtureId,
+    playerId: r.playerId,
+    teamId: r.teamId,
+    seasonId: r.seasonId,
+    stats: parseStatLine(r.statsJson),
+    enteredBy: r.enteredBy,
+    updatedAt: r.updatedAt,
+  }));
+}
+
+export async function getPlayerSeasonTotals(
+  playerId: string,
+  seasonId: string,
+): Promise<{ stats: PlayerGameStatLine; gameCount: number }> {
+  const res = await queryConvex(refs.getPlayerSeasonTotals, { playerId, seasonId });
+  return { stats: parseStatLine(res.statsJson), gameCount: res.gameCount };
 }
 
 // --- Phase 3 — standings wrappers ---
