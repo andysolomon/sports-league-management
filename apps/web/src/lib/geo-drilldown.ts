@@ -61,16 +61,16 @@ export function findState(stateFips: string): RegionFeature | null {
 let countiesCache: FeatureCollection<Geometry, { name?: string }> | null = null;
 
 /**
- * Fetch + decode the county geometry once, caching it for the session. Served
- * from /public so it's a separate static asset, never part of the JS bundle.
+ * Load + decode the county geometry once, caching it for the session. Imported
+ * as a code-split chunk (served from /_next/static), keeping it out of the
+ * initial bundle while being reliable on any host.
  */
 export async function loadCounties(): Promise<
   FeatureCollection<Geometry, { name?: string }>
 > {
   if (countiesCache) return countiesCache;
-  const res = await fetch("/geo/counties-10m.json");
-  if (!res.ok) throw new Error(`counties_fetch_failed_${res.status}`);
-  const topo = (await res.json()) as unknown as Topology;
+  const mod = await import("@/data/counties-10m.json");
+  const topo = (mod.default ?? mod) as unknown as Topology;
   countiesCache = feature(
     topo,
     topo.objects.counties as TopoObject,
