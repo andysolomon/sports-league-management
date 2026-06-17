@@ -85,12 +85,15 @@ export function stateCode(name: string): string | null {
 
 let citiesCache: CitiesByState | null = null;
 
-/** Fetch + cache the cities dataset once. Browser-only (served from /public). */
+/**
+ * Load + cache the cities dataset once. Imported as a code-split chunk (served
+ * from /_next/static) rather than fetched from /public — the dynamic import
+ * keeps it out of the initial bundle while being reliable on any host.
+ */
 export async function loadCities(): Promise<CitiesByState> {
   if (citiesCache) return citiesCache;
-  const res = await fetch("/geo/us-cities.json");
-  if (!res.ok) throw new Error(`cities_fetch_failed_${res.status}`);
-  citiesCache = (await res.json()) as CitiesByState;
+  const mod = await import("@/data/us-cities.json");
+  citiesCache = (mod.default ?? mod) as unknown as CitiesByState;
   return citiesCache;
 }
 
