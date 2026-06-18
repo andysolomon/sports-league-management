@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { cache } from "react";
-import { schedulesStandingsV1, liveStreamingV1 } from "@/lib/flags";
+import { schedulesStandingsV1, liveStreamingV1, liveScoringV1 } from "@/lib/flags";
 import {
   getFixture,
   getPublicLeagues,
   getPublicSeason,
   getResultByFixture,
   getStreamByFixture,
+  getLiveGameState,
 } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import GameStreamPlayer from "@/components/games/GameStreamPlayer";
+import PublicLiveScore from "@/components/games/PublicLiveScore";
 
 /*
  * Public game viewer route (WSM-000143, child of the streaming epic #225).
@@ -29,9 +31,11 @@ import GameStreamPlayer from "@/components/games/GameStreamPlayer";
  *      a PRIVATE league could be viewed by pairing it with a public league's
  *      path. All three reads are ungated and safe post-guard.
  *
- * `FixtureStatus` is only "scheduled" | "final" | "cancelled" — there is no
- * live/in-progress state yet (live scoring is deferred to the stat-keeping
- * keystone v3, per docs/design/live-streaming-rfc.md), so we render those three.
+ * `FixtureStatus` is "scheduled" | "final" | "cancelled". The in-progress state
+ * lives separately in `liveGameState` (keystone v3, WSM-000152): while a game is
+ * live the `PublicLiveScore` client component polls and shows a running score
+ * above these three; on "End game" the operator writes the final to gameResults
+ * and flips the fixture to "final", so the Final card below takes over.
  */
 
 const kickoffFormat = new Intl.DateTimeFormat("en-US", {
@@ -109,6 +113,15 @@ export default async function PublicGamePage({
   // off, the stream read is skipped and the page renders exactly as before.
   const streamingEnabled = await liveStreamingV1();
   const stream = streamingEnabled ? await getStreamByFixture(gameId) : null;
+
+  // Live scoring (WSM-000152): when on, seed the running scoreboard from the
+  // server so first paint has the score; the client component then polls. Skip
+  // entirely for already-final games — the Final card below is canonical.
+  const liveEnabled = await liveScoringV1();
+  const liveState =
+    liveEnabled && view.fixture.status !== "final"
+      ? await getLiveGameState(gameId)
+      : null;
   const liveActive = stream?.status === "active";
   const hasReplay = stream?.status === "ended" && stream.vodAssetId !== null;
   const streamEndedNoReplay =
@@ -138,6 +151,16 @@ export default async function PublicGamePage({
           {fixture.homeTeamName} vs {fixture.awayTeamName}
         </h1>
       </header>
+
+      {liveEnabled && fixture.status !== "final" ? (
+        <PublicLiveScore
+          leagueId={leagueId}
+          gameId={gameId}
+          homeTeamName={fixture.homeTeamName}
+          awayTeamName={fixture.awayTeamName}
+          initial={liveState}
+        />
+      ) : null}
 
       {liveActive || hasReplay ? (
         <Card className="mb-6">
