@@ -121,6 +121,22 @@ export const statKeepingV1 = flag<boolean>({
   },
 });
 
+export const liveScoringV1 = flag<boolean>({
+  key: "live_scoring_v1",
+  description:
+    "Keystone v3 live scoring: operator-driven running scoreboard + public live game-state (WSM-000152)",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_LIVE_SCORING_V1");
+    void trackFlagExposure("live_scoring_v1", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {

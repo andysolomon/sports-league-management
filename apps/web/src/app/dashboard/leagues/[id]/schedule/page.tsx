@@ -1,8 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
-import { schedulesStandingsV1, liveStreamingV1, statKeepingV1 } from "@/lib/flags";
+import { ClipboardList, Radio } from "lucide-react";
+import {
+  schedulesStandingsV1,
+  liveStreamingV1,
+  statKeepingV1,
+  liveScoringV1,
+} from "@/lib/flags";
 import {
   getLeague,
   getLeagueOrgId,
@@ -53,6 +58,9 @@ export default async function LeagueSchedulePage({
   // Box-score entry (WSM-000112): a league admin/coach can enter either team's
   // stats; the entry page re-checks canManageTeam for the specific team.
   const statsEnabled = await statKeepingV1();
+  // Live scoring (WSM-000152): operator-driven running scoreboard. Same
+  // admin/coach surface as stats; the live page re-checks canManageTeam.
+  const liveEnabled = await liveScoringV1();
 
   // Pick the active season — fall back to whichever exists if none flagged active.
   const allSeasons = await getSeasons([leagueId]);
@@ -249,6 +257,24 @@ export default async function LeagueSchedulePage({
                                     <span className="text-muted-foreground">/</span>
                                     <Link
                                       href={`/dashboard/teams/${fixture.awayTeamId}/games/${fixture.id}/stats`}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {fixture.awayTeamName}
+                                    </Link>
+                                  </span>
+                                ) : null}
+                                {liveEnabled ? (
+                                  <span className="flex items-center gap-1 text-xs">
+                                    <Radio className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Link
+                                      href={`/dashboard/teams/${fixture.homeTeamId}/games/${fixture.id}/live`}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {fixture.homeTeamName}
+                                    </Link>
+                                    <span className="text-muted-foreground">/</span>
+                                    <Link
+                                      href={`/dashboard/teams/${fixture.awayTeamId}/games/${fixture.id}/live`}
                                       className="text-primary hover:underline"
                                     >
                                       {fixture.awayTeamName}
