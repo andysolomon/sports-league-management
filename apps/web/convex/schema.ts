@@ -323,4 +323,23 @@ export default defineSchema({
     .index("by_playerId_seasonId", ["playerId", "seasonId"]) // season totals
     .index("by_teamId_seasonId", ["teamId", "seasonId"]) // team season view
     .index("by_seasonId", ["seasonId"]), // whole-season cohort (SPRT ratings)
+
+  /*
+   * Live game-state (WSM-000152, keystone v3). One row per in-progress fixture:
+   * the running scoreboard an operator drives. Public reads project to
+   * score/period/clock/status only (getLiveGameState) — the seam the streaming
+   * live-score overlay (#302) consumes. On "final", the score is written to
+   * gameResults (standings) via the shared final-result helper.
+   */
+  liveGameState: defineTable({
+    fixtureId: v.id("fixtures"),
+    homeScore: v.number(),
+    awayScore: v.number(),
+    period: v.number(), // 1..4; OT = 5+
+    clock: v.union(v.string(), v.null()), // display string e.g. "7:32"; null if unused
+    status: v.string(), // "in_progress" | "halftime" | "final"
+    startedBy: v.string(),
+    startedAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_fixtureId", ["fixtureId"]),
 });

@@ -15,6 +15,7 @@ import {
   positionToRatingGroup,
   type HsRatingInput,
 } from "./lib/hsSprt";
+import { applyScore, isLiveStatus, isNonNegInt } from "./lib/liveScore";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -4352,4 +4353,244 @@ export const adminPing = internalQueryGeneric({
   args: {},
   returns: v.boolean(),
   handler: async () => true,
+});
+
+/*
+ * Live game-state — keystone v3 (WSM-000152). One row per fixture; an operator
+ * drives the running scoreboard. Writes are internalMutation (admin-keyed server
+ * actions only); getLiveGameState is the PUBLIC projected read that the
+ * streaming live-score overlay (#302) and the public game page poll. Ending the
+ * game writes the final to gameResults (standings) the same way recordGameResult
+ * does, and flips the fixture to "final".
+ */
+
+const liveStateDtoValidator = v.object({
+  id: v.string(),
+  fixtureId: v.string(),
+  homeScore: v.number(),
+  awayScore: v.number(),
+  period: v.number(),
+  clock: v.union(v.string(), v.null()),
+  status: v.string(),
+  startedBy: v.string(),
+  startedAt: v.string(),
+  updatedAt: v.string(),
+});
+
+type LiveRow = {
+  _id: string;
+  fixtureId: string;
+  homeScore: number;
+  awayScore: number;
+  period: number;
+  clock: string | null;
+  status: string;
+  startedBy: string;
+  startedAt: string;
+  updatedAt: string;
+};
+
+function toLiveDto(row: LiveRow) {
+  return {
+    id: row._id,
+    fixtureId: row.fixtureId,
+    homeScore: row.homeScore,
+    awayScore: row.awayScore,
+    period: row.period,
+    clock: row.clock,
+    status: row.status,
+    startedBy: row.startedBy,
+    startedAt: row.startedAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export const startLiveGame = internalMutation({
+  args: { fixtureId: v.id("fixtures"), actorUserId: v.string() },
+  returns: liveStateDtoValidator,
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+
+    const now = new Date().toISOString();
+    const payload = {
+      fixtureId: args.fixtureId,
+      homeScore: 0,
+      awayScore: 0,
+      period: 1,
+      clock: null,
+      status: "in_progress",
+      startedBy: args.actorUserId,
+      startedAt: now,
+      updatedAt: now,
+    };
+    const existing = await ctx.db
+      .query("liveGameState")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    let id: string;
+    if (existing) {
+      await ctx.db.replace(existing._id, payload); // restart resets the board
+      id = existing._id;
+    } else {
+      id = await ctx.db.insert("liveGameState", payload);
+    }
+    return toLiveDto({ _id: id, ...payload });
+  },
+});
+
+export const addLiveScore = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    team: v.union(v.literal("home"), v.literal("away")),
+    points: v.number(),
+  },
+  returns: liveStateDtoValidator,
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("liveGameState")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) throw new Error("live_not_started");
+    // applyScore validates the point value + team (throws on bad input).
+    const next = applyScore(
+      { homeScore: row.homeScore, awayScore: row.awayScore },
+      args.team,
+      args.points,
+    );
+    await ctx.db.patch(row._id, { ...next, updatedAt: new Date().toISOString() });
+    return toLiveDto({ ...row, ...next, updatedAt: new Date().toISOString() });
+  },
+});
+
+export const setLiveScore = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    homeScore: v.number(),
+    awayScore: v.number(),
+  },
+  returns: liveStateDtoValidator,
+  handler: async (ctx, args) => {
+    if (!isNonNegInt(args.homeScore) || !isNonNegInt(args.awayScore)) {
+      throw new Error("invalid_score");
+    }
+    const row = await ctx.db
+      .query("liveGameState")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) throw new Error("live_not_started");
+    const patch = {
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      updatedAt: new Date().toISOString(),
+    };
+    await ctx.db.patch(row._id, patch);
+    return toLiveDto({ ...row, ...patch });
+  },
+});
+
+export const updateLiveState = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    period: v.optional(v.number()),
+    clock: v.optional(v.union(v.string(), v.null())),
+    status: v.optional(v.string()),
+  },
+  returns: liveStateDtoValidator,
+  handler: async (ctx, args) => {
+    if (args.period !== undefined && (!Number.isInteger(args.period) || args.period < 1)) {
+      throw new Error("invalid_period");
+    }
+    if (args.status !== undefined && !isLiveStatus(args.status)) {
+      throw new Error("invalid_status");
+    }
+    const row = await ctx.db
+      .query("liveGameState")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) throw new Error("live_not_started");
+    const patch: {
+      period?: number;
+      clock?: string | null;
+      status?: string;
+      updatedAt: string;
+    } = { updatedAt: new Date().toISOString() };
+    if (args.period !== undefined) patch.period = args.period;
+    if (args.clock !== undefined) patch.clock = args.clock;
+    if (args.status !== undefined) patch.status = args.status;
+    await ctx.db.patch(row._id, patch);
+    return toLiveDto({ ...row, ...patch });
+  },
+});
+
+export const endLiveGame = internalMutation({
+  args: { fixtureId: v.id("fixtures"), actorUserId: v.string() },
+  returns: liveStateDtoValidator,
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("liveGameState")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) throw new Error("live_not_started");
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+
+    const now = new Date().toISOString();
+    // 1) live state → final
+    await ctx.db.patch(row._id, { status: "final", updatedAt: now });
+
+    // 2) write the final score into gameResults (same shape recordGameResult
+    //    uses) so standings pick it up, and flip the fixture to "final".
+    const resultPayload = {
+      fixtureId: args.fixtureId,
+      homeScore: row.homeScore,
+      awayScore: row.awayScore,
+      playerStatsJson: null,
+      recordedAt: now,
+      recordedBy: args.actorUserId,
+    };
+    const existingResult = await ctx.db
+      .query("gameResults")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (existingResult) {
+      await ctx.db.replace(existingResult._id, resultPayload);
+    } else {
+      await ctx.db.insert("gameResults", resultPayload);
+    }
+    if (fixture.status !== "final") {
+      await ctx.db.patch(args.fixtureId, { status: "final" });
+    }
+
+    return toLiveDto({ ...row, status: "final", updatedAt: now });
+  },
+});
+
+export const getLiveGameState = query({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.union(
+    v.object({
+      homeScore: v.number(),
+      awayScore: v.number(),
+      period: v.number(),
+      clock: v.union(v.string(), v.null()),
+      status: v.string(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("liveGameState")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) return null;
+    // PUBLIC projection — operator/identity fields are not exposed.
+    return {
+      homeScore: row.homeScore,
+      awayScore: row.awayScore,
+      period: row.period,
+      clock: row.clock,
+      status: row.status,
+    };
+  },
 });
