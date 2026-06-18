@@ -37,6 +37,18 @@ node scripts/ghsa-seed/build-import.mjs --post http://localhost:3000 --key sk_..
 Flags: `--in <path>` (alignment source), `--out <path>` (payload), `--post <baseUrl>`,
 `--key <clerkApiKey>`.
 
+### Dashboard "Seed GHSA" button
+
+The web app's `/dashboard/import` page has a **Seed GHSA football (416 teams)**
+button that loads a prebuilt copy of this payload into the normal import
+preview, so an admin can seed without the CLI. That copy lives at
+`apps/web/public/seed/ghsa-2024-26.json` — regenerate it after editing the
+alignment data with:
+
+```bash
+node scripts/ghsa-seed/build-import.mjs --out ../../apps/web/public/seed/ghsa-2024-26.json
+```
+
 ## Data provenance
 
 `data/ghsa-2024-26.json` is generated from the **GHSA 2024 football
