@@ -568,7 +568,60 @@ const refs = {
       attributesJson: string;
     }>
   >("sports:computeSeasonSprt"),
+  // Live game-state (WSM-000152, keystone v3)
+  startLiveGame: mutationRef<
+    { fixtureId: string; actorUserId: string },
+    LiveGameStateDto
+  >("sports:startLiveGame"),
+  addLiveScore: mutationRef<
+    { fixtureId: string; team: "home" | "away"; points: number },
+    LiveGameStateDto
+  >("sports:addLiveScore"),
+  setLiveScore: mutationRef<
+    { fixtureId: string; homeScore: number; awayScore: number },
+    LiveGameStateDto
+  >("sports:setLiveScore"),
+  updateLiveState: mutationRef<
+    {
+      fixtureId: string;
+      period?: number;
+      clock?: string | null;
+      status?: string;
+    },
+    LiveGameStateDto
+  >("sports:updateLiveState"),
+  endLiveGame: mutationRef<
+    { fixtureId: string; actorUserId: string },
+    LiveGameStateDto
+  >("sports:endLiveGame"),
+  getLiveGameState: queryRef<
+    { fixtureId: string },
+    LiveGameStatePublic | null
+  >("sports:getLiveGameState"),
 };
+
+/** Full live game-state (operator UI). */
+export interface LiveGameStateDto {
+  id: string;
+  fixtureId: string;
+  homeScore: number;
+  awayScore: number;
+  period: number;
+  clock: string | null;
+  status: string;
+  startedBy: string;
+  startedAt: string;
+  updatedAt: string;
+}
+
+/** Public projection of live game-state — the seam #302's overlay consumes. */
+export interface LiveGameStatePublic {
+  homeScore: number;
+  awayScore: number;
+  period: number;
+  clock: string | null;
+  status: string;
+}
 
 /** Raw playerGameStats row as returned by Convex (statsJson unparsed). */
 interface PlayerGameStatsRow {
@@ -1713,6 +1766,52 @@ export async function computeSeasonSprt(
       attributes,
     };
   });
+}
+
+// --- Live game-state wrappers (WSM-000152, keystone v3) ---
+
+export async function startLiveGame(
+  fixtureId: string,
+  actorUserId: string,
+): Promise<LiveGameStateDto> {
+  return mutateConvex(refs.startLiveGame, { fixtureId, actorUserId });
+}
+
+export async function addLiveScore(
+  fixtureId: string,
+  team: "home" | "away",
+  points: number,
+): Promise<LiveGameStateDto> {
+  return mutateConvex(refs.addLiveScore, { fixtureId, team, points });
+}
+
+export async function setLiveScore(
+  fixtureId: string,
+  homeScore: number,
+  awayScore: number,
+): Promise<LiveGameStateDto> {
+  return mutateConvex(refs.setLiveScore, { fixtureId, homeScore, awayScore });
+}
+
+export async function updateLiveState(
+  fixtureId: string,
+  patch: { period?: number; clock?: string | null; status?: string },
+): Promise<LiveGameStateDto> {
+  return mutateConvex(refs.updateLiveState, { fixtureId, ...patch });
+}
+
+export async function endLiveGame(
+  fixtureId: string,
+  actorUserId: string,
+): Promise<LiveGameStateDto> {
+  return mutateConvex(refs.endLiveGame, { fixtureId, actorUserId });
+}
+
+/** Public live game-state (the seam #302's overlay + the public page poll). */
+export async function getLiveGameState(
+  fixtureId: string,
+): Promise<LiveGameStatePublic | null> {
+  return queryConvex(refs.getLiveGameState, { fixtureId });
 }
 
 // --- Phase 3 — standings wrappers ---

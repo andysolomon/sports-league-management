@@ -48,6 +48,11 @@ void internal.sports.createGameStream;
 void internal.sports.updateGameStreamStatus;
 void internal.sports.upsertPlayerGameStats;
 void internal.sports.deletePlayerGameStats;
+void internal.sports.startLiveGame;
+void internal.sports.addLiveScore;
+void internal.sports.setLiveScore;
+void internal.sports.updateLiveState;
+void internal.sports.endLiveGame;
 
 // --- Writes MUST NOT be on the public API (each access must be a type error) ---
 // @ts-expect-error createTeam is internal, not public
@@ -78,6 +83,12 @@ void api.sports.updateGameStreamStatus;
 void api.sports.upsertPlayerGameStats;
 // @ts-expect-error deletePlayerGameStats is internal, not public
 void api.sports.deletePlayerGameStats;
+// @ts-expect-error startLiveGame is internal, not public
+void api.sports.startLiveGame;
+// @ts-expect-error addLiveScore is internal, not public
+void api.sports.addLiveScore;
+// @ts-expect-error endLiveGame is internal, not public
+void api.sports.endLiveGame;
 
 // --- Public READ queries must remain public (these must exist on api) ---
 void api.sports.listTeams;
@@ -119,6 +130,7 @@ type AllowedPublicSportsReads =
   | "getLeagueForOrg"
   | "getLeagueOrgId"
   | "getLeagueVisibility"
+  | "getLiveGameState"
   | "getOrgForkedSourceTeamIds"
   | "getOrgMemberRole"
   | "getPlayer"
