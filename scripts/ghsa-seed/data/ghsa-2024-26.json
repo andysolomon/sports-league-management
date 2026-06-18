@@ -1,0 +1,1644 @@
+{
+  "league": "Georgia GHSA Football (2024-26)",
+  "source": "GHSA 2024 football standings / region alignment (https://www.ghsa.net/2024-ghsa-football-standings). These are FOOTBALL regions, not the enrollment-based reclassification. The 2025-season alignment may shift slightly within the same 2024-26 cycle.",
+  "notes": "School-level city is optional; when omitted the importer fills a 'TBD' placeholder a coach corrects on claim. Names are taken from the GHSA football standings with ' (Place)' normalized to '-Place'.",
+  "classifications": [
+    {
+      "name": "6A",
+      "regions": [
+        {
+          "region": 1,
+          "schools": [
+            {
+              "name": "Lowndes"
+            },
+            {
+              "name": "Colquitt County"
+            },
+            {
+              "name": "Valdosta",
+              "city": "Valdosta"
+            },
+            {
+              "name": "Camden County"
+            },
+            {
+              "name": "Richmond Hill"
+            },
+            {
+              "name": "Tift County"
+            }
+          ]
+        },
+        {
+          "region": 2,
+          "schools": [
+            {
+              "name": "Carrollton",
+              "city": "Carrollton"
+            },
+            {
+              "name": "Douglas County"
+            },
+            {
+              "name": "Westlake"
+            },
+            {
+              "name": "East Coweta"
+            },
+            {
+              "name": "Chapel Hill"
+            }
+          ]
+        },
+        {
+          "region": 3,
+          "schools": [
+            {
+              "name": "Harrison"
+            },
+            {
+              "name": "Hillgrove"
+            },
+            {
+              "name": "McEachern"
+            },
+            {
+              "name": "Pebblebrook"
+            },
+            {
+              "name": "Campbell"
+            },
+            {
+              "name": "Paulding County"
+            },
+            {
+              "name": "Osborne"
+            },
+            {
+              "name": "South Cobb"
+            }
+          ]
+        },
+        {
+          "region": 4,
+          "schools": [
+            {
+              "name": "Grayson"
+            },
+            {
+              "name": "Newton"
+            },
+            {
+              "name": "South Gwinnett"
+            },
+            {
+              "name": "Archer"
+            },
+            {
+              "name": "Rockdale County"
+            },
+            {
+              "name": "Grovetown"
+            },
+            {
+              "name": "Heritage-Conyers"
+            }
+          ]
+        },
+        {
+          "region": 5,
+          "schools": [
+            {
+              "name": "North Cobb"
+            },
+            {
+              "name": "Walton"
+            },
+            {
+              "name": "North Paulding"
+            },
+            {
+              "name": "Cherokee"
+            },
+            {
+              "name": "Marietta",
+              "city": "Marietta"
+            },
+            {
+              "name": "Wheeler"
+            },
+            {
+              "name": "Etowah"
+            }
+          ]
+        },
+        {
+          "region": 6,
+          "schools": [
+            {
+              "name": "North Atlanta"
+            },
+            {
+              "name": "Lambert"
+            },
+            {
+              "name": "West Forsyth"
+            },
+            {
+              "name": "Denmark"
+            },
+            {
+              "name": "North Forsyth"
+            },
+            {
+              "name": "Forsyth Central"
+            },
+            {
+              "name": "Alpharetta",
+              "city": "Alpharetta"
+            },
+            {
+              "name": "South Forsyth"
+            }
+          ]
+        },
+        {
+          "region": 7,
+          "schools": [
+            {
+              "name": "North Gwinnett"
+            },
+            {
+              "name": "Brookwood"
+            },
+            {
+              "name": "Norcross",
+              "city": "Norcross"
+            },
+            {
+              "name": "Peachtree Ridge"
+            },
+            {
+              "name": "Parkview"
+            },
+            {
+              "name": "Duluth",
+              "city": "Duluth"
+            },
+            {
+              "name": "Berkmar"
+            },
+            {
+              "name": "Meadowcreek"
+            }
+          ]
+        },
+        {
+          "region": 8,
+          "schools": [
+            {
+              "name": "Buford",
+              "city": "Buford"
+            },
+            {
+              "name": "Collins Hill"
+            },
+            {
+              "name": "Mill Creek"
+            },
+            {
+              "name": "Dacula",
+              "city": "Dacula"
+            },
+            {
+              "name": "Mountain View"
+            },
+            {
+              "name": "Central Gwinnett"
+            },
+            {
+              "name": "Discovery"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5A",
+      "regions": [
+        {
+          "region": 1,
+          "schools": [
+            {
+              "name": "Brunswick",
+              "city": "Brunswick"
+            },
+            {
+              "name": "Lakeside-Evans"
+            },
+            {
+              "name": "Effingham County"
+            },
+            {
+              "name": "Glynn Academy"
+            },
+            {
+              "name": "Evans"
+            },
+            {
+              "name": "Greenbrier"
+            },
+            {
+              "name": "Statesboro",
+              "city": "Statesboro"
+            },
+            {
+              "name": "Bradwell Institute"
+            },
+            {
+              "name": "South Effingham"
+            }
+          ]
+        },
+        {
+          "region": 2,
+          "schools": [
+            {
+              "name": "Lee County"
+            },
+            {
+              "name": "Thomas County Central"
+            },
+            {
+              "name": "Coffee"
+            },
+            {
+              "name": "Houston County"
+            },
+            {
+              "name": "Veterans"
+            },
+            {
+              "name": "Northside-Warner Robins"
+            }
+          ]
+        },
+        {
+          "region": 3,
+          "schools": [
+            {
+              "name": "Hughes"
+            },
+            {
+              "name": "Newnan",
+              "city": "Newnan"
+            },
+            {
+              "name": "Dutchtown"
+            },
+            {
+              "name": "Lovejoy"
+            },
+            {
+              "name": "McIntosh"
+            },
+            {
+              "name": "Morrow",
+              "city": "Morrow"
+            },
+            {
+              "name": "Northgate"
+            },
+            {
+              "name": "Banneker"
+            }
+          ]
+        },
+        {
+          "region": 4,
+          "schools": [
+            {
+              "name": "Woodward Academy"
+            },
+            {
+              "name": "Decatur",
+              "city": "Decatur"
+            },
+            {
+              "name": "Tri-Cities"
+            },
+            {
+              "name": "Dunwoody",
+              "city": "Dunwoody"
+            },
+            {
+              "name": "Lakeside-DeKalb"
+            },
+            {
+              "name": "Shiloh"
+            },
+            {
+              "name": "Chamblee",
+              "city": "Chamblee"
+            },
+            {
+              "name": "Arabia Mountain"
+            }
+          ]
+        },
+        {
+          "region": 5,
+          "schools": [
+            {
+              "name": "Rome",
+              "city": "Rome"
+            },
+            {
+              "name": "East Paulding"
+            },
+            {
+              "name": "New Manchester"
+            },
+            {
+              "name": "Villa Rica",
+              "city": "Villa Rica"
+            },
+            {
+              "name": "South Paulding"
+            },
+            {
+              "name": "Alexander"
+            },
+            {
+              "name": "Kennesaw Mountain"
+            },
+            {
+              "name": "Lithia Springs"
+            }
+          ]
+        },
+        {
+          "region": 6,
+          "schools": [
+            {
+              "name": "Sequoyah"
+            },
+            {
+              "name": "Sprayberry"
+            },
+            {
+              "name": "River Ridge"
+            },
+            {
+              "name": "Woodstock",
+              "city": "Woodstock"
+            },
+            {
+              "name": "Creekview"
+            },
+            {
+              "name": "Pope"
+            },
+            {
+              "name": "Riverwood"
+            },
+            {
+              "name": "Lassiter"
+            }
+          ]
+        },
+        {
+          "region": 7,
+          "schools": [
+            {
+              "name": "Milton",
+              "city": "Milton"
+            },
+            {
+              "name": "Roswell",
+              "city": "Roswell"
+            },
+            {
+              "name": "Gainesville",
+              "city": "Gainesville"
+            },
+            {
+              "name": "Lanier"
+            },
+            {
+              "name": "Seckinger"
+            },
+            {
+              "name": "Chattahoochee"
+            },
+            {
+              "name": "Johns Creek",
+              "city": "Johns Creek"
+            }
+          ]
+        },
+        {
+          "region": 8,
+          "schools": [
+            {
+              "name": "Clarke Central"
+            },
+            {
+              "name": "Jackson County"
+            },
+            {
+              "name": "Winder-Barrow"
+            },
+            {
+              "name": "Habersham Central"
+            },
+            {
+              "name": "Loganville",
+              "city": "Loganville"
+            },
+            {
+              "name": "Alcovy"
+            },
+            {
+              "name": "Apalachee"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4A",
+      "regions": [
+        {
+          "region": 1,
+          "schools": [
+            {
+              "name": "Perry",
+              "city": "Perry"
+            },
+            {
+              "name": "Warner Robins",
+              "city": "Warner Robins"
+            },
+            {
+              "name": "Benedictine"
+            },
+            {
+              "name": "Ware County"
+            },
+            {
+              "name": "New Hampstead"
+            },
+            {
+              "name": "Wayne County"
+            }
+          ]
+        },
+        {
+          "region": 2,
+          "schools": [
+            {
+              "name": "Ola"
+            },
+            {
+              "name": "Jones County"
+            },
+            {
+              "name": "Hampton",
+              "city": "Hampton"
+            },
+            {
+              "name": "Eagle's Landing"
+            },
+            {
+              "name": "Locust Grove",
+              "city": "Locust Grove"
+            },
+            {
+              "name": "Union Grove"
+            },
+            {
+              "name": "Eagle's Landing Christian"
+            },
+            {
+              "name": "Woodland-Stockbridge"
+            },
+            {
+              "name": "McDonough",
+              "city": "McDonough"
+            },
+            {
+              "name": "Stockbridge",
+              "city": "Stockbridge"
+            }
+          ]
+        },
+        {
+          "region": 3,
+          "schools": [
+            {
+              "name": "Starr's Mill"
+            },
+            {
+              "name": "Central-Carroll"
+            },
+            {
+              "name": "Jonesboro",
+              "city": "Jonesboro"
+            },
+            {
+              "name": "Harris County"
+            },
+            {
+              "name": "Northside-Columbus"
+            },
+            {
+              "name": "Griffin",
+              "city": "Griffin"
+            },
+            {
+              "name": "Mundy's Mill"
+            }
+          ]
+        },
+        {
+          "region": 4,
+          "schools": [
+            {
+              "name": "Creekside"
+            },
+            {
+              "name": "Mays"
+            },
+            {
+              "name": "Jackson-Atlanta"
+            },
+            {
+              "name": "Drew"
+            },
+            {
+              "name": "M.L. King"
+            },
+            {
+              "name": "Pace Academy"
+            },
+            {
+              "name": "Midtown"
+            },
+            {
+              "name": "Forest Park",
+              "city": "Forest Park"
+            }
+          ]
+        },
+        {
+          "region": 5,
+          "schools": [
+            {
+              "name": "Marist"
+            },
+            {
+              "name": "Southwest DeKalb"
+            },
+            {
+              "name": "St. Pius X"
+            },
+            {
+              "name": "Tucker",
+              "city": "Tucker"
+            },
+            {
+              "name": "Lithonia",
+              "city": "Lithonia"
+            },
+            {
+              "name": "Druid Hills"
+            },
+            {
+              "name": "North Springs"
+            },
+            {
+              "name": "Northview"
+            },
+            {
+              "name": "Clarkston",
+              "city": "Clarkston"
+            },
+            {
+              "name": "Cross Keys"
+            }
+          ]
+        },
+        {
+          "region": 6,
+          "schools": [
+            {
+              "name": "Blessed Trinity"
+            },
+            {
+              "name": "Cambridge"
+            },
+            {
+              "name": "Kell"
+            },
+            {
+              "name": "Westminster"
+            },
+            {
+              "name": "Centennial"
+            }
+          ]
+        },
+        {
+          "region": 7,
+          "schools": [
+            {
+              "name": "Cartersville",
+              "city": "Cartersville"
+            },
+            {
+              "name": "Cedartown",
+              "city": "Cedartown"
+            },
+            {
+              "name": "Hiram",
+              "city": "Hiram"
+            },
+            {
+              "name": "Cass"
+            },
+            {
+              "name": "Allatoona"
+            },
+            {
+              "name": "Woodland-Cartersville"
+            },
+            {
+              "name": "Southeast Whitfield"
+            },
+            {
+              "name": "Dalton",
+              "city": "Dalton"
+            }
+          ]
+        },
+        {
+          "region": 8,
+          "schools": [
+            {
+              "name": "North Oconee"
+            },
+            {
+              "name": "Eastside"
+            },
+            {
+              "name": "East Forsyth"
+            },
+            {
+              "name": "Flowery Branch",
+              "city": "Flowery Branch"
+            },
+            {
+              "name": "Madison County"
+            },
+            {
+              "name": "Walnut Grove"
+            },
+            {
+              "name": "Cedar Shoals"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3A",
+      "regions": [
+        {
+          "region": 1,
+          "schools": [
+            {
+              "name": "Peach County"
+            },
+            {
+              "name": "Westover"
+            },
+            {
+              "name": "Cairo",
+              "city": "Cairo"
+            },
+            {
+              "name": "Monroe"
+            },
+            {
+              "name": "Bainbridge",
+              "city": "Bainbridge"
+            },
+            {
+              "name": "Dougherty"
+            }
+          ]
+        },
+        {
+          "region": 2,
+          "schools": [
+            {
+              "name": "Sandy Creek"
+            },
+            {
+              "name": "LaGrange",
+              "city": "LaGrange"
+            },
+            {
+              "name": "Upson-Lee"
+            },
+            {
+              "name": "Whitewater"
+            },
+            {
+              "name": "Spalding"
+            },
+            {
+              "name": "Troup County"
+            },
+            {
+              "name": "Mary Persons"
+            },
+            {
+              "name": "Trinity Christian"
+            },
+            {
+              "name": "Fayette County"
+            }
+          ]
+        },
+        {
+          "region": 3,
+          "schools": [
+            {
+              "name": "Calvary Day School"
+            },
+            {
+              "name": "Jenkins"
+            },
+            {
+              "name": "Southeast Bulloch"
+            },
+            {
+              "name": "Long County"
+            },
+            {
+              "name": "Liberty County"
+            },
+            {
+              "name": "Beach"
+            },
+            {
+              "name": "Johnson-Savannah"
+            },
+            {
+              "name": "Windsor Forest"
+            },
+            {
+              "name": "Groves"
+            },
+            {
+              "name": "Islands"
+            }
+          ]
+        },
+        {
+          "region": 4,
+          "schools": [
+            {
+              "name": "Harlem",
+              "city": "Harlem"
+            },
+            {
+              "name": "West Laurens"
+            },
+            {
+              "name": "Westside-Augusta"
+            },
+            {
+              "name": "Baldwin"
+            },
+            {
+              "name": "Aquinas"
+            },
+            {
+              "name": "Howard"
+            },
+            {
+              "name": "Richmond Academy"
+            },
+            {
+              "name": "Hephzibah",
+              "city": "Hephzibah"
+            },
+            {
+              "name": "Cross Creek"
+            }
+          ]
+        },
+        {
+          "region": 5,
+          "schools": [
+            {
+              "name": "Douglass-Atlanta"
+            },
+            {
+              "name": "Stephenson"
+            },
+            {
+              "name": "Luella"
+            },
+            {
+              "name": "Cedar Grove"
+            },
+            {
+              "name": "Mt. Zion-Jonesboro"
+            },
+            {
+              "name": "North Clayton"
+            },
+            {
+              "name": "Riverdale",
+              "city": "Riverdale"
+            },
+            {
+              "name": "Stone Mountain",
+              "city": "Stone Mountain"
+            }
+          ]
+        },
+        {
+          "region": 6,
+          "schools": [
+            {
+              "name": "North Hall"
+            },
+            {
+              "name": "Lumpkin County"
+            },
+            {
+              "name": "Chestatee"
+            },
+            {
+              "name": "Greater Atlanta Christian"
+            },
+            {
+              "name": "Pickens"
+            },
+            {
+              "name": "Dawson County"
+            },
+            {
+              "name": "White County"
+            },
+            {
+              "name": "Johnson-Gainesville"
+            }
+          ]
+        },
+        {
+          "region": 7,
+          "schools": [
+            {
+              "name": "Calhoun",
+              "city": "Calhoun"
+            },
+            {
+              "name": "Northwest Whitfield"
+            },
+            {
+              "name": "Heritage-Catoosa"
+            },
+            {
+              "name": "Adairsville",
+              "city": "Adairsville"
+            },
+            {
+              "name": "Gilmer"
+            },
+            {
+              "name": "Ridgeland"
+            },
+            {
+              "name": "LaFayette",
+              "city": "LaFayette"
+            }
+          ]
+        },
+        {
+          "region": 8,
+          "schools": [
+            {
+              "name": "Cherokee Bluff"
+            },
+            {
+              "name": "Jefferson",
+              "city": "Jefferson"
+            },
+            {
+              "name": "Oconee County"
+            },
+            {
+              "name": "Monroe Area"
+            },
+            {
+              "name": "East Hall"
+            },
+            {
+              "name": "West Hall"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2A",
+      "regions": [
+        {
+          "region": 1,
+          "schools": [
+            {
+              "name": "Carver-Columbus"
+            },
+            {
+              "name": "Sumter County"
+            },
+            {
+              "name": "Spencer"
+            },
+            {
+              "name": "Shaw"
+            },
+            {
+              "name": "Hardaway"
+            },
+            {
+              "name": "Columbus",
+              "city": "Columbus"
+            },
+            {
+              "name": "Kendrick"
+            },
+            {
+              "name": "Jordan"
+            }
+          ]
+        },
+        {
+          "region": 2,
+          "schools": [
+            {
+              "name": "Callaway"
+            },
+            {
+              "name": "Morgan County"
+            },
+            {
+              "name": "Westside-Macon"
+            },
+            {
+              "name": "Jackson",
+              "city": "Jackson"
+            },
+            {
+              "name": "Pike County"
+            },
+            {
+              "name": "Rutland"
+            }
+          ]
+        },
+        {
+          "region": 3,
+          "schools": [
+            {
+              "name": "Appling County"
+            },
+            {
+              "name": "Pierce County"
+            },
+            {
+              "name": "Crisp County"
+            },
+            {
+              "name": "Cook"
+            },
+            {
+              "name": "Tattnall County"
+            }
+          ]
+        },
+        {
+          "region": 4,
+          "schools": [
+            {
+              "name": "Burke County"
+            },
+            {
+              "name": "Thomson",
+              "city": "Thomson"
+            },
+            {
+              "name": "Laney"
+            },
+            {
+              "name": "Butler"
+            },
+            {
+              "name": "Glenn Hills"
+            },
+            {
+              "name": "Josey"
+            }
+          ]
+        },
+        {
+          "region": 5,
+          "schools": [
+            {
+              "name": "Hapeville"
+            },
+            {
+              "name": "Carver-Atlanta"
+            },
+            {
+              "name": "Lovett"
+            },
+            {
+              "name": "Holy Innocents'"
+            },
+            {
+              "name": "Therrell"
+            },
+            {
+              "name": "KIPP Atlanta Collegiate"
+            },
+            {
+              "name": "Washington"
+            }
+          ]
+        },
+        {
+          "region": 6,
+          "schools": [
+            {
+              "name": "Columbia"
+            },
+            {
+              "name": "South Atlanta"
+            },
+            {
+              "name": "Miller Grove"
+            },
+            {
+              "name": "Redan"
+            },
+            {
+              "name": "Salem"
+            }
+          ]
+        },
+        {
+          "region": 7,
+          "schools": [
+            {
+              "name": "Rockmart",
+              "city": "Rockmart"
+            },
+            {
+              "name": "North Cobb Christian"
+            },
+            {
+              "name": "Ringgold",
+              "city": "Ringgold"
+            },
+            {
+              "name": "North Murray"
+            },
+            {
+              "name": "Union County"
+            },
+            {
+              "name": "Lakeview-Ft. Oglethorpe"
+            },
+            {
+              "name": "Sonoraville"
+            },
+            {
+              "name": "Coahulla Creek"
+            },
+            {
+              "name": "Murray County"
+            }
+          ]
+        },
+        {
+          "region": 8,
+          "schools": [
+            {
+              "name": "Prince Avenue Christian"
+            },
+            {
+              "name": "Hebron Christian Academy"
+            },
+            {
+              "name": "Stephens County"
+            },
+            {
+              "name": "Hart County"
+            },
+            {
+              "name": "East Jackson"
+            },
+            {
+              "name": "Franklin County"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "A Division I",
+      "regions": [
+        {
+          "region": 1,
+          "schools": [
+            {
+              "name": "Thomasville",
+              "city": "Thomasville"
+            },
+            {
+              "name": "Worth County"
+            },
+            {
+              "name": "Fitzgerald",
+              "city": "Fitzgerald"
+            },
+            {
+              "name": "Jeff Davis"
+            },
+            {
+              "name": "Brantley County"
+            },
+            {
+              "name": "Bacon County"
+            },
+            {
+              "name": "Berrien"
+            }
+          ]
+        },
+        {
+          "region": 2,
+          "schools": [
+            {
+              "name": "Dublin",
+              "city": "Dublin"
+            },
+            {
+              "name": "Northeast"
+            },
+            {
+              "name": "Dodge County"
+            },
+            {
+              "name": "Washington County"
+            },
+            {
+              "name": "ACE Charter"
+            },
+            {
+              "name": "Southwest"
+            },
+            {
+              "name": "Bleckley County"
+            },
+            {
+              "name": "East Laurens"
+            },
+            {
+              "name": "Jefferson County"
+            },
+            {
+              "name": "Central-Macon"
+            }
+          ]
+        },
+        {
+          "region": 3,
+          "schools": [
+            {
+              "name": "Savannah Christian"
+            },
+            {
+              "name": "Toombs County"
+            },
+            {
+              "name": "Swainsboro",
+              "city": "Swainsboro"
+            },
+            {
+              "name": "Savannah Country Day"
+            },
+            {
+              "name": "Vidalia",
+              "city": "Vidalia"
+            }
+          ]
+        },
+        {
+          "region": 4,
+          "schools": [
+            {
+              "name": "Lamar County"
+            },
+            {
+              "name": "Social Circle",
+              "city": "Social Circle"
+            },
+            {
+              "name": "Jasper County"
+            },
+            {
+              "name": "Putnam County"
+            },
+            {
+              "name": "McNair"
+            },
+            {
+              "name": "Towers"
+            },
+            {
+              "name": "Utopian Academy"
+            }
+          ]
+        },
+        {
+          "region": 5,
+          "schools": [
+            {
+              "name": "Fellowship Christian"
+            },
+            {
+              "name": "Wesleyan"
+            },
+            {
+              "name": "Whitefield Academy"
+            },
+            {
+              "name": "Mt. Paran Christian"
+            },
+            {
+              "name": "Landmark Christian"
+            },
+            {
+              "name": "King's Ridge"
+            },
+            {
+              "name": "Mount Vernon"
+            },
+            {
+              "name": "B.E.S.T Academy"
+            },
+            {
+              "name": "Mt. Pisgah Christian"
+            },
+            {
+              "name": "Mt. Bethel Christian"
+            },
+            {
+              "name": "Walker"
+            },
+            {
+              "name": "St. Francis"
+            }
+          ]
+        },
+        {
+          "region": 6,
+          "schools": [
+            {
+              "name": "Heard County"
+            },
+            {
+              "name": "Temple",
+              "city": "Temple"
+            },
+            {
+              "name": "Bremen",
+              "city": "Bremen"
+            },
+            {
+              "name": "Darlington"
+            },
+            {
+              "name": "Pepperell"
+            },
+            {
+              "name": "Model"
+            },
+            {
+              "name": "Haralson County"
+            }
+          ]
+        },
+        {
+          "region": 7,
+          "schools": [
+            {
+              "name": "Fannin County"
+            },
+            {
+              "name": "Christian Heritage"
+            },
+            {
+              "name": "Gordon Lee"
+            },
+            {
+              "name": "Chattooga"
+            },
+            {
+              "name": "Dade County"
+            },
+            {
+              "name": "Coosa"
+            },
+            {
+              "name": "Gordon Central"
+            },
+            {
+              "name": "Armuchee"
+            }
+          ]
+        },
+        {
+          "region": 8,
+          "schools": [
+            {
+              "name": "Athens Academy"
+            },
+            {
+              "name": "Commerce",
+              "city": "Commerce"
+            },
+            {
+              "name": "Elbert County"
+            },
+            {
+              "name": "Rabun County"
+            },
+            {
+              "name": "Banks County"
+            },
+            {
+              "name": "Providence Christian"
+            },
+            {
+              "name": "Oglethorpe County"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "A Division II",
+      "regions": [
+        {
+          "region": 1,
+          "schools": [
+            {
+              "name": "Mitchell County"
+            },
+            {
+              "name": "Early County"
+            },
+            {
+              "name": "Calhoun County"
+            },
+            {
+              "name": "Miller County"
+            },
+            {
+              "name": "Pataula Charter"
+            },
+            {
+              "name": "Seminole County"
+            },
+            {
+              "name": "Pelham",
+              "city": "Pelham"
+            },
+            {
+              "name": "Randolph-Clay"
+            },
+            {
+              "name": "Baconton"
+            },
+            {
+              "name": "Southwest Georgia STEM"
+            },
+            {
+              "name": "Terrell County"
+            },
+            {
+              "name": "Baker County"
+            },
+            {
+              "name": "Spring Creek"
+            }
+          ]
+        },
+        {
+          "region": 2,
+          "schools": [
+            {
+              "name": "Clinch County"
+            },
+            {
+              "name": "Irwin County"
+            },
+            {
+              "name": "Brooks County"
+            },
+            {
+              "name": "Charlton County"
+            },
+            {
+              "name": "Turner County"
+            },
+            {
+              "name": "Atkinson County"
+            },
+            {
+              "name": "Lanier County"
+            }
+          ]
+        },
+        {
+          "region": 3,
+          "schools": [
+            {
+              "name": "Metter",
+              "city": "Metter"
+            },
+            {
+              "name": "Jenkins County"
+            },
+            {
+              "name": "McIntosh County Academy"
+            },
+            {
+              "name": "Emanuel County Institute"
+            },
+            {
+              "name": "Bryan County"
+            },
+            {
+              "name": "Portal"
+            },
+            {
+              "name": "Screven County"
+            },
+            {
+              "name": "Claxton",
+              "city": "Claxton"
+            },
+            {
+              "name": "Savannah",
+              "city": "Savannah"
+            }
+          ]
+        },
+        {
+          "region": 4,
+          "schools": [
+            {
+              "name": "Telfair County"
+            },
+            {
+              "name": "Hawkinsville",
+              "city": "Hawkinsville"
+            },
+            {
+              "name": "Wheeler County"
+            },
+            {
+              "name": "Wilcox County"
+            },
+            {
+              "name": "Treutlen"
+            },
+            {
+              "name": "Dooly County"
+            },
+            {
+              "name": "Montgomery County"
+            }
+          ]
+        },
+        {
+          "region": 5,
+          "schools": [
+            {
+              "name": "Johnson County"
+            },
+            {
+              "name": "Wilkinson County"
+            },
+            {
+              "name": "Hancock Central"
+            },
+            {
+              "name": "Glascock County"
+            },
+            {
+              "name": "Twiggs County"
+            },
+            {
+              "name": "Georgia Military College"
+            }
+          ]
+        },
+        {
+          "region": 6,
+          "schools": [
+            {
+              "name": "Macon County"
+            },
+            {
+              "name": "Schley County"
+            },
+            {
+              "name": "Taylor County"
+            },
+            {
+              "name": "Marion County"
+            },
+            {
+              "name": "Crawford County"
+            },
+            {
+              "name": "Chattahoochee County"
+            },
+            {
+              "name": "Central-Talbotton"
+            }
+          ]
+        },
+        {
+          "region": 7,
+          "schools": [
+            {
+              "name": "Manchester",
+              "city": "Manchester"
+            },
+            {
+              "name": "Bowdon",
+              "city": "Bowdon"
+            },
+            {
+              "name": "Trion",
+              "city": "Trion"
+            },
+            {
+              "name": "Greenville",
+              "city": "Greenville"
+            },
+            {
+              "name": "Mt. Zion-Carroll"
+            }
+          ]
+        },
+        {
+          "region": 8,
+          "schools": [
+            {
+              "name": "Lincoln County"
+            },
+            {
+              "name": "Greene County"
+            },
+            {
+              "name": "Warren County"
+            },
+            {
+              "name": "Washington-Wilkes"
+            },
+            {
+              "name": "Towns County"
+            },
+            {
+              "name": "Lake Oconee Academy"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
