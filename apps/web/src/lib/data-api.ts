@@ -475,6 +475,10 @@ const refs = {
   deleteFixture: mutationRef<{ fixtureId: string }, null>(
     "sports:deleteFixture",
   ),
+  generateSeasonSchedule: mutationRef<
+    { seasonId: string; actorUserId: string; confirm?: boolean },
+    { created: number; weeks: number; teamCount: number }
+  >("sports:generateSeasonSchedule"),
   listFixturesBySeason: queryRef<{ seasonId: string }, FixtureDto[]>(
     "sports:listFixturesBySeason",
   ),
@@ -1581,6 +1585,14 @@ export async function updateFixture(input: {
 
 export async function deleteFixture(fixtureId: string): Promise<void> {
   await mutateConvex(refs.deleteFixture, { fixtureId });
+}
+
+export async function generateSeasonSchedule(input: {
+  seasonId: string;
+  actorUserId: string;
+  confirm?: boolean;
+}): Promise<{ created: number; weeks: number; teamCount: number }> {
+  return mutateConvex(refs.generateSeasonSchedule, input);
 }
 
 export async function listFixturesBySeason(

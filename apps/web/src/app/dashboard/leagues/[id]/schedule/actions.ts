@@ -6,6 +6,7 @@ import { schedulesStandingsV1 } from "@/lib/flags";
 import {
   createFixture,
   deleteFixture,
+  generateSeasonSchedule,
   getLeague,
   getLeagueOrgId,
   recordGameResult,
@@ -89,6 +90,45 @@ export async function createFixtureAction(
     return { ok: true, id: fixture.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
+/*
+ * Generate a single round-robin schedule for the league's active season
+ * (WSM-000153). The mutation refuses to overwrite a slate that already has
+ * recorded results / live state; that surfaces here as `needsConfirm` so the
+ * UI can re-call with `confirm: true`.
+ */
+export async function generateScheduleAction(input: {
+  leagueId: string;
+  seasonId: string;
+  confirm?: boolean;
+}): Promise<
+  | { ok: true; created: number; weeks: number; teamCount: number }
+  | { ok: false; needsConfirm: true }
+  | { ok: false; error: string }
+> {
+  const guard = await authorizeManagerAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  try {
+    const res = await generateSeasonSchedule({
+      seasonId: input.seasonId,
+      actorUserId: userId,
+      confirm: input.confirm,
+    });
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
+    return { ok: true, ...res };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("schedule_has_results")) {
+      return { ok: false, needsConfirm: true };
+    }
     return { ok: false, error: message };
   }
 }
