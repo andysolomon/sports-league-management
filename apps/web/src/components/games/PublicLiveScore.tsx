@@ -1,34 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface LivePublic {
-  homeScore: number;
-  awayScore: number;
-  period: number;
-  clock: string | null;
-  status: string;
-}
+import { useLiveScore, type LiveScorePublic } from "@/lib/use-live-score";
+import { isLiveVisible, cardStatusLabel } from "@/lib/live-score-view";
 
 interface PublicLiveScoreProps {
   leagueId: string;
   gameId: string;
   homeTeamName: string;
   awayTeamName: string;
-  initial: LivePublic | null;
+  initial: LiveScorePublic | null;
 }
 
-const POLL_MS = 5000;
-
 /*
- * Public live scoreboard (WSM-000152). Polls the sibling `live-score` route
- * while the game is live and renders a running score. SSR seeds `initial` so
- * the first paint has the score with no flash; polling keeps it fresh. When the
- * operator ends the game the status flips to "final" — we stop polling and
- * refresh the server component so the page's canonical Final card takes over.
+ * Public live scoreboard CARD (WSM-000152) — shown on the public game page for a
+ * live game that has NO video stream. When a stream is active the on-video
+ * overlay (LiveScoreOverlay, WSM-000145) carries the score instead and the page
+ * suppresses this card. Polling/visibility/final-handoff live in useLiveScore.
  */
 export default function PublicLiveScore({
   leagueId,
@@ -37,46 +26,10 @@ export default function PublicLiveScore({
   awayTeamName,
   initial,
 }: PublicLiveScoreProps) {
-  const router = useRouter();
-  const [live, setLive] = useState<LivePublic | null>(initial);
-  const refreshedOnFinal = useRef(false);
-
-  const isFinal = live?.status === "final";
-
-  useEffect(() => {
-    if (isFinal) {
-      // Let the server page's Final card (from gameResults) take over once.
-      if (!refreshedOnFinal.current) {
-        refreshedOnFinal.current = true;
-        router.refresh();
-      }
-      return;
-    }
-
-    let cancelled = false;
-    async function poll() {
-      try {
-        const res = await fetch(
-          `/leagues/${leagueId}/games/${gameId}/live-score`,
-          { cache: "no-store" },
-        );
-        if (!res.ok || cancelled) return;
-        const data = (await res.json()) as { live: LivePublic | null };
-        if (!cancelled) setLive(data.live);
-      } catch {
-        // Transient network error — keep the last known score, try again next tick.
-      }
-    }
-
-    const interval = setInterval(poll, POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [isFinal, leagueId, gameId, router]);
+  const live = useLiveScore(leagueId, gameId, initial);
 
   // Nothing live yet, or already final (handed back to the server Final card).
-  if (!live || isFinal) return null;
+  if (!isLiveVisible(live) || !live) return null;
 
   return (
     <Card className="mb-6">
@@ -98,7 +51,7 @@ export default function PublicLiveScore({
           </div>
           <div className="text-xs uppercase tracking-wider text-muted-foreground">
             <div className="font-semibold text-foreground">
-              {live.status === "halftime" ? "Halftime" : "Live"}
+              {cardStatusLabel(live)}
             </div>
             <div className="mt-1">Period {live.period}</div>
             {live.clock ? (
