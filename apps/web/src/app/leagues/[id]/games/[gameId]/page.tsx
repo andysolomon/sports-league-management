@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import GameStreamPlayer from "@/components/games/GameStreamPlayer";
 import PublicLiveScore from "@/components/games/PublicLiveScore";
+import LiveScoreOverlay from "@/components/games/LiveScoreOverlay";
 
 /*
  * Public game viewer route (WSM-000143, child of the streaming epic #225).
@@ -152,7 +153,10 @@ export default async function PublicGamePage({
         </h1>
       </header>
 
-      {liveEnabled && fixture.status !== "final" ? (
+      {/* Standalone scoreboard card — only when there's NO active stream. With a
+          stream, LiveScoreOverlay carries the score on the video instead (#302),
+          so we don't show it twice. */}
+      {liveEnabled && fixture.status !== "final" && !liveActive ? (
         <PublicLiveScore
           leagueId={leagueId}
           gameId={gameId}
@@ -177,11 +181,25 @@ export default async function PublicGamePage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <GameStreamPlayer
-              playbackId={stream!.muxPlaybackId}
-              live={liveActive}
-              title={`${fixture.homeTeamName} vs ${fixture.awayTeamName}`}
-            />
+            <div className="relative">
+              <GameStreamPlayer
+                playbackId={stream!.muxPlaybackId}
+                live={liveActive}
+                title={`${fixture.homeTeamName} vs ${fixture.awayTeamName}`}
+              />
+              {/* Live-score overlay (#302) — only over a live stream, and only
+                  when live scoring is on. Self-degrades to nothing if the fixture
+                  has no live game-state. */}
+              {liveActive && liveEnabled ? (
+                <LiveScoreOverlay
+                  leagueId={leagueId}
+                  gameId={gameId}
+                  homeTeamName={fixture.homeTeamName}
+                  awayTeamName={fixture.awayTeamName}
+                  initial={liveState}
+                />
+              ) : null}
+            </div>
           </CardContent>
         </Card>
       ) : streamEndedNoReplay ? (
