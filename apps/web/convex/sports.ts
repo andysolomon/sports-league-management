@@ -4339,3 +4339,17 @@ export const computeSeasonSprt = query({
     return out;
   },
 });
+
+/*
+ * Admin-auth probe (WSM-000151). A no-op internalQuery — callable only by an
+ * admin-keyed client. /api/health calls it through getConvexClient to verify
+ * CONVEX_ADMIN_KEY actually authenticates as admin, so a misconfigured key
+ * fails the health check loudly instead of silently breaking writes while
+ * public reads keep working (the WSM-000150 failure mode). internalQuery → not
+ * on the public api, so no #210 allow-list change.
+ */
+export const adminPing = internalQueryGeneric({
+  args: {},
+  returns: v.boolean(),
+  handler: async () => true,
+});

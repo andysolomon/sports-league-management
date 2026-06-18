@@ -19,9 +19,21 @@ export function getConvexClient(): ConvexHttpClient {
 
   const client = new ConvexHttpClient(url);
   if (adminKey) {
-    (client as ConvexHttpClient & {
+    const withAdmin = client as ConvexHttpClient & {
       setAdminAuth?: (key: string) => void;
-    }).setAdminAuth?.(adminKey);
+    };
+    // Fail loud rather than silently returning a non-admin client (WSM-000151):
+    // a missing setAdminAuth (e.g. a future Convex rename) would otherwise leave
+    // every internalMutation write broken while public reads still work — the
+    // exact silent failure mode behind WSM-000150. (An *invalid* key value can't
+    // be caught here — Convex validates it server-side; /api/health's adminPing
+    // probe covers that case.)
+    if (typeof withAdmin.setAdminAuth !== "function") {
+      throw new Error(
+        "Convex client is missing setAdminAuth — cannot authenticate admin writes.",
+      );
+    }
+    withAdmin.setAdminAuth(adminKey);
   }
   return client;
 }

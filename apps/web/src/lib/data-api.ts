@@ -187,6 +187,7 @@ const refs = {
       seasons: number;
     }
   >("sports:healthSummary"),
+  adminPing: queryRef<Record<string, never>, boolean>("sports:adminPing"),
   upsertLeague: mutationRef<
     { name: string; orgId: string | null },
     { dto: LeagueDto; created: boolean }
@@ -1120,6 +1121,12 @@ export async function getHealthSummary(): Promise<{
   seasons: number;
 }> {
   return queryConvex(refs.healthSummary, {});
+}
+
+/** Admin-auth probe (WSM-000151): resolves true only if the admin-keyed client
+ *  authenticates as admin; throws otherwise. Used by /api/health. */
+export async function adminPing(): Promise<boolean> {
+  return queryConvex(refs.adminPing, {});
 }
 
 export async function bulkImportLeague(
