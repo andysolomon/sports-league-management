@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ teamId: string; gameId: string }> },
+  { params }: { params: Promise<{ id: string; gameId: string }> },
 ) {
   if (!(await statKeepingV1())) {
     return NextResponse.json({ error: "flag_disabled" }, { status: 403 });
@@ -36,7 +36,7 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const { teamId, gameId } = await params;
+  const { id: teamId, gameId } = await params;
   if (!(await canManageTeam(teamId, userId))) {
     return NextResponse.json({ error: "not_authorized" }, { status: 403 });
   }
