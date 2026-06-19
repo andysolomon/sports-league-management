@@ -8,13 +8,13 @@
       "teams": [
         {
           "name": "Lowndes",
-          "city": "TBD",
+          "city": "Valdosta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Colquitt County",
-          "city": "TBD",
+          "city": "Norman Park",
           "stadium": "TBD",
           "players": []
         },
@@ -26,19 +26,19 @@
         },
         {
           "name": "Camden County",
-          "city": "TBD",
+          "city": "Kingsland",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Richmond Hill",
-          "city": "TBD",
+          "city": "Richmond Hill",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Tift County",
-          "city": "TBD",
+          "city": "Tifton",
           "stadium": "TBD",
           "players": []
         }
@@ -55,25 +55,25 @@
         },
         {
           "name": "Douglas County",
-          "city": "TBD",
+          "city": "Douglasville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Westlake",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "East Coweta",
-          "city": "TBD",
+          "city": "Sharpsburg",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Chapel Hill",
-          "city": "TBD",
+          "city": "Douglasville",
           "stadium": "TBD",
           "players": []
         }
@@ -84,49 +84,49 @@
       "teams": [
         {
           "name": "Harrison",
-          "city": "TBD",
+          "city": "Kennesaw",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Hillgrove",
-          "city": "TBD",
+          "city": "Powder Springs",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "McEachern",
-          "city": "TBD",
+          "city": "Powder Springs",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Pebblebrook",
-          "city": "TBD",
+          "city": "Mableton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Campbell",
-          "city": "TBD",
+          "city": "Smyrna",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Paulding County",
-          "city": "TBD",
+          "city": "Dallas",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Osborne",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "South Cobb",
-          "city": "TBD",
+          "city": "Austell",
           "stadium": "TBD",
           "players": []
         }
@@ -137,43 +137,43 @@
       "teams": [
         {
           "name": "Grayson",
-          "city": "TBD",
+          "city": "Grayson",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Newton",
-          "city": "TBD",
+          "city": "Covington",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "South Gwinnett",
-          "city": "TBD",
+          "city": "Snellville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Archer",
-          "city": "TBD",
+          "city": "Lawrenceville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Rockdale County",
-          "city": "TBD",
+          "city": "Conyers",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Grovetown",
-          "city": "TBD",
+          "city": "Grovetown",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Heritage-Conyers",
-          "city": "TBD",
+          "city": "Conyers",
           "stadium": "TBD",
           "players": []
         }
@@ -184,25 +184,25 @@
       "teams": [
         {
           "name": "North Cobb",
-          "city": "TBD",
+          "city": "Kennesaw",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Walton",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "North Paulding",
-          "city": "TBD",
+          "city": "Dallas",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Cherokee",
-          "city": "TBD",
+          "city": "Canton",
           "stadium": "TBD",
           "players": []
         },
@@ -214,13 +214,13 @@
         },
         {
           "name": "Wheeler",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Etowah",
-          "city": "TBD",
+          "city": "Woodstock",
           "stadium": "TBD",
           "players": []
         }
@@ -231,37 +231,37 @@
       "teams": [
         {
           "name": "North Atlanta",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lambert",
-          "city": "TBD",
+          "city": "Suwanee",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "West Forsyth",
-          "city": "TBD",
+          "city": "Cumming",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Denmark",
-          "city": "TBD",
+          "city": "Alpharetta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "North Forsyth",
-          "city": "TBD",
+          "city": "Cumming",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Forsyth Central",
-          "city": "TBD",
+          "city": "Cumming",
           "stadium": "TBD",
           "players": []
         },
@@ -273,7 +273,7 @@
         },
         {
           "name": "South Forsyth",
-          "city": "TBD",
+          "city": "Cumming",
           "stadium": "TBD",
           "players": []
         }
@@ -284,13 +284,13 @@
       "teams": [
         {
           "name": "North Gwinnett",
-          "city": "TBD",
+          "city": "Suwanee",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Brookwood",
-          "city": "TBD",
+          "city": "Snellville",
           "stadium": "TBD",
           "players": []
         },
@@ -302,13 +302,13 @@
         },
         {
           "name": "Peachtree Ridge",
-          "city": "TBD",
+          "city": "Suwanee",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Parkview",
-          "city": "TBD",
+          "city": "Lilburn",
           "stadium": "TBD",
           "players": []
         },
@@ -320,13 +320,13 @@
         },
         {
           "name": "Berkmar",
-          "city": "TBD",
+          "city": "Lilburn",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Meadowcreek",
-          "city": "TBD",
+          "city": "Norcross",
           "stadium": "TBD",
           "players": []
         }
@@ -343,13 +343,13 @@
         },
         {
           "name": "Collins Hill",
-          "city": "TBD",
+          "city": "Suwanee",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mill Creek",
-          "city": "TBD",
+          "city": "Hoschton",
           "stadium": "TBD",
           "players": []
         },
@@ -361,19 +361,19 @@
         },
         {
           "name": "Mountain View",
-          "city": "TBD",
+          "city": "Lawrenceville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Central Gwinnett",
-          "city": "TBD",
+          "city": "Lawrenceville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Discovery",
-          "city": "TBD",
+          "city": "Lawrenceville",
           "stadium": "TBD",
           "players": []
         }
@@ -390,31 +390,31 @@
         },
         {
           "name": "Lakeside-Evans",
-          "city": "TBD",
+          "city": "Evans",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Effingham County",
-          "city": "TBD",
+          "city": "Springfield",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Glynn Academy",
-          "city": "TBD",
+          "city": "Brunswick",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Evans",
-          "city": "TBD",
+          "city": "Evans",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Greenbrier",
-          "city": "TBD",
+          "city": "Evans",
           "stadium": "TBD",
           "players": []
         },
@@ -426,13 +426,13 @@
         },
         {
           "name": "Bradwell Institute",
-          "city": "TBD",
+          "city": "Hinesville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "South Effingham",
-          "city": "TBD",
+          "city": "Guyton",
           "stadium": "TBD",
           "players": []
         }
@@ -443,37 +443,37 @@
       "teams": [
         {
           "name": "Lee County",
-          "city": "TBD",
+          "city": "Leesburg",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Thomas County Central",
-          "city": "TBD",
+          "city": "Thomasville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Coffee",
-          "city": "TBD",
+          "city": "Douglas",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Houston County",
-          "city": "TBD",
+          "city": "Warner Robins",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Veterans",
-          "city": "TBD",
+          "city": "Kathleen",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Northside-Warner Robins",
-          "city": "TBD",
+          "city": "Warner Robins",
           "stadium": "TBD",
           "players": []
         }
@@ -484,7 +484,7 @@
       "teams": [
         {
           "name": "Hughes",
-          "city": "TBD",
+          "city": "Fairburn",
           "stadium": "TBD",
           "players": []
         },
@@ -496,19 +496,19 @@
         },
         {
           "name": "Dutchtown",
-          "city": "TBD",
+          "city": "Hampton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lovejoy",
-          "city": "TBD",
+          "city": "Hampton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "McIntosh",
-          "city": "TBD",
+          "city": "Peachtree City",
           "stadium": "TBD",
           "players": []
         },
@@ -520,13 +520,13 @@
         },
         {
           "name": "Northgate",
-          "city": "TBD",
+          "city": "Newnan",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Banneker",
-          "city": "TBD",
+          "city": "College Park",
           "stadium": "TBD",
           "players": []
         }
@@ -537,7 +537,7 @@
       "teams": [
         {
           "name": "Woodward Academy",
-          "city": "TBD",
+          "city": "College Park",
           "stadium": "TBD",
           "players": []
         },
@@ -549,7 +549,7 @@
         },
         {
           "name": "Tri-Cities",
-          "city": "TBD",
+          "city": "East Point",
           "stadium": "TBD",
           "players": []
         },
@@ -561,13 +561,13 @@
         },
         {
           "name": "Lakeside-DeKalb",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Shiloh",
-          "city": "TBD",
+          "city": "Snellville",
           "stadium": "TBD",
           "players": []
         },
@@ -579,7 +579,7 @@
         },
         {
           "name": "Arabia Mountain",
-          "city": "TBD",
+          "city": "Lithonia",
           "stadium": "TBD",
           "players": []
         }
@@ -596,13 +596,13 @@
         },
         {
           "name": "East Paulding",
-          "city": "TBD",
+          "city": "Dallas",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "New Manchester",
-          "city": "TBD",
+          "city": "Douglasville",
           "stadium": "TBD",
           "players": []
         },
@@ -614,25 +614,25 @@
         },
         {
           "name": "South Paulding",
-          "city": "TBD",
+          "city": "Douglasville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Alexander",
-          "city": "TBD",
+          "city": "Douglasville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Kennesaw Mountain",
-          "city": "TBD",
+          "city": "Kennesaw",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lithia Springs",
-          "city": "TBD",
+          "city": "Lithia Springs",
           "stadium": "TBD",
           "players": []
         }
@@ -643,19 +643,19 @@
       "teams": [
         {
           "name": "Sequoyah",
-          "city": "TBD",
+          "city": "Canton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Sprayberry",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "River Ridge",
-          "city": "TBD",
+          "city": "Woodstock",
           "stadium": "TBD",
           "players": []
         },
@@ -667,25 +667,25 @@
         },
         {
           "name": "Creekview",
-          "city": "TBD",
+          "city": "Canton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Pope",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Riverwood",
-          "city": "TBD",
+          "city": "Sandy Springs",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lassiter",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         }
@@ -714,19 +714,19 @@
         },
         {
           "name": "Lanier",
-          "city": "TBD",
+          "city": "Sugar Hill",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Seckinger",
-          "city": "TBD",
+          "city": "Buford",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Chattahoochee",
-          "city": "TBD",
+          "city": "Johns Creek",
           "stadium": "TBD",
           "players": []
         },
@@ -743,25 +743,25 @@
       "teams": [
         {
           "name": "Clarke Central",
-          "city": "TBD",
+          "city": "Athens",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Jackson County",
-          "city": "TBD",
+          "city": "Hoschton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Winder-Barrow",
-          "city": "TBD",
+          "city": "Winder",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Habersham Central",
-          "city": "TBD",
+          "city": "Mt. Airy",
           "stadium": "TBD",
           "players": []
         },
@@ -773,13 +773,13 @@
         },
         {
           "name": "Alcovy",
-          "city": "TBD",
+          "city": "Covington",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Apalachee",
-          "city": "TBD",
+          "city": "Winder",
           "stadium": "TBD",
           "players": []
         }
@@ -802,25 +802,25 @@
         },
         {
           "name": "Benedictine",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Ware County",
-          "city": "TBD",
+          "city": "Waycross",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "New Hampstead",
-          "city": "TBD",
+          "city": "Bloomingdale",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Wayne County",
-          "city": "TBD",
+          "city": "Jesup",
           "stadium": "TBD",
           "players": []
         }
@@ -831,13 +831,13 @@
       "teams": [
         {
           "name": "Ola",
-          "city": "TBD",
+          "city": "McDonough",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Jones County",
-          "city": "TBD",
+          "city": "Gray",
           "stadium": "TBD",
           "players": []
         },
@@ -849,7 +849,7 @@
         },
         {
           "name": "Eagle's Landing",
-          "city": "TBD",
+          "city": "McDonough",
           "stadium": "TBD",
           "players": []
         },
@@ -861,19 +861,19 @@
         },
         {
           "name": "Union Grove",
-          "city": "TBD",
+          "city": "McDonough",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Eagle's Landing Christian",
-          "city": "TBD",
+          "city": "McDonough",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Woodland-Stockbridge",
-          "city": "TBD",
+          "city": "Stockbridge",
           "stadium": "TBD",
           "players": []
         },
@@ -896,13 +896,13 @@
       "teams": [
         {
           "name": "Starr's Mill",
-          "city": "TBD",
+          "city": "Fayetteville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Central-Carroll",
-          "city": "TBD",
+          "city": "Carrollton",
           "stadium": "TBD",
           "players": []
         },
@@ -914,13 +914,13 @@
         },
         {
           "name": "Harris County",
-          "city": "TBD",
+          "city": "Hamilton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Northside-Columbus",
-          "city": "TBD",
+          "city": "Columbus",
           "stadium": "TBD",
           "players": []
         },
@@ -932,7 +932,7 @@
         },
         {
           "name": "Mundy's Mill",
-          "city": "TBD",
+          "city": "Jonesboro",
           "stadium": "TBD",
           "players": []
         }
@@ -943,43 +943,43 @@
       "teams": [
         {
           "name": "Creekside",
-          "city": "TBD",
+          "city": "Fairburn",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mays",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Jackson-Atlanta",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Drew",
-          "city": "TBD",
+          "city": "Riverdale",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "M.L. King",
-          "city": "TBD",
+          "city": "Lithonia",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Pace Academy",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Midtown",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
@@ -996,19 +996,19 @@
       "teams": [
         {
           "name": "Marist",
-          "city": "TBD",
+          "city": "Brookhaven",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Southwest DeKalb",
-          "city": "TBD",
+          "city": "Decatur",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "St. Pius X",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
@@ -1026,19 +1026,19 @@
         },
         {
           "name": "Druid Hills",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "North Springs",
-          "city": "TBD",
+          "city": "Sandy Springs",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Northview",
-          "city": "TBD",
+          "city": "Johns Creek",
           "stadium": "TBD",
           "players": []
         },
@@ -1050,7 +1050,7 @@
         },
         {
           "name": "Cross Keys",
-          "city": "TBD",
+          "city": "Brookhaven",
           "stadium": "TBD",
           "players": []
         }
@@ -1061,31 +1061,31 @@
       "teams": [
         {
           "name": "Blessed Trinity",
-          "city": "TBD",
+          "city": "Roswell",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Cambridge",
-          "city": "TBD",
+          "city": "Milton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Kell",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Westminster",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Centennial",
-          "city": "TBD",
+          "city": "Roswell",
           "stadium": "TBD",
           "players": []
         }
@@ -1114,25 +1114,25 @@
         },
         {
           "name": "Cass",
-          "city": "TBD",
+          "city": "White",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Allatoona",
-          "city": "TBD",
+          "city": "Acworth",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Woodland-Cartersville",
-          "city": "TBD",
+          "city": "Cartersville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Southeast Whitfield",
-          "city": "TBD",
+          "city": "Dalton",
           "stadium": "TBD",
           "players": []
         },
@@ -1149,19 +1149,19 @@
       "teams": [
         {
           "name": "North Oconee",
-          "city": "TBD",
+          "city": "Bogart",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Eastside",
-          "city": "TBD",
+          "city": "Covington",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "East Forsyth",
-          "city": "TBD",
+          "city": "Gainesville",
           "stadium": "TBD",
           "players": []
         },
@@ -1173,19 +1173,19 @@
         },
         {
           "name": "Madison County",
-          "city": "TBD",
+          "city": "Danielsville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Walnut Grove",
-          "city": "TBD",
+          "city": "Loganville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Cedar Shoals",
-          "city": "TBD",
+          "city": "Athens",
           "stadium": "TBD",
           "players": []
         }
@@ -1196,13 +1196,13 @@
       "teams": [
         {
           "name": "Peach County",
-          "city": "TBD",
+          "city": "Fort Valley",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Westover",
-          "city": "TBD",
+          "city": "Albany",
           "stadium": "TBD",
           "players": []
         },
@@ -1214,7 +1214,7 @@
         },
         {
           "name": "Monroe",
-          "city": "TBD",
+          "city": "Albany",
           "stadium": "TBD",
           "players": []
         },
@@ -1226,7 +1226,7 @@
         },
         {
           "name": "Dougherty",
-          "city": "TBD",
+          "city": "Albany",
           "stadium": "TBD",
           "players": []
         }
@@ -1237,7 +1237,7 @@
       "teams": [
         {
           "name": "Sandy Creek",
-          "city": "TBD",
+          "city": "Tyrone",
           "stadium": "TBD",
           "players": []
         },
@@ -1249,43 +1249,43 @@
         },
         {
           "name": "Upson-Lee",
-          "city": "TBD",
+          "city": "Thomaston",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Whitewater",
-          "city": "TBD",
+          "city": "Fayetteville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Spalding",
-          "city": "TBD",
+          "city": "Griffin",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Troup County",
-          "city": "TBD",
+          "city": "LaGrange",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mary Persons",
-          "city": "TBD",
+          "city": "Forsyth",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Trinity Christian",
-          "city": "TBD",
+          "city": "Sharpsburg",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Fayette County",
-          "city": "TBD",
+          "city": "Fayetteville",
           "stadium": "TBD",
           "players": []
         }
@@ -1296,61 +1296,61 @@
       "teams": [
         {
           "name": "Calvary Day School",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Jenkins",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Southeast Bulloch",
-          "city": "TBD",
+          "city": "Brooklet",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Long County",
-          "city": "TBD",
+          "city": "Ludowici",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Liberty County",
-          "city": "TBD",
+          "city": "Hinesville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Beach",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Johnson-Savannah",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Windsor Forest",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Groves",
-          "city": "TBD",
+          "city": "Garden City",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Islands",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         }
@@ -1367,37 +1367,37 @@
         },
         {
           "name": "West Laurens",
-          "city": "TBD",
+          "city": "Dexter",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Westside-Augusta",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Baldwin",
-          "city": "TBD",
+          "city": "Milledgeville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Aquinas",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Howard",
-          "city": "TBD",
+          "city": "Macon",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Richmond Academy",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         },
@@ -1409,7 +1409,7 @@
         },
         {
           "name": "Cross Creek",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         }
@@ -1420,37 +1420,37 @@
       "teams": [
         {
           "name": "Douglass-Atlanta",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Stephenson",
-          "city": "TBD",
+          "city": "Stone Mountain",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Luella",
-          "city": "TBD",
+          "city": "Locust Grove",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Cedar Grove",
-          "city": "TBD",
+          "city": "Ellenwood",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mt. Zion-Jonesboro",
-          "city": "TBD",
+          "city": "Jonesboro",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "North Clayton",
-          "city": "TBD",
+          "city": "College Park",
           "stadium": "TBD",
           "players": []
         },
@@ -1473,49 +1473,49 @@
       "teams": [
         {
           "name": "North Hall",
-          "city": "TBD",
+          "city": "Gainesville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lumpkin County",
-          "city": "TBD",
+          "city": "Dahlonega",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Chestatee",
-          "city": "TBD",
+          "city": "Gainesville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Greater Atlanta Christian",
-          "city": "TBD",
+          "city": "Norcross",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Pickens",
-          "city": "TBD",
+          "city": "Jasper",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Dawson County",
-          "city": "TBD",
+          "city": "Dawsonville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "White County",
-          "city": "TBD",
+          "city": "Cleveland",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Johnson-Gainesville",
-          "city": "TBD",
+          "city": "Gainesville",
           "stadium": "TBD",
           "players": []
         }
@@ -1532,13 +1532,13 @@
         },
         {
           "name": "Northwest Whitfield",
-          "city": "TBD",
+          "city": "Tunnel Hill",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Heritage-Catoosa",
-          "city": "TBD",
+          "city": "Ringgold",
           "stadium": "TBD",
           "players": []
         },
@@ -1550,13 +1550,13 @@
         },
         {
           "name": "Gilmer",
-          "city": "TBD",
+          "city": "Ellijay",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Ridgeland",
-          "city": "TBD",
+          "city": "Rossville",
           "stadium": "TBD",
           "players": []
         },
@@ -1573,7 +1573,7 @@
       "teams": [
         {
           "name": "Cherokee Bluff",
-          "city": "TBD",
+          "city": "Flowery Branch",
           "stadium": "TBD",
           "players": []
         },
@@ -1585,25 +1585,25 @@
         },
         {
           "name": "Oconee County",
-          "city": "TBD",
+          "city": "Watkinsville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Monroe Area",
-          "city": "TBD",
+          "city": "Monroe",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "East Hall",
-          "city": "TBD",
+          "city": "Gainesville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "West Hall",
-          "city": "TBD",
+          "city": "Oakwood",
           "stadium": "TBD",
           "players": []
         }
@@ -1614,31 +1614,31 @@
       "teams": [
         {
           "name": "Carver-Columbus",
-          "city": "TBD",
+          "city": "Columbus",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Sumter County",
-          "city": "TBD",
+          "city": "Americus",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Spencer",
-          "city": "TBD",
+          "city": "Columbus",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Shaw",
-          "city": "TBD",
+          "city": "Columbus",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Hardaway",
-          "city": "TBD",
+          "city": "Columbus",
           "stadium": "TBD",
           "players": []
         },
@@ -1650,13 +1650,13 @@
         },
         {
           "name": "Kendrick",
-          "city": "TBD",
+          "city": "Columbus",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Jordan",
-          "city": "TBD",
+          "city": "Columbus",
           "stadium": "TBD",
           "players": []
         }
@@ -1667,19 +1667,19 @@
       "teams": [
         {
           "name": "Callaway",
-          "city": "TBD",
+          "city": "Hogansville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Morgan County",
-          "city": "TBD",
+          "city": "Madison",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Westside-Macon",
-          "city": "TBD",
+          "city": "Macon",
           "stadium": "TBD",
           "players": []
         },
@@ -1691,13 +1691,13 @@
         },
         {
           "name": "Pike County",
-          "city": "TBD",
+          "city": "Zebulon",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Rutland",
-          "city": "TBD",
+          "city": "Macon",
           "stadium": "TBD",
           "players": []
         }
@@ -1708,31 +1708,31 @@
       "teams": [
         {
           "name": "Appling County",
-          "city": "TBD",
+          "city": "Baxley",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Pierce County",
-          "city": "TBD",
+          "city": "Blackshear",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Crisp County",
-          "city": "TBD",
+          "city": "Cordele",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Cook",
-          "city": "TBD",
+          "city": "Adel",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Tattnall County",
-          "city": "TBD",
+          "city": "Reidsville",
           "stadium": "TBD",
           "players": []
         }
@@ -1743,7 +1743,7 @@
       "teams": [
         {
           "name": "Burke County",
-          "city": "TBD",
+          "city": "Waynesboro",
           "stadium": "TBD",
           "players": []
         },
@@ -1755,25 +1755,25 @@
         },
         {
           "name": "Laney",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Butler",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Glenn Hills",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Josey",
-          "city": "TBD",
+          "city": "Augusta",
           "stadium": "TBD",
           "players": []
         }
@@ -1784,43 +1784,43 @@
       "teams": [
         {
           "name": "Hapeville",
-          "city": "TBD",
+          "city": "Hapeville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Carver-Atlanta",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lovett",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Holy Innocents'",
-          "city": "TBD",
+          "city": "Sandy Springs",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Therrell",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "KIPP Atlanta Collegiate",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Washington",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         }
@@ -1831,31 +1831,31 @@
       "teams": [
         {
           "name": "Columbia",
-          "city": "TBD",
+          "city": "Decatur",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "South Atlanta",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Miller Grove",
-          "city": "TBD",
+          "city": "Lithonia",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Redan",
-          "city": "TBD",
+          "city": "Stone Mountain",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Salem",
-          "city": "TBD",
+          "city": "Conyers",
           "stadium": "TBD",
           "players": []
         }
@@ -1872,7 +1872,7 @@
         },
         {
           "name": "North Cobb Christian",
-          "city": "TBD",
+          "city": "Kennesaw",
           "stadium": "TBD",
           "players": []
         },
@@ -1884,37 +1884,37 @@
         },
         {
           "name": "North Murray",
-          "city": "TBD",
+          "city": "Chatsworth",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Union County",
-          "city": "TBD",
+          "city": "Blairsville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lakeview-Ft. Oglethorpe",
-          "city": "TBD",
+          "city": "Fort Oglethorpe",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Sonoraville",
-          "city": "TBD",
+          "city": "Calhoun",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Coahulla Creek",
-          "city": "TBD",
+          "city": "Dalton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Murray County",
-          "city": "TBD",
+          "city": "Chatsworth",
           "stadium": "TBD",
           "players": []
         }
@@ -1925,37 +1925,37 @@
       "teams": [
         {
           "name": "Prince Avenue Christian",
-          "city": "TBD",
+          "city": "Bogart",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Hebron Christian Academy",
-          "city": "TBD",
+          "city": "Dacula",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Stephens County",
-          "city": "TBD",
+          "city": "Toccoa",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Hart County",
-          "city": "TBD",
+          "city": "Hartwell",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "East Jackson",
-          "city": "TBD",
+          "city": "Commerce",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Franklin County",
-          "city": "TBD",
+          "city": "Carnesville",
           "stadium": "TBD",
           "players": []
         }
@@ -1972,7 +1972,7 @@
         },
         {
           "name": "Worth County",
-          "city": "TBD",
+          "city": "Sylvester",
           "stadium": "TBD",
           "players": []
         },
@@ -1984,25 +1984,25 @@
         },
         {
           "name": "Jeff Davis",
-          "city": "TBD",
+          "city": "Hazlehurst",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Brantley County",
-          "city": "TBD",
+          "city": "Nahunta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Bacon County",
-          "city": "TBD",
+          "city": "Alma",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Berrien",
-          "city": "TBD",
+          "city": "Nashville",
           "stadium": "TBD",
           "players": []
         }
@@ -2019,55 +2019,55 @@
         },
         {
           "name": "Northeast",
-          "city": "TBD",
+          "city": "Macon",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Dodge County",
-          "city": "TBD",
+          "city": "Eastman",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Washington County",
-          "city": "TBD",
+          "city": "Sandersville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "ACE Charter",
-          "city": "TBD",
+          "city": "Macon",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Southwest",
-          "city": "TBD",
+          "city": "Macon",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Bleckley County",
-          "city": "TBD",
+          "city": "Cochran",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "East Laurens",
-          "city": "TBD",
+          "city": "East Dublin",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Jefferson County",
-          "city": "TBD",
+          "city": "Louisville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Central-Macon",
-          "city": "TBD",
+          "city": "Macon",
           "stadium": "TBD",
           "players": []
         }
@@ -2078,13 +2078,13 @@
       "teams": [
         {
           "name": "Savannah Christian",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Toombs County",
-          "city": "TBD",
+          "city": "Lyons",
           "stadium": "TBD",
           "players": []
         },
@@ -2096,7 +2096,7 @@
         },
         {
           "name": "Savannah Country Day",
-          "city": "TBD",
+          "city": "Savannah",
           "stadium": "TBD",
           "players": []
         },
@@ -2113,7 +2113,7 @@
       "teams": [
         {
           "name": "Lamar County",
-          "city": "TBD",
+          "city": "Barnesville",
           "stadium": "TBD",
           "players": []
         },
@@ -2125,31 +2125,31 @@
         },
         {
           "name": "Jasper County",
-          "city": "TBD",
+          "city": "Monticello",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Putnam County",
-          "city": "TBD",
+          "city": "Eatonton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "McNair",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Towers",
-          "city": "TBD",
+          "city": "Decatur",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Utopian Academy",
-          "city": "TBD",
+          "city": "Ellenwood",
           "stadium": "TBD",
           "players": []
         }
@@ -2160,73 +2160,73 @@
       "teams": [
         {
           "name": "Fellowship Christian",
-          "city": "TBD",
+          "city": "Roswell",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Wesleyan",
-          "city": "TBD",
+          "city": "Peachtree Corners",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Whitefield Academy",
-          "city": "TBD",
+          "city": "Mableton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mt. Paran Christian",
-          "city": "TBD",
+          "city": "Kennesaw",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Landmark Christian",
-          "city": "TBD",
+          "city": "Fairburn",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "King's Ridge",
-          "city": "TBD",
+          "city": "Alpharetta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mount Vernon",
-          "city": "TBD",
+          "city": "Sandy Springs",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "B.E.S.T Academy",
-          "city": "TBD",
+          "city": "Atlanta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mt. Pisgah Christian",
-          "city": "TBD",
+          "city": "Johns Creek",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Mt. Bethel Christian",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Walker",
-          "city": "TBD",
+          "city": "Marietta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "St. Francis",
-          "city": "TBD",
+          "city": "Alpharetta",
           "stadium": "TBD",
           "players": []
         }
@@ -2237,7 +2237,7 @@
       "teams": [
         {
           "name": "Heard County",
-          "city": "TBD",
+          "city": "Franklin",
           "stadium": "TBD",
           "players": []
         },
@@ -2255,25 +2255,25 @@
         },
         {
           "name": "Darlington",
-          "city": "TBD",
+          "city": "Rome",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Pepperell",
-          "city": "TBD",
+          "city": "Lindale",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Model",
-          "city": "TBD",
+          "city": "Rome",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Haralson County",
-          "city": "TBD",
+          "city": "Tallapoosa",
           "stadium": "TBD",
           "players": []
         }
@@ -2284,49 +2284,49 @@
       "teams": [
         {
           "name": "Fannin County",
-          "city": "TBD",
+          "city": "Blue Ridge",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Christian Heritage",
-          "city": "TBD",
+          "city": "Dalton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Gordon Lee",
-          "city": "TBD",
+          "city": "Chickamauga",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Chattooga",
-          "city": "TBD",
+          "city": "Summerville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Dade County",
-          "city": "TBD",
+          "city": "Trenton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Coosa",
-          "city": "TBD",
+          "city": "Rome",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Gordon Central",
-          "city": "TBD",
+          "city": "Calhoun",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Armuchee",
-          "city": "TBD",
+          "city": "Rome",
           "stadium": "TBD",
           "players": []
         }
@@ -2337,7 +2337,7 @@
       "teams": [
         {
           "name": "Athens Academy",
-          "city": "TBD",
+          "city": "Athens",
           "stadium": "TBD",
           "players": []
         },
@@ -2349,31 +2349,31 @@
         },
         {
           "name": "Elbert County",
-          "city": "TBD",
+          "city": "Elberton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Rabun County",
-          "city": "TBD",
+          "city": "Tiger",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Banks County",
-          "city": "TBD",
+          "city": "Homer",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Providence Christian",
-          "city": "TBD",
+          "city": "Lilburn",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Oglethorpe County",
-          "city": "TBD",
+          "city": "Lexington",
           "stadium": "TBD",
           "players": []
         }
@@ -2384,37 +2384,37 @@
       "teams": [
         {
           "name": "Mitchell County",
-          "city": "TBD",
+          "city": "Camilla",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Early County",
-          "city": "TBD",
+          "city": "Blakely",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Calhoun County",
-          "city": "TBD",
+          "city": "Edison",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Miller County",
-          "city": "TBD",
+          "city": "Colquitt",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Pataula Charter",
-          "city": "TBD",
+          "city": "Edison",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Seminole County",
-          "city": "TBD",
+          "city": "Donalsonville",
           "stadium": "TBD",
           "players": []
         },
@@ -2426,37 +2426,37 @@
         },
         {
           "name": "Randolph-Clay",
-          "city": "TBD",
+          "city": "Cuthbert",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Baconton",
-          "city": "TBD",
+          "city": "Baconton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Southwest Georgia STEM",
-          "city": "TBD",
+          "city": "Shellman",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Terrell County",
-          "city": "TBD",
+          "city": "Dawson",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Baker County",
-          "city": "TBD",
+          "city": "Newton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Spring Creek",
-          "city": "TBD",
+          "city": "Bainbridge",
           "stadium": "TBD",
           "players": []
         }
@@ -2467,43 +2467,43 @@
       "teams": [
         {
           "name": "Clinch County",
-          "city": "TBD",
+          "city": "Homerville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Irwin County",
-          "city": "TBD",
+          "city": "Ocilla",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Brooks County",
-          "city": "TBD",
+          "city": "Quitman",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Charlton County",
-          "city": "TBD",
+          "city": "Folkston",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Turner County",
-          "city": "TBD",
+          "city": "Ashburn",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Atkinson County",
-          "city": "TBD",
+          "city": "Pearson",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lanier County",
-          "city": "TBD",
+          "city": "Lakeland",
           "stadium": "TBD",
           "players": []
         }
@@ -2520,37 +2520,37 @@
         },
         {
           "name": "Jenkins County",
-          "city": "TBD",
+          "city": "Millen",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "McIntosh County Academy",
-          "city": "TBD",
+          "city": "Darien",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Emanuel County Institute",
-          "city": "TBD",
+          "city": "Twin City",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Bryan County",
-          "city": "TBD",
+          "city": "Pembroke",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Portal",
-          "city": "TBD",
+          "city": "Portal",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Screven County",
-          "city": "TBD",
+          "city": "Sylvania",
           "stadium": "TBD",
           "players": []
         },
@@ -2573,7 +2573,7 @@
       "teams": [
         {
           "name": "Telfair County",
-          "city": "TBD",
+          "city": "McRae",
           "stadium": "TBD",
           "players": []
         },
@@ -2585,31 +2585,31 @@
         },
         {
           "name": "Wheeler County",
-          "city": "TBD",
+          "city": "Alamo",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Wilcox County",
-          "city": "TBD",
+          "city": "Rochelle",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Treutlen",
-          "city": "TBD",
+          "city": "Soperton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Dooly County",
-          "city": "TBD",
+          "city": "Vienna",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Montgomery County",
-          "city": "TBD",
+          "city": "Mount Vernon",
           "stadium": "TBD",
           "players": []
         }
@@ -2620,37 +2620,37 @@
       "teams": [
         {
           "name": "Johnson County",
-          "city": "TBD",
+          "city": "Wrightsville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Wilkinson County",
-          "city": "TBD",
+          "city": "Irwinton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Hancock Central",
-          "city": "TBD",
+          "city": "Sparta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Glascock County",
-          "city": "TBD",
+          "city": "Gibson",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Twiggs County",
-          "city": "TBD",
+          "city": "Jeffersonville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Georgia Military College",
-          "city": "TBD",
+          "city": "Milledgeville",
           "stadium": "TBD",
           "players": []
         }
@@ -2661,43 +2661,43 @@
       "teams": [
         {
           "name": "Macon County",
-          "city": "TBD",
+          "city": "Montezuma",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Schley County",
-          "city": "TBD",
+          "city": "Ellaville",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Taylor County",
-          "city": "TBD",
+          "city": "Butler",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Marion County",
-          "city": "TBD",
+          "city": "Buena Vista",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Crawford County",
-          "city": "TBD",
+          "city": "Roberta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Chattahoochee County",
-          "city": "TBD",
+          "city": "Cusseta",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Central-Talbotton",
-          "city": "TBD",
+          "city": "Talbotton",
           "stadium": "TBD",
           "players": []
         }
@@ -2732,7 +2732,7 @@
         },
         {
           "name": "Mt. Zion-Carroll",
-          "city": "TBD",
+          "city": "Carrollton",
           "stadium": "TBD",
           "players": []
         }
@@ -2743,37 +2743,37 @@
       "teams": [
         {
           "name": "Lincoln County",
-          "city": "TBD",
+          "city": "Lincolnton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Greene County",
-          "city": "TBD",
+          "city": "Greensboro",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Warren County",
-          "city": "TBD",
+          "city": "Warrenton",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Washington-Wilkes",
-          "city": "TBD",
+          "city": "Washington",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Towns County",
-          "city": "TBD",
+          "city": "Hiawassee",
           "stadium": "TBD",
           "players": []
         },
         {
           "name": "Lake Oconee Academy",
-          "city": "TBD",
+          "city": "Greensboro",
           "stadium": "TBD",
           "players": []
         }
