@@ -19,9 +19,10 @@ name:
 | School            | `team.name` (+ city)  | `Valdosta` / `Valdosta`         |
 | —                 | `players: []`         | (empty — seeded later)          |
 
-`city` and `stadium` are required by the schema. Schools without a known city
-get a `TBD` placeholder the coach corrects when they **claim** the team
-(claim support already exists: `claimable` / `ownerOrgId`, WSM-000109).
+`city` and `stadium` are required by the schema. All 416 schools now carry a
+real `city` (see "Cities" below); `stadium` is still seeded as a `TBD`
+placeholder the coach corrects when they **claim** the team (claim support
+already exists: `claimable` / `ownerOrgId`, WSM-000109).
 
 ## Run
 
@@ -94,8 +95,9 @@ earlier — is **confirmed** in the official football alignment.
 
 1. **2025-season refresh** — regenerate from the 2025 football standings when
    seeding for the 2025 season (same shape, a few schools move).
-2. **Cities** — add `"city"` to a school entry to override the `TBD` placeholder.
-   74 are filled in; the rest are a separate enrichment pass.
+2. **Cities** — all 416 schools have a `city`, enriched from public sources
+   (Wikipedia / MaxPreps / school sites), resolved to the municipality (not the
+   county). Edit a school's `"city"` to correct any.
 3. **Other states** — the alignment JSON is association-agnostic; point `--in`
    at e.g. a CIF/FHSAA file with the same shape to seed another state.
 
