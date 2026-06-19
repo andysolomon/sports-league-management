@@ -21,6 +21,7 @@ import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
+import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton";
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
 import GoLiveControl from "@/components/schedule/GoLiveControl";
@@ -131,6 +132,14 @@ export default async function LeagueSchedulePage({
           >
             Standings &rarr;
           </Link>
+          {isAdmin && activeSeason && teams.length >= 2 ? (
+            <GenerateScheduleButton
+              leagueId={leagueId}
+              seasonId={activeSeason.id}
+              seasonName={activeSeason.name}
+              hasFixtures={fixtures.length > 0}
+            />
+          ) : null}
           {isAdmin && activeSeason ? (
             <FixtureFormDialog
               leagueId={leagueId}

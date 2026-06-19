@@ -16,6 +16,7 @@ import {
   type HsRatingInput,
 } from "./lib/hsSprt";
 import { applyScore, isLiveStatus, isNonNegInt } from "./lib/liveScore";
+import { roundRobinSchedule } from "./lib/roundRobin";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -3665,6 +3666,97 @@ export const listFixturesBySeason = queryGeneric({
         };
       }),
     );
+  },
+});
+
+/*
+ * WSM-000153 — Generate a single round-robin schedule for a season.
+ *
+ * Pulls every team in the season's league and creates one fixture per pairing
+ * (week numbers only; scheduledAt/venue left null for the admin to fill in).
+ *
+ * Regeneration guard: if fixtures already exist and any of them carry a
+ * recorded result or live game state, the mutation throws `schedule_has_results`
+ * unless the caller passes `confirm: true`. Otherwise existing fixtures are
+ * cleared (cascading gameResults + liveGameState, mirroring deleteFixture) and
+ * replaced. This keeps a re-run safe while the slate is unplayed but refuses to
+ * silently orphan recorded scores.
+ */
+export const generateSeasonSchedule = internalMutationGeneric({
+  args: {
+    seasonId: v.id("seasons"),
+    actorUserId: v.string(),
+    confirm: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    created: v.number(),
+    weeks: v.number(),
+    teamCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .collect();
+    if (teams.length < 2) throw new Error("need_at_least_two_teams");
+
+    const existing = await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+
+    // Results-guard: refuse to wipe a played/in-progress slate unless confirmed.
+    if (existing.length > 0 && !args.confirm) {
+      for (const f of existing) {
+        const result = await ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+          .first();
+        if (result) throw new Error("schedule_has_results");
+        const live = await ctx.db
+          .query("liveGameState")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+          .first();
+        if (live) throw new Error("schedule_has_results");
+      }
+    }
+
+    // Clear existing fixtures, cascading their results + live state.
+    for (const f of existing) {
+      for (const gr of await ctx.db
+        .query("gameResults")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+        .collect())
+        await ctx.db.delete(gr._id);
+      for (const lg of await ctx.db
+        .query("liveGameState")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+        .collect())
+        await ctx.db.delete(lg._id);
+      await ctx.db.delete(f._id);
+    }
+
+    const pairings = roundRobinSchedule(teams.map((t) => t._id));
+    const createdAt = new Date().toISOString();
+    for (const p of pairings) {
+      await ctx.db.insert("fixtures", {
+        seasonId: args.seasonId,
+        homeTeamId: p.homeTeamId as Id<"teams">,
+        awayTeamId: p.awayTeamId as Id<"teams">,
+        scheduledAt: null,
+        week: p.week,
+        venue: null,
+        status: "scheduled",
+        createdAt,
+        createdBy: args.actorUserId,
+      });
+    }
+
+    const weeks = pairings.reduce((max, p) => Math.max(max, p.week), 0);
+    return { created: pairings.length, weeks, teamCount: teams.length };
   },
 });
 
