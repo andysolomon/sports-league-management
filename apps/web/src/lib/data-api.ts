@@ -253,6 +253,8 @@ const refs = {
       status: string;
       headshotUrl: string | null;
       experienceYears: number | null;
+      grade: number | null;
+      squad: string | null;
     },
     { dto: PlayerDto; created: boolean }
   >("sports:upsertPlayer"),
@@ -1286,6 +1288,8 @@ export async function bulkImportLeague(
             status: player.status ?? "Active",
             headshotUrl: player.headshotUrl ?? null,
             experienceYears: player.experienceYears ?? null,
+            grade: player.grade ?? null,
+            squad: player.squad ?? null,
           });
           if (playerResult.created) created.players++;
           else updated.players++;

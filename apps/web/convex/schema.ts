@@ -100,6 +100,10 @@ export default defineSchema({
     headshotUrl: v.union(v.string(), v.null()),
     // Optional: pre-experienceYears documents validate without backfill.
     experienceYears: v.optional(v.union(v.number(), v.null())),
+    // HS fields (optional so pre-existing documents validate without backfill).
+    // grade: 9–12; squad: "Varsity" | "JV" | "Freshman".
+    grade: v.optional(v.union(v.number(), v.null())),
+    squad: v.optional(v.union(v.string(), v.null())),
     // Org workspace (WSM-000114): a workspace player's link to the reference
     // player it was forked from — SPRT/Madden ratings resolve through it so
     // they stay live without duplicating the rating pipeline per org.
