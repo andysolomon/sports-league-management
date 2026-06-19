@@ -118,14 +118,14 @@ export default async function LeagueSchedulePage({
         &larr; Back to League
       </Link>
 
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-foreground">{league.name}</h2>
           <p className="text-sm text-muted-foreground">
             Schedule {activeSeason ? `· ${activeSeason.name}` : ""}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href={`/dashboard/leagues/${leagueId}/standings`}
             className="text-sm text-primary hover:underline"
@@ -180,7 +180,8 @@ export default async function LeagueSchedulePage({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <table className="w-full text-sm">
+                  <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-sm">
                     <thead>
                       <tr className="border-b-2 border-border bg-muted text-left text-foreground">
                         <th className="px-4 py-2 font-mono text-xs uppercase">
@@ -297,6 +298,7 @@ export default async function LeagueSchedulePage({
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </CardContent>
               </Card>
             );
