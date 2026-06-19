@@ -1,7 +1,7 @@
 {
   "league": "Georgia GHSA Football (2024-26)",
-  "source": "GHSA 2024 football standings / region alignment (https://www.ghsa.net/2024-ghsa-football-standings). These are FOOTBALL regions, not the enrollment-based reclassification. The 2025-season alignment may shift slightly within the same 2024-26 cycle.",
-  "notes": "School-level city is optional; when omitted the importer fills a 'TBD' placeholder a coach corrects on claim. Names are taken from the GHSA football standings with ' (Place)' normalized to '-Place'.",
+  "source": "GHSA 2025 football standings / region alignment (https://www.ghsa.net/2025-ghsa-football-standings, as of 2025-11-01). The 2025 season of the 2024-26 cycle. Names/cities reuse the curated dataset where a school persists from 2024.",
+  "notes": "School-level city is optional; when omitted the importer fills a 'TBD' placeholder a coach corrects on claim. Names carried over from the curated 2024-season dataset by normalized match (apostrophes/spelling preserved); '(Place)' normalized to '-Place' for new entries.",
   "classifications": [
     {
       "name": "6A",
@@ -14,20 +14,20 @@
               "city": "Valdosta"
             },
             {
-              "name": "Colquitt County",
-              "city": "Norman Park"
-            },
-            {
               "name": "Valdosta",
               "city": "Valdosta"
             },
             {
-              "name": "Camden County",
-              "city": "Kingsland"
+              "name": "Colquitt County",
+              "city": "Norman Park"
             },
             {
               "name": "Richmond Hill",
               "city": "Richmond Hill"
+            },
+            {
+              "name": "Camden County",
+              "city": "Kingsland"
             },
             {
               "name": "Tift County",
@@ -47,12 +47,12 @@
               "city": "Douglasville"
             },
             {
-              "name": "Westlake",
-              "city": "Atlanta"
-            },
-            {
               "name": "East Coweta",
               "city": "Sharpsburg"
+            },
+            {
+              "name": "Westlake",
+              "city": "Atlanta"
             },
             {
               "name": "Chapel Hill",
@@ -64,6 +64,10 @@
           "region": 3,
           "schools": [
             {
+              "name": "McEachern",
+              "city": "Powder Springs"
+            },
+            {
               "name": "Harrison",
               "city": "Kennesaw"
             },
@@ -72,20 +76,16 @@
               "city": "Powder Springs"
             },
             {
-              "name": "McEachern",
-              "city": "Powder Springs"
-            },
-            {
-              "name": "Pebblebrook",
-              "city": "Mableton"
+              "name": "Paulding County",
+              "city": "Dallas"
             },
             {
               "name": "Campbell",
               "city": "Smyrna"
             },
             {
-              "name": "Paulding County",
-              "city": "Dallas"
+              "name": "Pebblebrook",
+              "city": "Mableton"
             },
             {
               "name": "Osborne",
@@ -109,12 +109,12 @@
               "city": "Covington"
             },
             {
-              "name": "South Gwinnett",
-              "city": "Snellville"
-            },
-            {
               "name": "Archer",
               "city": "Lawrenceville"
+            },
+            {
+              "name": "South Gwinnett",
+              "city": "Snellville"
             },
             {
               "name": "Rockdale County",
@@ -134,23 +134,19 @@
           "region": 5,
           "schools": [
             {
-              "name": "North Cobb",
-              "city": "Kennesaw"
-            },
-            {
-              "name": "Walton",
-              "city": "Marietta"
-            },
-            {
               "name": "North Paulding",
               "city": "Dallas"
             },
             {
-              "name": "Cherokee",
-              "city": "Canton"
+              "name": "North Cobb",
+              "city": "Kennesaw"
             },
             {
               "name": "Marietta",
+              "city": "Marietta"
+            },
+            {
+              "name": "Walton",
               "city": "Marietta"
             },
             {
@@ -160,20 +156,16 @@
             {
               "name": "Etowah",
               "city": "Woodstock"
+            },
+            {
+              "name": "Cherokee",
+              "city": "Canton"
             }
           ]
         },
         {
           "region": 6,
           "schools": [
-            {
-              "name": "North Atlanta",
-              "city": "Atlanta"
-            },
-            {
-              "name": "Lambert",
-              "city": "Suwanee"
-            },
             {
               "name": "West Forsyth",
               "city": "Cumming"
@@ -183,16 +175,24 @@
               "city": "Alpharetta"
             },
             {
+              "name": "Lambert",
+              "city": "Suwanee"
+            },
+            {
               "name": "North Forsyth",
               "city": "Cumming"
             },
             {
-              "name": "Forsyth Central",
-              "city": "Cumming"
+              "name": "North Atlanta",
+              "city": "Atlanta"
             },
             {
               "name": "Alpharetta",
               "city": "Alpharetta"
+            },
+            {
+              "name": "Forsyth Central",
+              "city": "Cumming"
             },
             {
               "name": "South Forsyth",
@@ -212,12 +212,12 @@
               "city": "Snellville"
             },
             {
-              "name": "Norcross",
-              "city": "Norcross"
-            },
-            {
               "name": "Peachtree Ridge",
               "city": "Suwanee"
+            },
+            {
+              "name": "Norcross",
+              "city": "Norcross"
             },
             {
               "name": "Parkview",
@@ -228,12 +228,12 @@
               "city": "Duluth"
             },
             {
-              "name": "Berkmar",
-              "city": "Lilburn"
-            },
-            {
               "name": "Meadowcreek",
               "city": "Norcross"
+            },
+            {
+              "name": "Berkmar",
+              "city": "Lilburn"
             }
           ]
         },
@@ -245,23 +245,23 @@
               "city": "Buford"
             },
             {
-              "name": "Collins Hill",
-              "city": "Suwanee"
-            },
-            {
               "name": "Mill Creek",
               "city": "Hoschton"
+            },
+            {
+              "name": "Collins Hill",
+              "city": "Suwanee"
             },
             {
               "name": "Dacula",
               "city": "Dacula"
             },
             {
-              "name": "Mountain View",
+              "name": "Central Gwinnett",
               "city": "Lawrenceville"
             },
             {
-              "name": "Central Gwinnett",
+              "name": "Mountain View",
               "city": "Lawrenceville"
             },
             {
@@ -283,36 +283,36 @@
               "city": "Brunswick"
             },
             {
-              "name": "Lakeside-Evans",
-              "city": "Evans"
-            },
-            {
               "name": "Effingham County",
               "city": "Springfield"
-            },
-            {
-              "name": "Glynn Academy",
-              "city": "Brunswick"
-            },
-            {
-              "name": "Evans",
-              "city": "Evans"
-            },
-            {
-              "name": "Greenbrier",
-              "city": "Evans"
             },
             {
               "name": "Statesboro",
               "city": "Statesboro"
             },
             {
-              "name": "Bradwell Institute",
-              "city": "Hinesville"
+              "name": "Glynn Academy",
+              "city": "Brunswick"
             },
             {
               "name": "South Effingham",
               "city": "Guyton"
+            },
+            {
+              "name": "Evans",
+              "city": "Evans"
+            },
+            {
+              "name": "Bradwell Institute",
+              "city": "Hinesville"
+            },
+            {
+              "name": "Greenbrier",
+              "city": "Evans"
+            },
+            {
+              "name": "Lakeside-Evans",
+              "city": "Evans"
             }
           ]
         },
@@ -320,28 +320,28 @@
           "region": 2,
           "schools": [
             {
-              "name": "Lee County",
-              "city": "Leesburg"
-            },
-            {
               "name": "Thomas County Central",
               "city": "Thomasville"
-            },
-            {
-              "name": "Coffee",
-              "city": "Douglas"
             },
             {
               "name": "Houston County",
               "city": "Warner Robins"
             },
             {
-              "name": "Veterans",
-              "city": "Kathleen"
+              "name": "Lee County",
+              "city": "Leesburg"
+            },
+            {
+              "name": "Coffee",
+              "city": "Douglas"
             },
             {
               "name": "Northside-Warner Robins",
               "city": "Warner Robins"
+            },
+            {
+              "name": "Veterans",
+              "city": "Kathleen"
             }
           ]
         },
@@ -353,7 +353,15 @@
               "city": "Fairburn"
             },
             {
+              "name": "Lovejoy",
+              "city": "Hampton"
+            },
+            {
               "name": "Newnan",
+              "city": "Newnan"
+            },
+            {
+              "name": "Northgate",
               "city": "Newnan"
             },
             {
@@ -361,24 +369,16 @@
               "city": "Hampton"
             },
             {
-              "name": "Lovejoy",
-              "city": "Hampton"
-            },
-            {
               "name": "McIntosh",
               "city": "Peachtree City"
             },
             {
-              "name": "Morrow",
-              "city": "Morrow"
-            },
-            {
-              "name": "Northgate",
-              "city": "Newnan"
-            },
-            {
               "name": "Banneker",
               "city": "College Park"
+            },
+            {
+              "name": "Morrow",
+              "city": "Morrow"
             }
           ]
         },
@@ -390,32 +390,32 @@
               "city": "College Park"
             },
             {
-              "name": "Decatur",
-              "city": "Decatur"
-            },
-            {
-              "name": "Tri-Cities",
-              "city": "East Point"
+              "name": "Shiloh",
+              "city": "Snellville"
             },
             {
               "name": "Dunwoody",
               "city": "Dunwoody"
             },
             {
-              "name": "Lakeside-DeKalb",
-              "city": "Atlanta"
-            },
-            {
-              "name": "Shiloh",
-              "city": "Snellville"
-            },
-            {
               "name": "Chamblee",
               "city": "Chamblee"
             },
             {
+              "name": "Decatur",
+              "city": "Decatur"
+            },
+            {
               "name": "Arabia Mountain",
               "city": "Lithonia"
+            },
+            {
+              "name": "Lakeside-DeKalb",
+              "city": "Atlanta"
+            },
+            {
+              "name": "Tri-Cities",
+              "city": "East Point"
             }
           ]
         },
@@ -427,16 +427,16 @@
               "city": "Rome"
             },
             {
-              "name": "East Paulding",
-              "city": "Dallas"
-            },
-            {
               "name": "New Manchester",
               "city": "Douglasville"
             },
             {
               "name": "Villa Rica",
               "city": "Villa Rica"
+            },
+            {
+              "name": "East Paulding",
+              "city": "Dallas"
             },
             {
               "name": "South Paulding",
@@ -468,6 +468,10 @@
               "city": "Marietta"
             },
             {
+              "name": "Creekview",
+              "city": "Canton"
+            },
+            {
               "name": "River Ridge",
               "city": "Woodstock"
             },
@@ -476,8 +480,8 @@
               "city": "Woodstock"
             },
             {
-              "name": "Creekview",
-              "city": "Canton"
+              "name": "Lassiter",
+              "city": "Marietta"
             },
             {
               "name": "Pope",
@@ -486,20 +490,12 @@
             {
               "name": "Riverwood",
               "city": "Sandy Springs"
-            },
-            {
-              "name": "Lassiter",
-              "city": "Marietta"
             }
           ]
         },
         {
           "region": 7,
           "schools": [
-            {
-              "name": "Milton",
-              "city": "Milton"
-            },
             {
               "name": "Roswell",
               "city": "Roswell"
@@ -509,12 +505,16 @@
               "city": "Gainesville"
             },
             {
-              "name": "Lanier",
-              "city": "Sugar Hill"
+              "name": "Milton",
+              "city": "Milton"
             },
             {
               "name": "Seckinger",
               "city": "Buford"
+            },
+            {
+              "name": "Lanier",
+              "city": "Sugar Hill"
             },
             {
               "name": "Chattahoochee",
@@ -530,32 +530,32 @@
           "region": 8,
           "schools": [
             {
-              "name": "Clarke Central",
-              "city": "Athens"
-            },
-            {
               "name": "Jackson County",
               "city": "Hoschton"
-            },
-            {
-              "name": "Winder-Barrow",
-              "city": "Winder"
             },
             {
               "name": "Habersham Central",
               "city": "Mt. Airy"
             },
             {
-              "name": "Loganville",
-              "city": "Loganville"
+              "name": "Clarke Central",
+              "city": "Athens"
+            },
+            {
+              "name": "Winder-Barrow",
+              "city": "Winder"
+            },
+            {
+              "name": "Apalachee",
+              "city": "Winder"
             },
             {
               "name": "Alcovy",
               "city": "Covington"
             },
             {
-              "name": "Apalachee",
-              "city": "Winder"
+              "name": "Loganville",
+              "city": "Loganville"
             }
           ]
         }
@@ -568,20 +568,20 @@
           "region": 1,
           "schools": [
             {
-              "name": "Perry",
-              "city": "Perry"
-            },
-            {
-              "name": "Warner Robins",
-              "city": "Warner Robins"
-            },
-            {
               "name": "Benedictine",
               "city": "Savannah"
             },
             {
               "name": "Ware County",
               "city": "Waycross"
+            },
+            {
+              "name": "Warner Robins",
+              "city": "Warner Robins"
+            },
+            {
+              "name": "Perry",
+              "city": "Perry"
             },
             {
               "name": "New Hampstead",
@@ -597,12 +597,16 @@
           "region": 2,
           "schools": [
             {
+              "name": "Locust Grove",
+              "city": "Locust Grove"
+            },
+            {
               "name": "Ola",
               "city": "McDonough"
             },
             {
-              "name": "Jones County",
-              "city": "Gray"
+              "name": "Stockbridge",
+              "city": "Stockbridge"
             },
             {
               "name": "Hampton",
@@ -613,15 +617,11 @@
               "city": "McDonough"
             },
             {
-              "name": "Locust Grove",
-              "city": "Locust Grove"
+              "name": "Jones County",
+              "city": "Gray"
             },
             {
-              "name": "Union Grove",
-              "city": "McDonough"
-            },
-            {
-              "name": "Eagle's Landing Christian",
+              "name": "McDonough",
               "city": "McDonough"
             },
             {
@@ -629,12 +629,12 @@
               "city": "Stockbridge"
             },
             {
-              "name": "McDonough",
+              "name": "Eagle's Landing Christian",
               "city": "McDonough"
             },
             {
-              "name": "Stockbridge",
-              "city": "Stockbridge"
+              "name": "Union Grove",
+              "city": "McDonough"
             }
           ]
         },
@@ -642,16 +642,20 @@
           "region": 3,
           "schools": [
             {
-              "name": "Starr's Mill",
-              "city": "Fayetteville"
-            },
-            {
               "name": "Central-Carroll",
               "city": "Carrollton"
             },
             {
+              "name": "Griffin",
+              "city": "Griffin"
+            },
+            {
               "name": "Jonesboro",
               "city": "Jonesboro"
+            },
+            {
+              "name": "Starr's Mill",
+              "city": "Fayetteville"
             },
             {
               "name": "Harris County",
@@ -660,10 +664,6 @@
             {
               "name": "Northside-Columbus",
               "city": "Columbus"
-            },
-            {
-              "name": "Griffin",
-              "city": "Griffin"
             },
             {
               "name": "Mundy's Mill",
@@ -679,6 +679,10 @@
               "city": "Fairburn"
             },
             {
+              "name": "M.L. King",
+              "city": "Lithonia"
+            },
+            {
               "name": "Mays",
               "city": "Atlanta"
             },
@@ -687,24 +691,20 @@
               "city": "Atlanta"
             },
             {
-              "name": "Drew",
-              "city": "Riverdale"
-            },
-            {
-              "name": "M.L. King",
-              "city": "Lithonia"
+              "name": "Midtown",
+              "city": "Atlanta"
             },
             {
               "name": "Pace Academy",
               "city": "Atlanta"
             },
             {
-              "name": "Midtown",
-              "city": "Atlanta"
-            },
-            {
               "name": "Forest Park",
               "city": "Forest Park"
+            },
+            {
+              "name": "Drew",
+              "city": "Riverdale"
             }
           ]
         },
@@ -720,36 +720,36 @@
               "city": "Decatur"
             },
             {
-              "name": "St. Pius X",
-              "city": "Atlanta"
+              "name": "Lithonia",
+              "city": "Lithonia"
             },
             {
               "name": "Tucker",
               "city": "Tucker"
             },
             {
-              "name": "Lithonia",
-              "city": "Lithonia"
+              "name": "St. Pius X",
+              "city": "Atlanta"
             },
             {
               "name": "Druid Hills",
               "city": "Atlanta"
             },
             {
-              "name": "North Springs",
-              "city": "Sandy Springs"
-            },
-            {
               "name": "Northview",
               "city": "Johns Creek"
             },
             {
-              "name": "Clarkston",
-              "city": "Clarkston"
+              "name": "North Springs",
+              "city": "Sandy Springs"
             },
             {
               "name": "Cross Keys",
               "city": "Brookhaven"
+            },
+            {
+              "name": "Clarkston",
+              "city": "Clarkston"
             }
           ]
         },
@@ -757,24 +757,24 @@
           "region": 6,
           "schools": [
             {
-              "name": "Blessed Trinity",
-              "city": "Roswell"
+              "name": "Kell",
+              "city": "Marietta"
             },
             {
               "name": "Cambridge",
               "city": "Milton"
             },
             {
-              "name": "Kell",
-              "city": "Marietta"
-            },
-            {
-              "name": "Westminster",
-              "city": "Atlanta"
+              "name": "Blessed Trinity",
+              "city": "Roswell"
             },
             {
               "name": "Centennial",
               "city": "Roswell"
+            },
+            {
+              "name": "Westminster",
+              "city": "Atlanta"
             }
           ]
         },
@@ -786,16 +786,16 @@
               "city": "Cartersville"
             },
             {
-              "name": "Cedartown",
-              "city": "Cedartown"
+              "name": "Cass",
+              "city": "White"
             },
             {
               "name": "Hiram",
               "city": "Hiram"
             },
             {
-              "name": "Cass",
-              "city": "White"
+              "name": "Dalton",
+              "city": "Dalton"
             },
             {
               "name": "Allatoona",
@@ -806,11 +806,11 @@
               "city": "Cartersville"
             },
             {
-              "name": "Southeast Whitfield",
-              "city": "Dalton"
+              "name": "Cedartown",
+              "city": "Cedartown"
             },
             {
-              "name": "Dalton",
+              "name": "Southeast Whitfield",
               "city": "Dalton"
             }
           ]
@@ -823,16 +823,16 @@
               "city": "Bogart"
             },
             {
+              "name": "Flowery Branch",
+              "city": "Flowery Branch"
+            },
+            {
               "name": "Eastside",
               "city": "Covington"
             },
             {
               "name": "East Forsyth",
               "city": "Gainesville"
-            },
-            {
-              "name": "Flowery Branch",
-              "city": "Flowery Branch"
             },
             {
               "name": "Madison County",
@@ -857,6 +857,10 @@
           "region": 1,
           "schools": [
             {
+              "name": "Cairo",
+              "city": "Cairo"
+            },
+            {
               "name": "Peach County",
               "city": "Fort Valley"
             },
@@ -865,20 +869,16 @@
               "city": "Albany"
             },
             {
-              "name": "Cairo",
-              "city": "Cairo"
+              "name": "Monroe",
+              "city": "Albany"
             },
             {
-              "name": "Monroe",
+              "name": "Dougherty",
               "city": "Albany"
             },
             {
               "name": "Bainbridge",
               "city": "Bainbridge"
-            },
-            {
-              "name": "Dougherty",
-              "city": "Albany"
             }
           ]
         },
@@ -890,32 +890,32 @@
               "city": "Tyrone"
             },
             {
-              "name": "LaGrange",
+              "name": "Troup County",
               "city": "LaGrange"
             },
             {
-              "name": "Upson-Lee",
-              "city": "Thomaston"
+              "name": "LaGrange",
+              "city": "LaGrange"
             },
             {
               "name": "Whitewater",
               "city": "Fayetteville"
             },
             {
-              "name": "Spalding",
-              "city": "Griffin"
-            },
-            {
-              "name": "Troup County",
-              "city": "LaGrange"
-            },
-            {
               "name": "Mary Persons",
               "city": "Forsyth"
             },
             {
+              "name": "Upson-Lee",
+              "city": "Thomaston"
+            },
+            {
               "name": "Trinity Christian",
               "city": "Sharpsburg"
+            },
+            {
+              "name": "Spalding",
+              "city": "Griffin"
             },
             {
               "name": "Fayette County",
@@ -927,11 +927,23 @@
           "region": 3,
           "schools": [
             {
+              "name": "Jenkins",
+              "city": "Savannah"
+            },
+            {
               "name": "Calvary Day School",
               "city": "Savannah"
             },
             {
-              "name": "Jenkins",
+              "name": "Liberty County",
+              "city": "Hinesville"
+            },
+            {
+              "name": "Long County",
+              "city": "Ludowici"
+            },
+            {
+              "name": "Beach",
               "city": "Savannah"
             },
             {
@@ -939,15 +951,7 @@
               "city": "Brooklet"
             },
             {
-              "name": "Long County",
-              "city": "Ludowici"
-            },
-            {
-              "name": "Liberty County",
-              "city": "Hinesville"
-            },
-            {
-              "name": "Beach",
+              "name": "Windsor Forest",
               "city": "Savannah"
             },
             {
@@ -955,26 +959,18 @@
               "city": "Savannah"
             },
             {
-              "name": "Windsor Forest",
+              "name": "Islands",
               "city": "Savannah"
             },
             {
               "name": "Groves",
               "city": "Garden City"
-            },
-            {
-              "name": "Islands",
-              "city": "Savannah"
             }
           ]
         },
         {
           "region": 4,
           "schools": [
-            {
-              "name": "Harlem",
-              "city": "Harlem"
-            },
             {
               "name": "West Laurens",
               "city": "Dexter"
@@ -984,24 +980,28 @@
               "city": "Augusta"
             },
             {
-              "name": "Baldwin",
-              "city": "Milledgeville"
-            },
-            {
-              "name": "Aquinas",
-              "city": "Augusta"
-            },
-            {
-              "name": "Howard",
-              "city": "Macon"
+              "name": "Harlem",
+              "city": "Harlem"
             },
             {
               "name": "Richmond Academy",
               "city": "Augusta"
             },
             {
+              "name": "Aquinas",
+              "city": "Augusta"
+            },
+            {
+              "name": "Baldwin",
+              "city": "Milledgeville"
+            },
+            {
               "name": "Hephzibah",
               "city": "Hephzibah"
+            },
+            {
+              "name": "Howard",
+              "city": "Macon"
             },
             {
               "name": "Cross Creek",
@@ -1013,28 +1013,28 @@
           "region": 5,
           "schools": [
             {
-              "name": "Douglass-Atlanta",
-              "city": "Atlanta"
-            },
-            {
               "name": "Stephenson",
               "city": "Stone Mountain"
             },
             {
-              "name": "Luella",
-              "city": "Locust Grove"
+              "name": "North Clayton",
+              "city": "College Park"
+            },
+            {
+              "name": "Douglass-Atlanta",
+              "city": "Atlanta"
             },
             {
               "name": "Cedar Grove",
               "city": "Ellenwood"
             },
             {
-              "name": "Mt. Zion-Jonesboro",
-              "city": "Jonesboro"
+              "name": "Luella",
+              "city": "Locust Grove"
             },
             {
-              "name": "North Clayton",
-              "city": "College Park"
+              "name": "Mt. Zion-Jonesboro",
+              "city": "Jonesboro"
             },
             {
               "name": "Riverdale",
@@ -1054,14 +1054,6 @@
               "city": "Gainesville"
             },
             {
-              "name": "Lumpkin County",
-              "city": "Dahlonega"
-            },
-            {
-              "name": "Chestatee",
-              "city": "Gainesville"
-            },
-            {
               "name": "Greater Atlanta Christian",
               "city": "Norcross"
             },
@@ -1070,12 +1062,20 @@
               "city": "Jasper"
             },
             {
+              "name": "Lumpkin County",
+              "city": "Dahlonega"
+            },
+            {
               "name": "Dawson County",
               "city": "Dawsonville"
             },
             {
               "name": "White County",
               "city": "Cleveland"
+            },
+            {
+              "name": "Chestatee",
+              "city": "Gainesville"
             },
             {
               "name": "Johnson-Gainesville",
@@ -1091,28 +1091,28 @@
               "city": "Calhoun"
             },
             {
-              "name": "Northwest Whitfield",
-              "city": "Tunnel Hill"
-            },
-            {
               "name": "Heritage-Catoosa",
               "city": "Ringgold"
             },
             {
-              "name": "Adairsville",
-              "city": "Adairsville"
+              "name": "Northwest Whitfield",
+              "city": "Tunnel Hill"
             },
             {
               "name": "Gilmer",
               "city": "Ellijay"
             },
             {
-              "name": "Ridgeland",
-              "city": "Rossville"
+              "name": "Adairsville",
+              "city": "Adairsville"
             },
             {
               "name": "LaFayette",
               "city": "LaFayette"
+            },
+            {
+              "name": "Ridgeland",
+              "city": "Rossville"
             }
           ]
         },
@@ -1120,20 +1120,20 @@
           "region": 8,
           "schools": [
             {
-              "name": "Cherokee Bluff",
-              "city": "Flowery Branch"
-            },
-            {
               "name": "Jefferson",
               "city": "Jefferson"
+            },
+            {
+              "name": "Monroe Area",
+              "city": "Monroe"
             },
             {
               "name": "Oconee County",
               "city": "Watkinsville"
             },
             {
-              "name": "Monroe Area",
-              "city": "Monroe"
+              "name": "Cherokee Bluff",
+              "city": "Flowery Branch"
             },
             {
               "name": "East Hall",
@@ -1166,19 +1166,19 @@
               "city": "Columbus"
             },
             {
-              "name": "Shaw",
-              "city": "Columbus"
-            },
-            {
-              "name": "Hardaway",
-              "city": "Columbus"
-            },
-            {
               "name": "Columbus",
               "city": "Columbus"
             },
             {
+              "name": "Shaw",
+              "city": "Columbus"
+            },
+            {
               "name": "Kendrick",
+              "city": "Columbus"
+            },
+            {
+              "name": "Hardaway",
               "city": "Columbus"
             },
             {
@@ -1191,20 +1191,20 @@
           "region": 2,
           "schools": [
             {
-              "name": "Callaway",
-              "city": "Hogansville"
-            },
-            {
               "name": "Morgan County",
               "city": "Madison"
             },
             {
-              "name": "Westside-Macon",
-              "city": "Macon"
+              "name": "Callaway",
+              "city": "Hogansville"
             },
             {
               "name": "Jackson",
               "city": "Jackson"
+            },
+            {
+              "name": "Westside-Macon",
+              "city": "Macon"
             },
             {
               "name": "Pike County",
@@ -1224,12 +1224,12 @@
               "city": "Baxley"
             },
             {
-              "name": "Pierce County",
-              "city": "Blackshear"
-            },
-            {
               "name": "Crisp County",
               "city": "Cordele"
+            },
+            {
+              "name": "Pierce County",
+              "city": "Blackshear"
             },
             {
               "name": "Cook",
@@ -1245,12 +1245,12 @@
           "region": 4,
           "schools": [
             {
-              "name": "Burke County",
-              "city": "Waynesboro"
-            },
-            {
               "name": "Thomson",
               "city": "Thomson"
+            },
+            {
+              "name": "Burke County",
+              "city": "Waynesboro"
             },
             {
               "name": "Laney",
@@ -1261,11 +1261,11 @@
               "city": "Augusta"
             },
             {
-              "name": "Glenn Hills",
+              "name": "Josey",
               "city": "Augusta"
             },
             {
-              "name": "Josey",
+              "name": "Glenn Hills",
               "city": "Augusta"
             }
           ]
@@ -1274,23 +1274,19 @@
           "region": 5,
           "schools": [
             {
-              "name": "Hapeville",
-              "city": "Hapeville"
-            },
-            {
               "name": "Carver-Atlanta",
               "city": "Atlanta"
             },
             {
-              "name": "Lovett",
-              "city": "Atlanta"
+              "name": "Hapeville",
+              "city": "Hapeville"
             },
             {
               "name": "Holy Innocents'",
               "city": "Sandy Springs"
             },
             {
-              "name": "Therrell",
+              "name": "Lovett",
               "city": "Atlanta"
             },
             {
@@ -1299,6 +1295,10 @@
             },
             {
               "name": "Washington",
+              "city": "Atlanta"
+            },
+            {
+              "name": "Therrell",
               "city": "Atlanta"
             }
           ]
@@ -1311,16 +1311,16 @@
               "city": "Decatur"
             },
             {
-              "name": "South Atlanta",
-              "city": "Atlanta"
-            },
-            {
               "name": "Miller Grove",
               "city": "Lithonia"
             },
             {
               "name": "Redan",
               "city": "Stone Mountain"
+            },
+            {
+              "name": "South Atlanta",
+              "city": "Atlanta"
             },
             {
               "name": "Salem",
@@ -1336,28 +1336,28 @@
               "city": "Rockmart"
             },
             {
-              "name": "North Cobb Christian",
-              "city": "Kennesaw"
-            },
-            {
-              "name": "Ringgold",
-              "city": "Ringgold"
-            },
-            {
               "name": "North Murray",
               "city": "Chatsworth"
-            },
-            {
-              "name": "Union County",
-              "city": "Blairsville"
             },
             {
               "name": "Lakeview-Ft. Oglethorpe",
               "city": "Fort Oglethorpe"
             },
             {
+              "name": "Ringgold",
+              "city": "Ringgold"
+            },
+            {
               "name": "Sonoraville",
               "city": "Calhoun"
+            },
+            {
+              "name": "Union County",
+              "city": "Blairsville"
+            },
+            {
+              "name": "North Cobb Christian",
+              "city": "Kennesaw"
             },
             {
               "name": "Coahulla Creek",
@@ -1373,16 +1373,20 @@
           "region": 8,
           "schools": [
             {
+              "name": "Hebron Christian",
+              "city": "Dacula"
+            },
+            {
               "name": "Prince Avenue Christian",
               "city": "Bogart"
             },
             {
-              "name": "Hebron Christian Academy",
-              "city": "Dacula"
-            },
-            {
               "name": "Stephens County",
               "city": "Toccoa"
+            },
+            {
+              "name": "Franklin County",
+              "city": "Carnesville"
             },
             {
               "name": "Hart County",
@@ -1391,10 +1395,6 @@
             {
               "name": "East Jackson",
               "city": "Commerce"
-            },
-            {
-              "name": "Franklin County",
-              "city": "Carnesville"
             }
           ]
         }
@@ -1407,10 +1407,6 @@
           "region": 1,
           "schools": [
             {
-              "name": "Thomasville",
-              "city": "Thomasville"
-            },
-            {
               "name": "Worth County",
               "city": "Sylvester"
             },
@@ -1419,12 +1415,12 @@
               "city": "Fitzgerald"
             },
             {
-              "name": "Jeff Davis",
-              "city": "Hazlehurst"
+              "name": "Thomasville",
+              "city": "Thomasville"
             },
             {
-              "name": "Brantley County",
-              "city": "Nahunta"
+              "name": "Jeff Davis",
+              "city": "Hazlehurst"
             },
             {
               "name": "Bacon County",
@@ -1433,6 +1429,10 @@
             {
               "name": "Berrien",
               "city": "Nashville"
+            },
+            {
+              "name": "Brantley County",
+              "city": "Nahunta"
             }
           ]
         },
@@ -1448,6 +1448,10 @@
               "city": "Macon"
             },
             {
+              "name": "Bleckley County",
+              "city": "Cochran"
+            },
+            {
               "name": "Dodge County",
               "city": "Eastman"
             },
@@ -1460,16 +1464,12 @@
               "city": "Macon"
             },
             {
-              "name": "Southwest",
-              "city": "Macon"
-            },
-            {
-              "name": "Bleckley County",
-              "city": "Cochran"
-            },
-            {
               "name": "East Laurens",
               "city": "East Dublin"
+            },
+            {
+              "name": "Southwest",
+              "city": "Macon"
             },
             {
               "name": "Jefferson County",
@@ -1485,12 +1485,12 @@
           "region": 3,
           "schools": [
             {
-              "name": "Savannah Christian",
-              "city": "Savannah"
-            },
-            {
               "name": "Toombs County",
               "city": "Lyons"
+            },
+            {
+              "name": "Savannah Christian",
+              "city": "Savannah"
             },
             {
               "name": "Swainsboro",
@@ -1514,12 +1514,12 @@
               "city": "Barnesville"
             },
             {
-              "name": "Social Circle",
-              "city": "Social Circle"
-            },
-            {
               "name": "Jasper County",
               "city": "Monticello"
+            },
+            {
+              "name": "Social Circle",
+              "city": "Social Circle"
             },
             {
               "name": "Putnam County",
@@ -1547,36 +1547,36 @@
               "city": "Roswell"
             },
             {
-              "name": "Wesleyan",
-              "city": "Peachtree Corners"
-            },
-            {
               "name": "Whitefield Academy",
               "city": "Mableton"
             },
             {
-              "name": "Mt. Paran Christian",
-              "city": "Kennesaw"
+              "name": "Wesleyan",
+              "city": "Peachtree Corners"
             },
             {
               "name": "Landmark Christian",
               "city": "Fairburn"
             },
             {
-              "name": "King's Ridge",
-              "city": "Alpharetta"
-            },
-            {
               "name": "Mount Vernon",
               "city": "Sandy Springs"
             },
             {
-              "name": "B.E.S.T Academy",
-              "city": "Atlanta"
+              "name": "King's Ridge",
+              "city": "Alpharetta"
+            },
+            {
+              "name": "Mt. Paran Christian",
+              "city": "Kennesaw"
             },
             {
               "name": "Mt. Pisgah Christian",
               "city": "Johns Creek"
+            },
+            {
+              "name": "B.E.S.T Academy",
+              "city": "Atlanta"
             },
             {
               "name": "Mt. Bethel Christian",
@@ -1585,10 +1585,6 @@
             {
               "name": "Walker",
               "city": "Marietta"
-            },
-            {
-              "name": "St. Francis",
-              "city": "Alpharetta"
             }
           ]
         },
@@ -1600,28 +1596,28 @@
               "city": "Franklin"
             },
             {
-              "name": "Temple",
-              "city": "Temple"
+              "name": "Pepperell",
+              "city": "Lindale"
+            },
+            {
+              "name": "Haralson County",
+              "city": "Tallapoosa"
             },
             {
               "name": "Bremen",
               "city": "Bremen"
             },
             {
+              "name": "Temple",
+              "city": "Temple"
+            },
+            {
               "name": "Darlington",
               "city": "Rome"
             },
             {
-              "name": "Pepperell",
-              "city": "Lindale"
-            },
-            {
               "name": "Model",
               "city": "Rome"
-            },
-            {
-              "name": "Haralson County",
-              "city": "Tallapoosa"
             }
           ]
         },
@@ -1629,32 +1625,32 @@
           "region": 7,
           "schools": [
             {
-              "name": "Fannin County",
-              "city": "Blue Ridge"
+              "name": "Gordon Lee",
+              "city": "Chickamauga"
             },
             {
               "name": "Christian Heritage",
               "city": "Dalton"
             },
             {
-              "name": "Gordon Lee",
-              "city": "Chickamauga"
+              "name": "Gordon Central",
+              "city": "Calhoun"
+            },
+            {
+              "name": "Fannin County",
+              "city": "Blue Ridge"
             },
             {
               "name": "Chattooga",
               "city": "Summerville"
             },
             {
-              "name": "Dade County",
-              "city": "Trenton"
-            },
-            {
               "name": "Coosa",
               "city": "Rome"
             },
             {
-              "name": "Gordon Central",
-              "city": "Calhoun"
+              "name": "Dade County",
+              "city": "Trenton"
             },
             {
               "name": "Armuchee",
@@ -1670,28 +1666,28 @@
               "city": "Athens"
             },
             {
-              "name": "Commerce",
-              "city": "Commerce"
+              "name": "Rabun County",
+              "city": "Tiger"
+            },
+            {
+              "name": "Oglethorpe County",
+              "city": "Lexington"
             },
             {
               "name": "Elbert County",
               "city": "Elberton"
             },
             {
-              "name": "Rabun County",
-              "city": "Tiger"
-            },
-            {
-              "name": "Banks County",
-              "city": "Homer"
+              "name": "Commerce",
+              "city": "Commerce"
             },
             {
               "name": "Providence Christian",
               "city": "Lilburn"
             },
             {
-              "name": "Oglethorpe County",
-              "city": "Lexington"
+              "name": "Banks County",
+              "city": "Homer"
             }
           ]
         }
@@ -1704,56 +1700,48 @@
           "region": 1,
           "schools": [
             {
-              "name": "Mitchell County",
-              "city": "Camilla"
-            },
-            {
               "name": "Early County",
               "city": "Blakely"
-            },
-            {
-              "name": "Calhoun County",
-              "city": "Edison"
-            },
-            {
-              "name": "Miller County",
-              "city": "Colquitt"
-            },
-            {
-              "name": "Pataula Charter",
-              "city": "Edison"
             },
             {
               "name": "Seminole County",
               "city": "Donalsonville"
             },
             {
-              "name": "Pelham",
-              "city": "Pelham"
+              "name": "Mitchell County",
+              "city": "Camilla"
             },
             {
               "name": "Randolph-Clay",
               "city": "Cuthbert"
             },
             {
+              "name": "Miller County",
+              "city": "Colquitt"
+            },
+            {
+              "name": "Pelham",
+              "city": "Pelham"
+            },
+            {
               "name": "Baconton",
               "city": "Baconton"
+            },
+            {
+              "name": "Pataula Charter",
+              "city": "Edison"
             },
             {
               "name": "Southwest Georgia STEM",
               "city": "Shellman"
             },
             {
+              "name": "Calhoun County",
+              "city": "Edison"
+            },
+            {
               "name": "Terrell County",
               "city": "Dawson"
-            },
-            {
-              "name": "Baker County",
-              "city": "Newton"
-            },
-            {
-              "name": "Spring Creek",
-              "city": "Bainbridge"
             }
           ]
         },
@@ -1765,16 +1753,16 @@
               "city": "Homerville"
             },
             {
-              "name": "Irwin County",
-              "city": "Ocilla"
-            },
-            {
               "name": "Brooks County",
               "city": "Quitman"
             },
             {
               "name": "Charlton County",
               "city": "Folkston"
+            },
+            {
+              "name": "Lanier County",
+              "city": "Lakeland"
             },
             {
               "name": "Turner County",
@@ -1785,8 +1773,8 @@
               "city": "Pearson"
             },
             {
-              "name": "Lanier County",
-              "city": "Lakeland"
+              "name": "Irwin County",
+              "city": "Ocilla"
             }
           ]
         },
@@ -1794,40 +1782,40 @@
           "region": 3,
           "schools": [
             {
-              "name": "Metter",
-              "city": "Metter"
-            },
-            {
-              "name": "Jenkins County",
-              "city": "Millen"
-            },
-            {
-              "name": "McIntosh County Academy",
-              "city": "Darien"
+              "name": "Screven County",
+              "city": "Sylvania"
             },
             {
               "name": "Emanuel County Institute",
               "city": "Twin City"
             },
             {
+              "name": "Jenkins County",
+              "city": "Millen"
+            },
+            {
               "name": "Bryan County",
               "city": "Pembroke"
+            },
+            {
+              "name": "McIntosh County Academy",
+              "city": "Darien"
+            },
+            {
+              "name": "Metter",
+              "city": "Metter"
             },
             {
               "name": "Portal",
               "city": "Portal"
             },
             {
-              "name": "Screven County",
-              "city": "Sylvania"
+              "name": "Savannah",
+              "city": "Savannah"
             },
             {
               "name": "Claxton",
               "city": "Claxton"
-            },
-            {
-              "name": "Savannah",
-              "city": "Savannah"
             }
           ]
         },
@@ -1835,16 +1823,12 @@
           "region": 4,
           "schools": [
             {
-              "name": "Telfair County",
-              "city": "McRae"
+              "name": "Wheeler County",
+              "city": "Alamo"
             },
             {
               "name": "Hawkinsville",
               "city": "Hawkinsville"
-            },
-            {
-              "name": "Wheeler County",
-              "city": "Alamo"
             },
             {
               "name": "Wilcox County",
@@ -1853,6 +1837,10 @@
             {
               "name": "Treutlen",
               "city": "Soperton"
+            },
+            {
+              "name": "Telfair County",
+              "city": "McRae"
             },
             {
               "name": "Dooly County",
@@ -1876,20 +1864,20 @@
               "city": "Irwinton"
             },
             {
-              "name": "Hancock Central",
-              "city": "Sparta"
+              "name": "Georgia Military College",
+              "city": "Milledgeville"
             },
             {
               "name": "Glascock County",
               "city": "Gibson"
             },
             {
-              "name": "Twiggs County",
-              "city": "Jeffersonville"
+              "name": "Hancock Central",
+              "city": "Sparta"
             },
             {
-              "name": "Georgia Military College",
-              "city": "Milledgeville"
+              "name": "Twiggs County",
+              "city": "Jeffersonville"
             }
           ]
         },
@@ -1897,28 +1885,28 @@
           "region": 6,
           "schools": [
             {
-              "name": "Macon County",
-              "city": "Montezuma"
+              "name": "Taylor County",
+              "city": "Butler"
             },
             {
               "name": "Schley County",
               "city": "Ellaville"
             },
             {
-              "name": "Taylor County",
-              "city": "Butler"
+              "name": "Macon County",
+              "city": "Montezuma"
             },
             {
-              "name": "Marion County",
-              "city": "Buena Vista"
+              "name": "Chattahoochee County",
+              "city": "Cusseta"
             },
             {
               "name": "Crawford County",
               "city": "Roberta"
             },
             {
-              "name": "Chattahoochee County",
-              "city": "Cusseta"
+              "name": "Marion County",
+              "city": "Buena Vista"
             },
             {
               "name": "Central-Talbotton",
@@ -1930,12 +1918,16 @@
           "region": 7,
           "schools": [
             {
-              "name": "Manchester",
-              "city": "Manchester"
-            },
-            {
               "name": "Bowdon",
               "city": "Bowdon"
+            },
+            {
+              "name": "Mt. Zion-Carroll",
+              "city": "Carrollton"
+            },
+            {
+              "name": "Manchester",
+              "city": "Manchester"
             },
             {
               "name": "Trion",
@@ -1944,10 +1936,6 @@
             {
               "name": "Greenville",
               "city": "Greenville"
-            },
-            {
-              "name": "Mt. Zion-Carroll",
-              "city": "Carrollton"
             }
           ]
         },
@@ -1959,16 +1947,16 @@
               "city": "Lincolnton"
             },
             {
-              "name": "Greene County",
-              "city": "Greensboro"
-            },
-            {
               "name": "Warren County",
               "city": "Warrenton"
             },
             {
               "name": "Washington-Wilkes",
               "city": "Washington"
+            },
+            {
+              "name": "Greene County",
+              "city": "Greensboro"
             },
             {
               "name": "Towns County",
