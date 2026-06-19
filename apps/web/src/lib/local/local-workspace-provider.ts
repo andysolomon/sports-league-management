@@ -207,6 +207,8 @@ export class LocalWorkspaceProvider implements WorkspaceDataProvider {
       status: input.status,
       headshotUrl: null,
       experienceYears: null,
+      grade: input.grade ?? null,
+      squad: input.squad ?? null,
     };
     await this.db.players.add(player);
     return player;
@@ -239,6 +241,8 @@ export class LocalWorkspaceProvider implements WorkspaceDataProvider {
         ? { dateOfBirth: input.dateOfBirth }
         : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
+      ...(input.grade !== undefined ? { grade: input.grade } : {}),
+      ...(input.squad !== undefined ? { squad: input.squad } : {}),
     };
 
     const team = await this.db.teams.get(updated.teamId);

@@ -15,7 +15,11 @@ import type {
   CreatePlayerInput,
   UpdatePlayerInput,
   UpdateTeamInput,
+  Squad,
 } from "@sports-management/shared-types";
+
+/** Allowed HS squad values — single source for schemas and UI pick-lists. */
+export const SQUADS = ["Varsity", "JV", "Freshman"] as const satisfies readonly Squad[];
 
 // --- Entity schemas ---
 
@@ -67,6 +71,8 @@ export const PlayerDtoSchema = z.object({
   status: z.string(),
   headshotUrl: z.string().nullable(),
   experienceYears: z.number().nullable(),
+  grade: z.number().nullable(),
+  squad: z.string().nullable(),
 }) satisfies z.ZodType<PlayerDto>;
 
 export const RosterAssignmentDtoSchema = z.object({
@@ -136,6 +142,8 @@ export const CreatePlayerInputSchema = z.object({
   jerseyNumber: z.number().nullable().optional(),
   dateOfBirth: z.string().nullable().optional(),
   status: z.string().min(1),
+  grade: z.number().int().min(9).max(12).nullable().optional(),
+  squad: z.enum(SQUADS).nullable().optional(),
 }) satisfies z.ZodType<CreatePlayerInput>;
 
 export const UpdatePlayerInputSchema = z.object({
@@ -145,6 +153,8 @@ export const UpdatePlayerInputSchema = z.object({
   jerseyNumber: z.number().nullable().optional(),
   dateOfBirth: z.string().nullable().optional(),
   status: z.string().min(1).optional(),
+  grade: z.number().int().min(9).max(12).nullable().optional(),
+  squad: z.enum(SQUADS).nullable().optional(),
 }) satisfies z.ZodType<UpdatePlayerInput>;
 
 const hexColor = z

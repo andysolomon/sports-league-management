@@ -49,6 +49,8 @@ const PLAYER_FIELDS: FieldRow[] = [
   { field: "status", type: "string", required: false, notes: 'Defaults to "Active".' },
   { field: "headshotUrl", type: "string (url)", required: false, notes: "Absolute URL." },
   { field: "experienceYears", type: "integer >= 0", required: false, notes: "Years of experience." },
+  { field: "grade", type: "integer 9–12", required: false, notes: "HS grade level." },
+  { field: "squad", type: "string", required: false, notes: '"Varsity", "JV", or "Freshman".' },
 ];
 
 const CSV_COLUMNS: FieldRow[] = [
@@ -65,6 +67,8 @@ const CSV_COLUMNS: FieldRow[] = [
   { field: "status", type: "string", required: false, notes: 'Defaults to "Active".' },
   { field: "headshotUrl", type: "string (url)", required: false, notes: "Absolute URL." },
   { field: "experienceYears", type: "integer >= 0", required: false, notes: 'Alias: "experience".' },
+  { field: "grade", type: "integer 9–12", required: false, notes: "HS grade level." },
+  { field: "squad", type: "string", required: false, notes: '"Varsity", "JV", or "Freshman".' },
 ];
 
 const JSON_EXAMPLE = `{
@@ -79,7 +83,7 @@ const JSON_EXAMPLE = `{
           "stadium": "Nest Field",
           "logoUrl": "https://example.com/hawks.png",
           "players": [
-            { "name": "Pat Lee", "position": "QB", "jerseyNumber": 12, "experienceYears": 3 },
+            { "name": "Pat Lee", "position": "QB", "jerseyNumber": 12, "experienceYears": 3, "grade": 12, "squad": "Varsity" },
             { "name": "Sam Roe", "position": "RB", "jerseyNumber": 28, "status": "Active" }
           ]
         }
@@ -88,22 +92,23 @@ const JSON_EXAMPLE = `{
   ]
 }`;
 
-const CSV_EXAMPLE = `league,division,team,city,stadium,teamLogoUrl,playerName,position,jerseyNumber,dateOfBirth,status,headshotUrl,experienceYears
-Metro Youth Football,East,Riverside Hawks,Austin,Nest Field,https://example.com/hawks.png,Pat Lee,QB,12,2003-09-01,Active,,3
-Metro Youth Football,East,Riverside Hawks,Austin,Nest Field,,Sam Roe,RB,28,,Active,,1
-Metro Youth Football,West,Dallas Bears,Dallas,Den Stadium,,Jo Fox,WR,80,,Active,,2`;
+const CSV_EXAMPLE = `league,division,team,city,stadium,teamLogoUrl,playerName,position,jerseyNumber,dateOfBirth,status,headshotUrl,experienceYears,grade,squad
+Metro Youth Football,East,Riverside Hawks,Austin,Nest Field,https://example.com/hawks.png,Pat Lee,QB,12,2003-09-01,Active,,3,12,Varsity
+Metro Youth Football,East,Riverside Hawks,Austin,Nest Field,,Sam Roe,RB,28,,Active,,1,11,JV
+Metro Youth Football,West,Dallas Bears,Dallas,Den Stadium,,Jo Fox,WR,80,,Active,,2,12,Varsity`;
 
 const GENERATOR_PROMPT = `You are converting a roster into a league-import file for a sports management app.
 
 Output a SINGLE CSV file (no prose, no code fences) with EXACTLY this header row:
 
-league,division,team,city,stadium,teamLogoUrl,playerName,position,jerseyNumber,dateOfBirth,status,headshotUrl,experienceYears
+league,division,team,city,stadium,teamLogoUrl,playerName,position,jerseyNumber,dateOfBirth,status,headshotUrl,experienceYears,grade,squad
 
 Rules:
 - One row per player. Repeat league/division/team/city/stadium on every row of that team.
 - "league" must be identical on every row (one league per file).
 - For a team with no players yet, emit one row with the team columns filled and the player columns blank.
 - jerseyNumber and experienceYears must be whole numbers (or blank). experienceYears >= 0.
+- grade is a whole number 9–12 or blank. squad is "Varsity", "JV", or "Freshman" (or blank).
 - dateOfBirth in ISO format (YYYY-MM-DD) or blank. status defaults to "Active" if blank.
 - logoUrl/headshotUrl must be absolute URLs or blank.
 - Quote any field that contains a comma.

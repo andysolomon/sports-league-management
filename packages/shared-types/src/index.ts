@@ -51,6 +51,9 @@ export interface TeamDto {
   maxprepsSupplierId: string | null;
 }
 
+/** High-school squad level. */
+export type Squad = "Varsity" | "JV" | "Freshman";
+
 export interface PlayerDto {
   id: string;
   name: string;
@@ -62,6 +65,10 @@ export interface PlayerDto {
   status: string;
   headshotUrl: string | null;
   experienceYears: number | null;
+  /** HS grade level, 9–12. */
+  grade: number | null;
+  /** HS squad: "Varsity" | "JV" | "Freshman" (stored as string for forward-compat). */
+  squad: string | null;
 }
 
 export interface SeasonDto {
@@ -124,6 +131,8 @@ export interface CreatePlayerInput {
   jerseyNumber?: number | null;
   dateOfBirth?: string | null;
   status: string;
+  grade?: number | null;
+  squad?: Squad | null;
 }
 
 export interface UpdatePlayerInput {
@@ -133,6 +142,8 @@ export interface UpdatePlayerInput {
   jerseyNumber?: number | null;
   dateOfBirth?: string | null;
   status?: string;
+  grade?: number | null;
+  squad?: Squad | null;
 }
 
 export interface CreateLeagueInput {

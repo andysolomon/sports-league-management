@@ -5,6 +5,7 @@ import type { PlayerDto } from "@sports-management/shared-types";
 import {
   CreatePlayerInputSchema,
   UpdatePlayerInputSchema,
+  SQUADS,
 } from "@sports-management/api-contracts";
 import {
   Dialog,
@@ -94,6 +95,8 @@ export default function PlayerForm({
   );
   const [dateOfBirth, setDateOfBirth] = useState(player?.dateOfBirth ?? "");
   const [status, setStatus] = useState(player?.status ?? "Active");
+  const [grade, setGrade] = useState(player?.grade?.toString() ?? "");
+  const [squad, setSquad] = useState(player?.squad ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -115,6 +118,8 @@ export default function PlayerForm({
         jerseyNumber: jerseyNumber ? Number(jerseyNumber) : null,
         dateOfBirth: dateOfBirth || null,
         status,
+        grade: grade ? Number(grade) : null,
+        squad: squad || null,
       };
 
       // When duplicates are allowed, a clash is a soft warning (saved anyway).
@@ -274,6 +279,46 @@ export default function PlayerForm({
                 <SelectItem value="Active">Active</SelectItem>
                 <SelectItem value="Injured">Injured</SelectItem>
                 <SelectItem value="Inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="player-grade">Grade</Label>
+            <Select
+              value={grade === "" ? "none" : grade}
+              onValueChange={(val) => setGrade(val === "none" ? "" : val)}
+            >
+              <SelectTrigger id="player-grade">
+                <SelectValue placeholder="Select a grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {[9, 10, 11, 12].map((g) => (
+                  <SelectItem key={g} value={String(g)}>
+                    {g}th
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="player-squad">Squad</Label>
+            <Select
+              value={squad === "" ? "none" : squad}
+              onValueChange={(val) => setSquad(val === "none" ? "" : val)}
+            >
+              <SelectTrigger id="player-squad">
+                <SelectValue placeholder="Select a squad" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {SQUADS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

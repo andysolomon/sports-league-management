@@ -8,6 +8,8 @@ const PlayerImportSchema = z.object({
   status: z.string().min(1).optional().default("Active"),
   headshotUrl: z.string().url().nullable().optional(),
   experienceYears: z.number().int().min(0).nullable().optional(),
+  grade: z.number().int().min(9).max(12).nullable().optional(),
+  squad: z.enum(["Varsity", "JV", "Freshman"]).nullable().optional(),
 });
 
 const TeamImportSchema = z.object({
