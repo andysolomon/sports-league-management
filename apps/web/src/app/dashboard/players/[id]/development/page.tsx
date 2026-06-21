@@ -71,7 +71,7 @@ export default async function PlayerDevelopmentPage({
         &larr; Back to Players
       </Link>
 
-      <header className="mb-6 flex items-start justify-between gap-4">
+      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-foreground">
             {player.name}
@@ -115,7 +115,8 @@ export default async function PlayerDevelopmentPage({
 
       <Card>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b-2 border-border bg-muted text-left text-foreground">
                 <th className="px-4 py-2 font-mono text-xs uppercase">
@@ -174,6 +175,7 @@ export default async function PlayerDevelopmentPage({
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
     </div>
