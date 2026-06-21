@@ -90,7 +90,8 @@ export default async function SeasonAttributesByPositionPage({
 
       <Card>
         <CardContent className="p-0">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b-2 border-border bg-muted text-left text-foreground">
                 <th className="px-4 py-2 font-mono text-xs uppercase">
@@ -147,6 +148,7 @@ export default async function SeasonAttributesByPositionPage({
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
       </Card>
     </div>
