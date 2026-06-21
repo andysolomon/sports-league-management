@@ -78,6 +78,11 @@ jobs:
       - name: Type-check
         run: pnpm turbo type-check
 
+      # Catches a stray comment-closer inside a CSS comment (WSM-000156): it
+      # passes `next build` but 500s every route under Turbopack `next dev`.
+      - name: CSS comment guard
+        run: pnpm check:css
+
       - name: Test (LWC Jest)
         run: npx jest --config jest.config.js --passWithNoTests
 
