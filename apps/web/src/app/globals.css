@@ -5,7 +5,7 @@
  *
  * Neutral, token-driven shadcn theme. Tokens live in :root (light) and .dark
  * (dark) as `--<name>`; `@theme inline` maps them to the Tailwind v4
- * `--color-<name>` namespace that powers bg-*/text-*/border-* utilities, so
+ * `--color-<name>` namespace that powers the bg, text and border utilities, so
  * every shadcn `ui/*` primitive inherits the palette. The app renders dark-first
  * (`.dark` is set on <html>); the light set is retained for a future toggle.
  */
