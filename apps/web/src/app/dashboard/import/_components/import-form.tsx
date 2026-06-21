@@ -286,14 +286,16 @@ export function ImportForm() {
               ) : (
                 <>
                   <Trophy className="mr-2 h-4 w-4" />
-                  Seed GHSA football (416 teams)
+                  Seed GHSA football (413 teams)
                 </>
               )}
             </Button>
             <p className="text-xs text-muted-foreground">
               Pre-loads every Georgia high-school football team (56 regions) as
-              empty, claimable teams. You&apos;ll review the preview before
-              anything is imported.
+              empty teams. You&apos;ll review the preview before anything is
+              imported. To let coaches claim their team afterward, turn on{" "}
+              <strong>Public viewer</strong> and <strong>Claimable by coaches</strong>{" "}
+              in the new league&apos;s settings.
             </p>
           </div>
         </CardContent>
