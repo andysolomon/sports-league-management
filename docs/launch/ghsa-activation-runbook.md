@@ -1,16 +1,22 @@
 # GHSA Activation Runbook (Coach Path) — Soft Launch
 
-Status: **code audit complete (read-only).** This document describes how to seed
-the GHSA league into a target environment and confirms, at the code level,
-whether a high-school coach can complete the seed → claim → roster path.
+Status: **activation enabled.** This document describes how to seed the GHSA
+league and walk a high-school coach through seed → claim → roster.
 
-> **Verdict (TL;DR):** The coach path is **NOT yet functional end-to-end via the
-> in-product "Seed GHSA" button.** The 413-team payload seeds correctly, but the
-> button/`POST /api/cli/import` path creates the league **private and
-> non-claimable**, so coaches can neither discover nor claim their school. The
-> claim + roster code itself is sound. **Use the admin-keyed script path described
-> in "Seeding" below — but note that the existing script only seeds the 16-team
-> Cobb subset, not the 413-team file.** See **Open gaps / blockers**.
+> **Verdict (TL;DR):** The coach path is **functional end-to-end through the
+> product** as of WSM-000109 activation work (this change). Flow:
+> 1. Admin: `/dashboard/import` → **Seed GHSA football (413 teams)** (creates the
+>    league + 56 regions + 413 empty teams).
+> 2. Admin: `/dashboard/leagues/<id>` → turn on **Public viewer** and **Claimable
+>    by coaches** (the claimable toggle is new — it wires the previously
+>    UI-less `setLeagueClaimable`).
+> 3. Coach: `/dashboard/discover` → find their school → claim → fills the roster
+>    (with HS grade/squad).
+>
+> The claim + roster code was already sound; the missing piece was a way to mark a
+> seeded league claimable from the product, now added. The earlier blockers are
+> resolved (see **Status of audit findings**). A custom 413-seeding script is **no
+> longer required** — the in-product button + settings toggles complete it.
 
 ---
 
@@ -95,7 +101,12 @@ npx tsx apps/web/scripts/seed-ghsa-cobb.mts --write  # commit
 > — see blockers). **Do not improvise the prod write; this is a code gap to fix
 > before launch.**
 
-### Path B — In-product "Seed GHSA" button / `POST /api/cli/import` (seeds 413, but NOT claimable)
+### Path B — In-product "Seed GHSA" button / `POST /api/cli/import` (recommended; seeds 413, then flip the toggles)
+
+> **This is now the recommended path.** The button seeds the full 413-team league;
+> then, in the new league's settings, turn on **Public viewer** and **Claimable by
+> coaches** to complete activation. The mechanical detail below still holds — the
+> seed alone does not set the flags; the settings toggles do.
 
 - UI: `/dashboard/import` → "Seed GHSA football" button
   (`apps/web/src/app/dashboard/import/_components/import-form.tsx`). It loads
@@ -115,8 +126,10 @@ set** (defaults to absent/false). The `upsertTeam` mutation likewise sets no
 claim-related fields. Result: a private, non-claimable league that does not
 appear in Discover and cannot be claimed.
 
-> The button's label/copy ("empty, claimable teams") is therefore **misleading**
-> relative to what the code does. (It also says "416 teams"; the payload has 413.)
+> After seeding, open the league settings and enable **Public viewer** +
+> **Claimable by coaches** — that is what makes the teams discoverable and
+> claimable. (Button copy now reads "413 teams" and directs the admin to these
+> toggles.)
 
 ---
 
@@ -200,42 +213,30 @@ The grade/squad path (task C) is **fully wired** through both entry points.
 
 ---
 
-## Open gaps / blockers
+## Status of audit findings
 
-Listed for separate filing — **not fixed here.**
+3 of 5 audit findings are **resolved** by the activation change; the remaining 2
+are non-blocking notes.
 
-1. **BLOCKER — In-product "Seed GHSA" button produces a non-claimable, private
-   league.** `POST /api/cli/import` → `bulkImportLeague` creates a Clerk org and
-   sets `isPublic: false`, and never sets `claimable`. The league won't appear in
-   Discover and `requireForkableLeague` will reject every claim ("Team is not
-   forkable"). This blocks the entire coach path if the button is the seeding
-   mechanism. (`apps/web/src/lib/data-api.ts` `bulkImportLeague`;
-   `apps/web/convex/sports.ts` `upsertLeague` line ~821.)
-2. **BLOCKER — No seeding path produces the 413-team league *and* sets it
-   public + claimable.** The only script that sets the flags
-   (`apps/web/scripts/seed-ghsa-cobb.mts`) hardcodes 16 Cobb teams and ignores
-   `ghsa-2024-26.json`. A script (or a one-time admin action) that imports the 413
-   payload **and** calls `setLeaguePublic(true)` + `setLeagueClaimable(true)` must
-   exist before launch.
-3. **BLOCKER — No UI/route exposes `setLeagueClaimable`.** `setLeagueClaimable`
-   exists in `data-api.ts` (and `sports:setLeagueClaimable` in Convex), but it has
-   **zero callers** in the app. There is a UI to toggle `isPublic`
-   (`league-public-toggle.tsx` → `setLeaguePublicAction`) but **none** for
-   `claimable`. So after a Path B seed, an admin **cannot** fix the league to be
-   claimable through the product — only via a manual admin-keyed mutation call.
-4. **Minor — Misleading button copy.** The "Seed GHSA" button says teams are
-   imported "as empty, claimable teams" and shows **"416 teams"**, but the code
-   does not make them claimable and the payload has **413** teams.
-5. **Minor — CSV grade upper bound.** `csv-import.ts` validates `grade >= 9` but
-   not `<= 12`; an out-of-range grade surfaces only as a downstream Zod validation
-   error rather than a row-scoped CSV error message. Cosmetic, not blocking.
-
-### Recommended pre-launch fix (for the team, not done here)
-
-Add an admin-keyed seed step that (a) imports `ghsa-2024-26.json` via
-`bulkImportLeague(payload, undefined, /* orgIdOverride */ null)` so the league is
-created with `orgId: null` → `isPublic: true`, then (b) calls
-`setLeagueClaimable(leagueId, true)` (and `setLeaguePublic(leagueId, true)`
-defensively). Optionally expose a claimable toggle in league settings alongside
-the existing public toggle. Until then, the prod seed must be a deliberate
-admin-keyed script run by a human — not the in-product button.
+1. **RESOLVED — claimable from the product.** A **Claimable by coaches** toggle
+   was added to league settings (`league-claimable-toggle.tsx` →
+   `setLeagueClaimableAction` → existing `setLeagueClaimable`), alongside the
+   public toggle. An admin can now make any seeded public league claimable
+   without an admin-keyed mutation call. This unblocks the coach path: after the
+   in-product Seed, the admin flips Public + Claimable and coaches can claim.
+2. **RESOLVED (no longer required) — full-413 seed path.** The in-product button
+   already seeds the full 413-team payload; with the new toggle setting the flags,
+   a bespoke 413-seeding script is unnecessary. The Cobb script
+   (`seed-ghsa-cobb.mts`) remains only as a self-contained example.
+3. **RESOLVED — button copy.** Now reads **"413 teams"** and no longer claims the
+   teams are claimable on import; it points the admin to the settings toggles.
+4. **Minor (note) — Seed-button creates a Clerk org for the league.**
+   `bulkImportLeague` (no `orgIdOverride`) creates a new Clerk org and an
+   org-owned league (`isPublic: false` until toggled). This is harmless — an
+   org-owned league that is public + claimable passes `requireForkableLeague`
+   (which checks only `isPublic && claimable`) — but it does leave a stray org if
+   the league is later deleted. For a perfectly clean public template, an
+   admin-keyed `bulkImportLeague(payload, undefined, null)` (orgId null →
+   `isPublic: true`) avoids the org; not required for launch.
+5. **Minor — RESOLVED — CSV grade upper bound.** `csv-import.ts` now validates
+   `grade` is `between 9 and 12` at the row level (was `>= 9` only).

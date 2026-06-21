@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getLeague, getLeagueVisibility } from "@/lib/data-api";
+import {
+  getLeague,
+  getLeagueVisibility,
+  getLeagueClaimable,
+} from "@/lib/data-api";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +14,7 @@ import InviteForm from "./invite-form";
 import InvitationList from "./invitation-list";
 import InviteLinkSection from "./invite-link-section";
 import LeaguePublicToggle from "./league-public-toggle";
+import LeagueClaimableToggle from "./league-claimable-toggle";
 import { RenameLeagueForm, DeleteLeagueButton } from "../leagues-actions";
 
 export default async function LeagueDetailPage({
@@ -24,6 +29,7 @@ export default async function LeagueDetailPage({
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(id, orgContext);
   const visibility = await getLeagueVisibility(id);
+  const claimable = await getLeagueClaimable(id);
 
   // Check if user is admin of this league's org
   let isAdmin = false;
@@ -78,6 +84,11 @@ export default async function LeagueDetailPage({
               <LeaguePublicToggle
                 leagueId={id}
                 initialIsPublic={visibility?.isPublic ?? false}
+              />
+              <LeagueClaimableToggle
+                leagueId={id}
+                initialClaimable={claimable}
+                isPublic={visibility?.isPublic ?? false}
               />
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 <Link
