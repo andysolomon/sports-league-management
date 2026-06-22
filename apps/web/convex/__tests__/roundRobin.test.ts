@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   roundRobinSchedule,
+  weekKickoff,
   type RoundRobinPairing,
 } from "../lib/roundRobin";
 
@@ -115,4 +116,36 @@ describe("roundRobinSchedule (WSM-000153)", () => {
       }
     },
   );
+});
+
+describe("weekKickoff (WSM-000158)", () => {
+  it("returns null when the season has no start date", () => {
+    expect(weekKickoff(null, 1)).toBeNull();
+    expect(weekKickoff("", 3)).toBeNull();
+  });
+
+  it("returns null for an unparseable start date", () => {
+    expect(weekKickoff("not-a-date", 1)).toBeNull();
+  });
+
+  it("puts week 1 on the season start date and adds 7 days per week (UTC)", () => {
+    expect(weekKickoff("2026-09-01", 1)).toBe("2026-09-01T00:00:00.000Z");
+    expect(weekKickoff("2026-09-01", 2)).toBe("2026-09-08T00:00:00.000Z");
+    expect(weekKickoff("2026-09-01", 3)).toBe("2026-09-15T00:00:00.000Z");
+  });
+
+  it("adds whole weeks without DST drift across a US fall-back", () => {
+    // US DST ends 2026-11-01; whole-week UTC math keeps the same wall offset.
+    const w1 = weekKickoff("2026-10-25", 1);
+    const w2 = weekKickoff("2026-10-25", 2);
+    expect(w1).toBe("2026-10-25T00:00:00.000Z");
+    expect(w2).toBe("2026-11-01T00:00:00.000Z");
+    expect(Date.parse(w2!) - Date.parse(w1!)).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  it("preserves the time-of-day when the start is a full ISO timestamp", () => {
+    expect(weekKickoff("2026-09-01T19:30:00.000Z", 2)).toBe(
+      "2026-09-08T19:30:00.000Z",
+    );
+  });
 });

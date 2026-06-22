@@ -16,7 +16,7 @@ import {
   type HsRatingInput,
 } from "./lib/hsSprt";
 import { applyScore, isLiveStatus, isNonNegInt } from "./lib/liveScore";
-import { roundRobinSchedule } from "./lib/roundRobin";
+import { roundRobinSchedule, weekKickoff } from "./lib/roundRobin";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -3772,7 +3772,9 @@ export const generateSeasonSchedule = internalMutationGeneric({
         seasonId: args.seasonId,
         homeTeamId: p.homeTeamId as Id<"teams">,
         awayTeamId: p.awayTeamId as Id<"teams">,
-        scheduledAt: null,
+        // Week 1 on the season start, +7 days per week; null when the season
+        // has no start date (week-numbers-only). Admins fine-tune per game.
+        scheduledAt: weekKickoff(season.startDate, p.week),
         week: p.week,
         venue: null,
         status: "scheduled",
