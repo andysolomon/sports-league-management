@@ -11,6 +11,7 @@ const modules = import.meta.glob("../**/*.*s");
 async function seedLeague(
   t: ReturnType<typeof convexTest>,
   teamCount: number,
+  startDate: string | null = null,
 ) {
   return t.run(async (ctx) => {
     const leagueId = await ctx.db.insert("leagues", {
@@ -42,7 +43,7 @@ async function seedLeague(
     const seasonId = await ctx.db.insert("seasons", {
       name: "2026",
       leagueId,
-      startDate: null,
+      startDate,
       endDate: null,
       status: "active",
       rosterLocked: false,
@@ -82,6 +83,31 @@ describe("generateSeasonSchedule (WSM-000153)", () => {
       expect(f.week).toBeGreaterThanOrEqual(1);
       expect(f.createdBy).toBe("user_1");
     }
+  });
+
+  it("dates fixtures off the season start (+7d/week) when startDate is set", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeague(t, 4, "2026-09-05");
+
+    await t.mutation(internal.sports.generateSeasonSchedule, {
+      seasonId,
+      actorUserId: "user_1",
+    });
+
+    const fixtures = await t.run((ctx) =>
+      ctx.db.query("fixtures").collect(),
+    );
+    const dateByWeek: Record<number, string> = {
+      1: "2026-09-05T00:00:00.000Z",
+      2: "2026-09-12T00:00:00.000Z",
+      3: "2026-09-19T00:00:00.000Z",
+    };
+    for (const f of fixtures) {
+      expect(f.scheduledAt).toBe(dateByWeek[f.week as number]);
+    }
+    // All games in a week share one date.
+    const wk1 = fixtures.filter((f) => f.week === 1).map((f) => f.scheduledAt);
+    expect(new Set(wk1).size).toBe(1);
   });
 
   it("throws when the league has fewer than two teams", async () => {

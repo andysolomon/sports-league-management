@@ -78,3 +78,29 @@ export function roundRobinSchedule(teamIds: string[]): RoundRobinPairing[] {
 
   return pairings;
 }
+
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Kickoff timestamp for a given week of a generated schedule (WSM-000158).
+ *
+ * Week 1 sits on the season's start date; each subsequent week is +7 days, so
+ * every game in a week shares one date. Returns null when the season has no
+ * start date (the generator then leaves `scheduledAt` null — week numbers only).
+ *
+ * Date math is done in UTC off the parsed start, so adding whole weeks never
+ * drifts across DST and the result is deterministic (no `Date.now()`).
+ *
+ * @param seasonStart the season's startDate (`YYYY-MM-DD` or ISO), or null
+ * @param week 1-based week number
+ * @returns ISO timestamp string, or null if no start date
+ */
+export function weekKickoff(
+  seasonStart: string | null,
+  week: number,
+): string | null {
+  if (!seasonStart) return null;
+  const startMs = Date.parse(seasonStart);
+  if (Number.isNaN(startMs)) return null;
+  return new Date(startMs + (week - 1) * MS_PER_WEEK).toISOString();
+}
