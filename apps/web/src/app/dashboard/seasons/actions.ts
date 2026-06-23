@@ -7,6 +7,7 @@ import {
   updateSeason as updateSeasonMutation,
   setActiveSeason as setActiveSeasonMutation,
   deleteSeason as deleteSeasonMutation,
+  copySeasonRosters,
   getSeasonLeagueId,
   getLeagueOrgId,
   getSeasons,
@@ -109,4 +110,53 @@ export async function deleteSeasonAction(seasonId: string): Promise<Result> {
   await deleteSeasonMutation(seasonId);
   revalidatePath("/dashboard/seasons");
   return { ok: true };
+}
+
+/*
+ * Roster carryover (WSM-000163). Clone the most recent prior season's rosters
+ * into the target season. The mutation refuses to overwrite a target that
+ * already has rosters; that surfaces here as `needsConfirm` so the UI can
+ * re-call with `confirm: true`. A league with no prior season maps to a
+ * friendly error.
+ */
+export async function copyRostersAction(input: {
+  targetSeasonId: string;
+  confirm?: boolean;
+}): Promise<
+  | { ok: true; copiedAssignments: number; copiedDepthEntries: number }
+  | { ok: false; needsConfirm: true }
+  | { ok: false; error: string }
+> {
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const leagueId = await getSeasonLeagueId(input.targetSeasonId);
+  const gate = await requireLeagueAdmin(leagueId);
+  if (!gate.ok) return gate;
+
+  try {
+    const res = await copySeasonRosters({
+      targetSeasonId: input.targetSeasonId,
+      actorUserId: userId,
+      confirm: input.confirm,
+    });
+    revalidatePath("/dashboard/seasons");
+    return {
+      ok: true,
+      copiedAssignments: res.copiedAssignments,
+      copiedDepthEntries: res.copiedDepthEntries,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("target_has_rosters")) {
+      return { ok: false, needsConfirm: true };
+    }
+    if (message.includes("no_source_season")) {
+      return {
+        ok: false,
+        error: "This league has no earlier season to copy rosters from.",
+      };
+    }
+    return { ok: false, error: message };
+  }
 }

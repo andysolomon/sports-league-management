@@ -3788,6 +3788,125 @@ export const generateSeasonSchedule = internalMutationGeneric({
   },
 });
 
+/*
+ * Roster carryover (WSM-000163). Clone the previous season's rosters into a new
+ * season so a coach doesn't rebuild the depth chart from scratch each year.
+ *
+ * Source resolution: an explicit `sourceSeasonId` (must be in the same league)
+ * wins; otherwise the most recent PRIOR season in the same league — ordered by
+ * `startDate` when present, else `_creationTime`, excluding the target. If none
+ * exists the mutation throws `no_source_season`.
+ *
+ * Like generateSeasonSchedule, this refuses to silently overwrite: if the target
+ * already has any rosterAssignments and the caller hasn't passed `confirm: true`,
+ * it throws `target_has_rosters`. On confirm (or an empty target) it does a clean
+ * replace — the target's existing rosterAssignments + depthChartEntries are
+ * deleted first, then every source row is cloned into the target season.
+ */
+export const copySeasonRosters = internalMutation({
+  args: {
+    targetSeasonId: v.id("seasons"),
+    sourceSeasonId: v.optional(v.id("seasons")),
+    actorUserId: v.string(),
+    confirm: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    copiedAssignments: v.number(),
+    copiedDepthEntries: v.number(),
+    sourceSeasonId: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const target = await ctx.db.get(args.targetSeasonId);
+    if (!target) throw new Error("target_season_not_found");
+
+    // Resolve the source season.
+    let source;
+    if (args.sourceSeasonId) {
+      source = await ctx.db.get(args.sourceSeasonId);
+      if (!source) throw new Error("no_source_season");
+      if (source.leagueId !== target.leagueId) {
+        throw new Error("source_season_league_mismatch");
+      }
+      if (source._id === target._id) throw new Error("no_source_season");
+    } else {
+      // Most recent prior season in the same league. Prefer startDate ordering,
+      // falling back to _creationTime when a season has no start date.
+      const candidates = (
+        await ctx.db
+          .query("seasons")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", target.leagueId))
+          .collect()
+      ).filter((s) => s._id !== target._id);
+      if (candidates.length === 0) throw new Error("no_source_season");
+      const sortKey = (s: (typeof candidates)[number]) =>
+        s.startDate ?? new Date(s._creationTime).toISOString();
+      candidates.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+      source = candidates[0];
+    }
+
+    // Load the source rows up front so the target wipe can't affect them.
+    const sourceAssignments = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) => q.eq("seasonId", source._id))
+      .collect();
+    const sourceDepthEntries = (
+      await ctx.db.query("depthChartEntries").collect()
+    ).filter((d) => d.seasonId === source._id);
+
+    // Results-style guard: refuse to overwrite a populated target unconfirmed.
+    const existingTargetAssignments = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.targetSeasonId),
+      )
+      .collect();
+    if (existingTargetAssignments.length > 0 && !args.confirm) {
+      throw new Error("target_has_rosters");
+    }
+
+    // Clean replace: clear the target's existing roster + depth-chart rows.
+    for (const ra of existingTargetAssignments) {
+      await ctx.db.delete(ra._id);
+    }
+    for (const d of await ctx.db.query("depthChartEntries").collect()) {
+      if (d.seasonId === args.targetSeasonId) await ctx.db.delete(d._id);
+    }
+
+    const now = new Date().toISOString();
+
+    for (const ra of sourceAssignments) {
+      await ctx.db.insert("rosterAssignments", {
+        seasonId: args.targetSeasonId,
+        teamId: ra.teamId,
+        playerId: ra.playerId,
+        leagueId: ra.leagueId,
+        depthRank: ra.depthRank,
+        positionSlot: ra.positionSlot,
+        status: ra.status,
+        assignedAt: now,
+        assignedBy: args.actorUserId,
+      });
+    }
+
+    for (const d of sourceDepthEntries) {
+      await ctx.db.insert("depthChartEntries", {
+        teamId: d.teamId,
+        seasonId: args.targetSeasonId,
+        playerId: d.playerId,
+        positionSlot: d.positionSlot,
+        sortOrder: d.sortOrder,
+        updatedAt: now,
+      });
+    }
+
+    return {
+      copiedAssignments: sourceAssignments.length,
+      copiedDepthEntries: sourceDepthEntries.length,
+      sourceSeasonId: source._id as string,
+    };
+  },
+});
+
 export const getFixture = queryGeneric({
   args: { fixtureId: v.id("fixtures") },
   returns: v.union(fixtureDtoValidator, v.null()),

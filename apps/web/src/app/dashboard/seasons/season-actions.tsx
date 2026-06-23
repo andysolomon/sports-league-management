@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import type { SeasonDto } from "@sports-management/shared-types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle2, Users } from "lucide-react";
 import {
   createSeasonAction,
   updateSeasonAction,
   activateSeasonAction,
   deleteSeasonAction,
+  copyRostersAction,
 } from "./actions";
 
 const inputClass =
@@ -103,6 +104,62 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
         Cancel
       </Button>
     </div>
+  );
+}
+
+/**
+ * Copy rosters from the most recent prior season into this one (WSM-000163).
+ * Mirrors the GenerateScheduleButton confirm flow: a populated target surfaces
+ * `needsConfirm`, and the user is asked before the clean-replace proceeds.
+ */
+export function CopyRostersButton({ season }: { season: SeasonDto }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function run(confirm: boolean) {
+    setBusy(true);
+    const res = await copyRostersAction({
+      targetSeasonId: season.id,
+      confirm,
+    });
+    setBusy(false);
+
+    if (res.ok) {
+      toast.success(
+        `Copied ${res.copiedAssignments} roster ${
+          res.copiedAssignments === 1 ? "player" : "players"
+        } into ${season.name}.`,
+      );
+      router.refresh();
+      return;
+    }
+
+    if ("needsConfirm" in res) {
+      const proceed = window.confirm(
+        `${season.name} already has rosters. Copying replaces them with last season's rosters. This can't be undone. Continue?`,
+      );
+      if (proceed) run(true);
+      return;
+    }
+
+    toast.error(
+      res.error === "not_admin"
+        ? "Only league admins can copy rosters."
+        : res.error,
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={busy}
+      onClick={() => run(false)}
+      aria-label={`Copy rosters from last season into ${season.name}`}
+    >
+      <Users className="mr-1 h-3.5 w-3.5" />
+      {busy ? "…" : "Copy rosters"}
+    </Button>
   );
 }
 
@@ -218,6 +275,7 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
           Make active
         </Button>
       )}
+      <CopyRostersButton season={season} />
       <Button
         size="sm"
         variant="ghost"
