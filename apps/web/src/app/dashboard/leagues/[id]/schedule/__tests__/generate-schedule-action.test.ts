@@ -85,6 +85,7 @@ describe("generateScheduleAction (WSM-000153)", () => {
       seasonId: SEASON,
       actorUserId: "user_1",
       confirm: undefined,
+      format: undefined,
     });
   });
 
@@ -120,6 +121,29 @@ describe("generateScheduleAction (WSM-000153)", () => {
       seasonId: SEASON,
       actorUserId: "user_1",
       confirm: true,
+      format: undefined,
+    });
+  });
+
+  it("forwards the chosen format to the mutation (WSM-000162)", async () => {
+    authorize();
+    mockGenerateSeasonSchedule.mockResolvedValue({
+      created: 12,
+      weeks: 6,
+      teamCount: 4,
+    });
+
+    await generateScheduleAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+      format: "double",
+    });
+
+    expect(mockGenerateSeasonSchedule).toHaveBeenCalledWith({
+      seasonId: SEASON,
+      actorUserId: "user_1",
+      confirm: undefined,
+      format: "double",
     });
   });
 

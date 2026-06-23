@@ -16,7 +16,11 @@ import {
   type HsRatingInput,
 } from "./lib/hsSprt";
 import { applyScore, isLiveStatus, isNonNegInt } from "./lib/liveScore";
-import { roundRobinSchedule, weekKickoff } from "./lib/roundRobin";
+import {
+  roundRobinSchedule,
+  doubleRoundRobinSchedule,
+  weekKickoff,
+} from "./lib/roundRobin";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -3713,6 +3717,9 @@ export const generateSeasonSchedule = internalMutationGeneric({
     seasonId: v.id("seasons"),
     actorUserId: v.string(),
     confirm: v.optional(v.boolean()),
+    // "single" (default) plays each pair once; "double" plays a home-and-away
+    // double round-robin (WSM-000162).
+    format: v.optional(v.union(v.literal("single"), v.literal("double"))),
   },
   returns: v.object({
     created: v.number(),
@@ -3765,7 +3772,11 @@ export const generateSeasonSchedule = internalMutationGeneric({
       await ctx.db.delete(f._id);
     }
 
-    const pairings = roundRobinSchedule(teams.map((t) => t._id));
+    const teamIds = teams.map((t) => t._id);
+    const pairings =
+      args.format === "double"
+        ? doubleRoundRobinSchedule(teamIds)
+        : roundRobinSchedule(teamIds);
     const createdAt = new Date().toISOString();
     for (const p of pairings) {
       await ctx.db.insert("fixtures", {
