@@ -262,6 +262,9 @@ export default defineSchema({
     week: v.union(v.number(), v.null()),
     venue: v.union(v.string(), v.null()),
     status: v.string(),
+    // "regular" (default when absent) | "playoff" (WSM-000164). Playoff fixtures
+    // are spawned by the bracket and excluded from standings computation.
+    stage: v.optional(v.string()),
     createdAt: v.string(),
     createdBy: v.string(),
   })
@@ -346,4 +349,47 @@ export default defineSchema({
     startedAt: v.string(),
     updatedAt: v.string(),
   }).index("by_fixtureId", ["fixtureId"]),
+
+  /*
+   * Single-elimination playoffs (WSM-000164). One bracket per season; sizes
+   * 4/8/16 (powers of two, no byes). Seeds are snapshotted from standings at
+   * generation time onto the matchups.
+   */
+  playoffBrackets: defineTable({
+    seasonId: v.id("seasons"),
+    leagueId: v.id("leagues"),
+    size: v.number(), // 4 | 8 | 16
+    rounds: v.number(), // log2(size)
+    createdAt: v.string(),
+    createdBy: v.string(),
+  })
+    .index("by_seasonId", ["seasonId"])
+    .index("by_leagueId", ["leagueId"]),
+
+  /*
+   * One node of the bracket tree. round 1 = first round … round = `rounds` is
+   * the final. `slot` is the 0-based position within the round. Team/seed ids
+   * are null until both feeders resolve. `nextMatchupId`/`nextSlot` point at the
+   * parent node the winner advances into (null for the final). `fixtureId` is
+   * set once both teams are known and a playable fixture is spawned.
+   */
+  playoffMatchups: defineTable({
+    bracketId: v.id("playoffBrackets"),
+    seasonId: v.id("seasons"),
+    round: v.number(),
+    slot: v.number(),
+    homeSeed: v.union(v.number(), v.null()),
+    awaySeed: v.union(v.number(), v.null()),
+    homeTeamId: v.union(v.id("teams"), v.null()),
+    awayTeamId: v.union(v.id("teams"), v.null()),
+    // Self-referential id stored as a string: v.id("playoffMatchups") here would
+    // make DataModelFromSchemaDefinition circular and silently drop this table's
+    // indexes. Cast back to Id<"playoffMatchups"> at the (few) use sites.
+    nextMatchupId: v.union(v.string(), v.null()),
+    nextSlot: v.union(v.string(), v.null()), // "home" | "away" | null
+    winnerTeamId: v.union(v.id("teams"), v.null()),
+    fixtureId: v.union(v.id("fixtures"), v.null()),
+  })
+    .index("by_bracketId", ["bracketId"])
+    .index("by_seasonId", ["seasonId"]),
 });
