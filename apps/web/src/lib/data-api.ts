@@ -486,6 +486,19 @@ const refs = {
     },
     { created: number; weeks: number; teamCount: number }
   >("sports:generateSeasonSchedule"),
+  copySeasonRosters: mutationRef<
+    {
+      targetSeasonId: string;
+      sourceSeasonId?: string;
+      actorUserId: string;
+      confirm?: boolean;
+    },
+    {
+      copiedAssignments: number;
+      copiedDepthEntries: number;
+      sourceSeasonId: string;
+    }
+  >("sports:copySeasonRosters"),
   listFixturesBySeason: queryRef<{ seasonId: string }, FixtureDto[]>(
     "sports:listFixturesBySeason",
   ),
@@ -1603,6 +1616,19 @@ export async function generateSeasonSchedule(input: {
   format?: "single" | "double";
 }): Promise<{ created: number; weeks: number; teamCount: number }> {
   return mutateConvex(refs.generateSeasonSchedule, input);
+}
+
+export async function copySeasonRosters(input: {
+  targetSeasonId: string;
+  sourceSeasonId?: string;
+  actorUserId: string;
+  confirm?: boolean;
+}): Promise<{
+  copiedAssignments: number;
+  copiedDepthEntries: number;
+  sourceSeasonId: string;
+}> {
+  return mutateConvex(refs.copySeasonRosters, input);
 }
 
 export async function listFixturesBySeason(
