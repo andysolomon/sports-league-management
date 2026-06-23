@@ -98,9 +98,9 @@ describe("generateSeasonSchedule (WSM-000153)", () => {
       ctx.db.query("fixtures").collect(),
     );
     const dateByWeek: Record<number, string> = {
-      1: "2026-09-05T00:00:00.000Z",
-      2: "2026-09-12T00:00:00.000Z",
-      3: "2026-09-19T00:00:00.000Z",
+      1: "2026-09-05T12:00:00.000Z",
+      2: "2026-09-12T12:00:00.000Z",
+      3: "2026-09-19T12:00:00.000Z",
     };
     for (const f of fixtures) {
       expect(f.scheduledAt).toBe(dateByWeek[f.week as number]);
