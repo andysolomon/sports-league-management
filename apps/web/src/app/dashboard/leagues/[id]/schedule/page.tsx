@@ -19,6 +19,7 @@ import {
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
+import { formatFixtureWhen } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
 import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton";
@@ -210,9 +211,7 @@ export default async function LeagueSchedulePage({
                       {rows.map(({ fixture, result }) => (
                         <tr key={fixture.id} className="border-b border-border">
                           <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
-                            {fixture.scheduledAt
-                              ? new Date(fixture.scheduledAt).toLocaleString()
-                              : "TBD"}
+                            {formatFixtureWhen(fixture.scheduledAt)}
                           </td>
                           <td className="px-4 py-2 text-foreground">
                             {fixture.homeTeamName}
