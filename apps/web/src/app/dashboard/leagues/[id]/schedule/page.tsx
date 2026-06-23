@@ -7,6 +7,7 @@ import {
   liveStreamingV1,
   statKeepingV1,
   liveScoringV1,
+  playoffsV1,
 } from "@/lib/flags";
 import {
   getLeague,
@@ -63,6 +64,8 @@ export default async function LeagueSchedulePage({
   // Live scoring (WSM-000152): operator-driven running scoreboard. Same
   // admin/coach surface as stats; the live page re-checks canManageTeam.
   const liveEnabled = await liveScoringV1();
+  // Playoffs (WSM-000164/165): bracket lives on its own page; link when enabled.
+  const playoffsEnabled = await playoffsV1();
 
   // Pick the active season — fall back to whichever exists if none flagged active.
   const allSeasons = await getSeasons([leagueId]);
@@ -133,6 +136,14 @@ export default async function LeagueSchedulePage({
           >
             Standings &rarr;
           </Link>
+          {playoffsEnabled ? (
+            <Link
+              href={`/dashboard/leagues/${leagueId}/playoffs`}
+              className="text-sm text-primary hover:underline"
+            >
+              Playoffs &rarr;
+            </Link>
+          ) : null}
           {isAdmin && activeSeason && teams.length >= 2 ? (
             <GenerateScheduleButton
               leagueId={leagueId}
