@@ -113,7 +113,11 @@ export default async function PublicGamePage({
   // Live streaming is a TRUE dark flag — OFF in every env unless opted in. When
   // off, the stream read is skipped and the page renders exactly as before.
   const streamingEnabled = await liveStreamingV1();
-  const stream = streamingEnabled ? await getStreamByFixture(gameId) : null;
+  // Fail-soft: a stream-read hiccup must not crash the public page — just hide
+  // the player. (Incident hardening alongside the live-state read below.)
+  const stream = streamingEnabled
+    ? await getStreamByFixture(gameId).catch(() => null)
+    : null;
 
   // Live scoring (WSM-000152): when on, seed the running scoreboard from the
   // server so first paint has the score; the client component then polls. Skip
@@ -121,7 +125,7 @@ export default async function PublicGamePage({
   const liveEnabled = await liveScoringV1();
   const liveState =
     liveEnabled && view.fixture.status !== "final"
-      ? await getLiveGameState(gameId)
+      ? await getLiveGameState(gameId).catch(() => null)
       : null;
   const liveActive = stream?.status === "active";
   const hasReplay = stream?.status === "ended" && stream.vodAssetId !== null;

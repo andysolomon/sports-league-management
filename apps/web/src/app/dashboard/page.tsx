@@ -129,6 +129,9 @@ export default async function DashboardPage() {
   }[] = [];
 
   if (activeSeason) {
+    // Incident hardening: a single failing season-data read must not crash the
+    // whole dashboard. Degrade to empty widgets (defaults initialized above).
+    try {
     const fixtures = await listFixturesBySeason(activeSeason.id);
     const results = await Promise.all(
       fixtures.map((f) => getResultByFixture(f.id)),
@@ -179,6 +182,9 @@ export default async function DashboardPage() {
         homeScore: x.r!.homeScore,
         awayScore: x.r!.awayScore,
       }));
+    } catch (err) {
+      console.error("dashboard: season widgets failed to load", err);
+    }
   }
 
   return (
