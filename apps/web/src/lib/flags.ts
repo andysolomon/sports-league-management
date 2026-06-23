@@ -137,6 +137,22 @@ export const liveScoringV1 = flag<boolean>({
   },
 });
 
+export const playoffsV1 = flag<boolean>({
+  key: "playoffs_v1",
+  description:
+    "Single-elimination playoffs: seeded bracket generation + auto-advancement (WSM-000164)",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_PLAYOFFS_V1");
+    void trackFlagExposure("playoffs_v1", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {

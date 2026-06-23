@@ -134,6 +134,7 @@ type AllowedPublicSportsReads =
   | "getOrgForkedSourceTeamIds"
   | "getOrgMemberRole"
   | "getPlayer"
+  | "getPlayoffBracket"
   | "getPlayerDevelopment"
   | "getPlayerDevelopmentPublic"
   | "getPlayerGameStatsByFixture"

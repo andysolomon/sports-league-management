@@ -67,6 +67,31 @@ function mutationRef<Args extends object, Return>(name: string) {
   return makeFunctionReference<"mutation", any, Return>(name);
 }
 
+/** A single bracket node (WSM-000164). Team/score fields are null until played. */
+export interface PlayoffMatchupDto {
+  id: string;
+  round: number;
+  slot: number;
+  homeSeed: number | null;
+  awaySeed: number | null;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+  homeTeamName: string | null;
+  awayTeamName: string | null;
+  winnerTeamId: string | null;
+  fixtureId: string | null;
+  status: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+}
+
+export interface PlayoffBracketDto {
+  bracketId: string;
+  size: number;
+  rounds: number;
+  matchups: PlayoffMatchupDto[];
+}
+
 const refs = {
   getVisibleLeagueContext: queryRef<
     { orgIds: string[]; userId: string },
@@ -499,6 +524,13 @@ const refs = {
       sourceSeasonId: string;
     }
   >("sports:copySeasonRosters"),
+  generatePlayoffBracket: mutationRef<
+    { seasonId: string; size: number; actorUserId: string; confirm?: boolean },
+    { bracketId: string; size: number; rounds: number; matchups: number }
+  >("sports:generatePlayoffBracket"),
+  getPlayoffBracket: queryRef<{ seasonId: string }, PlayoffBracketDto | null>(
+    "sports:getPlayoffBracket",
+  ),
   listFixturesBySeason: queryRef<{ seasonId: string }, FixtureDto[]>(
     "sports:listFixturesBySeason",
   ),
@@ -1629,6 +1661,26 @@ export async function copySeasonRosters(input: {
   sourceSeasonId: string;
 }> {
   return mutateConvex(refs.copySeasonRosters, input);
+}
+
+export async function generatePlayoffBracket(input: {
+  seasonId: string;
+  size: number;
+  actorUserId: string;
+  confirm?: boolean;
+}): Promise<{
+  bracketId: string;
+  size: number;
+  rounds: number;
+  matchups: number;
+}> {
+  return mutateConvex(refs.generatePlayoffBracket, input);
+}
+
+export async function getPlayoffBracket(
+  seasonId: string,
+): Promise<PlayoffBracketDto | null> {
+  return queryConvex(refs.getPlayoffBracket, { seasonId });
 }
 
 export async function listFixturesBySeason(

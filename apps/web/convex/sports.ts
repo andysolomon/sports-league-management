@@ -21,6 +21,7 @@ import {
   doubleRoundRobinSchedule,
   weekKickoff,
 } from "./lib/roundRobin";
+import { buildBracket } from "./lib/bracket";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -4000,6 +4001,12 @@ export const recordGameResult = internalMutationGeneric({
       await ctx.db.patch(args.fixtureId, { status: "final" });
     }
 
+    // Playoff games advance the winner up the bracket atomically with the
+    // result (WSM-000164). Idempotent: re-recording recomputes the same tree.
+    if (fixture.stage === "playoff") {
+      await advanceBracketForSeason(ctx as MutationCtx, fixture.seasonId);
+    }
+
     return {
       id: resultId,
       fixtureId: args.fixtureId,
@@ -4071,7 +4078,7 @@ export const computeStandings = query({
       .collect();
 
     const finalFixtureIds = fixtureRows
-      .filter((f) => f.status === "final")
+      .filter((f) => f.status === "final" && f.stage !== "playoff")
       .map((f) => f._id);
 
     const resultRows = (
@@ -4091,13 +4098,15 @@ export const computeStandings = query({
         name: t.name,
         divisionId: t.divisionId,
       })),
-      fixtures: fixtureRows.map((f) => ({
-        _id: f._id,
-        seasonId: f.seasonId,
-        homeTeamId: f.homeTeamId,
-        awayTeamId: f.awayTeamId,
-        status: f.status,
-      })),
+      fixtures: fixtureRows
+        .filter((f) => f.stage !== "playoff")
+        .map((f) => ({
+          _id: f._id,
+          seasonId: f.seasonId,
+          homeTeamId: f.homeTeamId,
+          awayTeamId: f.awayTeamId,
+          status: f.status,
+        })),
       results: resultRows.map((r) => ({
         fixtureId: r.fixtureId,
         homeScore: r.homeScore,
@@ -4128,7 +4137,7 @@ export const computeDivisionStandings = query({
       .collect();
 
     const finalFixtureIds = fixtureRows
-      .filter((f) => f.status === "final")
+      .filter((f) => f.status === "final" && f.stage !== "playoff")
       .map((f) => f._id);
 
     const resultRows = (
@@ -4148,13 +4157,15 @@ export const computeDivisionStandings = query({
         name: t.name,
         divisionId: t.divisionId,
       })),
-      fixtures: fixtureRows.map((f) => ({
-        _id: f._id,
-        seasonId: f.seasonId,
-        homeTeamId: f.homeTeamId,
-        awayTeamId: f.awayTeamId,
-        status: f.status,
-      })),
+      fixtures: fixtureRows
+        .filter((f) => f.stage !== "playoff")
+        .map((f) => ({
+          _id: f._id,
+          seasonId: f.seasonId,
+          homeTeamId: f.homeTeamId,
+          awayTeamId: f.awayTeamId,
+          status: f.status,
+        })),
       results: resultRows.map((r) => ({
         fixtureId: r.fixtureId,
         homeScore: r.homeScore,
@@ -4205,7 +4216,7 @@ export const computeStandingsPublic = query({
       .collect();
 
     const finalFixtureIds = fixtureRows
-      .filter((f) => f.status === "final")
+      .filter((f) => f.status === "final" && f.stage !== "playoff")
       .map((f) => f._id);
 
     const resultRows = (
@@ -4225,13 +4236,15 @@ export const computeStandingsPublic = query({
         name: t.name,
         divisionId: t.divisionId,
       })),
-      fixtures: fixtureRows.map((f) => ({
-        _id: f._id,
-        seasonId: f.seasonId,
-        homeTeamId: f.homeTeamId,
-        awayTeamId: f.awayTeamId,
-        status: f.status,
-      })),
+      fixtures: fixtureRows
+        .filter((f) => f.stage !== "playoff")
+        .map((f) => ({
+          _id: f._id,
+          seasonId: f.seasonId,
+          homeTeamId: f.homeTeamId,
+          awayTeamId: f.awayTeamId,
+          status: f.status,
+        })),
       results: resultRows.map((r) => ({
         fixtureId: r.fixtureId,
         homeScore: r.homeScore,
@@ -4841,6 +4854,385 @@ export const getLiveGameState = query({
       period: row.period,
       clock: row.clock,
       status: row.status,
+    };
+  },
+});
+
+/* ───────────────────────── Playoffs (WSM-000164) ───────────────────────── */
+
+/** Ordered team ids by league standings (regular season only), seeds 1..N. */
+async function seasonStandingTeamIds(
+  ctx: MutationCtx,
+  season: { _id: Id<"seasons">; leagueId: Id<"leagues"> },
+): Promise<string[]> {
+  const teamRows = await ctx.db
+    .query("teams")
+    .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+    .collect();
+  const fixtureRows = (
+    await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", season._id))
+      .collect()
+  ).filter((f) => f.stage !== "playoff");
+  const finalIds = fixtureRows
+    .filter((f) => f.status === "final")
+    .map((f) => f._id);
+  const results = (
+    await Promise.all(
+      finalIds.map((fid) =>
+        ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fid))
+          .first(),
+      ),
+    )
+  ).filter((r): r is NonNullable<typeof r> => r !== null);
+  return computeStandingsPure({
+    teams: teamRows.map((t) => ({
+      _id: t._id,
+      name: t.name,
+      divisionId: t.divisionId,
+    })),
+    fixtures: fixtureRows.map((f) => ({
+      _id: f._id,
+      seasonId: f.seasonId,
+      homeTeamId: f.homeTeamId,
+      awayTeamId: f.awayTeamId,
+      status: f.status,
+    })),
+    results: results.map((r) => ({
+      fixtureId: r.fixtureId,
+      homeScore: r.homeScore,
+      awayScore: r.awayScore,
+    })),
+  }).map((r) => r.teamId);
+}
+
+/** Insert a playoff fixture for a matchup whose two teams are known. */
+async function spawnPlayoffFixture(
+  ctx: MutationCtx,
+  m: {
+    seasonId: Id<"seasons">;
+    homeTeamId: Id<"teams"> | null;
+    awayTeamId: Id<"teams"> | null;
+  },
+  createdBy: string,
+): Promise<Id<"fixtures">> {
+  if (!m.homeTeamId || !m.awayTeamId) throw new Error("matchup_teams_unknown");
+  return ctx.db.insert("fixtures", {
+    seasonId: m.seasonId,
+    homeTeamId: m.homeTeamId,
+    awayTeamId: m.awayTeamId,
+    scheduledAt: null,
+    week: null,
+    venue: null,
+    status: "scheduled",
+    stage: "playoff",
+    createdAt: new Date().toISOString(),
+    createdBy,
+  });
+}
+
+/**
+ * Idempotent bracket recompute. In round order: spawn a fixture when both teams
+ * are known, resolve a decisive game's winner, and propagate that winner into
+ * its parent matchup's slot. A tie leaves the matchup unresolved (no advance).
+ */
+async function advanceBracketForSeason(
+  ctx: MutationCtx,
+  seasonId: Id<"seasons">,
+): Promise<void> {
+  const bracket = await ctx.db
+    .query("playoffBrackets")
+    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+    .first();
+  if (!bracket) return;
+
+  const matchups = await ctx.db
+    .query("playoffMatchups")
+    .withIndex("by_bracketId", (q) => q.eq("bracketId", bracket._id))
+    .collect();
+  const byId = new Map(matchups.map((m) => [m._id, m]));
+  const ordered = [...matchups].sort(
+    (a, b) => a.round - b.round || a.slot - b.slot,
+  );
+
+  for (const m of ordered) {
+    // 1. Spawn this matchup's fixture once both teams are known.
+    if (m.homeTeamId && m.awayTeamId && !m.fixtureId) {
+      const fid = await spawnPlayoffFixture(ctx, m, "system");
+      await ctx.db.patch(m._id, { fixtureId: fid });
+      m.fixtureId = fid;
+    }
+    // 2. Resolve a decisive winner from the played fixture.
+    if (m.fixtureId && !m.winnerTeamId) {
+      const fx = await ctx.db.get(m.fixtureId);
+      if (fx && fx.status === "final") {
+        const res = await ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", m.fixtureId!))
+          .first();
+        if (res && res.homeScore !== res.awayScore) {
+          const winner =
+            res.homeScore > res.awayScore ? fx.homeTeamId : fx.awayTeamId;
+          await ctx.db.patch(m._id, { winnerTeamId: winner });
+          m.winnerTeamId = winner;
+        }
+      }
+    }
+    // 3. Propagate the winner into the parent slot.
+    if (m.winnerTeamId && m.nextMatchupId && m.nextSlot) {
+      const parent = byId.get(m.nextMatchupId as Id<"playoffMatchups">);
+      if (parent) {
+        if (m.nextSlot === "home" && parent.homeTeamId !== m.winnerTeamId) {
+          await ctx.db.patch(parent._id, { homeTeamId: m.winnerTeamId });
+          parent.homeTeamId = m.winnerTeamId;
+        } else if (
+          m.nextSlot === "away" &&
+          parent.awayTeamId !== m.winnerTeamId
+        ) {
+          await ctx.db.patch(parent._id, { awayTeamId: m.winnerTeamId });
+          parent.awayTeamId = m.winnerTeamId;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Generate a single-elimination bracket from the season's standings. Sizes
+ * 4/8/16. Re-running re-snapshots seeds, but refuses to wipe a bracket that has
+ * a played/in-progress game unless `confirm` is set.
+ */
+export const generatePlayoffBracket = internalMutationGeneric({
+  args: {
+    seasonId: v.id("seasons"),
+    size: v.number(),
+    actorUserId: v.string(),
+    confirm: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    bracketId: v.string(),
+    size: v.number(),
+    rounds: v.number(),
+    matchups: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    if (![4, 8, 16].includes(args.size)) {
+      throw new Error("invalid_bracket_size");
+    }
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+
+    // Existing bracket: results-guard, then clean wipe.
+    const existing = await ctx.db
+      .query("playoffBrackets")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .first();
+    if (existing) {
+      const existingMatchups = await ctx.db
+        .query("playoffMatchups")
+        .withIndex("by_bracketId", (q) => q.eq("bracketId", existing._id))
+        .collect();
+      if (!args.confirm) {
+        for (const m of existingMatchups) {
+          if (!m.fixtureId) continue;
+          const res = await ctx.db
+            .query("gameResults")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", m.fixtureId!))
+            .first();
+          if (res) throw new Error("bracket_has_results");
+          const live = await ctx.db
+            .query("liveGameState")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", m.fixtureId!))
+            .first();
+          if (live) throw new Error("bracket_has_results");
+        }
+      }
+      for (const m of existingMatchups) {
+        if (m.fixtureId) {
+          for (const gr of await ctx.db
+            .query("gameResults")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", m.fixtureId!))
+            .collect())
+            await ctx.db.delete(gr._id);
+          for (const lg of await ctx.db
+            .query("liveGameState")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", m.fixtureId!))
+            .collect())
+            await ctx.db.delete(lg._id);
+          await ctx.db.delete(m.fixtureId);
+        }
+        await ctx.db.delete(m._id);
+      }
+      await ctx.db.delete(existing._id);
+    }
+
+    const seeds = await seasonStandingTeamIds(ctx as MutationCtx, season);
+    if (seeds.length < args.size) throw new Error("not_enough_teams");
+
+    const plan = buildBracket(args.size);
+    const createdAt = new Date().toISOString();
+    const bracketId = await ctx.db.insert("playoffBrackets", {
+      seasonId: args.seasonId,
+      leagueId: season.leagueId,
+      size: args.size,
+      rounds: plan.rounds,
+      createdAt,
+      createdBy: args.actorUserId,
+    });
+
+    // Insert matchups, then wire parent pointers, then spawn round-1 fixtures.
+    const idByKey = new Map<string, Id<"playoffMatchups">>();
+    for (const mp of plan.matchups) {
+      const homeTeamId =
+        mp.homeSeed != null
+          ? (seeds[mp.homeSeed - 1] as Id<"teams">)
+          : null;
+      const awayTeamId =
+        mp.awaySeed != null
+          ? (seeds[mp.awaySeed - 1] as Id<"teams">)
+          : null;
+      const id = await ctx.db.insert("playoffMatchups", {
+        bracketId,
+        seasonId: args.seasonId,
+        round: mp.round,
+        slot: mp.slot,
+        homeSeed: mp.homeSeed,
+        awaySeed: mp.awaySeed,
+        homeTeamId,
+        awayTeamId,
+        nextMatchupId: null,
+        nextSlot: null,
+        winnerTeamId: null,
+        fixtureId: null,
+      });
+      idByKey.set(`${mp.round}:${mp.slot}`, id);
+    }
+    for (const mp of plan.matchups) {
+      if (mp.parentSlot == null || mp.parentSide == null) continue;
+      await ctx.db.patch(idByKey.get(`${mp.round}:${mp.slot}`)!, {
+        nextMatchupId: idByKey.get(`${mp.round + 1}:${mp.parentSlot}`)!,
+        nextSlot: mp.parentSide,
+      });
+    }
+    for (const mp of plan.matchups) {
+      if (mp.round !== 1) continue;
+      const id = idByKey.get(`1:${mp.slot}`)!;
+      const m = (await ctx.db.get(id))!;
+      const fid = await spawnPlayoffFixture(ctx as MutationCtx, m, args.actorUserId);
+      await ctx.db.patch(id, { fixtureId: fid });
+    }
+
+    return {
+      bracketId,
+      size: args.size,
+      rounds: plan.rounds,
+      matchups: plan.matchups.length,
+    };
+  },
+});
+
+/** Manual/repair recompute of a season's bracket (advancement is otherwise
+ * automatic on result recording). */
+export const advancePlayoffBracket = internalMutationGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await advanceBracketForSeason(ctx as MutationCtx, args.seasonId);
+    return null;
+  },
+});
+
+const playoffMatchupDtoValidator = v.object({
+  id: v.string(),
+  round: v.number(),
+  slot: v.number(),
+  homeSeed: v.union(v.number(), v.null()),
+  awaySeed: v.union(v.number(), v.null()),
+  homeTeamId: v.union(v.string(), v.null()),
+  awayTeamId: v.union(v.string(), v.null()),
+  homeTeamName: v.union(v.string(), v.null()),
+  awayTeamName: v.union(v.string(), v.null()),
+  winnerTeamId: v.union(v.string(), v.null()),
+  fixtureId: v.union(v.string(), v.null()),
+  status: v.union(v.string(), v.null()),
+  homeScore: v.union(v.number(), v.null()),
+  awayScore: v.union(v.number(), v.null()),
+});
+
+/** Bracket tree DTO for the UI (WSM-000165). Null when no bracket exists. */
+export const getPlayoffBracket = queryGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.union(
+    v.object({
+      bracketId: v.string(),
+      size: v.number(),
+      rounds: v.number(),
+      matchups: v.array(playoffMatchupDtoValidator),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const bracket = await ctx.db
+      .query("playoffBrackets")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .first();
+    if (!bracket) return null;
+
+    const matchups = await ctx.db
+      .query("playoffMatchups")
+      .withIndex("by_bracketId", (q) => q.eq("bracketId", bracket._id))
+      .collect();
+
+    const dtos = await Promise.all(
+      matchups
+        .sort((a, b) => a.round - b.round || a.slot - b.slot)
+        .map(async (m) => {
+          const home = m.homeTeamId ? await ctx.db.get(m.homeTeamId) : null;
+          const away = m.awayTeamId ? await ctx.db.get(m.awayTeamId) : null;
+          let status: string | null = null;
+          let homeScore: number | null = null;
+          let awayScore: number | null = null;
+          if (m.fixtureId) {
+            const fx = await ctx.db.get(m.fixtureId);
+            status = fx?.status ?? null;
+            if (fx?.status === "final") {
+              const res = await ctx.db
+                .query("gameResults")
+                .withIndex("by_fixtureId", (q) =>
+                  q.eq("fixtureId", m.fixtureId!),
+                )
+                .first();
+              homeScore = res?.homeScore ?? null;
+              awayScore = res?.awayScore ?? null;
+            }
+          }
+          return {
+            id: m._id,
+            round: m.round,
+            slot: m.slot,
+            homeSeed: m.homeSeed,
+            awaySeed: m.awaySeed,
+            homeTeamId: m.homeTeamId,
+            awayTeamId: m.awayTeamId,
+            homeTeamName: home?.name ?? null,
+            awayTeamName: away?.name ?? null,
+            winnerTeamId: m.winnerTeamId,
+            fixtureId: m.fixtureId,
+            status,
+            homeScore,
+            awayScore,
+          };
+        }),
+    );
+
+    return {
+      bracketId: bracket._id,
+      size: bracket.size,
+      rounds: bracket.rounds,
+      matchups: dtos,
     };
   },
 });
