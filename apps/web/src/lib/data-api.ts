@@ -478,7 +478,12 @@ const refs = {
     "sports:deleteFixture",
   ),
   generateSeasonSchedule: mutationRef<
-    { seasonId: string; actorUserId: string; confirm?: boolean },
+    {
+      seasonId: string;
+      actorUserId: string;
+      confirm?: boolean;
+      format?: "single" | "double";
+    },
     { created: number; weeks: number; teamCount: number }
   >("sports:generateSeasonSchedule"),
   listFixturesBySeason: queryRef<{ seasonId: string }, FixtureDto[]>(
@@ -1595,6 +1600,7 @@ export async function generateSeasonSchedule(input: {
   seasonId: string;
   actorUserId: string;
   confirm?: boolean;
+  format?: "single" | "double";
 }): Promise<{ created: number; weeks: number; teamCount: number }> {
   return mutateConvex(refs.generateSeasonSchedule, input);
 }

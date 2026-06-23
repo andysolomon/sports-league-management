@@ -95,15 +95,17 @@ export async function createFixtureAction(
 }
 
 /*
- * Generate a single round-robin schedule for the league's active season
- * (WSM-000153). The mutation refuses to overwrite a slate that already has
- * recorded results / live state; that surfaces here as `needsConfirm` so the
- * UI can re-call with `confirm: true`.
+ * Generate a round-robin schedule for the league's active season (WSM-000153).
+ * `format` chooses a single round-robin (default) or a home-and-away double
+ * round-robin (WSM-000162). The mutation refuses to overwrite a slate that
+ * already has recorded results / live state; that surfaces here as
+ * `needsConfirm` so the UI can re-call with `confirm: true`.
  */
 export async function generateScheduleAction(input: {
   leagueId: string;
   seasonId: string;
   confirm?: boolean;
+  format?: "single" | "double";
 }): Promise<
   | { ok: true; created: number; weeks: number; teamCount: number }
   | { ok: false; needsConfirm: true }
@@ -120,6 +122,7 @@ export async function generateScheduleAction(input: {
       seasonId: input.seasonId,
       actorUserId: userId,
       confirm: input.confirm,
+      format: input.format,
     });
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
