@@ -88,6 +88,13 @@ const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
  * every game in a week shares one date. Returns null when the season has no
  * start date (the generator then leaves `scheduledAt` null — week numbers only).
  *
+ * A date-only start (`YYYY-MM-DD`) has no meaningful kickoff time, so it is
+ * anchored at **noon UTC** rather than the midnight UTC that `Date.parse` would
+ * give it. Midnight UTC renders as the *previous* day under `toLocaleString()`
+ * in any negative-offset timezone (the Americas) — WSM-000160. Noon UTC lands
+ * on the intended calendar day across the Americas and Europe. A start that
+ * already carries an explicit time keeps it.
+ *
  * Date math is done in UTC off the parsed start, so adding whole weeks never
  * drifts across DST and the result is deterministic (no `Date.now()`).
  *
@@ -100,7 +107,8 @@ export function weekKickoff(
   week: number,
 ): string | null {
   if (!seasonStart) return null;
-  const startMs = Date.parse(seasonStart);
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(seasonStart);
+  const startMs = Date.parse(dateOnly ? `${seasonStart}T12:00:00.000Z` : seasonStart);
   if (Number.isNaN(startMs)) return null;
   return new Date(startMs + (week - 1) * MS_PER_WEEK).toISOString();
 }

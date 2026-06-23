@@ -128,18 +128,28 @@ describe("weekKickoff (WSM-000158)", () => {
     expect(weekKickoff("not-a-date", 1)).toBeNull();
   });
 
-  it("puts week 1 on the season start date and adds 7 days per week (UTC)", () => {
-    expect(weekKickoff("2026-09-01", 1)).toBe("2026-09-01T00:00:00.000Z");
-    expect(weekKickoff("2026-09-01", 2)).toBe("2026-09-08T00:00:00.000Z");
-    expect(weekKickoff("2026-09-01", 3)).toBe("2026-09-15T00:00:00.000Z");
+  it("anchors a date-only start at noon UTC and adds 7 days per week (WSM-000160)", () => {
+    // Noon UTC, not midnight, so the date renders correctly in the Americas.
+    expect(weekKickoff("2026-09-01", 1)).toBe("2026-09-01T12:00:00.000Z");
+    expect(weekKickoff("2026-09-01", 2)).toBe("2026-09-08T12:00:00.000Z");
+    expect(weekKickoff("2026-09-01", 3)).toBe("2026-09-15T12:00:00.000Z");
+  });
+
+  it("renders the intended calendar day in a US-Eastern timezone", () => {
+    // The bug: midnight UTC showed as the previous day. Noon UTC fixes it.
+    const iso = weekKickoff("2026-09-05", 1)!;
+    const shown = new Date(iso).toLocaleDateString("en-US", {
+      timeZone: "America/New_York",
+    });
+    expect(shown).toBe("9/5/2026");
   });
 
   it("adds whole weeks without DST drift across a US fall-back", () => {
     // US DST ends 2026-11-01; whole-week UTC math keeps the same wall offset.
     const w1 = weekKickoff("2026-10-25", 1);
     const w2 = weekKickoff("2026-10-25", 2);
-    expect(w1).toBe("2026-10-25T00:00:00.000Z");
-    expect(w2).toBe("2026-11-01T00:00:00.000Z");
+    expect(w1).toBe("2026-10-25T12:00:00.000Z");
+    expect(w2).toBe("2026-11-01T12:00:00.000Z");
     expect(Date.parse(w2!) - Date.parse(w1!)).toBe(7 * 24 * 60 * 60 * 1000);
   });
 
