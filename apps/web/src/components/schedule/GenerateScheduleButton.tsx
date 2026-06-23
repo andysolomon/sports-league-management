@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarPlus } from "lucide-react";
@@ -25,6 +25,8 @@ function friendlyError(code: string): string {
   return "Could not generate the schedule.";
 }
 
+type ScheduleFormat = "single" | "double";
+
 export default function GenerateScheduleButton({
   leagueId,
   seasonId,
@@ -32,15 +34,24 @@ export default function GenerateScheduleButton({
   hasFixtures,
 }: GenerateScheduleButtonProps) {
   const router = useRouter();
+  const formatId = useId();
+  const [format, setFormat] = useState<ScheduleFormat>("single");
   const [pending, startTransition] = useTransition();
 
   function run(confirm: boolean) {
     startTransition(async () => {
-      const res = await generateScheduleAction({ leagueId, seasonId, confirm });
+      const res = await generateScheduleAction({
+        leagueId,
+        seasonId,
+        confirm,
+        format,
+      });
 
       if (res.ok) {
         toast.success(
-          `Generated ${res.created} games across ${res.weeks} weeks for ${res.teamCount} teams.`,
+          `Generated ${res.created} ${
+            format === "double" ? "home-and-away " : ""
+          }games across ${res.weeks} weeks for ${res.teamCount} teams.`,
         );
         router.refresh();
         return;
@@ -73,13 +84,28 @@ export default function GenerateScheduleButton({
   }
 
   return (
-    <Button size="sm" variant="outline" disabled={pending} onClick={onClick}>
-      <CalendarPlus className="mr-1.5 h-4 w-4" />
-      {pending
-        ? "Generating…"
-        : hasFixtures
-          ? "Regenerate schedule"
-          : "Generate schedule"}
-    </Button>
+    <div className="flex items-center gap-2">
+      <label htmlFor={formatId} className="sr-only">
+        Schedule format
+      </label>
+      <select
+        id={formatId}
+        value={format}
+        disabled={pending}
+        onChange={(e) => setFormat(e.target.value as ScheduleFormat)}
+        className="h-8 rounded-md border border-input bg-background px-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <option value="single">Single round-robin</option>
+        <option value="double">Double (home &amp; away)</option>
+      </select>
+      <Button size="sm" variant="outline" disabled={pending} onClick={onClick}>
+        <CalendarPlus className="mr-1.5 h-4 w-4" />
+        {pending
+          ? "Generating…"
+          : hasFixtures
+            ? "Regenerate schedule"
+            : "Generate schedule"}
+      </Button>
+    </div>
   );
 }

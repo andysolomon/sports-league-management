@@ -79,6 +79,34 @@ export function roundRobinSchedule(teamIds: string[]): RoundRobinPairing[] {
   return pairings;
 }
 
+/**
+ * Build a double round-robin: every team plays every other team exactly twice,
+ * once at home and once away (WSM-000162).
+ *
+ * The first leg is a plain {@link roundRobinSchedule}. The second leg replays
+ * those same pairings with home/away swapped, on weeks that continue after the
+ * first leg (second-leg week = firstLegMaxWeek + originalWeek). For an even
+ * team count this spans 2(N-1) weeks and yields N(N-1) games.
+ *
+ * @param teamIds distinct team ids (order is preserved as seeded)
+ * @returns pairings across both legs, weeks continuing 1..2(N-1) for even N
+ * @throws if fewer than two teams, or ids are not distinct
+ */
+export function doubleRoundRobinSchedule(
+  teamIds: string[],
+): RoundRobinPairing[] {
+  const firstLeg = roundRobinSchedule(teamIds);
+  const firstLegMaxWeek = firstLeg.reduce((max, p) => Math.max(max, p.week), 0);
+
+  const secondLeg = firstLeg.map((p) => ({
+    week: firstLegMaxWeek + p.week,
+    homeTeamId: p.awayTeamId,
+    awayTeamId: p.homeTeamId,
+  }));
+
+  return [...firstLeg, ...secondLeg];
+}
+
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
 /**

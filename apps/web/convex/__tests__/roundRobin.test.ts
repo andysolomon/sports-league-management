@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   roundRobinSchedule,
+  doubleRoundRobinSchedule,
   weekKickoff,
   type RoundRobinPairing,
 } from "../lib/roundRobin";
@@ -116,6 +117,98 @@ describe("roundRobinSchedule (WSM-000153)", () => {
       }
     },
   );
+});
+
+describe("doubleRoundRobinSchedule (WSM-000162)", () => {
+  it("inherits the input guards from the single round-robin", () => {
+    expect(() => doubleRoundRobinSchedule([])).toThrow(
+      "need_at_least_two_teams",
+    );
+    expect(() => doubleRoundRobinSchedule(["t1", "t1"])).toThrow(
+      "duplicate_team_ids",
+    );
+  });
+
+  it("schedules two teams as a home-and-away pair across two weeks", () => {
+    const p = doubleRoundRobinSchedule(ids(2));
+    expect(p).toHaveLength(2);
+    expect(p[0].week).toBe(1);
+    expect(p[1].week).toBe(2);
+    // Same matchup, home/away swapped.
+    expect(p[1].homeTeamId).toBe(p[0].awayTeamId);
+    expect(p[1].awayTeamId).toBe(p[0].homeTeamId);
+  });
+
+  it.each([2, 4, 6, 8])(
+    "with %i teams: every pair meets exactly twice — once home each (N(N-1) games)",
+    (n) => {
+      const pairings = doubleRoundRobinSchedule(ids(n));
+      const expectedGames = n * (n - 1);
+      expect(pairings).toHaveLength(expectedGames);
+
+      // No duplicate ordered (home, away) directed fixtures: each appears once.
+      const directed = pairings.map((p) => `${p.homeTeamId}>${p.awayTeamId}`);
+      expect(new Set(directed).size).toBe(expectedGames);
+
+      // Every unordered pair meets exactly twice.
+      const meetings = new Map<string, number>();
+      for (const p of pairings) {
+        const key = matchupKey(p);
+        meetings.set(key, (meetings.get(key) ?? 0) + 1);
+      }
+      for (const count of meetings.values()) {
+        expect(count).toBe(2);
+      }
+
+      // Each pair plays once with each team home (both directed fixtures exist).
+      const teams = ids(n);
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          expect(directed).toContain(`${teams[i]}>${teams[j]}`);
+          expect(directed).toContain(`${teams[j]}>${teams[i]}`);
+        }
+      }
+    },
+  );
+
+  it.each([
+    [2, 2],
+    [4, 6],
+    [6, 10],
+    [8, 14],
+  ])("even count (%i teams) spans 2(N-1) weeks", (n, weeks) => {
+    const pairings = doubleRoundRobinSchedule(ids(n));
+    const maxWeek = Math.max(...pairings.map((p) => p.week));
+    expect(maxWeek).toBe(weeks);
+  });
+
+  it("continues second-leg weeks after the first leg (no overlap)", () => {
+    const n = 4;
+    const single = roundRobinSchedule(ids(n));
+    const firstLegMaxWeek = Math.max(...single.map((p) => p.week));
+    const pairings = doubleRoundRobinSchedule(ids(n));
+
+    // First leg occupies weeks 1..firstLegMaxWeek; second leg the next block.
+    const minSecondLegWeek = Math.min(
+      ...pairings
+        .filter((p) => p.week > firstLegMaxWeek)
+        .map((p) => p.week),
+    );
+    expect(minSecondLegWeek).toBe(firstLegMaxWeek + 1);
+  });
+
+  it("never schedules a team twice in the same week", () => {
+    const pairings = doubleRoundRobinSchedule(ids(6));
+    const byWeek = new Map<number, string[]>();
+    for (const p of pairings) {
+      const arr = byWeek.get(p.week) ?? [];
+      arr.push(p.homeTeamId, p.awayTeamId);
+      byWeek.set(p.week, arr);
+    }
+    for (const teams of byWeek.values()) {
+      expect(new Set(teams).size).toBe(teams.length);
+    }
+  });
 });
 
 describe("weekKickoff (WSM-000158)", () => {

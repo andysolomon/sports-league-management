@@ -110,6 +110,53 @@ describe("generateSeasonSchedule (WSM-000153)", () => {
     expect(new Set(wk1).size).toBe(1);
   });
 
+  it("defaults to a single round-robin (6 fixtures for 4 teams)", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeague(t, 4);
+
+    const res = await t.mutation(internal.sports.generateSeasonSchedule, {
+      seasonId,
+      actorUserId: "user_1",
+      format: "single",
+    });
+
+    expect(res.created).toBe(6); // C(4,2)
+    expect(res.weeks).toBe(3); // n-1
+    expect(await countFixtures(t)).toBe(6);
+  });
+
+  it("double format generates 12 fixtures spanning 6 weeks for 4 teams (WSM-000162)", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeague(t, 4);
+
+    const res = await t.mutation(internal.sports.generateSeasonSchedule, {
+      seasonId,
+      actorUserId: "user_1",
+      format: "double",
+    });
+
+    expect(res.teamCount).toBe(4);
+    expect(res.created).toBe(12); // N(N-1)
+    expect(res.weeks).toBe(6); // 2(N-1)
+    expect(await countFixtures(t)).toBe(12);
+
+    const fixtures = await t.run((ctx) =>
+      ctx.db.query("fixtures").collect(),
+    );
+    const weeks = fixtures.map((f) => f.week as number);
+    expect(Math.min(...weeks)).toBe(1);
+    expect(Math.max(...weeks)).toBe(6);
+
+    // Every unordered pair meets exactly twice.
+    const meetings = new Map<string, number>();
+    for (const f of fixtures) {
+      const key = [f.homeTeamId, f.awayTeamId].sort().join("|");
+      meetings.set(key, (meetings.get(key) ?? 0) + 1);
+    }
+    expect(meetings.size).toBe(6); // C(4,2) distinct pairs
+    for (const count of meetings.values()) expect(count).toBe(2);
+  });
+
   it("throws when the league has fewer than two teams", async () => {
     const t = convexTest(schema, modules);
     const { seasonId } = await seedLeague(t, 1);
