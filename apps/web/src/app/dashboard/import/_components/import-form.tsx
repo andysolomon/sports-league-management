@@ -392,9 +392,9 @@ export function ImportForm() {
 
       {/* Result */}
       {state.step === "done" && (
-        <Card className="border-green-500/30">
+        <Card className="border-accent/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-500">
+            <CardTitle className="flex items-center gap-2 text-accent">
               <CheckCircle2 className="h-5 w-5" />
               Import Complete
             </CardTitle>
@@ -408,7 +408,7 @@ export function ImportForm() {
                       {entity}
                     </p>
                     <p className="text-sm">
-                      <span className="font-semibold text-green-500">
+                      <span className="font-semibold text-accent">
                         {state.result.created[entity]} created
                       </span>
                       {", "}

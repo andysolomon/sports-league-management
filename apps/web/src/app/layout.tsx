@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { Pixelify_Sans } from "next/font/google";
-import { GeistSans } from "geist/font/sans";
-import { GeistMono } from "geist/font/mono";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
@@ -11,12 +9,20 @@ import "./globals.css";
 
 export const dynamic = "force-dynamic";
 
-// Display font for headings + 8-bit retro accents.
-const pixelifySans = Pixelify_Sans({
+// Design system type: Hanken Grotesk carries UI + prose; JetBrains Mono sets
+// keys, paths, and data (numerics, IDs, ⌘K).
+const hanken = Hanken_Grotesk({
   subsets: ["latin"],
-  variable: "--font-pixelify-sans",
+  variable: "--font-hanken",
   display: "swap",
   weight: ["400", "500", "600", "700"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -62,11 +68,11 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      {/* dark-first (WSM-000136); next-themes sets the class, light via toggle. */}
+      {/* Theme follows the OS by default (next-themes); a top-bar toggle overrides. */}
       <html
         lang="en"
         suppressHydrationWarning
-        className={`${GeistSans.variable} ${GeistMono.variable} ${pixelifySans.variable}`}
+        className={`${hanken.variable} ${jetbrainsMono.variable}`}
       >
         <body className="bg-background text-foreground font-sans antialiased">
           <script
@@ -75,8 +81,8 @@ export default function RootLayout({
           />
           <ThemeProvider
             attribute="class"
-            defaultTheme="dark"
-            enableSystem={false}
+            defaultTheme="system"
+            enableSystem
             disableTransitionOnChange
           >
             {children}

@@ -268,9 +268,9 @@ export default function LocalImportPage() {
       )}
 
       {state.step === "done" && (
-        <Card className="border-green-500/30">
+        <Card className="border-accent/30">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base text-green-500">
+            <CardTitle className="flex items-center gap-2 text-base text-accent">
               <CheckCircle2 className="h-5 w-5" />
               Import complete
             </CardTitle>

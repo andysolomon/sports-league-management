@@ -43,7 +43,7 @@ export function HsRatingCard({
               from game stats
             </span>
           </h3>
-          <span className="font-mono text-2xl font-bold text-green-500">
+          <span className="font-mono text-2xl font-bold text-accent">
             {overall}
             <span className="ml-1 text-xs font-normal text-muted-foreground">
               OVR

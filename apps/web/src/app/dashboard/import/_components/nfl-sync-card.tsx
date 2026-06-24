@@ -64,7 +64,7 @@ function SyncReportDisplay({ report }: { report: SyncReport }) {
                   {entity}
                 </p>
                 <p className="text-sm">
-                  <span className="font-semibold text-green-500">
+                  <span className="font-semibold text-accent">
                     {report.importResult!.created[entity]}
                   </span>
                   {" / "}
@@ -302,7 +302,7 @@ export function NflSyncCard() {
         {config.lastSyncReport ? (
           <div>
             <h4 className="mb-2 flex items-center gap-1 text-sm font-medium text-foreground">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle2 className="h-4 w-4 text-accent" />
               Last Sync
             </h4>
             <SyncReportDisplay report={config.lastSyncReport} />

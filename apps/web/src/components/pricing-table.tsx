@@ -115,14 +115,14 @@ export function PricingTable({
                     </span>
                   )}
                   {!isFree && interval === "yearly" && savings > 0 && (
-                    <p className="mt-1 text-xs text-green-500">Save {savings}% vs monthly</p>
+                    <p className="mt-1 text-xs text-accent">Save {savings}% vs monthly</p>
                   )}
                 </div>
 
                 <ul className="mb-6 space-y-2 text-sm">
                   {config.highlights.map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
+                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" />
                       <span>{feature}</span>
                     </li>
                   ))}

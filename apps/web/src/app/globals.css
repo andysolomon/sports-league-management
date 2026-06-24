@@ -1,88 +1,124 @@
 @import "tailwindcss";
 
 /*
- * Standard shadcn/ui theme (WSM-000136 — UI overhaul global cutover).
+ * Sports League design system — semantic tokens (one set, two themes).
  *
- * Neutral, token-driven shadcn theme. Tokens live in :root (light) and .dark
- * (dark) as `--<name>`; `@theme inline` maps them to the Tailwind v4
- * `--color-<name>` namespace that powers the bg, text and border utilities, so
- * every shadcn `ui/*` primitive inherits the palette. The app renders dark-first
- * (`.dark` is set on <html>); the light set is retained for a future toggle.
+ * 12 semantic tokens live in :root (light) and .dark (dark) as `--<name>`.
+ * `@theme inline` maps them to the Tailwind v4 `--color-<name>` namespace AND
+ * keeps the legacy shadcn aliases (--color-background, --color-card, …) so the
+ * existing `ui/*` primitives and ~600 call sites inherit the palette unchanged.
+ * Components reference token names, never the hex. Theme follows the OS by
+ * default (next-themes); `.dark` is toggled on <html>.
+ *
+ * `--accent` is GREEN (success / live data); the neutral hover/pressed fill is
+ * `--surface-3` (shadcn's old neutral `accent` was rewired to it). `--primary`
+ * intentionally inverts: near-black in light, near-white in dark.
  */
 :root {
-  --radius: 0.625rem;
+  --bg: #fbfbfc;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #eaeaec;
+  --border: #e6e6e9;
+  --border-strong: #d6d6da;
+  --text: #0c0c0d;
+  --text-muted: #5b5b61;
+  --text-subtle: #9a9aa1;
+  --primary: #0c0c0d;
+  --accent: #18a558;
+  --danger: #e5484d;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --radius-control: 10px;
+  --radius-card: 14px;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --bg: #0a0a0b;
+  --surface: #161618;
+  --surface-2: #1d1d20;
+  --surface-3: #26262a;
+  --border: #2a2a2e;
+  --border-strong: #3a3a40;
+  --text: #fafafa;
+  --text-muted: #9b9ba3;
+  --text-subtle: #67676f;
+  --primary: #fafafa;
+  --accent: #46c964;
+  --danger: #ff6166;
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular,
+    monospace;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+  /* Design-system semantic color utilities */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--bg);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--bg);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--bg);
 
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Legacy shadcn aliases → semantic tokens (keep existing call sites working) */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--text-muted);
+  --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--bg);
+  --color-input: var(--border-strong);
+  --color-ring: var(--border-strong);
+
+  /* Type scale — size / line-height · weight */
+  --text-display-32: 32px;
+  --text-display-32--line-height: 38px;
+  --text-display-32--font-weight: 700;
+  --text-stat-30: 30px;
+  --text-stat-30--line-height: 32px;
+  --text-stat-30--font-weight: 700;
+  --text-title-22: 22px;
+  --text-title-22--line-height: 28px;
+  --text-title-22--font-weight: 700;
+  --text-heading-18: 18px;
+  --text-heading-18--line-height: 24px;
+  --text-heading-18--font-weight: 600;
+  --text-body-15: 15px;
+  --text-body-15--line-height: 23px;
+  --text-body-15--font-weight: 400;
+  --text-label-14: 14px;
+  --text-label-14--line-height: 20px;
+  --text-label-14--font-weight: 500;
+  --text-caption-12: 12px;
+  --text-caption-12--line-height: 16px;
+  --text-caption-12--font-weight: 500;
+  --text-mono-13: 13px;
+  --text-mono-13--line-height: 18px;
+  --text-mono-13--font-weight: 500;
+
+  /* Radius — control / card / pill (+ shadcn aliases).
+   * rounded-md (buttons/inputs/menus) → 10px; rounded-xl (cards) → 14px. */
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
 
   --animate-in: enter 0.2s ease-out;
   --animate-out: exit 0.2s ease-in;

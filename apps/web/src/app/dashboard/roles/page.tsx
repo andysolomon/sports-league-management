@@ -88,7 +88,7 @@ export default function RolesPage() {
                   <TableCell key={role} className="text-center">
                     {row.allowed[role] ? (
                       <Check
-                        className="mx-auto h-4 w-4 text-green-500"
+                        className="mx-auto h-4 w-4 text-accent"
                         aria-label="Allowed"
                       />
                     ) : (
