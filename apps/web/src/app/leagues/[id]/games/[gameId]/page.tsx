@@ -176,7 +176,7 @@ export default async function PublicGamePage({
             <CardTitle className="flex items-center gap-2">
               {liveActive ? (
                 <>
-                  <Badge variant="destructive">LIVE</Badge>
+                  <Badge variant="success">LIVE</Badge>
                   <span>Watch live</span>
                 </>
               ) : (

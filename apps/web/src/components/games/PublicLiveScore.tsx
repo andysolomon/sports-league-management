@@ -35,7 +35,7 @@ export default function PublicLiveScore({
     <Card className="mb-6">
       <CardContent className="py-6">
         <div className="mb-3 flex justify-center">
-          <Badge variant="destructive" className="gap-1.5">
+          <Badge variant="success" className="gap-1.5">
             <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-current" />
             LIVE
           </Badge>
