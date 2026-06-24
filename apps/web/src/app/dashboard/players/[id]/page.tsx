@@ -227,7 +227,7 @@ export default async function PlayerProfilePage({
                 SPRT Rating
               </h3>
               {rating.weightedOverall != null && (
-                <span className="font-mono text-2xl font-bold text-green-500">
+                <span className="font-mono text-2xl font-bold text-accent">
                   {Math.round(rating.weightedOverall)}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">
                     OVR
@@ -299,7 +299,7 @@ export default async function PlayerProfilePage({
                     </dt>
                     <dd
                       className={`shrink-0 font-mono text-sm font-semibold ${
-                        a.value >= 90 ? "text-green-500" : "text-foreground"
+                        a.value >= 90 ? "text-accent" : "text-foreground"
                       }`}
                     >
                       {a.value}

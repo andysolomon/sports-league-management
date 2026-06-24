@@ -58,7 +58,7 @@ export default function StandingsTable({ rows }: StandingsTableProps) {
                 <td
                   className={`px-4 py-2 text-right font-mono ${
                     diff > 0
-                      ? "text-green-500"
+                      ? "text-accent"
                       : diff < 0
                         ? "text-destructive"
                         : "text-muted-foreground"

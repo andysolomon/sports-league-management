@@ -47,9 +47,9 @@ export default async function BillingPage({
       </div>
 
       {params.success && (
-        <Card className="border-green-500/30 bg-green-500/10">
+        <Card className="border-accent/30 bg-accent/10">
           <CardContent className="py-4">
-            <p className="text-sm text-green-400">
+            <p className="text-sm text-accent">
               ✓ Subscription activated. Welcome to {config.name}!
             </p>
           </CardContent>

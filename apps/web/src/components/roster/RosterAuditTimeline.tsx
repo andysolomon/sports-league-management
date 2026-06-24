@@ -24,7 +24,7 @@ const ACTION_FILTERS: Array<{
 ];
 
 const ACTION_COLORS: Record<RosterAuditAction, string> = {
-  assign: "bg-green-500/15 text-green-400 border-green-500/30",
+  assign: "bg-accent/15 text-accent border-accent/30",
   remove: "bg-destructive/15 text-destructive border-destructive/30",
   status_change: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   depth_reorder: "bg-blue-500/15 text-blue-400 border-blue-500/30",

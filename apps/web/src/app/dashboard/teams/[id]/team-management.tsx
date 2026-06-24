@@ -164,7 +164,7 @@ export default function TeamManagement({
               render: (p: RosterRow) => {
                 const ovr = snapshots.get(p.id as string)?.weightedOverall;
                 return ovr != null ? (
-                  <span className="font-mono font-semibold text-green-500">
+                  <span className="font-mono font-semibold text-accent">
                     {Math.round(ovr)}
                   </span>
                 ) : (

@@ -353,7 +353,7 @@ function LeagueCatalogCard({ league }: { league: DiscoverLeague }) {
 function StateBadge({ state }: { state: AddState }) {
   if (state === "all") {
     return (
-      <span className="flex shrink-0 items-center gap-1 text-xs text-green-500">
+      <span className="flex shrink-0 items-center gap-1 text-xs text-accent">
         <CheckCircle2 className="h-3.5 w-3.5" />
         All added
       </span>
@@ -494,7 +494,7 @@ function DivisionSection({
                 </span>
                 {isAdded ? (
                   <div className="flex shrink-0 items-center gap-1">
-                    <span className="flex items-center gap-1 text-xs text-green-500">
+                    <span className="flex items-center gap-1 text-xs text-accent">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Added
                     </span>
