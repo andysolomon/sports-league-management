@@ -27,10 +27,10 @@ export default function NavLink({
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        "flex items-center gap-3 rounded-control px-3 py-2 text-label-14 transition-colors",
         isActive
           ? "bg-primary text-primary-foreground"
-          : "text-foreground hover:bg-card",
+          : "text-text-muted hover:bg-surface-3 hover:text-text",
       )}
     >
       {Icon && <Icon className="h-4 w-4" />}

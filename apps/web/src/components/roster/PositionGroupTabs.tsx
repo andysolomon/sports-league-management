@@ -66,10 +66,10 @@ export function PositionGroupTabs<T extends Positioned>({
               role="tab"
               aria-selected={isActive}
               onClick={() => setActiveTab(tab)}
-              className={`shrink-0 whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap rounded-control px-3 py-2 text-label-14 transition-colors ${
                 isActive
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                  : "bg-surface-2 text-text-muted hover:bg-surface-3 hover:text-text"
               }`}
             >
               {tab === OTHER_GROUP ? "Other" : tab}
