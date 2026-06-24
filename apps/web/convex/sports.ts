@@ -642,6 +642,8 @@ export const listPlayers = queryGeneric({
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
       experienceYears: v.union(v.number(), v.null()),
+      grade: v.union(v.number(), v.null()),
+      squad: v.union(v.string(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -671,6 +673,8 @@ export const listPlayersByTeam = queryGeneric({
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
       experienceYears: v.union(v.number(), v.null()),
+      grade: v.union(v.number(), v.null()),
+      squad: v.union(v.string(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -696,6 +700,8 @@ export const getPlayer = queryGeneric({
       status: v.string(),
       headshotUrl: v.union(v.string(), v.null()),
       experienceYears: v.union(v.number(), v.null()),
+      grade: v.union(v.number(), v.null()),
+      squad: v.union(v.string(), v.null()),
     }),
     v.null(),
   ),
