@@ -3,7 +3,7 @@ import {
   internalQueryGeneric,
   queryGeneric,
 } from "convex/server";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -113,6 +113,28 @@ function toTeamDto(doc: {
   };
 }
 
+/*
+ * Single source of truth for the player DTO shape (WSM-000167). Reused by every
+ * player query/mutation `returns` validator, and `toPlayerDto`'s return type is
+ * pinned to it via `Infer` below — so the mapper and the validators can't drift.
+ * The WSM-000166 prod outage was exactly that drift (the DTO grew grade/squad
+ * but the read validators didn't); this turns that class of bug into a tsc error.
+ */
+export const playerDtoValidator = v.object({
+  id: v.string(),
+  name: v.string(),
+  teamId: v.string(),
+  position: v.string(),
+  positionGroup: v.union(v.string(), v.null()),
+  jerseyNumber: v.union(v.number(), v.null()),
+  dateOfBirth: v.union(v.string(), v.null()),
+  status: v.string(),
+  headshotUrl: v.union(v.string(), v.null()),
+  experienceYears: v.union(v.number(), v.null()),
+  grade: v.union(v.number(), v.null()),
+  squad: v.union(v.string(), v.null()),
+});
+
 function toPlayerDto(doc: {
   _id: string;
   name: string;
@@ -126,7 +148,7 @@ function toPlayerDto(doc: {
   experienceYears?: number | null;
   grade?: number | null;
   squad?: string | null;
-}) {
+}): Infer<typeof playerDtoValidator> {
   return {
     id: doc._id,
     name: doc.name,
@@ -631,20 +653,7 @@ export const getTeamOwnerOrgId = queryGeneric({
 export const listPlayers = queryGeneric({
   args: { leagueIds: v.array(v.id("leagues")) },
   returns: v.array(
-    v.object({
-      id: v.string(),
-      name: v.string(),
-      teamId: v.string(),
-      position: v.string(),
-      positionGroup: v.union(v.string(), v.null()),
-      jerseyNumber: v.union(v.number(), v.null()),
-      dateOfBirth: v.union(v.string(), v.null()),
-      status: v.string(),
-      headshotUrl: v.union(v.string(), v.null()),
-      experienceYears: v.union(v.number(), v.null()),
-      grade: v.union(v.number(), v.null()),
-      squad: v.union(v.string(), v.null()),
-    }),
+    playerDtoValidator,
   ),
   handler: async (ctx, args) => {
     const docs = await Promise.all(
@@ -662,20 +671,7 @@ export const listPlayers = queryGeneric({
 export const listPlayersByTeam = queryGeneric({
   args: { teamId: v.id("teams") },
   returns: v.array(
-    v.object({
-      id: v.string(),
-      name: v.string(),
-      teamId: v.string(),
-      position: v.string(),
-      positionGroup: v.union(v.string(), v.null()),
-      jerseyNumber: v.union(v.number(), v.null()),
-      dateOfBirth: v.union(v.string(), v.null()),
-      status: v.string(),
-      headshotUrl: v.union(v.string(), v.null()),
-      experienceYears: v.union(v.number(), v.null()),
-      grade: v.union(v.number(), v.null()),
-      squad: v.union(v.string(), v.null()),
-    }),
+    playerDtoValidator,
   ),
   handler: async (ctx, args) => {
     const docs = await ctx.db
@@ -689,20 +685,7 @@ export const listPlayersByTeam = queryGeneric({
 export const getPlayer = queryGeneric({
   args: { playerId: v.id("players") },
   returns: v.union(
-    v.object({
-      id: v.string(),
-      name: v.string(),
-      teamId: v.string(),
-      position: v.string(),
-      positionGroup: v.union(v.string(), v.null()),
-      jerseyNumber: v.union(v.number(), v.null()),
-      dateOfBirth: v.union(v.string(), v.null()),
-      status: v.string(),
-      headshotUrl: v.union(v.string(), v.null()),
-      experienceYears: v.union(v.number(), v.null()),
-      grade: v.union(v.number(), v.null()),
-      squad: v.union(v.string(), v.null()),
-    }),
+    playerDtoValidator,
     v.null(),
   ),
   handler: async (ctx, args) => {
@@ -1244,20 +1227,7 @@ export const upsertPlayer = internalMutationGeneric({
     squad: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
-    dto: v.object({
-      id: v.string(),
-      name: v.string(),
-      teamId: v.string(),
-      position: v.string(),
-      positionGroup: v.union(v.string(), v.null()),
-      jerseyNumber: v.union(v.number(), v.null()),
-      dateOfBirth: v.union(v.string(), v.null()),
-      status: v.string(),
-      headshotUrl: v.union(v.string(), v.null()),
-      experienceYears: v.union(v.number(), v.null()),
-      grade: v.union(v.number(), v.null()),
-      squad: v.union(v.string(), v.null()),
-    }),
+    dto: playerDtoValidator,
     created: v.boolean(),
   }),
   handler: async (ctx, args) => {
@@ -1556,20 +1526,7 @@ export const updatePlayer = internalMutationGeneric({
     squad: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.union(
-    v.object({
-      id: v.string(),
-      name: v.string(),
-      teamId: v.string(),
-      position: v.string(),
-      positionGroup: v.union(v.string(), v.null()),
-      jerseyNumber: v.union(v.number(), v.null()),
-      dateOfBirth: v.union(v.string(), v.null()),
-      status: v.string(),
-      headshotUrl: v.union(v.string(), v.null()),
-      experienceYears: v.union(v.number(), v.null()),
-      grade: v.union(v.number(), v.null()),
-      squad: v.union(v.string(), v.null()),
-    }),
+    playerDtoValidator,
     v.null(),
   ),
   handler: async (ctx, args) => {
