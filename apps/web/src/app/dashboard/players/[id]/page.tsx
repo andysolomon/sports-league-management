@@ -227,9 +227,9 @@ export default async function PlayerProfilePage({
                 SPRT Rating
               </h3>
               {rating.weightedOverall != null && (
-                <span className="font-mono text-2xl font-bold text-accent">
+                <span className="font-mono text-stat-30 tabular-nums text-accent">
                   {Math.round(rating.weightedOverall)}
-                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                  <span className="ml-1 text-caption-12 font-normal text-text-muted">
                     OVR
                   </span>
                 </span>
