@@ -10,7 +10,12 @@ import { cn } from "@/lib/utils";
 
 interface PricingTableProps {
   currentTier?: Tier;
-  onSelectPlan?: (priceId: string, tier: Tier) => void | Promise<void>;
+  /**
+   * Called with the chosen tier + interval (NOT a Stripe price id). Stripe price
+   * ids are server-only env vars and are `null` in this client bundle, so the
+   * server resolves the price from the tier — see WSM-000169.
+   */
+  onSelectPlan?: (tier: Tier, interval: BillingInterval) => void | Promise<void>;
   defaultInterval?: BillingInterval;
 }
 
@@ -35,13 +40,9 @@ export function PricingTable({
 
   const handleSelect = async (tier: Tier) => {
     if (!onSelectPlan) return;
-    const config = TIER_CONFIGS[tier];
-    const priceId = interval === "monthly" ? config.monthlyPriceId : config.yearlyPriceId;
-    if (!priceId) return;
-
     setLoadingTier(tier);
     try {
-      await onSelectPlan(priceId, tier);
+      await onSelectPlan(tier, interval);
     } finally {
       setLoadingTier(null);
     }

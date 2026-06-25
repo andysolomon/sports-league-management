@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PricingTable } from "@/components/pricing-table";
-import type { Tier } from "@/lib/tiers";
+import type { Tier, BillingInterval } from "@/lib/tiers";
 
 interface BillingActionsProps {
   currentTier?: Tier;
@@ -36,12 +36,12 @@ export function BillingActions({
     }
   };
 
-  const handleSelectPlan = async (priceId: string) => {
+  const handleSelectPlan = async (tier: Tier, interval: BillingInterval) => {
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ tier, interval }),
       });
       if (!res.ok) {
         const err = await res.json();
