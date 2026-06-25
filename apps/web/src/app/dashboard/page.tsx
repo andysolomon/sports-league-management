@@ -213,8 +213,10 @@ export default async function DashboardPage() {
                 <CardContent className="flex items-center gap-3 p-4">
                   <Icon className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-xs text-muted-foreground">{card.label}</p>
-                    <p className="text-xl font-bold text-foreground">
+                    <p className="text-caption-12 uppercase tracking-wide text-text-muted">
+                      {card.label}
+                    </p>
+                    <p className="text-stat-30 font-mono tabular-nums text-foreground">
                       {counts[card.key]}
                     </p>
                   </div>
@@ -245,7 +247,7 @@ export default async function DashboardPage() {
           <BentoCard title="This league" className="lg:col-span-2">
             <div className="flex flex-1 flex-col justify-between gap-4">
               <div>
-                <p className="text-2xl font-semibold text-foreground">
+                <p className="text-title-22 text-foreground">
                   {activeLeague!.name}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
