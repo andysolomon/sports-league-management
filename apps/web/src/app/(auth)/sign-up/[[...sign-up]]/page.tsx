@@ -8,10 +8,24 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string; interval?: string }>;
+}) {
+  // When a marketing pricing CTA carried a plan, resume Stripe checkout right
+  // after sign-up by sending the new account through /checkout/start (WSM-000171).
+  const { plan, interval } = await searchParams;
+  const redirectUrl = plan
+    ? `/checkout/start?plan=${encodeURIComponent(plan)}&interval=${encodeURIComponent(interval ?? "monthly")}`
+    : undefined;
+
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <SignUp />
+      <SignUp
+        forceRedirectUrl={redirectUrl}
+        fallbackRedirectUrl={redirectUrl}
+      />
     </main>
   );
 }

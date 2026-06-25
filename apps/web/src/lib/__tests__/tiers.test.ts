@@ -81,4 +81,27 @@ describe("tiers", () => {
     const { getTierLimits } = await import("../tiers");
     expect(getTierLimits("plus").maxTeams).toBe(-1);
   });
+
+  // resolvePriceId — the server-side tier+interval → price resolution that
+  // backs the upgrade CTAs and post-sign-up checkout (WSM-000169/171).
+  it("resolvePriceId resolves paid tier + interval to the configured price", async () => {
+    const { resolvePriceId } = await import("../tiers");
+    expect(resolvePriceId("plus", "monthly")).toBe("price_plus_monthly");
+    expect(resolvePriceId("plus", "yearly")).toBe("price_plus_yearly");
+    expect(resolvePriceId("club", "yearly")).toBe("price_club_yearly");
+  });
+
+  it("resolvePriceId defaults a missing/odd interval to monthly", async () => {
+    const { resolvePriceId } = await import("../tiers");
+    expect(resolvePriceId("league", undefined)).toBe("price_league_monthly");
+    expect(resolvePriceId("league", "bogus")).toBe("price_league_monthly");
+  });
+
+  it("resolvePriceId rejects free, unknown, and non-string tiers", async () => {
+    const { resolvePriceId } = await import("../tiers");
+    expect(resolvePriceId("free", "monthly")).toBeNull();
+    expect(resolvePriceId("enterprise", "monthly")).toBeNull();
+    expect(resolvePriceId(123, "monthly")).toBeNull();
+    expect(resolvePriceId(null, "monthly")).toBeNull();
+  });
 });
