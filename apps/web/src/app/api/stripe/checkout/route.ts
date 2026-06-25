@@ -2,18 +2,28 @@ import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getStripeCustomerId } from "@/lib/authorization";
-import { TIER_CONFIGS, TIER_ORDER } from "@/lib/tiers";
+import {
+  TIER_CONFIGS,
+  TIER_ORDER,
+  type Tier,
+  type BillingInterval,
+} from "@/lib/tiers";
 import { handleApiError, ApiError } from "@/lib/api-error";
 
-// Build the set of valid price IDs at module load
-function getValidPriceIds(): Set<string> {
-  const ids = new Set<string>();
-  for (const tier of TIER_ORDER) {
-    const config = TIER_CONFIGS[tier];
-    if (config.monthlyPriceId) ids.add(config.monthlyPriceId);
-    if (config.yearlyPriceId) ids.add(config.yearlyPriceId);
+/**
+ * Resolve a Stripe price id from a (paid) tier + interval. Price ids live in
+ * server-only env (`STRIPE_PRICE_*`), so the CLIENT cannot send them — it sends
+ * the tier and we resolve here (WSM-000169). Returns null for a free/unknown
+ * tier or a plan whose price isn't configured in this environment.
+ */
+function resolvePriceId(tier: unknown, interval: unknown): string | null {
+  if (typeof tier !== "string" || !TIER_ORDER.includes(tier as Tier)) {
+    return null;
   }
-  return ids;
+  if (tier === "free") return null;
+  const billing: BillingInterval = interval === "yearly" ? "yearly" : "monthly";
+  const config = TIER_CONFIGS[tier as Tier];
+  return billing === "yearly" ? config.yearlyPriceId : config.monthlyPriceId;
 }
 
 export async function POST(request: NextRequest) {
@@ -24,17 +34,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const priceId = body?.priceId as string | undefined;
 
-    if (!priceId || typeof priceId !== "string") {
-      throw new ApiError({ statusCode: 400, message: "priceId is required" });
-    }
-
-    const validPriceIds = getValidPriceIds();
-    if (!validPriceIds.has(priceId)) {
+    const priceId = resolvePriceId(body?.tier, body?.interval);
+    if (!priceId) {
       throw new ApiError({
         statusCode: 400,
-        message: "Invalid priceId",
+        message: "A valid paid tier is required",
       });
     }
 
