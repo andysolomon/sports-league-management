@@ -47,10 +47,15 @@ if (!CONVEX_URL) {
   process.exit(1);
 }
 
-const INSTANCE = CLERK_SECRET_KEY.startsWith("sk_live_") ? "LIVE (production)" : "test (dev)";
+const IS_LIVE = CLERK_SECRET_KEY.startsWith("sk_live_");
+const INSTANCE = IS_LIVE ? "LIVE (production)" : "test (dev)";
+// Dev and live share one Convex deployment, and upsertLeague keys on name only,
+// so the org + league names are tagged per instance to avoid cross-run
+// collisions (Clerk orgs are per-instance, but the Convex league is shared).
+const TAG = IS_LIVE ? "live" : "dev";
 
-const ORG_NAME = "Sports League — Test Org";
-const LEAGUE_NAME = "Sports League — Test League";
+const ORG_NAME = `Sports League — Test Org (${TAG})`;
+const LEAGUE_NAME = `Sports League — Test League (${TAG})`;
 // A known, shared password for all test accounts. Test-only; not a secret.
 const PASSWORD = "SprtsmngTest!2026";
 
