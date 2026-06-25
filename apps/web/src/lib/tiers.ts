@@ -169,3 +169,19 @@ export function tierMeetsRequirement(userTier: Tier, requiredTier: Tier): boolea
 export function isPaidTier(tier: Tier): boolean {
   return tier !== "free";
 }
+
+/**
+ * Resolve a Stripe price id from a (paid) tier + interval. Price ids live in
+ * server-only env (`STRIPE_PRICE_*`), so callers pass the tier and we resolve
+ * here on the server (WSM-000169/171). Returns null for a free/unknown tier or
+ * a plan whose price isn't configured in this environment.
+ */
+export function resolvePriceId(tier: unknown, interval: unknown): string | null {
+  if (typeof tier !== "string" || !TIER_ORDER.includes(tier as Tier)) {
+    return null;
+  }
+  if (tier === "free") return null;
+  const billing: BillingInterval = interval === "yearly" ? "yearly" : "monthly";
+  const config = TIER_CONFIGS[tier as Tier];
+  return billing === "yearly" ? config.yearlyPriceId : config.monthlyPriceId;
+}
