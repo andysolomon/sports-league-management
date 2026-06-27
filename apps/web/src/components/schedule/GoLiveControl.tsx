@@ -35,6 +35,8 @@ export interface GoLiveControlProps {
   awayTeamName: string;
   /** Current stream status from getStreamByFixture, or null if none exists. */
   status: "idle" | "active" | "ended" | null;
+  /** Fixture status — a finished/cancelled game can't start a new stream. */
+  gameStatus?: string;
 }
 
 export default function GoLiveControl({
@@ -43,6 +45,7 @@ export default function GoLiveControl({
   homeTeamName,
   awayTeamName,
   status,
+  gameStatus,
 }: GoLiveControlProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -50,6 +53,9 @@ export default function GoLiveControl({
   const [url, setUrl] = useState("");
 
   const isLive = status === "active";
+  // A game that's over (or cancelled) can't go live. We still show the LIVE +
+  // Stop control if a stream is somehow active, so it can always be stopped.
+  const gameOver = gameStatus === "final" || gameStatus === "cancelled";
 
   function start() {
     const value = url.trim();
@@ -104,7 +110,7 @@ export default function GoLiveControl({
             <Square className="h-4 w-4 text-destructive" />
           </Button>
         </div>
-      ) : (
+      ) : gameOver ? null : (
         <Button
           size="sm"
           variant="ghost"
@@ -179,6 +185,8 @@ function errorLabel(error: string): string {
       return "Game not found.";
     case "stream_not_found":
       return "No live stream to stop.";
+    case "game_over":
+      return "This game has ended — you can't start a live stream for it.";
     default:
       return error;
   }
