@@ -275,6 +275,9 @@ export class LocalWorkspaceProvider implements WorkspaceDataProvider {
       endDate: input.endDate ?? null,
       status: "active",
       rosterLocked: false,
+      playoffTeams: null,
+      playoffFormat: null,
+      divisionWinnersQualify: false,
     };
     await this.db.seasons.add(season);
     return season;

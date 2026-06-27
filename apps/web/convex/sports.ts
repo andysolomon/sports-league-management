@@ -176,6 +176,9 @@ function toSeasonDto(doc: {
   endDate: string | null;
   status: string;
   rosterLocked?: boolean;
+  playoffTeams?: number;
+  playoffFormat?: string;
+  divisionWinnersQualify?: boolean;
 }) {
   return {
     id: doc._id,
@@ -185,6 +188,9 @@ function toSeasonDto(doc: {
     endDate: doc.endDate ?? null,
     status: doc.status,
     rosterLocked: doc.rosterLocked ?? false,
+    playoffTeams: doc.playoffTeams ?? null,
+    playoffFormat: doc.playoffFormat ?? null,
+    divisionWinnersQualify: doc.divisionWinnersQualify ?? false,
   };
 }
 
@@ -708,6 +714,9 @@ export const listSeasons = queryGeneric({
       endDate: v.union(v.string(), v.null()),
       status: v.string(),
       rosterLocked: v.boolean(),
+      playoffTeams: v.optional(v.union(v.number(), v.null())),
+      playoffFormat: v.optional(v.union(v.string(), v.null())),
+      divisionWinnersQualify: v.optional(v.boolean()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -734,6 +743,9 @@ export const getSeason = queryGeneric({
       endDate: v.union(v.string(), v.null()),
       status: v.string(),
       rosterLocked: v.boolean(),
+      playoffTeams: v.optional(v.union(v.number(), v.null())),
+      playoffFormat: v.optional(v.union(v.string(), v.null())),
+      divisionWinnersQualify: v.optional(v.boolean()),
     }),
     v.null(),
   ),
@@ -1772,6 +1784,9 @@ export const upsertSeason = internalMutationGeneric({
     startDate: v.union(v.string(), v.null()),
     endDate: v.union(v.string(), v.null()),
     status: v.string(),
+    playoffTeams: v.optional(v.number()),
+    playoffFormat: v.optional(v.string()),
+    divisionWinnersQualify: v.optional(v.boolean()),
   },
   returns: v.object({
     dto: v.object({
@@ -1782,6 +1797,9 @@ export const upsertSeason = internalMutationGeneric({
       endDate: v.union(v.string(), v.null()),
       status: v.string(),
       rosterLocked: v.boolean(),
+      playoffTeams: v.optional(v.union(v.number(), v.null())),
+      playoffFormat: v.optional(v.union(v.string(), v.null())),
+      divisionWinnersQualify: v.optional(v.boolean()),
     }),
     created: v.boolean(),
   }),
@@ -1795,17 +1813,29 @@ export const upsertSeason = internalMutationGeneric({
       ).find((season) => season.name === args.name) ?? null;
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
+      // Only overwrite playoff config when the caller actually supplied it, so
+      // non-config callers (e.g. bulk import) don't wipe a season's settings.
+      const patch: Record<string, unknown> = {
         startDate: args.startDate,
         endDate: args.endDate,
         status: args.status,
-      });
+      };
+      if (args.playoffTeams !== undefined) patch.playoffTeams = args.playoffTeams;
+      if (args.playoffFormat !== undefined) patch.playoffFormat = args.playoffFormat;
+      if (args.divisionWinnersQualify !== undefined) {
+        patch.divisionWinnersQualify = args.divisionWinnersQualify;
+      }
+      await ctx.db.patch(existing._id, patch);
       return {
         dto: toSeasonDto({
           ...existing,
           startDate: args.startDate,
           endDate: args.endDate,
           status: args.status,
+          playoffTeams: args.playoffTeams ?? existing.playoffTeams,
+          playoffFormat: args.playoffFormat ?? existing.playoffFormat,
+          divisionWinnersQualify:
+            args.divisionWinnersQualify ?? existing.divisionWinnersQualify,
         }),
         created: false,
       };
@@ -1816,15 +1846,18 @@ export const upsertSeason = internalMutationGeneric({
       rosterLocked: false,
     });
     return {
-      dto: {
-        id: seasonId,
+      dto: toSeasonDto({
+        _id: seasonId,
         name: args.name,
         leagueId: args.leagueId,
         startDate: args.startDate,
         endDate: args.endDate,
         status: args.status,
         rosterLocked: false,
-      },
+        playoffTeams: args.playoffTeams,
+        playoffFormat: args.playoffFormat,
+        divisionWinnersQualify: args.divisionWinnersQualify,
+      }),
       created: true,
     };
   },
@@ -1840,6 +1873,9 @@ export const updateSeason = internalMutationGeneric({
     name: v.string(),
     startDate: v.union(v.string(), v.null()),
     endDate: v.union(v.string(), v.null()),
+    playoffTeams: v.optional(v.number()),
+    playoffFormat: v.optional(v.string()),
+    divisionWinnersQualify: v.optional(v.boolean()),
   },
   returns: v.union(
     v.object({
@@ -1850,22 +1886,35 @@ export const updateSeason = internalMutationGeneric({
       endDate: v.union(v.string(), v.null()),
       status: v.string(),
       rosterLocked: v.boolean(),
+      playoffTeams: v.optional(v.union(v.number(), v.null())),
+      playoffFormat: v.optional(v.union(v.string(), v.null())),
+      divisionWinnersQualify: v.optional(v.boolean()),
     }),
     v.null(),
   ),
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.seasonId);
     if (!existing) return null;
-    await ctx.db.patch(args.seasonId, {
+    const patch: Record<string, unknown> = {
       name: args.name,
       startDate: args.startDate,
       endDate: args.endDate,
-    });
+    };
+    if (args.playoffTeams !== undefined) patch.playoffTeams = args.playoffTeams;
+    if (args.playoffFormat !== undefined) patch.playoffFormat = args.playoffFormat;
+    if (args.divisionWinnersQualify !== undefined) {
+      patch.divisionWinnersQualify = args.divisionWinnersQualify;
+    }
+    await ctx.db.patch(args.seasonId, patch);
     return toSeasonDto({
       ...existing,
       name: args.name,
       startDate: args.startDate,
       endDate: args.endDate,
+      playoffTeams: args.playoffTeams ?? existing.playoffTeams,
+      playoffFormat: args.playoffFormat ?? existing.playoffFormat,
+      divisionWinnersQualify:
+        args.divisionWinnersQualify ?? existing.divisionWinnersQualify,
     });
   },
 });
@@ -4996,6 +5045,43 @@ async function seasonStandingTeamIds(
   }).map((r) => r.teamId);
 }
 
+/**
+ * Playoff seed order (WSM-000184). Default = league standings order. When
+ * `divisionWinnersQualify` is on, each division's best team (its first
+ * appearance in standings order) is seeded ahead of all non-winners, with both
+ * groups keeping their standings order — so division champs always make the
+ * field and get the top seeds. Teams without a division are never "winners".
+ */
+async function seasonPlayoffSeeds(
+  ctx: MutationCtx,
+  season: { _id: Id<"seasons">; leagueId: Id<"leagues"> },
+  divisionWinnersQualify: boolean,
+): Promise<string[]> {
+  const ordered = await seasonStandingTeamIds(ctx, season);
+  if (!divisionWinnersQualify) return ordered;
+
+  const teamRows = await ctx.db
+    .query("teams")
+    .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+    .collect();
+  const divisionByTeam = new Map<string, string | null>(
+    teamRows.map((t) => [t._id as string, (t.divisionId as string | null) ?? null]),
+  );
+
+  const winners: string[] = [];
+  const seenDivisions = new Set<string>();
+  for (const teamId of ordered) {
+    const division = divisionByTeam.get(teamId) ?? null;
+    if (division && !seenDivisions.has(division)) {
+      seenDivisions.add(division);
+      winners.push(teamId);
+    }
+  }
+  const winnerSet = new Set(winners);
+  const rest = ordered.filter((t) => !winnerSet.has(t));
+  return [...winners, ...rest];
+}
+
 /** Insert a playoff fixture for a matchup whose two teams are known. */
 async function spawnPlayoffFixture(
   ctx: MutationCtx,
@@ -5098,6 +5184,7 @@ export const generatePlayoffBracket = internalMutationGeneric({
     size: v.number(),
     actorUserId: v.string(),
     confirm: v.optional(v.boolean()),
+    divisionWinnersQualify: v.optional(v.boolean()),
   },
   returns: v.object({
     bracketId: v.string(),
@@ -5111,6 +5198,9 @@ export const generatePlayoffBracket = internalMutationGeneric({
     }
     const season = await ctx.db.get(args.seasonId);
     if (!season) throw new Error("season_not_found");
+    // Honor the season's configured qualification rule (overridable per call).
+    const divisionWinnersQualify =
+      args.divisionWinnersQualify ?? season.divisionWinnersQualify ?? false;
 
     // Existing bracket: results-guard, then clean wipe.
     const existing = await ctx.db
@@ -5156,7 +5246,11 @@ export const generatePlayoffBracket = internalMutationGeneric({
       await ctx.db.delete(existing._id);
     }
 
-    const seeds = await seasonStandingTeamIds(ctx as MutationCtx, season);
+    const seeds = await seasonPlayoffSeeds(
+      ctx as MutationCtx,
+      season,
+      divisionWinnersQualify,
+    );
     if (seeds.length < args.size) throw new Error("not_enough_teams");
 
     const plan = buildBracket(args.size);

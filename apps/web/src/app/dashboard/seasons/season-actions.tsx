@@ -22,18 +22,63 @@ function nullableDate(value: string): string | null {
   return value.trim() === "" ? null : value;
 }
 
+/** Playoff setup fields shared by the create + edit season forms (WSM-000184).
+ *  Single-elimination only for now; double-elim is a future option. */
+function PlayoffConfigFields({
+  playoffTeams,
+  setPlayoffTeams,
+  divisionWinnersQualify,
+  setDivisionWinnersQualify,
+}: {
+  playoffTeams: number;
+  setPlayoffTeams: (n: number) => void;
+  divisionWinnersQualify: boolean;
+  setDivisionWinnersQualify: (b: boolean) => void;
+}) {
+  return (
+    <>
+      <label className="flex items-center gap-1 text-xs text-muted-foreground">
+        Playoffs
+        <select
+          className={inputClass}
+          value={playoffTeams}
+          onChange={(e) => setPlayoffTeams(Number(e.target.value))}
+          aria-label="Number of playoff teams"
+        >
+          <option value={0}>None</option>
+          <option value={4}>4 teams (single-elim)</option>
+          <option value={8}>8 teams (single-elim)</option>
+          <option value={16}>16 teams (single-elim)</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-1 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={divisionWinnersQualify}
+          onChange={(e) => setDivisionWinnersQualify(e.target.checked)}
+        />
+        Division winners qualify
+      </label>
+    </>
+  );
+}
+
 export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [playoffTeams, setPlayoffTeams] = useState(8);
+  const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(false);
   const [busy, setBusy] = useState(false);
 
   function reset() {
     setName("");
     setStartDate("");
     setEndDate("");
+    setPlayoffTeams(8);
+    setDivisionWinnersQualify(false);
     setOpen(false);
   }
 
@@ -46,6 +91,8 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
       name: trimmed,
       startDate: nullableDate(startDate),
       endDate: nullableDate(endDate),
+      playoffTeams,
+      divisionWinnersQualify,
     });
     setBusy(false);
     if (res.ok) {
@@ -97,6 +144,12 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
           className={inputClass}
         />
       </label>
+      <PlayoffConfigFields
+        playoffTeams={playoffTeams}
+        setPlayoffTeams={setPlayoffTeams}
+        divisionWinnersQualify={divisionWinnersQualify}
+        setDivisionWinnersQualify={setDivisionWinnersQualify}
+      />
       <Button size="sm" disabled={busy} onClick={submit}>
         {busy ? "…" : "Create"}
       </Button>
@@ -169,6 +222,10 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
   const [name, setName] = useState(season.name);
   const [startDate, setStartDate] = useState(season.startDate ?? "");
   const [endDate, setEndDate] = useState(season.endDate ?? "");
+  const [playoffTeams, setPlayoffTeams] = useState(season.playoffTeams ?? 8);
+  const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(
+    season.divisionWinnersQualify ?? false,
+  );
   const [busy, setBusy] = useState(false);
 
   const isActive = season.status === "active";
@@ -194,6 +251,8 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
       name: trimmed,
       startDate: nullableDate(startDate),
       endDate: nullableDate(endDate),
+      playoffTeams,
+      divisionWinnersQualify,
     });
     setBusy(false);
     if (res.ok) {
@@ -250,6 +309,12 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
           onChange={(e) => setEndDate(e.target.value)}
           className={inputClass}
           aria-label="End date"
+        />
+        <PlayoffConfigFields
+          playoffTeams={playoffTeams}
+          setPlayoffTeams={setPlayoffTeams}
+          divisionWinnersQualify={divisionWinnersQualify}
+          setDivisionWinnersQualify={setDivisionWinnersQualify}
         />
         <Button size="sm" disabled={busy} onClick={save}>
           {busy ? "…" : "Save"}

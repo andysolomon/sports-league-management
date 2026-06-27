@@ -35,6 +35,8 @@ export async function createSeasonAction(input: {
   name: string;
   startDate: string | null;
   endDate: string | null;
+  playoffTeams?: number;
+  divisionWinnersQualify?: boolean;
 }): Promise<Result<{ id: string }>> {
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Season name is required." };
@@ -54,6 +56,9 @@ export async function createSeasonAction(input: {
       startDate: input.startDate,
       endDate: input.endDate,
       status,
+      playoffTeams: input.playoffTeams,
+      playoffFormat: "single",
+      divisionWinnersQualify: input.divisionWinnersQualify,
     });
     revalidatePath("/dashboard/seasons");
     return { ok: true, id: dto.id };
@@ -70,6 +75,8 @@ export async function updateSeasonAction(input: {
   name: string;
   startDate: string | null;
   endDate: string | null;
+  playoffTeams?: number;
+  divisionWinnersQualify?: boolean;
 }): Promise<Result> {
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Season name is required." };
@@ -83,6 +90,8 @@ export async function updateSeasonAction(input: {
       name,
       startDate: input.startDate,
       endDate: input.endDate,
+      playoffTeams: input.playoffTeams,
+      divisionWinnersQualify: input.divisionWinnersQualify,
     });
     revalidatePath("/dashboard/seasons");
     return { ok: true };

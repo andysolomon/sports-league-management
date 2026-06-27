@@ -290,6 +290,9 @@ const refs = {
       startDate: string | null;
       endDate: string | null;
       status: string;
+      playoffTeams?: number;
+      playoffFormat?: string;
+      divisionWinnersQualify?: boolean;
     },
     { dto: SeasonDto; created: boolean }
   >("sports:upsertSeason"),
@@ -299,6 +302,9 @@ const refs = {
       name: string;
       startDate: string | null;
       endDate: string | null;
+      playoffTeams?: number;
+      playoffFormat?: string;
+      divisionWinnersQualify?: boolean;
     },
     SeasonDto | null
   >("sports:updateSeason"),
@@ -1219,6 +1225,9 @@ export async function upsertSeason(input: {
   startDate: string | null;
   endDate: string | null;
   status: string;
+  playoffTeams?: number;
+  playoffFormat?: string;
+  divisionWinnersQualify?: boolean;
 }): Promise<{ dto: SeasonDto; created: boolean }> {
   return mutateConvex(refs.upsertSeason, input);
 }
@@ -1228,6 +1237,9 @@ export async function updateSeason(input: {
   name: string;
   startDate: string | null;
   endDate: string | null;
+  playoffTeams?: number;
+  playoffFormat?: string;
+  divisionWinnersQualify?: boolean;
 }): Promise<SeasonDto> {
   const dto = await mutateConvex(refs.updateSeason, input);
   if (!dto) throw new Error("Season not found");

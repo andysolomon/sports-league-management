@@ -126,6 +126,11 @@ export default defineSchema({
     endDate: v.union(v.string(), v.null()),
     status: v.string(),
     rosterLocked: v.boolean(),
+    // Playoff configuration set at season setup (WSM-000184). Optional so legacy
+    // seasons default sensibly (8 teams, single-elim, no division auto-qualify).
+    playoffTeams: v.optional(v.number()), // 0 = no playoffs; else 4 | 8 | 16
+    playoffFormat: v.optional(v.string()), // "single" (double = future)
+    divisionWinnersQualify: v.optional(v.boolean()),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_leagueId_name", ["leagueId", "name"]),
