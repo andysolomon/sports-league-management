@@ -344,6 +344,7 @@ export default function TeamManagement({
             {canGenerateRoster && (
               <>
                 <SyntheticRosterButton kind="team" id={team.id} />
+                <SyntheticRosterButton kind="team" id={team.id} action="attributes" />
                 <SyntheticRosterButton kind="team" id={team.id} action="clear" />
               </>
             )}

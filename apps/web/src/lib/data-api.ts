@@ -1155,6 +1155,22 @@ export async function clearSyntheticPlayers(
   return mutateConvex(refs.clearSyntheticPlayers, { teamId });
 }
 
+/** A precomputed attribute snapshot for bulk ingest (WSM-000175). */
+export interface AttributeBatchRow {
+  playerId: string;
+  positionGroup: string;
+  attributesJson: string;
+  weightedOverall: number | null;
+}
+
+/** Upsert many players' season attribute snapshots in one call (WSM-000175). */
+export async function ingestPlayerAttributesBatch(
+  seasonId: string,
+  rows: AttributeBatchRow[],
+): Promise<{ created: number; updated: number }> {
+  return mutateConvex(refs.ingestPlayerAttributesBatch, { seasonId, rows });
+}
+
 export async function updatePlayer(
   id: string,
   input: UpdatePlayerInput,

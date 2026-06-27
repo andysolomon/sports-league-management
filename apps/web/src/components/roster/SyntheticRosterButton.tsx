@@ -3,13 +3,15 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Sparkles, Trash2 } from "lucide-react";
+import { Sparkles, Trash2, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   generateTeamRosterAction,
   generateLeagueRostersAction,
   clearTeamSyntheticAction,
   clearLeagueSyntheticAction,
+  generateTeamAttributesAction,
+  generateLeagueAttributesAction,
 } from "@/app/dashboard/_actions/synthetic-rosters";
 
 /*
@@ -22,7 +24,7 @@ import {
 interface SyntheticRosterButtonProps {
   kind: "team" | "league";
   id: string;
-  action?: "generate" | "clear";
+  action?: "generate" | "clear" | "attributes";
 }
 
 export function SyntheticRosterButton({
@@ -37,7 +39,29 @@ export function SyntheticRosterButton({
     if (!window.confirm(CONFIRM[action][kind])) return;
 
     start(async () => {
-      if (action === "generate" && kind === "team") {
+      if (action === "attributes" && kind === "team") {
+        const res = await generateTeamAttributesAction({ teamId: id });
+        if (!res.ok) {
+          toast.error(errorLabel(res.error));
+          return;
+        }
+        toast.success(
+          res.rated === 0
+            ? "No players to rate yet — generate a roster first."
+            : `Generated ratings for ${res.rated} player${res.rated === 1 ? "" : "s"}.`,
+        );
+      } else if (action === "attributes") {
+        const res = await generateLeagueAttributesAction({ leagueId: id });
+        if (!res.ok) {
+          toast.error(errorLabel(res.error));
+          return;
+        }
+        toast.success(
+          res.rated === 0
+            ? "No players to rate yet — generate rosters first."
+            : `Generated ratings for ${res.rated} player${res.rated === 1 ? "" : "s"} across ${res.teams} team${res.teams === 1 ? "" : "s"}.`,
+        );
+      } else if (action === "generate" && kind === "team") {
         const res = await generateTeamRosterAction({ teamId: id });
         if (!res.ok) {
           toast.error(errorLabel(res.error));
@@ -87,16 +111,21 @@ export function SyntheticRosterButton({
   }
 
   const isClear = action === "clear";
-  const Icon = isClear ? Trash2 : Sparkles;
+  const isAttributes = action === "attributes";
+  const Icon = isClear ? Trash2 : isAttributes ? Gauge : Sparkles;
   const label = isClear
     ? pending
       ? "Clearing…"
       : "Clear synthetic"
-    : pending
-      ? "Generating…"
-      : kind === "team"
-        ? "Generate roster"
-        : "Generate rosters";
+    : isAttributes
+      ? pending
+        ? "Rating…"
+        : "Generate ratings"
+      : pending
+        ? "Generating…"
+        : kind === "team"
+          ? "Generate roster"
+          : "Generate rosters";
 
   return (
     <Button
@@ -109,7 +138,9 @@ export function SyntheticRosterButton({
       title={
         isClear
           ? "Delete generated test players (keeps real players)"
-          : "Generate fake players to populate this roster for testing/demos"
+          : isAttributes
+            ? "Generate Madden-style ratings for this roster's players (test data)"
+            : "Generate fake players to populate this roster for testing/demos"
       }
     >
       <Icon className="mr-1 h-4 w-4" />
@@ -118,7 +149,10 @@ export function SyntheticRosterButton({
   );
 }
 
-const CONFIRM: Record<"generate" | "clear", Record<"team" | "league", string>> = {
+const CONFIRM: Record<
+  "generate" | "clear" | "attributes",
+  Record<"team" | "league", string>
+> = {
   generate: {
     team: "Generate a synthetic (fake) roster for this team? These are test players, not real people.",
     league:
@@ -128,6 +162,11 @@ const CONFIRM: Record<"generate" | "clear", Record<"team" | "league", string>> =
     team: "Delete all synthetic (generated) players from this team? Real players are kept.",
     league:
       "Delete all synthetic (generated) players from EVERY team in this league? Real players are kept.",
+  },
+  attributes: {
+    team: "Generate Madden-style ratings for this team's players? Test data — overwrites any existing synthetic ratings for the active season.",
+    league:
+      "Generate Madden-style ratings for EVERY team's players in this league? Test data — overwrites existing synthetic ratings for the active season.",
   },
 };
 
@@ -139,6 +178,8 @@ function errorLabel(error: string): string {
       return "Please sign in.";
     case "not_authorized":
       return "You don't have permission to do that.";
+    case "no_season":
+      return "This league has no season yet — create one first.";
     default:
       return error;
   }
