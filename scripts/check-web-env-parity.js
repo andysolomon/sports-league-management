@@ -14,6 +14,11 @@ const tempEnvPath = path.join(
   `sprtsmng-vercel-prod-${Date.now()}.env`,
 );
 
+// `--launch` turns the prod Clerk-key identity marker into a hard launch gate:
+// production must be on pk_live_/sk_live_ (WSM-000168 / #386). Off by default so
+// normal parity runs are unaffected pre-launch.
+const LAUNCH = process.argv.includes("--launch");
+
 const KEYS_TO_COMPARE = [
   "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
   "CLERK_SECRET_KEY",
@@ -184,8 +189,28 @@ function main() {
       return localValue !== productionValue;
     });
 
+    let launchFailed = false;
+    if (LAUNCH) {
+      const prodClerk = clerkKeyType(
+        normalizeValue(productionEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY),
+      );
+      const prodSecret = clerkKeyType(normalizeValue(productionEnv.CLERK_SECRET_KEY));
+      if (prodClerk === "live" && prodSecret === "live") {
+        console.log("\nLaunch readiness: production Clerk is LIVE ✓");
+      } else {
+        launchFailed = true;
+        console.error(
+          `\nLaunch readiness FAILED — production is on Clerk ${prodClerk}/${prodSecret} keys (need pk_live_ / sk_live_).\n` +
+            "Clerk development instances rate-limit and are not for production (WSM-000168 / #386).\n" +
+            "Cut over per docs/launch/clerk-prod-cutover.md, then re-run: pnpm run check:launch",
+        );
+      }
+    }
+
     if (hasDrift) {
-      console.error("\nEnv parity check failed.");
+      console.error("\nEnv parity check failed (drift).");
+    }
+    if (hasDrift || launchFailed) {
       process.exit(1);
     }
 
