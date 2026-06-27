@@ -16,7 +16,7 @@ export interface SyntheticPlayer {
   jerseyNumber: number;
   grade: number; // 9–12 (US high school)
   squad: string; // "Varsity" | "JV"
-  status: string; // "active"
+  status: string; // "Active" (canonical — matches the status badge map)
   dateOfBirth: string; // ISO date, age-appropriate for the grade
   hometown: string; // "City, ST"
 }
@@ -148,7 +148,7 @@ export function generateSyntheticRoster({
       jerseyNumber: jersey,
       grade,
       squad,
-      status: "active",
+      status: "Active",
       dateOfBirth,
       hometown,
     });
