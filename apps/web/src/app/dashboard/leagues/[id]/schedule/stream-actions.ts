@@ -8,11 +8,13 @@ import {
   getPublicSeason,
   createGameStream,
   updateGameStreamStatus,
+  endGameStreamByFixture,
   getActiveStreamCountForLeague,
   getStreamAdminByFixture,
 } from "@/lib/data-api";
 import { canAdministerTeam } from "@/lib/authorization";
 import { createMuxLiveStream, disableMuxLiveStream } from "@/lib/mux";
+import { parseYoutubeVideoId } from "@/lib/youtube";
 
 /*
  * Live-stream start/stop server actions (WSM-000144, dark behind
@@ -112,6 +114,46 @@ export async function startGameStream(
   }
 }
 
+/**
+ * Free streaming path (WSM-000180): a coach goes live on their own (unlisted)
+ * YouTube broadcast and pastes the watch/live URL. We store only the public
+ * video id and embed the player — YouTube handles ingest, delivery, and the
+ * recording (the same link becomes the replay). No RTMP key transits our app.
+ */
+export async function startYoutubeStream(
+  leagueId: string,
+  fixtureId: string,
+  youtubeUrl: string,
+): Promise<StopResult> {
+  const guard = await authorizeStreamAction(leagueId, fixtureId);
+  if (!guard.ok) return guard;
+
+  const videoId = parseYoutubeVideoId(youtubeUrl);
+  if (!videoId) return { ok: false, error: "invalid_youtube_url" };
+
+  // Same concurrent cap as Mux — bounds how many live games a league juggles.
+  const activeCount = await getActiveStreamCountForLeague(leagueId);
+  if (activeCount >= PER_LEAGUE_CONCURRENT_CAP) {
+    return { ok: false, error: "stream_cap_reached" };
+  }
+
+  try {
+    await createGameStream({
+      fixtureId,
+      provider: "youtube",
+      youtubeVideoId: videoId,
+      startedBy: guard.userId,
+      maxDurationMinutes: MAX_STREAM_DURATION_MINUTES,
+    });
+    revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
+    revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
 export async function stopGameStream(
   leagueId: string,
   fixtureId: string,
@@ -123,13 +165,21 @@ export async function stopGameStream(
     const stream = await getStreamAdminByFixture(fixtureId);
     if (!stream) return { ok: false, error: "stream_not_found" };
 
-    await disableMuxLiveStream(stream.muxLiveStreamId);
-    // Reflect the stop immediately; the webhook also flips this idempotently.
-    await updateGameStreamStatus({
-      muxLiveStreamId: stream.muxLiveStreamId,
-      status: "ended",
-      endedAt: new Date().toISOString(),
-    });
+    if (stream.provider === "youtube") {
+      // No Mux resource to tear down — the broadcast lives on YouTube. Just mark
+      // it ended; the same video id then serves as the replay on the game page.
+      await endGameStreamByFixture(fixtureId, new Date().toISOString());
+    } else {
+      if (stream.muxLiveStreamId) {
+        await disableMuxLiveStream(stream.muxLiveStreamId);
+        // Reflect the stop immediately; the webhook also flips this idempotently.
+        await updateGameStreamStatus({
+          muxLiveStreamId: stream.muxLiveStreamId,
+          status: "ended",
+          endedAt: new Date().toISOString(),
+        });
+      }
+    }
 
     revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
     revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);

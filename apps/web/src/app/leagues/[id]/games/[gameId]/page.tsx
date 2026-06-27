@@ -128,9 +128,12 @@ export default async function PublicGamePage({
       ? await getLiveGameState(gameId).catch(() => null)
       : null;
   const liveActive = stream?.status === "active";
-  const hasReplay = stream?.status === "ended" && stream.vodAssetId !== null;
-  const streamEndedNoReplay =
-    stream?.status === "ended" && stream.vodAssetId === null;
+  // A replay exists when Mux has attached a VOD asset, or — for YouTube — the
+  // same broadcast video id keeps serving the recording after it ends.
+  const hasReplay =
+    stream?.status === "ended" &&
+    (stream.vodAssetId !== null || stream.youtubeVideoId !== null);
+  const streamEndedNoReplay = stream?.status === "ended" && !hasReplay;
 
   const { fixture, result, seasonName } = view;
   const isFinal = fixture.status === "final" && result !== null;
@@ -187,7 +190,9 @@ export default async function PublicGamePage({
           <CardContent>
             <div className="relative">
               <GameStreamPlayer
-                playbackId={stream!.muxPlaybackId}
+                provider={stream!.provider}
+                muxPlaybackId={stream!.muxPlaybackId}
+                youtubeVideoId={stream!.youtubeVideoId}
                 live={liveActive}
                 title={`${fixture.homeTeamName} vs ${fixture.awayTeamName}`}
               />

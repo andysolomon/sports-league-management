@@ -7,6 +7,7 @@ const {
   mockGetPublicSeason,
   mockCreateGameStream,
   mockUpdateGameStreamStatus,
+  mockEndGameStreamByFixture,
   mockGetActiveStreamCountForLeague,
   mockGetStreamAdminByFixture,
   mockCanAdministerTeam,
@@ -19,6 +20,7 @@ const {
   mockGetPublicSeason: vi.fn(),
   mockCreateGameStream: vi.fn(),
   mockUpdateGameStreamStatus: vi.fn(),
+  mockEndGameStreamByFixture: vi.fn(),
   mockGetActiveStreamCountForLeague: vi.fn(),
   mockGetStreamAdminByFixture: vi.fn(),
   mockCanAdministerTeam: vi.fn(),
@@ -33,6 +35,7 @@ vi.mock("@/lib/data-api", () => ({
   getPublicSeason: mockGetPublicSeason,
   createGameStream: mockCreateGameStream,
   updateGameStreamStatus: mockUpdateGameStreamStatus,
+  endGameStreamByFixture: mockEndGameStreamByFixture,
   getActiveStreamCountForLeague: mockGetActiveStreamCountForLeague,
   getStreamAdminByFixture: mockGetStreamAdminByFixture,
 }));
@@ -45,7 +48,11 @@ vi.mock("@/lib/mux", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { startGameStream, stopGameStream } from "../stream-actions";
+import {
+  startGameStream,
+  startYoutubeStream,
+  stopGameStream,
+} from "../stream-actions";
 
 const LEAGUE = "league_1";
 const FIXTURE = "fixture_1";
@@ -146,6 +153,62 @@ describe("startGameStream", () => {
   });
 });
 
+describe("startYoutubeStream", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    happyFixture();
+    mockCanAdministerTeam.mockResolvedValue(true);
+    mockGetActiveStreamCountForLeague.mockResolvedValue(0);
+    mockCreateGameStream.mockResolvedValue({
+      id: "gs_1",
+      fixtureId: FIXTURE,
+      status: "active",
+    });
+  });
+
+  it("persists a youtube stream from a pasted watch URL", async () => {
+    const res = await startYoutubeStream(
+      LEAGUE,
+      FIXTURE,
+      "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    );
+    expect(res).toEqual({ ok: true });
+    expect(mockCreateGameStream).toHaveBeenCalledWith({
+      fixtureId: FIXTURE,
+      provider: "youtube",
+      youtubeVideoId: "dQw4w9WgXcQ",
+      startedBy: "user_1",
+      maxDurationMinutes: 180,
+    });
+  });
+
+  it("rejects a non-YouTube link without persisting", async () => {
+    expect(
+      await startYoutubeStream(LEAGUE, FIXTURE, "https://vimeo.com/123"),
+    ).toEqual({ ok: false, error: "invalid_youtube_url" });
+    expect(mockCreateGameStream).not.toHaveBeenCalled();
+  });
+
+  it("enforces the per-league concurrent cap", async () => {
+    mockGetActiveStreamCountForLeague.mockResolvedValue(3);
+    expect(
+      await startYoutubeStream(
+        LEAGUE,
+        FIXTURE,
+        "https://youtu.be/dQw4w9WgXcQ",
+      ),
+    ).toEqual({ ok: false, error: "stream_cap_reached" });
+    expect(mockCreateGameStream).not.toHaveBeenCalled();
+  });
+
+  it("blocks when the dark flag is off", async () => {
+    mockLiveStreamingV1.mockResolvedValue(false);
+    expect(
+      await startYoutubeStream(LEAGUE, FIXTURE, "https://youtu.be/dQw4w9WgXcQ"),
+    ).toEqual({ ok: false, error: "flag_disabled" });
+  });
+});
+
 describe("stopGameStream", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -155,6 +218,7 @@ describe("stopGameStream", () => {
 
   it("disables the Mux stream and marks it ended", async () => {
     mockGetStreamAdminByFixture.mockResolvedValue({
+      provider: "mux",
       muxLiveStreamId: "ls_1",
       status: "active",
     });
@@ -164,6 +228,21 @@ describe("stopGameStream", () => {
     expect(mockUpdateGameStreamStatus).toHaveBeenCalledWith(
       expect.objectContaining({ muxLiveStreamId: "ls_1", status: "ended" }),
     );
+  });
+
+  it("ends a youtube stream without touching Mux", async () => {
+    mockGetStreamAdminByFixture.mockResolvedValue({
+      provider: "youtube",
+      muxLiveStreamId: null,
+      status: "active",
+    });
+    const res = await stopGameStream(LEAGUE, FIXTURE);
+    expect(res).toEqual({ ok: true });
+    expect(mockEndGameStreamByFixture).toHaveBeenCalledWith(
+      FIXTURE,
+      expect.any(String),
+    );
+    expect(mockDisableMuxLiveStream).not.toHaveBeenCalled();
   });
 
   it("returns stream_not_found when there is no stream", async () => {

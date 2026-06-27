@@ -4312,10 +4312,14 @@ export const computeStandingsPublic = query({
  */
 
 // Public projection — what an unauthenticated viewer is allowed to see.
+// Provider-agnostic (WSM-000180): a viewer gets the public playback id for
+// whichever provider backs the stream, never the Mux live-stream id.
 const publicStreamDtoValidator = v.union(
   v.object({
     status: v.string(),
-    muxPlaybackId: v.string(),
+    provider: v.string(), // "mux" | "youtube"
+    muxPlaybackId: v.union(v.string(), v.null()),
+    youtubeVideoId: v.union(v.string(), v.null()),
     vodAssetId: v.union(v.string(), v.null()),
   }),
   v.null(),
@@ -4324,8 +4328,10 @@ const publicStreamDtoValidator = v.union(
 export const createGameStream = internalMutationGeneric({
   args: {
     fixtureId: v.id("fixtures"),
-    muxLiveStreamId: v.string(),
-    muxPlaybackId: v.string(),
+    provider: v.optional(v.string()), // "mux" (default) | "youtube"
+    muxLiveStreamId: v.optional(v.string()),
+    muxPlaybackId: v.optional(v.string()),
+    youtubeVideoId: v.optional(v.union(v.string(), v.null())),
     startedBy: v.string(),
     maxDurationMinutes: v.number(),
   },
@@ -4333,17 +4339,21 @@ export const createGameStream = internalMutationGeneric({
     id: v.string(),
     fixtureId: v.string(),
     status: v.string(),
-    muxPlaybackId: v.string(),
   }),
   handler: async (ctx, args) => {
     const fixture = await ctx.db.get(args.fixtureId);
     if (!fixture) throw new Error("fixture_not_found");
 
+    const provider = args.provider ?? "mux";
     const payload = {
       fixtureId: args.fixtureId,
+      provider,
       muxLiveStreamId: args.muxLiveStreamId,
       muxPlaybackId: args.muxPlaybackId,
-      status: "idle",
+      youtubeVideoId: args.youtubeVideoId ?? null,
+      // A pasted YouTube link is already live, so it starts "active"; Mux waits
+      // for its webhook (video.live_stream.active) to confirm before flipping.
+      status: provider === "youtube" ? "active" : "idle",
       vodAssetId: null,
       startedBy: args.startedBy,
       startedAt: new Date().toISOString(),
@@ -4370,8 +4380,25 @@ export const createGameStream = internalMutationGeneric({
       id,
       fixtureId: args.fixtureId,
       status: payload.status,
-      muxPlaybackId: args.muxPlaybackId,
     };
+  },
+});
+
+/*
+ * Manual end-by-fixture (WSM-000180) — used to stop a YouTube stream, which has
+ * no Mux webhook to flip it. Provider-agnostic and idempotent.
+ */
+export const endGameStreamByFixture = internalMutationGeneric({
+  args: { fixtureId: v.id("fixtures"), endedAt: v.string() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("gameStreams")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) return false;
+    await ctx.db.patch(row._id, { status: "ended", endedAt: args.endedAt });
+    return true;
   },
 });
 
@@ -4422,7 +4449,9 @@ export const getStreamByFixture = queryGeneric({
     // PUBLIC PROJECTION ONLY — never return muxLiveStreamId (server-side) here.
     return {
       status: row.status,
-      muxPlaybackId: row.muxPlaybackId,
+      provider: row.provider ?? "mux",
+      muxPlaybackId: row.muxPlaybackId ?? null,
+      youtubeVideoId: row.youtubeVideoId ?? null,
       vodAssetId: row.vodAssetId,
     };
   },
@@ -4438,7 +4467,11 @@ export const getStreamByFixture = queryGeneric({
 export const getStreamAdminByFixture = internalQueryGeneric({
   args: { fixtureId: v.id("fixtures") },
   returns: v.union(
-    v.object({ muxLiveStreamId: v.string(), status: v.string() }),
+    v.object({
+      provider: v.string(),
+      muxLiveStreamId: v.union(v.string(), v.null()),
+      status: v.string(),
+    }),
     v.null(),
   ),
   handler: async (ctx, args) => {
@@ -4447,7 +4480,11 @@ export const getStreamAdminByFixture = internalQueryGeneric({
       .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
       .first();
     if (!row) return null;
-    return { muxLiveStreamId: row.muxLiveStreamId, status: row.status };
+    return {
+      provider: row.provider ?? "mux",
+      muxLiveStreamId: row.muxLiveStreamId ?? null,
+      status: row.status,
+    };
   },
 });
 
