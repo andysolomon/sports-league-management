@@ -8,6 +8,7 @@ import {
   statKeepingV1,
   liveScoringV1,
   playoffsV1,
+  syntheticRostersV1,
 } from "@/lib/flags";
 import {
   getLeague,
@@ -32,6 +33,7 @@ import {
   SimulateSeasonButton,
   SimulateChampionButton,
 } from "@/components/schedule/SimulateControls";
+import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 
@@ -72,6 +74,10 @@ export default async function LeagueSchedulePage({
   const liveEnabled = await liveScoringV1();
   // Playoffs (WSM-000164/165): bracket lives on its own page; link when enabled.
   const playoffsEnabled = await playoffsV1();
+  // Synthetic rosters (WSM-000173): discoverability shortcut — admins setting up
+  // a schedule often need rosters first. Same admin + flag gate as the league
+  // detail page; the server actions re-check flag + role.
+  const canGenerateRosters = canManageOrgSettings(role) && (await syntheticRostersV1());
 
   // Pick the active season — fall back to whichever exists if none flagged active.
   const allSeasons = await getSeasons([leagueId]);
@@ -174,6 +180,16 @@ export default async function LeagueSchedulePage({
               <SimulateChampionButton
                 leagueId={leagueId}
                 seasonId={activeSeason.id}
+              />
+            </>
+          ) : null}
+          {canGenerateRosters ? (
+            <>
+              <SyntheticRosterButton kind="league" id={leagueId} />
+              <SyntheticRosterButton
+                kind="league"
+                id={leagueId}
+                action="attributes"
               />
             </>
           ) : null}
