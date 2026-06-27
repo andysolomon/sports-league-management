@@ -15,7 +15,11 @@ import InvitationList from "./invitation-list";
 import InviteLinkSection from "./invite-link-section";
 import LeaguePublicToggle from "./league-public-toggle";
 import LeagueClaimableToggle from "./league-claimable-toggle";
-import { RenameLeagueForm, DeleteLeagueButton } from "../leagues-actions";
+import {
+  RenameLeagueForm,
+  DeleteLeagueButton,
+  AddTeamForm,
+} from "../leagues-actions";
 import { syntheticRostersV1 } from "@/lib/flags";
 import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
 
@@ -95,6 +99,15 @@ export default async function LeagueDetailPage({
                 initialClaimable={claimable}
                 isPublic={visibility?.isPublic ?? false}
               />
+              <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+                <div className="min-w-0">
+                  <p className="text-label-14 text-foreground">Teams</p>
+                  <p className="text-caption-12 text-text-muted">
+                    Add a team to this league.
+                  </p>
+                </div>
+                <AddTeamForm leagueId={id} />
+              </div>
               {canGenerateRosters && (
                 <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
                   <div className="min-w-0">

@@ -6,6 +6,7 @@ import {
   createLeague as createLeagueMutation,
   renameLeague as renameLeagueMutation,
   deleteLeague as deleteLeagueMutation,
+  createTeam as createTeamMutation,
   getLeagueOrgId,
 } from "@/lib/data-api";
 import { getUserRoleInOrg } from "@/lib/org-context";
@@ -89,4 +90,34 @@ export async function deleteLeagueAction(leagueId: string): Promise<Result> {
   await deleteLeagueMutation(leagueId);
   revalidatePath("/dashboard/leagues");
   return { ok: true };
+}
+
+/** Add a team to an existing league (org-admin only). City/stadium optional. */
+export async function createTeamInLeagueAction(input: {
+  leagueId: string;
+  name: string;
+  city?: string;
+  stadium?: string;
+}): Promise<Result<{ id: string; name: string }>> {
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: "Team name is required." };
+  const gate = await requireLeagueAdmin(input.leagueId);
+  if (!gate.ok) return gate;
+
+  try {
+    const team = await createTeamMutation({
+      name,
+      leagueId: input.leagueId,
+      city: input.city?.trim() ?? "",
+      stadium: input.stadium?.trim() ?? "",
+    });
+    revalidatePath(`/dashboard/leagues/${input.leagueId}`);
+    revalidatePath("/dashboard/teams");
+    return { ok: true, id: team.id, name: team.name };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not create team.",
+    };
+  }
 }
