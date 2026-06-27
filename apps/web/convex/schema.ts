@@ -108,6 +108,10 @@ export default defineSchema({
     // player it was forked from — SPRT/Madden ratings resolve through it so
     // they stay live without duplicating the rating pipeline per org.
     sourcePlayerId: v.optional(v.id("players")),
+    // WSM-000173: marks players created by the synthetic-roster generator, so
+    // the "clear synthetic" action only ever deletes generated test players,
+    // never real entries. Absent/false on all real players.
+    synthetic: v.optional(v.boolean()),
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_teamId", ["teamId"])

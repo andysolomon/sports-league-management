@@ -320,6 +320,10 @@ const refs = {
     { teamId: string; players: BulkPlayerInput[] },
     { created: number }
   >("sports:bulkCreatePlayers"),
+  clearSyntheticPlayers: mutationRef<
+    { teamId: string },
+    { deleted: number }
+  >("sports:clearSyntheticPlayers"),
   updatePlayer: mutationRef<
     { playerId: string } & UpdatePlayerInput,
     PlayerDto | null
@@ -1142,6 +1146,12 @@ export async function bulkCreatePlayers(
   players: BulkPlayerInput[],
 ): Promise<{ created: number }> {
   return mutateConvex(refs.bulkCreatePlayers, { teamId, players });
+}
+
+export async function clearSyntheticPlayers(
+  teamId: string,
+): Promise<{ deleted: number }> {
+  return mutateConvex(refs.clearSyntheticPlayers, { teamId });
 }
 
 export async function updatePlayer(
