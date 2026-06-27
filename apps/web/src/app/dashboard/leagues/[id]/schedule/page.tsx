@@ -27,6 +27,10 @@ import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
 import GoLiveControl from "@/components/schedule/GoLiveControl";
+import {
+  SimulateGameButton,
+  SimulateSeasonButton,
+} from "@/components/schedule/SimulateControls";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 
@@ -160,6 +164,12 @@ export default async function LeagueSchedulePage({
               teams={teams.map((t) => ({ id: t.id, name: t.name }))}
             />
           ) : null}
+          {isAdmin && activeSeason && fixtures.length > 0 ? (
+            <SimulateSeasonButton
+              leagueId={leagueId}
+              seasonId={activeSeason.id}
+            />
+          ) : null}
         </div>
       </header>
 
@@ -251,6 +261,14 @@ export default async function LeagueSchedulePage({
                                   initialAwayScore={result?.awayScore ?? null}
                                   triggerLabel={result ? "Edit result" : "Record result"}
                                 />
+                                {fixture.status === "scheduled" ? (
+                                  <SimulateGameButton
+                                    leagueId={leagueId}
+                                    fixtureId={fixture.id}
+                                    homeTeamName={fixture.homeTeamName}
+                                    awayTeamName={fixture.awayTeamName}
+                                  />
+                                ) : null}
                                 <DeleteFixtureButton
                                   leagueId={leagueId}
                                   fixtureId={fixture.id}

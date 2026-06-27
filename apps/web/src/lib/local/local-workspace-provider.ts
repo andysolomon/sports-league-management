@@ -343,6 +343,7 @@ export class LocalWorkspaceProvider implements WorkspaceDataProvider {
       week: input.week ?? null,
       venue: input.venue ?? null,
       status: "scheduled",
+      stage: "regular",
       createdAt: nowIso(),
       createdBy: "local",
     };
