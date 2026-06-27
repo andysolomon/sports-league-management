@@ -10,7 +10,7 @@ import {
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam, canAdministerTeam } from "@/lib/authorization";
-import { playerAttributesV1 } from "@/lib/flags";
+import { playerAttributesV1, syntheticRostersV1 } from "@/lib/flags";
 import type { PlayerSnapshot } from "@/lib/attributes/headline-columns";
 import TeamManagement from "./team-management";
 import { ClaimTeamButton } from "./claim-team-button";
@@ -55,6 +55,9 @@ export default async function TeamDetailPage({
   if (!canManage) {
     offerFork = await getLeagueClaimable(team.leagueId).catch(() => false);
   }
+
+  // WSM-000173: synthetic-roster generation — managers only, behind the flag.
+  const canGenerateRoster = canManage && (await syntheticRostersV1());
 
   // WSM-000090: attribute snapshots feed the SPRT stat columns. Phase 2-gated;
   // the season is resolved server-side — including workspace forks, which read
@@ -101,6 +104,7 @@ export default async function TeamDetailPage({
         players={players}
         canManage={canManage}
         canDelete={canDelete}
+        canGenerateRoster={canGenerateRoster}
         attributeSnapshots={Object.fromEntries(snapshots)}
         maddenOveralls={Object.fromEntries(maddenOveralls)}
       />

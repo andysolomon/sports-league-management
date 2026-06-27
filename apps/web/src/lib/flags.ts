@@ -137,6 +137,22 @@ export const liveScoringV1 = flag<boolean>({
   },
 });
 
+export const syntheticRostersV1 = flag<boolean>({
+  key: "synthetic_rosters_v1",
+  description:
+    "Generate synthetic (fake) players to populate demo/test rosters — per team or league-wide (WSM-000173). Enabled in prod for demo leagues.",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_SYNTHETIC_ROSTERS_V1");
+    void trackFlagExposure("synthetic_rosters_v1", enabled);
+    return enabled;
+  },
+});
+
 export const playoffsV1 = flag<boolean>({
   key: "playoffs_v1",
   description:

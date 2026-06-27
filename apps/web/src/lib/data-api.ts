@@ -316,6 +316,10 @@ const refs = {
     TeamDto | null
   >("sports:updateTeam"),
   createPlayer: mutationRef<CreatePlayerInput, PlayerDto>("sports:createPlayer"),
+  bulkCreatePlayers: mutationRef<
+    { teamId: string; players: BulkPlayerInput[] },
+    { created: number }
+  >("sports:bulkCreatePlayers"),
   updatePlayer: mutationRef<
     { playerId: string } & UpdatePlayerInput,
     PlayerDto | null
@@ -1120,6 +1124,24 @@ export async function getSeason(
 
 export async function createPlayer(input: CreatePlayerInput): Promise<PlayerDto> {
   return mutateConvex(refs.createPlayer, input);
+}
+
+/** A synthetic player row for bulk insert (WSM-000173). */
+export interface BulkPlayerInput {
+  name: string;
+  position: string;
+  jerseyNumber: number | null;
+  status: string;
+  grade?: number | null;
+  squad?: string | null;
+  dateOfBirth?: string | null;
+}
+
+export async function bulkCreatePlayers(
+  teamId: string,
+  players: BulkPlayerInput[],
+): Promise<{ created: number }> {
+  return mutateConvex(refs.bulkCreatePlayers, { teamId, players });
 }
 
 export async function updatePlayer(

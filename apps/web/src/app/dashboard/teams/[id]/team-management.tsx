@@ -9,6 +9,7 @@ import DeleteConfirm from "../../_components/delete-confirm";
 import { DataTable, type Column } from "@/components/data-table";
 import { PositionGroupTabs } from "@/components/roster/PositionGroupTabs";
 import { RosterStatusIndicator } from "@/components/roster/RosterStatusIndicator";
+import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
 import { orderByDepth } from "@/lib/roster/depth-order";
 import { abbreviateName } from "@/lib/position-group";
 import {
@@ -29,6 +30,8 @@ interface TeamManagementProps {
   canManage: boolean;
   /** Admin only: remove the whole team (WSM-000121). */
   canDelete?: boolean;
+  /** WSM-000173: show the "Generate roster" (synthetic players) action. */
+  canGenerateRoster?: boolean;
   /** WSM-000090: playerId → attribute snapshot; empty when Phase 2 is
       dark or the season has no ingested attributes. */
   attributeSnapshots?: Record<string, PlayerSnapshot>;
@@ -49,6 +52,7 @@ export default function TeamManagement({
   players,
   canManage,
   canDelete = false,
+  canGenerateRoster = false,
   attributeSnapshots = {},
   maddenOveralls = {},
 }: TeamManagementProps) {
@@ -336,9 +340,14 @@ export default function TeamManagement({
           Player Roster ({players.length})
         </h3>
         {canManage && (
-          <Button onClick={() => setModal({ type: "addPlayer" })}>
-            Add Player
-          </Button>
+          <div className="flex items-center gap-2">
+            {canGenerateRoster && (
+              <SyntheticRosterButton kind="team" id={team.id} />
+            )}
+            <Button onClick={() => setModal({ type: "addPlayer" })}>
+              Add Player
+            </Button>
+          </div>
         )}
       </div>
 
