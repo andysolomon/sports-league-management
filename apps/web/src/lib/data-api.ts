@@ -1139,6 +1139,7 @@ export interface BulkPlayerInput {
   grade?: number | null;
   squad?: string | null;
   dateOfBirth?: string | null;
+  hometown?: string | null;
 }
 
 export async function bulkCreatePlayers(

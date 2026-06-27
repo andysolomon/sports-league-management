@@ -69,6 +69,8 @@ export interface PlayerDto {
   grade: number | null;
   /** HS squad: "Varsity" | "JV" | "Freshman" (stored as string for forward-compat). */
   squad: string | null;
+  /** Player hometown, free-text (e.g. "Acworth, GA"). */
+  hometown: string | null;
 }
 
 export interface SeasonDto {
@@ -133,6 +135,7 @@ export interface CreatePlayerInput {
   status: string;
   grade?: number | null;
   squad?: Squad | null;
+  hometown?: string | null;
 }
 
 export interface UpdatePlayerInput {
@@ -144,6 +147,7 @@ export interface UpdatePlayerInput {
   status?: string;
   grade?: number | null;
   squad?: Squad | null;
+  hometown?: string | null;
 }
 
 export interface CreateLeagueInput {

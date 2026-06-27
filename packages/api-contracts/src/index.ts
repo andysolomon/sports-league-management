@@ -73,6 +73,7 @@ export const PlayerDtoSchema = z.object({
   experienceYears: z.number().nullable(),
   grade: z.number().nullable(),
   squad: z.string().nullable(),
+  hometown: z.string().nullable(),
 }) satisfies z.ZodType<PlayerDto>;
 
 export const RosterAssignmentDtoSchema = z.object({
@@ -144,6 +145,7 @@ export const CreatePlayerInputSchema = z.object({
   status: z.string().min(1),
   grade: z.number().int().min(9).max(12).nullable().optional(),
   squad: z.enum(SQUADS).nullable().optional(),
+  hometown: z.string().max(120).nullable().optional(),
 }) satisfies z.ZodType<CreatePlayerInput>;
 
 export const UpdatePlayerInputSchema = z.object({
@@ -155,6 +157,7 @@ export const UpdatePlayerInputSchema = z.object({
   status: z.string().min(1).optional(),
   grade: z.number().int().min(9).max(12).nullable().optional(),
   squad: z.enum(SQUADS).nullable().optional(),
+  hometown: z.string().max(120).nullable().optional(),
 }) satisfies z.ZodType<UpdatePlayerInput>;
 
 const hexColor = z

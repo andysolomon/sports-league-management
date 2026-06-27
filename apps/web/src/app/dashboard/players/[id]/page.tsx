@@ -190,6 +190,12 @@ export default async function PlayerProfilePage({
                 </dd>
               </div>
             )}
+            {player.hometown && (
+              <div>
+                <dt className="font-medium text-muted-foreground">Hometown</dt>
+                <dd className="mt-1 text-foreground">{player.hometown}</dd>
+              </div>
+            )}
           </dl>
 
           {attributesEnabled && (

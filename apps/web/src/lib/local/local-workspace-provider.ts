@@ -209,6 +209,7 @@ export class LocalWorkspaceProvider implements WorkspaceDataProvider {
       experienceYears: null,
       grade: input.grade ?? null,
       squad: input.squad ?? null,
+      hometown: input.hometown ?? null,
     };
     await this.db.players.add(player);
     return player;

@@ -104,6 +104,8 @@ export default defineSchema({
     // grade: 9–12; squad: "Varsity" | "JV" | "Freshman".
     grade: v.optional(v.union(v.number(), v.null())),
     squad: v.optional(v.union(v.string(), v.null())),
+    // Free-text player hometown, e.g. "Acworth, GA" (WSM-000174).
+    hometown: v.optional(v.union(v.string(), v.null())),
     // Org workspace (WSM-000114): a workspace player's link to the reference
     // player it was forked from — SPRT/Madden ratings resolve through it so
     // they stay live without duplicating the rating pipeline per org.
