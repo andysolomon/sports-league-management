@@ -1513,6 +1513,52 @@ export const createPlayer = internalMutationGeneric({
   },
 });
 
+// Bulk-insert synthetic players for a team (WSM-000173). Thin insert loop —
+// the realistic data is generated in the web layer (lib/synthetic-roster) and
+// passed in; this just persists. Mirrors createPlayer's insert shape.
+export const bulkCreatePlayers = internalMutationGeneric({
+  args: {
+    teamId: v.id("teams"),
+    players: v.array(
+      v.object({
+        name: v.string(),
+        position: v.string(),
+        jerseyNumber: v.union(v.number(), v.null()),
+        status: v.string(),
+        grade: v.optional(v.union(v.number(), v.null())),
+        squad: v.optional(v.union(v.string(), v.null())),
+        dateOfBirth: v.optional(v.union(v.string(), v.null())),
+      }),
+    ),
+  },
+  returns: v.object({ created: v.number() }),
+  handler: async (ctx, args) => {
+    const team = await ctx.db.get(args.teamId);
+    if (!team) {
+      throw new Error("Team not found");
+    }
+    let created = 0;
+    for (const p of args.players) {
+      await ctx.db.insert("players", {
+        name: p.name,
+        leagueId: team.leagueId,
+        teamId: args.teamId,
+        position: p.position,
+        positionGroup: null,
+        jerseyNumber: p.jerseyNumber,
+        dateOfBirth: p.dateOfBirth ?? null,
+        status: p.status,
+        headshotUrl: null,
+        experienceYears: null,
+        grade: p.grade ?? null,
+        squad: p.squad ?? null,
+      });
+      created += 1;
+    }
+    return { created };
+  },
+});
+
 export const updatePlayer = internalMutationGeneric({
   args: {
     playerId: v.id("players"),

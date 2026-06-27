@@ -1,0 +1,127 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const {
+  mockFlag,
+  mockAuth,
+  mockCanManageTeam,
+  mockResolveOrgContext,
+  mockResolveOrgRole,
+  mockGetPlayersByTeam,
+  mockGetTeamsByLeague,
+  mockGetLeagueOrgId,
+  mockBulkCreatePlayers,
+} = vi.hoisted(() => ({
+  mockFlag: vi.fn(),
+  mockAuth: vi.fn(),
+  mockCanManageTeam: vi.fn(),
+  mockResolveOrgContext: vi.fn(),
+  mockResolveOrgRole: vi.fn(),
+  mockGetPlayersByTeam: vi.fn(),
+  mockGetTeamsByLeague: vi.fn(),
+  mockGetLeagueOrgId: vi.fn(),
+  mockBulkCreatePlayers: vi.fn(),
+}));
+
+vi.mock("@/lib/flags", () => ({ syntheticRostersV1: mockFlag }));
+vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
+vi.mock("@/lib/authorization", () => ({ canManageTeam: mockCanManageTeam }));
+vi.mock("@/lib/org-context", () => ({
+  resolveOrgContext: mockResolveOrgContext,
+  resolveOrgRole: mockResolveOrgRole,
+}));
+vi.mock("@/lib/data-api", () => ({
+  getPlayersByTeam: mockGetPlayersByTeam,
+  getTeamsByLeague: mockGetTeamsByLeague,
+  getLeagueOrgId: mockGetLeagueOrgId,
+  bulkCreatePlayers: mockBulkCreatePlayers,
+}));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// @/lib/permissions (canManageOrgSettings) and @/lib/synthetic-roster are real.
+
+import {
+  generateTeamRosterAction,
+  generateLeagueRostersAction,
+} from "../synthetic-rosters";
+
+const TEAM = "team_1";
+const LEAGUE = "league_1";
+const ORG = "org_1";
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockFlag.mockResolvedValue(true);
+  mockAuth.mockResolvedValue({ userId: "user_1" });
+  mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [LEAGUE], orgIds: [ORG] });
+});
+
+describe("generateTeamRosterAction", () => {
+  beforeEach(() => {
+    mockCanManageTeam.mockResolvedValue(true);
+    mockGetPlayersByTeam.mockResolvedValue([]); // empty team
+    mockBulkCreatePlayers.mockResolvedValue({ created: 48 });
+  });
+
+  it("blocks when the flag is off", async () => {
+    mockFlag.mockResolvedValue(false);
+    expect(await generateTeamRosterAction({ teamId: TEAM })).toEqual({ ok: false, error: "flag_disabled" });
+    expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
+  });
+
+  it("blocks an unauthenticated caller", async () => {
+    mockAuth.mockResolvedValue({ userId: null });
+    expect(await generateTeamRosterAction({ teamId: TEAM })).toEqual({ ok: false, error: "unauthorized" });
+  });
+
+  it("rejects a caller who can't manage the team", async () => {
+    mockCanManageTeam.mockResolvedValue(false);
+    expect(await generateTeamRosterAction({ teamId: TEAM })).toEqual({ ok: false, error: "not_authorized" });
+    expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
+  });
+
+  it("generates a full roster onto an empty team", async () => {
+    const res = await generateTeamRosterAction({ teamId: TEAM });
+    expect(res).toEqual({ ok: true, created: 48 });
+    // bulkCreatePlayers called with teamId + 48 generated players.
+    const [teamId, players] = mockBulkCreatePlayers.mock.calls[0];
+    expect(teamId).toBe(TEAM);
+    expect(players).toHaveLength(48);
+    expect(players[0]).toHaveProperty("position");
+    expect(players[0]).toHaveProperty("jerseyNumber");
+  });
+
+  it("fills to count (creates nothing when already full)", async () => {
+    mockGetPlayersByTeam.mockResolvedValue(
+      Array.from({ length: 50 }, (_, i) => ({ jerseyNumber: i })),
+    );
+    const res = await generateTeamRosterAction({ teamId: TEAM, count: 48 });
+    expect(res).toEqual({ ok: true, created: 0 });
+    expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
+  });
+});
+
+describe("generateLeagueRostersAction", () => {
+  beforeEach(() => {
+    mockGetLeagueOrgId.mockResolvedValue(ORG);
+    mockResolveOrgRole.mockResolvedValue("admin");
+    mockGetTeamsByLeague.mockResolvedValue([{ id: "t1" }, { id: "t2" }]);
+    mockGetPlayersByTeam.mockResolvedValue([]);
+    mockBulkCreatePlayers.mockResolvedValue({ created: 48 });
+  });
+
+  it("is admin-only (coach rejected)", async () => {
+    mockResolveOrgRole.mockResolvedValue("coach");
+    expect(await generateLeagueRostersAction({ leagueId: LEAGUE })).toEqual({ ok: false, error: "not_authorized" });
+    expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
+  });
+
+  it("blocks when the flag is off", async () => {
+    mockFlag.mockResolvedValue(false);
+    expect(await generateLeagueRostersAction({ leagueId: LEAGUE })).toEqual({ ok: false, error: "flag_disabled" });
+  });
+
+  it("fills every team and aggregates the counts", async () => {
+    const res = await generateLeagueRostersAction({ leagueId: LEAGUE });
+    expect(res).toEqual({ ok: true, teams: 2, created: 96 });
+    expect(mockBulkCreatePlayers).toHaveBeenCalledTimes(2);
+  });
+});

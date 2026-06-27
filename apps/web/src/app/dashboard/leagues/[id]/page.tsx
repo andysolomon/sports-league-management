@@ -16,6 +16,8 @@ import InviteLinkSection from "./invite-link-section";
 import LeaguePublicToggle from "./league-public-toggle";
 import LeagueClaimableToggle from "./league-claimable-toggle";
 import { RenameLeagueForm, DeleteLeagueButton } from "../leagues-actions";
+import { syntheticRostersV1 } from "@/lib/flags";
+import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
 
 export default async function LeagueDetailPage({
   params,
@@ -41,6 +43,9 @@ export default async function LeagueDetailPage({
       // Not admin — read-only view
     }
   }
+
+  // WSM-000173: league-wide synthetic-roster generation — admins only, flagged.
+  const canGenerateRosters = isAdmin && (await syntheticRostersV1());
 
   return (
     <div>
@@ -90,6 +95,18 @@ export default async function LeagueDetailPage({
                 initialClaimable={claimable}
                 isPublic={visibility?.isPublic ?? false}
               />
+              {canGenerateRosters && (
+                <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+                  <div className="min-w-0">
+                    <p className="text-label-14 text-foreground">Synthetic rosters</p>
+                    <p className="text-caption-12 text-text-muted">
+                      Fill every team in this league with fake test players (~48
+                      each) for demos. Not real people.
+                    </p>
+                  </div>
+                  <SyntheticRosterButton kind="league" id={id} />
+                </div>
+              )}
               <div className="flex flex-wrap gap-x-4 gap-y-2">
                 <Link
                   href={`/dashboard/leagues/${id}/members`}
