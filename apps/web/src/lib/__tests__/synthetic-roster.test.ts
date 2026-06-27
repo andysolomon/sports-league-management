@@ -47,12 +47,12 @@ describe("generateSyntheticRoster", () => {
     expect(roster.some((p) => p.position === "K")).toBe(true);
   });
 
-  it("uses HS grades 9–12 and active status", () => {
+  it("uses HS grades 9–12 and canonical Active status", () => {
     const roster = generateSyntheticRoster({ count: 30, seed: 7 });
     for (const p of roster) {
       expect(p.grade).toBeGreaterThanOrEqual(9);
       expect(p.grade).toBeLessThanOrEqual(12);
-      expect(p.status).toBe("active");
+      expect(p.status).toBe("Active");
       expect(["Varsity", "JV"]).toContain(p.squad);
       expect(p.dateOfBirth).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       const year = Number(p.dateOfBirth.slice(0, 4));
