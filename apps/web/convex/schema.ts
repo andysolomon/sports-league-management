@@ -372,10 +372,14 @@ export default defineSchema({
   playoffBrackets: defineTable({
     seasonId: v.id("seasons"),
     leagueId: v.id("leagues"),
-    size: v.number(), // 4 | 8 | 16
-    rounds: v.number(), // log2(size)
+    size: v.number(), // next power of two ≥ teamCount (byes fill the gap)
+    rounds: v.number(), // log2(size) — winners-bracket rounds for double-elim
     createdAt: v.string(),
     createdBy: v.string(),
+    // "single" | "double". Optional for back-compat (legacy rows = single-elim).
+    format: v.optional(v.string()),
+    // Number of qualifying teams (≤ size). Optional for legacy rows.
+    teamCount: v.optional(v.number()),
   })
     .index("by_seasonId", ["seasonId"])
     .index("by_leagueId", ["leagueId"]),
@@ -403,6 +407,13 @@ export default defineSchema({
     nextSlot: v.union(v.string(), v.null()), // "home" | "away" | null
     winnerTeamId: v.union(v.id("teams"), v.null()),
     fixtureId: v.union(v.id("fixtures"), v.null()),
+    // Double-elim (WSM-flex-brackets). Optional → legacy single-elim rows valid.
+    // "winners" | "losers" | "grandFinal"; undefined = single-elim.
+    bracketType: v.optional(v.string()),
+    // Where the LOSER of this matchup drops (double-elim WB → LB routing).
+    // Self-referential id stored as a string (same rationale as nextMatchupId).
+    loserNextMatchupId: v.optional(v.union(v.string(), v.null())),
+    loserNextSlot: v.optional(v.union(v.string(), v.null())), // "home" | "away"
   })
     .index("by_bracketId", ["bracketId"])
     .index("by_seasonId", ["seasonId"]),

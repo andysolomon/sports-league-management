@@ -41,7 +41,7 @@ function friendlyError(code: string): string {
     return "Not enough teams in the standings for a bracket of this size.";
   }
   if (code.includes("invalid_bracket_size")) {
-    return "Bracket size must be 4, 8, or 16.";
+    return "Pick a playoff team count between 2 and 64.";
   }
   if (code.includes("season_not_found")) {
     return "This season no longer exists.";
@@ -50,15 +50,19 @@ function friendlyError(code: string): string {
 }
 
 /*
- * Seed a single-elimination bracket from the season's standings (WSM-000164).
- * The mutation refuses to overwrite a bracket that already has a played game;
- * that surfaces here as `needsConfirm` so the UI can re-call with confirm.
+ * Seed a playoff bracket from the season's standings (WSM-000164,
+ * WSM-flex-brackets). `size` is the qualifying team count (any value ≥ 2, with
+ * byes for non-powers-of-two); `format` selects single/double elimination
+ * (defaults to the season config). The mutation refuses to overwrite a bracket
+ * that already has a played game; that surfaces here as `needsConfirm` so the
+ * UI can re-call with confirm.
  */
 export async function generatePlayoffsAction(input: {
   leagueId: string;
   seasonId: string;
   size: number;
   confirm?: boolean;
+  format?: string;
 }): Promise<
   | { ok: true; bracketId: string; size: number; rounds: number; matchups: number }
   | { ok: false; needsConfirm: true }
@@ -76,6 +80,7 @@ export async function generatePlayoffsAction(input: {
       size: input.size,
       actorUserId: userId,
       confirm: input.confirm,
+      format: input.format,
     });
     revalidatePath(`/dashboard/leagues/${input.leagueId}/playoffs`);
     return { ok: true, ...res };

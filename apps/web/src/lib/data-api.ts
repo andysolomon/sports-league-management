@@ -83,12 +83,18 @@ export interface PlayoffMatchupDto {
   status: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  /** "winners" | "losers" | "grandFinal" — null for single-elim brackets. */
+  bracketType: string | null;
+  /** First-round bye: the present team auto-advanced with no game. */
+  isBye: boolean;
 }
 
 export interface PlayoffBracketDto {
   bracketId: string;
   size: number;
   rounds: number;
+  /** "single" | "double". */
+  format: string;
   matchups: PlayoffMatchupDto[];
 }
 
@@ -545,6 +551,7 @@ const refs = {
       actorUserId: string;
       confirm?: boolean;
       divisionWinnersQualify?: boolean;
+      format?: string;
     },
     { bracketId: string; size: number; rounds: number; matchups: number }
   >("sports:generatePlayoffBracket"),
@@ -1742,6 +1749,7 @@ export async function generatePlayoffBracket(input: {
   actorUserId: string;
   confirm?: boolean;
   divisionWinnersQualify?: boolean;
+  format?: string;
 }): Promise<{
   bracketId: string;
   size: number;

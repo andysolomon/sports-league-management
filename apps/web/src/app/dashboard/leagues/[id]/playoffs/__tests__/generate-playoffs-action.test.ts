@@ -79,6 +79,7 @@ describe("generatePlayoffsAction (WSM-000164)", () => {
       size: 8,
       actorUserId: "user_1",
       confirm: undefined,
+      format: undefined,
     });
   });
 
