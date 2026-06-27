@@ -9,6 +9,8 @@
     "create-scratch-org": "node scripts/create-scratch-org.js",
     "seed-data": "node scripts/seed-data.js",
     "check:css": "node scripts/check-css-comments.mjs",
+    "check:env": "node scripts/check-web-env-parity.js",
+    "check:launch": "node scripts/check-web-env-parity.js --launch",
     "tui": "pnpm --filter @sports-management/tui dev",
     "test": "pnpm run test:unit",
     "test:unit": "sf force lightning lwc test run",
