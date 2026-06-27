@@ -51,15 +51,30 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  onOpenAutoFocus,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  // By default Radix focuses the first focusable element when a dialog opens,
+  // which on mobile pops the on-screen keyboard the instant any dialog with a
+  // text field appears (e.g. "Record game result"). Instead, move focus to the
+  // dialog container itself — focus stays trapped inside the dialog for
+  // keyboard/screen-reader users, but no input is focused, so the keyboard
+  // stays closed. Callers that genuinely want a field focused can pass their
+  // own onOpenAutoFocus.
+  const handleOpenAutoFocus =
+    onOpenAutoFocus ??
+    ((event: Event) => {
+      event.preventDefault()
+      ;(event.currentTarget as HTMLElement | null)?.focus()
+    })
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        onOpenAutoFocus={handleOpenAutoFocus}
         className={cn(
           // max-h + overflow safety net: a dialog taller than the viewport
           // (long forms on mobile) scrolls instead of pushing its footer
