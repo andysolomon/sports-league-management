@@ -342,7 +342,10 @@ export default function TeamManagement({
         {canManage && (
           <div className="flex items-center gap-2">
             {canGenerateRoster && (
-              <SyntheticRosterButton kind="team" id={team.id} />
+              <>
+                <SyntheticRosterButton kind="team" id={team.id} />
+                <SyntheticRosterButton kind="team" id={team.id} action="clear" />
+              </>
             )}
             <Button onClick={() => setModal({ type: "addPlayer" })}>
               Add Player

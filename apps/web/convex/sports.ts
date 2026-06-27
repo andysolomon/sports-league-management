@@ -1552,10 +1552,32 @@ export const bulkCreatePlayers = internalMutationGeneric({
         experienceYears: null,
         grade: p.grade ?? null,
         squad: p.squad ?? null,
+        synthetic: true,
       });
       created += 1;
     }
     return { created };
+  },
+});
+
+// Delete the synthetic (generator-created) players on a team (WSM-000173).
+// Only rows flagged `synthetic` are removed — real players are never touched.
+export const clearSyntheticPlayers = internalMutationGeneric({
+  args: { teamId: v.id("teams") },
+  returns: v.object({ deleted: v.number() }),
+  handler: async (ctx, args) => {
+    const players = await ctx.db
+      .query("players")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    let deleted = 0;
+    for (const p of players) {
+      if (p.synthetic === true) {
+        await ctx.db.delete(p._id);
+        deleted += 1;
+      }
+    }
+    return { deleted };
   },
 });
 

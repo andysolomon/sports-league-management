@@ -11,6 +11,7 @@ import {
   getTeamsByLeague,
   getLeagueOrgId,
   bulkCreatePlayers,
+  clearSyntheticPlayers,
 } from "@/lib/data-api";
 import {
   generateSyntheticRoster,
@@ -102,6 +103,55 @@ export async function generateLeagueRostersAction(input: {
     }
     revalidatePath(`/dashboard/leagues/${input.leagueId}`);
     return { ok: true, teams: touched, created };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+// --- Clear synthetic players (delete generator-created test players only) ---
+
+export async function clearTeamSyntheticAction(input: {
+  teamId: string;
+}): Promise<{ ok: true; deleted: number } | { ok: false; error: string }> {
+  if (!(await syntheticRostersV1())) return { ok: false, error: "flag_disabled" };
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+  if (!(await canManageTeam(input.teamId, userId))) {
+    return { ok: false, error: "not_authorized" };
+  }
+  try {
+    const { deleted } = await clearSyntheticPlayers(input.teamId);
+    revalidatePath(`/dashboard/teams/${input.teamId}`);
+    return { ok: true, deleted };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+export async function clearLeagueSyntheticAction(input: {
+  leagueId: string;
+}): Promise<
+  { ok: true; teams: number; deleted: number } | { ok: false; error: string }
+> {
+  if (!(await syntheticRostersV1())) return { ok: false, error: "flag_disabled" };
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+  const orgId = await getLeagueOrgId(input.leagueId);
+  const role = orgId ? await resolveOrgRole(orgId, userId) : null;
+  if (!canManageOrgSettings(role)) return { ok: false, error: "not_authorized" };
+
+  const orgContext = await resolveOrgContext(userId);
+  const teams = await getTeamsByLeague(input.leagueId, orgContext).catch(() => []);
+  let deleted = 0;
+  let touched = 0;
+  try {
+    for (const team of teams) {
+      const res = await clearSyntheticPlayers(team.id);
+      deleted += res.deleted;
+      if (res.deleted > 0) touched += 1;
+    }
+    revalidatePath(`/dashboard/leagues/${input.leagueId}`);
+    return { ok: true, teams: touched, deleted };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
   }

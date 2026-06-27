@@ -10,6 +10,7 @@ const {
   mockGetTeamsByLeague,
   mockGetLeagueOrgId,
   mockBulkCreatePlayers,
+  mockClearSyntheticPlayers,
 } = vi.hoisted(() => ({
   mockFlag: vi.fn(),
   mockAuth: vi.fn(),
@@ -20,6 +21,7 @@ const {
   mockGetTeamsByLeague: vi.fn(),
   mockGetLeagueOrgId: vi.fn(),
   mockBulkCreatePlayers: vi.fn(),
+  mockClearSyntheticPlayers: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({ syntheticRostersV1: mockFlag }));
@@ -34,6 +36,7 @@ vi.mock("@/lib/data-api", () => ({
   getTeamsByLeague: mockGetTeamsByLeague,
   getLeagueOrgId: mockGetLeagueOrgId,
   bulkCreatePlayers: mockBulkCreatePlayers,
+  clearSyntheticPlayers: mockClearSyntheticPlayers,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 // @/lib/permissions (canManageOrgSettings) and @/lib/synthetic-roster are real.
@@ -41,6 +44,8 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import {
   generateTeamRosterAction,
   generateLeagueRostersAction,
+  clearTeamSyntheticAction,
+  clearLeagueSyntheticAction,
 } from "../synthetic-rosters";
 
 const TEAM = "team_1";
@@ -123,5 +128,51 @@ describe("generateLeagueRostersAction", () => {
     const res = await generateLeagueRostersAction({ leagueId: LEAGUE });
     expect(res).toEqual({ ok: true, teams: 2, created: 96 });
     expect(mockBulkCreatePlayers).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("clearTeamSyntheticAction", () => {
+  beforeEach(() => {
+    mockCanManageTeam.mockResolvedValue(true);
+    mockClearSyntheticPlayers.mockResolvedValue({ deleted: 48 });
+  });
+
+  it("blocks when the flag is off", async () => {
+    mockFlag.mockResolvedValue(false);
+    expect(await clearTeamSyntheticAction({ teamId: TEAM })).toEqual({ ok: false, error: "flag_disabled" });
+    expect(mockClearSyntheticPlayers).not.toHaveBeenCalled();
+  });
+
+  it("rejects a caller who can't manage the team", async () => {
+    mockCanManageTeam.mockResolvedValue(false);
+    expect(await clearTeamSyntheticAction({ teamId: TEAM })).toEqual({ ok: false, error: "not_authorized" });
+    expect(mockClearSyntheticPlayers).not.toHaveBeenCalled();
+  });
+
+  it("deletes synthetic players on the team", async () => {
+    const res = await clearTeamSyntheticAction({ teamId: TEAM });
+    expect(res).toEqual({ ok: true, deleted: 48 });
+    expect(mockClearSyntheticPlayers).toHaveBeenCalledWith(TEAM);
+  });
+});
+
+describe("clearLeagueSyntheticAction", () => {
+  beforeEach(() => {
+    mockGetLeagueOrgId.mockResolvedValue(ORG);
+    mockResolveOrgRole.mockResolvedValue("admin");
+    mockGetTeamsByLeague.mockResolvedValue([{ id: "t1" }, { id: "t2" }]);
+    mockClearSyntheticPlayers.mockResolvedValue({ deleted: 10 });
+  });
+
+  it("is admin-only (coach rejected)", async () => {
+    mockResolveOrgRole.mockResolvedValue("coach");
+    expect(await clearLeagueSyntheticAction({ leagueId: LEAGUE })).toEqual({ ok: false, error: "not_authorized" });
+    expect(mockClearSyntheticPlayers).not.toHaveBeenCalled();
+  });
+
+  it("clears every team and aggregates the deletions", async () => {
+    const res = await clearLeagueSyntheticAction({ leagueId: LEAGUE });
+    expect(res).toEqual({ ok: true, teams: 2, deleted: 20 });
+    expect(mockClearSyntheticPlayers).toHaveBeenCalledTimes(2);
   });
 });
