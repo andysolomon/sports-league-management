@@ -27,6 +27,7 @@ import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
 import GoLiveControl from "@/components/schedule/GoLiveControl";
+import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 
 type StreamStatus = "idle" | "active" | "ended";
@@ -235,8 +236,8 @@ export default async function LeagueSchedulePage({
                               ? `${result.homeScore} – ${result.awayScore}`
                               : "—"}
                           </td>
-                          <td className="px-4 py-2 font-mono text-xs uppercase text-muted-foreground">
-                            {fixture.status}
+                          <td className="px-4 py-2">
+                            <StatusBadge status={fixture.status} />
                           </td>
                           {isAdmin ? (
                             <td className="px-4 py-2">
@@ -263,6 +264,7 @@ export default async function LeagueSchedulePage({
                                     homeTeamName={fixture.homeTeamName}
                                     awayTeamName={fixture.awayTeamName}
                                     status={streamStatuses.get(fixture.id) ?? null}
+                                    gameStatus={fixture.status}
                                   />
                                 ) : null}
                                 {statsEnabled ? (

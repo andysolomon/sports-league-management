@@ -48,7 +48,7 @@ async function authorizeStreamAction(
   leagueId: string,
   fixtureId: string,
 ): Promise<
-  { ok: true; userId: string } | { ok: false; error: string }
+  { ok: true; userId: string; fixtureStatus: string } | { ok: false; error: string }
 > {
   const enabled = await liveStreamingV1();
   if (!enabled) return { ok: false, error: "flag_disabled" };
@@ -71,7 +71,7 @@ async function authorizeStreamAction(
   ]);
   if (!canHome && !canAway) return { ok: false, error: "not_authorized" };
 
-  return { ok: true, userId };
+  return { ok: true, userId, fixtureStatus: fixture.status };
 }
 
 export async function startGameStream(
@@ -80,6 +80,10 @@ export async function startGameStream(
 ): Promise<StartResult> {
   const guard = await authorizeStreamAction(leagueId, fixtureId);
   if (!guard.ok) return guard;
+  // A finished/cancelled game can't go live.
+  if (guard.fixtureStatus === "final" || guard.fixtureStatus === "cancelled") {
+    return { ok: false, error: "game_over" };
+  }
 
   // Concurrent-stream cap — bounds the absorbed cost for a pilot league.
   // TODO(streaming paid tier): replace/augment with an entitlement check here.
@@ -127,6 +131,10 @@ export async function startYoutubeStream(
 ): Promise<StopResult> {
   const guard = await authorizeStreamAction(leagueId, fixtureId);
   if (!guard.ok) return guard;
+  // A finished/cancelled game can't go live.
+  if (guard.fixtureStatus === "final" || guard.fixtureStatus === "cancelled") {
+    return { ok: false, error: "game_over" };
+  }
 
   const videoId = parseYoutubeVideoId(youtubeUrl);
   if (!videoId) return { ok: false, error: "invalid_youtube_url" };

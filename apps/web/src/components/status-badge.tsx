@@ -1,13 +1,18 @@
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 
 const statusVariantMap: Record<string, BadgeProps["variant"]> = {
+  // Player statuses
   Active: "success",
   Injured: "warning",
   Inactive: "secondary",
+  // Season / generic statuses
   Planned: "outline",
   "In Progress": "default",
   Completed: "success",
   Cancelled: "destructive",
+  // Game (fixture) statuses
+  Scheduled: "outline",
+  Final: "secondary",
 };
 
 /**

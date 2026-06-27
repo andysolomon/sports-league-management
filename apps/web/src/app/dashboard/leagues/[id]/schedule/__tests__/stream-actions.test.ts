@@ -67,6 +67,7 @@ function happyFixture() {
     awayTeamId: "team_away",
     homeTeamName: "Home",
     awayTeamName: "Away",
+    status: "scheduled",
   });
   mockGetPublicSeason.mockResolvedValue({ id: "season_1", leagueId: LEAGUE });
 }
@@ -131,6 +132,23 @@ describe("startGameStream", () => {
     expect(await startGameStream(LEAGUE, FIXTURE)).toEqual({
       ok: false,
       error: "stream_cap_reached",
+    });
+    expect(mockCreateMuxLiveStream).not.toHaveBeenCalled();
+  });
+
+  it("refuses to start a stream for a finished game", async () => {
+    mockGetFixture.mockResolvedValue({
+      id: FIXTURE,
+      seasonId: "season_1",
+      homeTeamId: "team_home",
+      awayTeamId: "team_away",
+      homeTeamName: "Home",
+      awayTeamName: "Away",
+      status: "final",
+    });
+    expect(await startGameStream(LEAGUE, FIXTURE)).toEqual({
+      ok: false,
+      error: "game_over",
     });
     expect(mockCreateMuxLiveStream).not.toHaveBeenCalled();
   });
