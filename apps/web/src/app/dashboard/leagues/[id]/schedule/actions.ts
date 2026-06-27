@@ -9,10 +9,16 @@ import {
   generateSeasonSchedule,
   getLeague,
   getLeagueOrgId,
+  getFixture,
+  listFixturesBySeason,
+  getTeamAttributeSnapshots,
+  getTeamMaddenOveralls,
   recordGameResult,
 } from "@/lib/data-api";
+import type { OrgContext } from "@/lib/org-context";
 import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
+import { simulateScore, seedFromString } from "@/lib/simulate-game";
 import {
   trackFixtureCreated,
   trackResultRecorded,
@@ -200,6 +206,150 @@ export async function deleteFixtureAction(
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
+/*
+ * Game simulation (WSM-000183) — fill plausible, ratings-weighted scores for
+ * unplayed games. A team's strength is the mean of its roster's SPRT/Madden
+ * `weightedOverall` (50 = unrated/neutral). Sims are deterministic per fixture
+ * and recorded as normal results (never overwrite a real/final game), so
+ * standings + playoff advancement flow exactly as hand-entered results do.
+ */
+
+const NEUTRAL_STRENGTH = 50;
+
+function mean(values: number[]): number {
+  if (values.length === 0) return NEUTRAL_STRENGTH;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+/** Aggregate team strength for a season, cached per team across a batch sim. */
+async function teamStrength(
+  teamId: string,
+  orgContext: OrgContext,
+  cache: Map<string, number>,
+): Promise<number> {
+  const cached = cache.get(teamId);
+  if (cached !== undefined) return cached;
+
+  let strength = NEUTRAL_STRENGTH;
+  const snaps = await getTeamAttributeSnapshots(teamId, orgContext).catch(
+    () => null,
+  );
+  const sprt = snaps
+    ? [...snaps.values()]
+        .map((s) => s.weightedOverall)
+        .filter((n): n is number => n != null)
+    : [];
+  if (sprt.length > 0) {
+    strength = mean(sprt);
+  } else {
+    // Fall back to Madden overalls when no SPRT snapshot exists this season.
+    const madden = await getTeamMaddenOveralls(teamId, orgContext).catch(
+      () => null,
+    );
+    if (madden && madden.size > 0) strength = mean([...madden.values()]);
+  }
+
+  cache.set(teamId, strength);
+  return strength;
+}
+
+export async function simulateGameAction(input: {
+  leagueId: string;
+  fixtureId: string;
+}): Promise<
+  { ok: true; homeScore: number; awayScore: number } | { ok: false; error: string }
+> {
+  const guard = await authorizeManagerAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const fixture = await getFixture(input.fixtureId);
+  if (!fixture) return { ok: false, error: "fixture_not_found" };
+  if (fixture.status === "final") return { ok: false, error: "already_final" };
+  if (fixture.status === "cancelled") return { ok: false, error: "cancelled" };
+
+  const orgContext = await resolveOrgContext(userId);
+  const cache = new Map<string, number>();
+  const [homeStrength, awayStrength] = await Promise.all([
+    teamStrength(fixture.homeTeamId, orgContext, cache),
+    teamStrength(fixture.awayTeamId, orgContext, cache),
+  ]);
+
+  const { homeScore, awayScore } = simulateScore({
+    homeStrength,
+    awayStrength,
+    seed: seedFromString(input.fixtureId),
+    decisive: fixture.stage === "playoff",
+  });
+
+  try {
+    await recordGameResult({
+      fixtureId: input.fixtureId,
+      homeScore,
+      awayScore,
+      actorUserId: userId,
+    });
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
+    revalidatePath(`/leagues/${input.leagueId}/standings`);
+    return { ok: true, homeScore, awayScore };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
+export async function simulateSeasonAction(input: {
+  leagueId: string;
+  seasonId: string;
+}): Promise<{ ok: true; simulated: number } | { ok: false; error: string }> {
+  const guard = await authorizeManagerAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const orgContext = await resolveOrgContext(userId);
+  const fixtures = await listFixturesBySeason(input.seasonId).catch(() => []);
+  // Regular-season, unplayed games only — never overwrite real results, and
+  // leave playoff games to the bracket flow.
+  const unplayed = fixtures.filter(
+    (f) => f.status === "scheduled" && f.stage !== "playoff",
+  );
+
+  const cache = new Map<string, number>();
+  let simulated = 0;
+  try {
+    for (const fixture of unplayed) {
+      const [homeStrength, awayStrength] = await Promise.all([
+        teamStrength(fixture.homeTeamId, orgContext, cache),
+        teamStrength(fixture.awayTeamId, orgContext, cache),
+      ]);
+      const { homeScore, awayScore } = simulateScore({
+        homeStrength,
+        awayStrength,
+        seed: seedFromString(fixture.id),
+      });
+      await recordGameResult({
+        fixtureId: fixture.id,
+        homeScore,
+        awayScore,
+        actorUserId: userId,
+      });
+      simulated += 1;
+    }
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
+    revalidatePath(`/leagues/${input.leagueId}/standings`);
+    return { ok: true, simulated };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: message };

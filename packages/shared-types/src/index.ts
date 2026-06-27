@@ -252,6 +252,7 @@ export interface FixtureDto {
   week: number | null;
   venue: string | null;
   status: FixtureStatus;
+  stage: string; // "regular" | "playoff"
   createdAt: string;
   createdBy: string;
 }

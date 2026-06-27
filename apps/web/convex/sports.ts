@@ -3586,6 +3586,7 @@ const fixtureDtoValidator = v.object({
   week: v.union(v.number(), v.null()),
   venue: v.union(v.string(), v.null()),
   status: v.string(),
+  stage: v.string(), // "regular" | "playoff" (legacy rows = regular)
   createdAt: v.string(),
   createdBy: v.string(),
 });
@@ -3643,6 +3644,7 @@ export const createFixture = internalMutationGeneric({
       week: args.week,
       venue: args.venue,
       status: "scheduled",
+      stage: "regular",
       createdAt,
       createdBy: args.actorUserId,
     };
@@ -3685,6 +3687,7 @@ export const updateFixture = internalMutationGeneric({
       week: merged.week,
       venue: merged.venue,
       status: merged.status,
+      stage: merged.stage ?? "regular",
       createdAt: merged.createdAt,
       createdBy: merged.createdBy,
     };
@@ -3737,6 +3740,7 @@ export const listFixturesBySeason = queryGeneric({
           week: row.week,
           venue: row.venue,
           status: row.status,
+          stage: row.stage ?? "regular",
           createdAt: row.createdAt,
           createdBy: row.createdBy,
         };
@@ -3983,6 +3987,7 @@ export const getFixture = queryGeneric({
       week: row.week,
       venue: row.venue,
       status: row.status,
+      stage: row.stage ?? "regular",
       createdAt: row.createdAt,
       createdBy: row.createdBy,
     };
