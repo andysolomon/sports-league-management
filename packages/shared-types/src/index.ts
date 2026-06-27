@@ -81,6 +81,10 @@ export interface SeasonDto {
   endDate: string | null;
   status: string;
   rosterLocked: boolean;
+  /** Playoff configuration (WSM-000184). */
+  playoffTeams: number | null; // 0/null = no playoffs; else 4 | 8 | 16
+  playoffFormat: string | null; // "single"
+  divisionWinnersQualify: boolean;
 }
 
 export interface DepthChartEntryDto {
