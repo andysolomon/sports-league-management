@@ -30,6 +30,7 @@ import GoLiveControl from "@/components/schedule/GoLiveControl";
 import {
   SimulateGameButton,
   SimulateSeasonButton,
+  SimulateChampionButton,
 } from "@/components/schedule/SimulateControls";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -165,10 +166,16 @@ export default async function LeagueSchedulePage({
             />
           ) : null}
           {isAdmin && activeSeason && fixtures.length > 0 ? (
-            <SimulateSeasonButton
-              leagueId={leagueId}
-              seasonId={activeSeason.id}
-            />
+            <>
+              <SimulateSeasonButton
+                leagueId={leagueId}
+                seasonId={activeSeason.id}
+              />
+              <SimulateChampionButton
+                leagueId={leagueId}
+                seasonId={activeSeason.id}
+              />
+            </>
           ) : null}
         </div>
       </header>

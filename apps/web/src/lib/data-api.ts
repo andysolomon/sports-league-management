@@ -539,7 +539,13 @@ const refs = {
     }
   >("sports:copySeasonRosters"),
   generatePlayoffBracket: mutationRef<
-    { seasonId: string; size: number; actorUserId: string; confirm?: boolean },
+    {
+      seasonId: string;
+      size: number;
+      actorUserId: string;
+      confirm?: boolean;
+      divisionWinnersQualify?: boolean;
+    },
     { bracketId: string; size: number; rounds: number; matchups: number }
   >("sports:generatePlayoffBracket"),
   getPlayoffBracket: queryRef<{ seasonId: string }, PlayoffBracketDto | null>(
@@ -1735,6 +1741,7 @@ export async function generatePlayoffBracket(input: {
   size: number;
   actorUserId: string;
   confirm?: boolean;
+  divisionWinnersQualify?: boolean;
 }): Promise<{
   bracketId: string;
   size: number;

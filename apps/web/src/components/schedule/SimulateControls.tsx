@@ -3,11 +3,12 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Dices, Wand2 } from "lucide-react";
+import { Dices, Wand2, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   simulateGameAction,
   simulateSeasonAction,
+  simulateSeasonThroughChampionAction,
 } from "@/app/dashboard/leagues/[id]/schedule/actions";
 
 /*
@@ -110,6 +111,64 @@ export function SimulateSeasonButton({
   );
 }
 
+export function SimulateChampionButton({
+  leagueId,
+  seasonId,
+}: {
+  leagueId: string;
+  seasonId: string;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+
+  function run() {
+    if (
+      !window.confirm(
+        "Simulate the rest of the season AND the playoffs to crown a champion? This generates a fresh bracket from the season's playoff settings and fills every remaining game. Already-recorded regular-season games are kept.",
+      )
+    ) {
+      return;
+    }
+    start(async () => {
+      const res = await simulateSeasonThroughChampionAction({ leagueId, seasonId });
+      if (res.ok) {
+        const parts = [
+          res.regularSimulated > 0
+            ? `${res.regularSimulated} regular-season game${res.regularSimulated === 1 ? "" : "s"}`
+            : null,
+          res.playoffGames > 0
+            ? `${res.playoffGames} playoff game${res.playoffGames === 1 ? "" : "s"}`
+            : null,
+        ].filter(Boolean);
+        toast.success(
+          res.champion
+            ? `🏆 ${res.champion} wins! Simulated ${parts.join(" + ")}.`
+            : parts.length > 0
+              ? `Simulated ${parts.join(" + ")}.`
+              : "Nothing left to simulate.",
+        );
+        router.refresh();
+      } else {
+        toast.error(simError(res.error));
+      }
+    });
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={pending}
+      onClick={run}
+      title="Simulate the rest of the season and the playoffs to crown a champion"
+    >
+      <Trophy className="mr-1 h-4 w-4" />
+      {pending ? "Simulating…" : "Sim to champion"}
+    </Button>
+  );
+}
+
 function simError(error: string): string {
   switch (error) {
     case "flag_disabled":
@@ -125,6 +184,12 @@ function simError(error: string): string {
     case "fixture_not_found":
       return "Game not found.";
     default:
+      if (error.includes("not_enough_teams")) {
+        return "Not enough teams for the configured playoff bracket. Lower the playoff team count in season settings.";
+      }
+      if (error.includes("invalid_bracket_size")) {
+        return "Playoff team count must be 4, 8, or 16 (set it in season settings).";
+      }
       return error;
   }
 }

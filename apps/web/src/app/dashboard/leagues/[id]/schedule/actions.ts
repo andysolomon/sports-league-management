@@ -10,11 +10,15 @@ import {
   getLeague,
   getLeagueOrgId,
   getFixture,
+  getSeason,
   listFixturesBySeason,
   getTeamAttributeSnapshots,
   getTeamMaddenOveralls,
+  generatePlayoffBracket,
+  getPlayoffBracket,
   recordGameResult,
 } from "@/lib/data-api";
+import type { PlayoffMatchupDto } from "@/lib/data-api";
 import type { OrgContext } from "@/lib/org-context";
 import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
@@ -307,6 +311,42 @@ export async function simulateGameAction(input: {
   }
 }
 
+/** Sim every unplayed regular-season fixture; returns how many were played.
+ *  Shared by simulateSeasonAction and the through-to-champion flow. */
+async function simulateUnplayedRegularSeason(
+  seasonId: string,
+  userId: string,
+  orgContext: OrgContext,
+  cache: Map<string, number>,
+): Promise<number> {
+  const fixtures = await listFixturesBySeason(seasonId).catch(() => []);
+  // Regular-season, unplayed games only — never overwrite real results, and
+  // leave playoff games to the bracket flow.
+  const unplayed = fixtures.filter(
+    (f) => f.status === "scheduled" && f.stage !== "playoff",
+  );
+  let simulated = 0;
+  for (const fixture of unplayed) {
+    const [homeStrength, awayStrength] = await Promise.all([
+      teamStrength(fixture.homeTeamId, orgContext, cache),
+      teamStrength(fixture.awayTeamId, orgContext, cache),
+    ]);
+    const { homeScore, awayScore } = simulateScore({
+      homeStrength,
+      awayStrength,
+      seed: seedFromString(fixture.id),
+    });
+    await recordGameResult({
+      fixtureId: fixture.id,
+      homeScore,
+      awayScore,
+      actorUserId: userId,
+    });
+    simulated += 1;
+  }
+  return simulated;
+}
+
 export async function simulateSeasonAction(input: {
   leagueId: string;
   seasonId: string;
@@ -318,38 +358,128 @@ export async function simulateSeasonAction(input: {
   if (!userId) return { ok: false, error: "unauthorized" };
 
   const orgContext = await resolveOrgContext(userId);
-  const fixtures = await listFixturesBySeason(input.seasonId).catch(() => []);
-  // Regular-season, unplayed games only — never overwrite real results, and
-  // leave playoff games to the bracket flow.
-  const unplayed = fixtures.filter(
-    (f) => f.status === "scheduled" && f.stage !== "playoff",
-  );
-
-  const cache = new Map<string, number>();
-  let simulated = 0;
   try {
-    for (const fixture of unplayed) {
-      const [homeStrength, awayStrength] = await Promise.all([
-        teamStrength(fixture.homeTeamId, orgContext, cache),
-        teamStrength(fixture.awayTeamId, orgContext, cache),
-      ]);
-      const { homeScore, awayScore } = simulateScore({
-        homeStrength,
-        awayStrength,
-        seed: seedFromString(fixture.id),
-      });
-      await recordGameResult({
-        fixtureId: fixture.id,
-        homeScore,
-        awayScore,
-        actorUserId: userId,
-      });
-      simulated += 1;
-    }
+    const simulated = await simulateUnplayedRegularSeason(
+      input.seasonId,
+      userId,
+      orgContext,
+      new Map(),
+    );
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     revalidatePath(`/leagues/${input.leagueId}/standings`);
     return { ok: true, simulated };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
+/*
+ * Simulate a whole season through to a champion (WSM-000185): sim every unplayed
+ * regular-season game, then — if the season is configured for playoffs —
+ * (re)generate the bracket from its config and sim each playoff round until a
+ * winner emerges. Playoff games are simulated `decisive` so a bracket never
+ * stalls on a tie. Bounded loop (≤ 8 rounds) as a safety net.
+ */
+export async function simulateSeasonThroughChampionAction(input: {
+  leagueId: string;
+  seasonId: string;
+}): Promise<
+  | {
+      ok: true;
+      regularSimulated: number;
+      playoffGames: number;
+      champion: string | null;
+    }
+  | { ok: false; error: string }
+> {
+  const guard = await authorizeManagerAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const orgContext = await resolveOrgContext(userId);
+  const cache = new Map<string, number>();
+  try {
+    const regularSimulated = await simulateUnplayedRegularSeason(
+      input.seasonId,
+      userId,
+      orgContext,
+      cache,
+    );
+
+    const season = await getSeason(input.seasonId, orgContext).catch(() => null);
+    const size = season?.playoffTeams ?? 0;
+    if (!season || !size) {
+      // No playoffs configured — regular season is the whole story.
+      revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
+      revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
+      revalidatePath(`/leagues/${input.leagueId}/standings`);
+      return { ok: true, regularSimulated, playoffGames: 0, champion: null };
+    }
+
+    // Fresh bracket from the configured size + qualification rule.
+    await generatePlayoffBracket({
+      seasonId: input.seasonId,
+      size,
+      actorUserId: userId,
+      confirm: true,
+      divisionWinnersQualify: season.divisionWinnersQualify,
+    });
+
+    // Sim round by round — each result advances the bracket and spawns the next
+    // round's fixtures once both feeders are decided.
+    let playoffGames = 0;
+    for (let round = 0; round < 8; round++) {
+      const fixtures = await listFixturesBySeason(input.seasonId).catch(() => []);
+      const pending = fixtures.filter(
+        (f) => f.stage === "playoff" && f.status === "scheduled",
+      );
+      if (pending.length === 0) break;
+      for (const fixture of pending) {
+        const [homeStrength, awayStrength] = await Promise.all([
+          teamStrength(fixture.homeTeamId, orgContext, cache),
+          teamStrength(fixture.awayTeamId, orgContext, cache),
+        ]);
+        const { homeScore, awayScore } = simulateScore({
+          homeStrength,
+          awayStrength,
+          seed: seedFromString(fixture.id),
+          decisive: true,
+        });
+        await recordGameResult({
+          fixtureId: fixture.id,
+          homeScore,
+          awayScore,
+          actorUserId: userId,
+        });
+        playoffGames += 1;
+      }
+    }
+
+    // Champion = the final (highest-round) matchup's winner.
+    const bracket = await getPlayoffBracket(input.seasonId).catch(() => null);
+    let champion: string | null = null;
+    if (bracket) {
+      const final = bracket.matchups.reduce<PlayoffMatchupDto | null>(
+        (best, m) => (m.round > (best?.round ?? -1) ? m : best),
+        null,
+      );
+      if (final?.winnerTeamId) {
+        champion =
+          final.winnerTeamId === final.homeTeamId
+            ? final.homeTeamName
+            : final.awayTeamName;
+      }
+    }
+
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
+    revalidatePath(`/leagues/${input.leagueId}/standings`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/playoffs`);
+    return { ok: true, regularSimulated, playoffGames, champion };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: message };
