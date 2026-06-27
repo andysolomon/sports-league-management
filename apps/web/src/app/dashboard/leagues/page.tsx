@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import { getDivisions, getTeams, getLeagueOrgId } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { getUserRoleInOrg } from "@/lib/org-context";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import { Trophy } from "lucide-react";
+import { Trophy, BarChart3, CalendarDays } from "lucide-react";
 import { LeagueSwitcher } from "../_components/league-switcher";
 import {
   CreateLeagueButton,
@@ -104,6 +105,22 @@ export default async function LeaguesPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 border-b border-border pb-4">
+            <Link
+              href={`/dashboard/leagues/${activeLeague.id}/standings`}
+              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Standings
+            </Link>
+            <Link
+              href={`/dashboard/leagues/${activeLeague.id}/schedule`}
+              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              <CalendarDays className="h-4 w-4" />
+              Schedule
+            </Link>
+          </div>
           <LeaguesAccordion
             leagueId={activeLeague.id}
             isAdmin={isAdmin}
