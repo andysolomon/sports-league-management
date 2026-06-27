@@ -133,6 +133,7 @@ export const playerDtoValidator = v.object({
   experienceYears: v.union(v.number(), v.null()),
   grade: v.union(v.number(), v.null()),
   squad: v.union(v.string(), v.null()),
+  hometown: v.union(v.string(), v.null()),
 });
 
 function toPlayerDto(doc: {
@@ -148,6 +149,7 @@ function toPlayerDto(doc: {
   experienceYears?: number | null;
   grade?: number | null;
   squad?: string | null;
+  hometown?: string | null;
 }): Infer<typeof playerDtoValidator> {
   return {
     id: doc._id,
@@ -162,6 +164,7 @@ function toPlayerDto(doc: {
     experienceYears: doc.experienceYears ?? null,
     grade: doc.grade ?? null,
     squad: doc.squad ?? null,
+    hometown: doc.hometown ?? null,
   };
 }
 
@@ -1225,6 +1228,7 @@ export const upsertPlayer = internalMutationGeneric({
     experienceYears: v.optional(v.union(v.number(), v.null())),
     grade: v.optional(v.union(v.number(), v.null())),
     squad: v.optional(v.union(v.string(), v.null())),
+    hometown: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     dto: playerDtoValidator,
@@ -1250,6 +1254,7 @@ export const upsertPlayer = internalMutationGeneric({
         experienceYears: args.experienceYears ?? null,
         grade: args.grade ?? null,
         squad: args.squad ?? null,
+        hometown: args.hometown ?? existing.hometown ?? null,
       });
       return {
         dto: toPlayerDto({
@@ -1263,6 +1268,7 @@ export const upsertPlayer = internalMutationGeneric({
           experienceYears: args.experienceYears ?? null,
           grade: args.grade ?? null,
           squad: args.squad ?? null,
+          hometown: args.hometown ?? existing.hometown ?? null,
         }),
         created: false,
       };
@@ -1286,6 +1292,7 @@ export const upsertPlayer = internalMutationGeneric({
         experienceYears: args.experienceYears ?? null,
         grade: args.grade ?? null,
         squad: args.squad ?? null,
+        hometown: args.hometown ?? null,
       },
       created: true,
     };
@@ -1455,6 +1462,7 @@ export const createPlayer = internalMutationGeneric({
     status: v.string(),
     grade: v.optional(v.union(v.number(), v.null())),
     squad: v.optional(v.union(v.string(), v.null())),
+    hometown: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.object({
     id: v.string(),
@@ -1469,6 +1477,7 @@ export const createPlayer = internalMutationGeneric({
     experienceYears: v.optional(v.union(v.number(), v.null())),
     grade: v.union(v.number(), v.null()),
     squad: v.union(v.string(), v.null()),
+    hometown: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
     const team = await ctx.db.get(args.teamId);
@@ -1509,6 +1518,7 @@ export const createPlayer = internalMutationGeneric({
       experienceYears: null,
       grade: args.grade ?? null,
       squad: args.squad ?? null,
+      hometown: args.hometown ?? null,
     };
   },
 });
@@ -1528,6 +1538,7 @@ export const bulkCreatePlayers = internalMutationGeneric({
         grade: v.optional(v.union(v.number(), v.null())),
         squad: v.optional(v.union(v.string(), v.null())),
         dateOfBirth: v.optional(v.union(v.string(), v.null())),
+        hometown: v.optional(v.union(v.string(), v.null())),
       }),
     ),
   },
@@ -1552,6 +1563,7 @@ export const bulkCreatePlayers = internalMutationGeneric({
         experienceYears: null,
         grade: p.grade ?? null,
         squad: p.squad ?? null,
+        hometown: p.hometown ?? null,
         synthetic: true,
       });
       created += 1;
@@ -1592,6 +1604,7 @@ export const updatePlayer = internalMutationGeneric({
     status: v.optional(v.string()),
     grade: v.optional(v.union(v.number(), v.null())),
     squad: v.optional(v.union(v.string(), v.null())),
+    hometown: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.union(
     playerDtoValidator,
@@ -1642,6 +1655,7 @@ export const updatePlayer = internalMutationGeneric({
       ...(args.status !== undefined ? { status: args.status } : {}),
       ...(args.grade !== undefined ? { grade: args.grade } : {}),
       ...(args.squad !== undefined ? { squad: args.squad } : {}),
+      ...(args.hometown !== undefined ? { hometown: args.hometown } : {}),
       ...(args.teamId !== undefined ? { leagueId } : {}),
     };
 

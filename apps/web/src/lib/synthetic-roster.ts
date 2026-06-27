@@ -17,6 +17,24 @@ export interface SyntheticPlayer {
   grade: number; // 9–12 (US high school)
   squad: string; // "Varsity" | "JV"
   status: string; // "active"
+  dateOfBirth: string; // ISO date, age-appropriate for the grade
+  hometown: string; // "City, ST"
+}
+
+// Reference season year for deriving age-appropriate birth dates (a grade-9
+// player is ~14, grade-12 ~17). Constant so generation stays deterministic.
+const SEASON_YEAR = 2026;
+
+// GA-flavored hometowns (HS football); fake, just for believable demo data.
+const HOMETOWNS: readonly string[] = [
+  "Acworth, GA", "Marietta, GA", "Kennesaw, GA", "Smyrna, GA",
+  "Powder Springs, GA", "Austell, GA", "Mableton, GA", "Roswell, GA",
+  "Alpharetta, GA", "Woodstock, GA", "Canton, GA", "Dallas, GA",
+  "Douglasville, GA", "Sandy Springs, GA", "Decatur, GA", "Lawrenceville, GA",
+];
+
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : `${n}`;
 }
 
 // A believable 48-man depth spread (concrete positions, not groups).
@@ -115,7 +133,25 @@ export function generateSyntheticRoster({
     // Upperclassmen lean varsity; underclassmen lean JV — just a believable mix.
     const squad = grade >= 11 ? "Varsity" : rand() < 0.5 ? "Varsity" : "JV";
 
-    players.push({ name, position, jerseyNumber: jersey, grade, squad, status: "active" });
+    // Age-appropriate DOB: ~14 at grade 9 → ~17 at grade 12 (+0/1 year jitter).
+    const age = 14 + (grade - 9) + Math.floor(rand() * 2);
+    const birthYear = SEASON_YEAR - age;
+    const birthMonth = 1 + Math.floor(rand() * 12);
+    const birthDay = 1 + Math.floor(rand() * 28);
+    const dateOfBirth = `${birthYear}-${pad2(birthMonth)}-${pad2(birthDay)}`;
+
+    const hometown = HOMETOWNS[Math.floor(rand() * HOMETOWNS.length)] ?? HOMETOWNS[0];
+
+    players.push({
+      name,
+      position,
+      jerseyNumber: jersey,
+      grade,
+      squad,
+      status: "active",
+      dateOfBirth,
+      hometown,
+    });
   }
 
   return players;

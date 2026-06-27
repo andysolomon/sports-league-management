@@ -54,6 +54,11 @@ describe("generateSyntheticRoster", () => {
       expect(p.grade).toBeLessThanOrEqual(12);
       expect(p.status).toBe("active");
       expect(["Varsity", "JV"]).toContain(p.squad);
+      expect(p.dateOfBirth).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      const year = Number(p.dateOfBirth.slice(0, 4));
+      expect(year).toBeGreaterThanOrEqual(2006);
+      expect(year).toBeLessThanOrEqual(2013);
+      expect(p.hometown).toMatch(/, [A-Z]{2}$/);
     }
   });
 });

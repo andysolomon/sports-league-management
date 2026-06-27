@@ -97,6 +97,7 @@ export default function PlayerForm({
   const [status, setStatus] = useState(player?.status ?? "Active");
   const [grade, setGrade] = useState(player?.grade?.toString() ?? "");
   const [squad, setSquad] = useState(player?.squad ?? "");
+  const [hometown, setHometown] = useState(player?.hometown ?? "");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -120,6 +121,7 @@ export default function PlayerForm({
         status,
         grade: grade ? Number(grade) : null,
         squad: squad || null,
+        hometown: hometown.trim() || null,
       };
 
       // When duplicates are allowed, a clash is a soft warning (saved anyway).
@@ -266,6 +268,17 @@ export default function PlayerForm({
               type="date"
               value={dateOfBirth}
               onChange={(e) => setDateOfBirth(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="player-hometown">Hometown</Label>
+            <Input
+              id="player-hometown"
+              type="text"
+              placeholder="Acworth, GA"
+              value={hometown}
+              onChange={(e) => setHometown(e.target.value)}
             />
           </div>
 
