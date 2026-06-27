@@ -52,12 +52,23 @@ export async function createMuxLiveStream(
   maxDurationMinutes: number,
 ): Promise<CreatedMuxLiveStream> {
   const mux = getMux();
-  const liveStream = await mux.video.liveStreams.create({
-    playback_policy: ["public"],
-    new_asset_settings: { playback_policy: ["public"] },
-    // Mux expects seconds; this is the guardrail auto-stop.
-    max_continuous_duration: maxDurationMinutes * 60,
-  });
+  let liveStream;
+  try {
+    liveStream = await mux.video.liveStreams.create({
+      playback_policy: ["public"],
+      new_asset_settings: { playback_policy: ["public"] },
+      // Mux expects seconds; this is the guardrail auto-stop.
+      max_continuous_duration: maxDurationMinutes * 60,
+    });
+  } catch (err) {
+    // Mux rejects live-stream creation on the free plan with a 400. Surface a
+    // clean, actionable code instead of leaking the raw Mux JSON to a toast.
+    const raw = err instanceof Error ? err.message : String(err);
+    if (/free plan|live streams are unavailable/i.test(raw)) {
+      throw new Error("mux_plan_required");
+    }
+    throw err;
+  }
 
   const playbackId = liveStream.playback_ids?.[0]?.id;
   if (!liveStream.id || !liveStream.stream_key || !playbackId) {

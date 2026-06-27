@@ -185,6 +185,10 @@ function errorLabel(error: string): string {
       return "Game not found.";
     case "stream_not_found":
       return "No live stream to stop.";
+    case "mux_plan_required":
+      return "Live streaming needs a paid Mux plan — the account is on the free plan. Upgrade at dashboard.mux.com, then try again.";
+    case "mux_live_stream_incomplete":
+      return "Mux didn't return complete stream details. Please try again.";
     default:
       return error;
   }
