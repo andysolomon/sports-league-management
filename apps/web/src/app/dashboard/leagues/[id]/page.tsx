@@ -106,6 +106,7 @@ export default async function LeagueDetailPage({
                   </div>
                   <div className="flex items-center gap-2">
                     <SyntheticRosterButton kind="league" id={id} />
+                    <SyntheticRosterButton kind="league" id={id} action="attributes" />
                     <SyntheticRosterButton kind="league" id={id} action="clear" />
                   </div>
                 </div>
