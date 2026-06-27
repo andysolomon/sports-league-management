@@ -571,13 +571,19 @@ const refs = {
   createGameStream: mutationRef<
     {
       fixtureId: string;
-      muxLiveStreamId: string;
-      muxPlaybackId: string;
+      provider?: string;
+      muxLiveStreamId?: string;
+      muxPlaybackId?: string;
+      youtubeVideoId?: string | null;
       startedBy: string;
       maxDurationMinutes: number;
     },
-    { id: string; fixtureId: string; status: string; muxPlaybackId: string }
+    { id: string; fixtureId: string; status: string }
   >("sports:createGameStream"),
+  endGameStreamByFixture: mutationRef<
+    { fixtureId: string; endedAt: string },
+    boolean
+  >("sports:endGameStreamByFixture"),
   updateGameStreamStatus: mutationRef<
     {
       muxLiveStreamId: string;
@@ -597,7 +603,7 @@ const refs = {
   // Internal query (not on public api) — admin-keyed server code only.
   getStreamAdminByFixture: queryRef<
     { fixtureId: string },
-    { muxLiveStreamId: string; status: string } | null
+    { provider: string; muxLiveStreamId: string | null; status: string } | null
   >("sports:getStreamAdminByFixture"),
   // Stat-keeping keystone (WSM-000112)
   upsertPlayerGameStats: mutationRef<
@@ -1768,17 +1774,22 @@ export async function getResultByFixture(
 // --- Phase 1 live streaming wrappers (WSM-000144) ---
 
 /** Public projection of a game stream — what an unauthenticated viewer sees.
- *  Never carries the Mux live-stream id or stream key. */
+ *  Never carries the Mux live-stream id or stream key. Provider-agnostic:
+ *  `provider` selects which public playback id is populated. */
 export interface PublicGameStream {
   status: string; // "idle" | "active" | "ended"
-  muxPlaybackId: string;
+  provider: string; // "mux" | "youtube"
+  muxPlaybackId: string | null;
+  youtubeVideoId: string | null;
   vodAssetId: string | null;
 }
 
 export interface CreateGameStreamInput {
   fixtureId: string;
-  muxLiveStreamId: string;
-  muxPlaybackId: string;
+  provider?: string; // "mux" (default) | "youtube"
+  muxLiveStreamId?: string;
+  muxPlaybackId?: string;
+  youtubeVideoId?: string | null;
   startedBy: string;
   maxDurationMinutes: number;
 }
@@ -1789,9 +1800,16 @@ export async function createGameStream(
   id: string;
   fixtureId: string;
   status: string;
-  muxPlaybackId: string;
 }> {
   return mutateConvex(refs.createGameStream, input);
+}
+
+/** Mark a fixture's stream ended (YouTube stop — no Mux webhook to flip it). */
+export async function endGameStreamByFixture(
+  fixtureId: string,
+  endedAt: string,
+): Promise<boolean> {
+  return mutateConvex(refs.endGameStreamByFixture, { fixtureId, endedAt });
 }
 
 export async function updateGameStreamStatus(input: {
@@ -1820,7 +1838,11 @@ export async function getActiveStreamCountForLeague(
  *  action can disable/transition it. Admin-keyed; not a public projection. */
 export async function getStreamAdminByFixture(
   fixtureId: string,
-): Promise<{ muxLiveStreamId: string; status: string } | null> {
+): Promise<{
+  provider: string;
+  muxLiveStreamId: string | null;
+  status: string;
+} | null> {
   return queryConvex(refs.getStreamAdminByFixture, { fixtureId });
 }
 

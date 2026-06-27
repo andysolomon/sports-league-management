@@ -293,16 +293,19 @@ export default defineSchema({
   }).index("by_fixtureId", ["fixtureId"]),
 
   /*
-   * One live stream per fixture (WSM-000144, streaming epic #225). The Mux
-   * stream KEY is never stored — Mux holds it; we keep only the live-stream id
-   * (server-side) and the public HLS playback id. Public reads project to
-   * status/playbackId/vodAssetId only; the key + live-stream id never transit a
-   * public query (see getStreamByFixture).
+   * One live stream per fixture (WSM-000144, streaming epic #225). Two
+   * providers (WSM-000180): "mux" (RTMP ingest, paid) keeps the server-side
+   * live-stream id + public HLS playback id; "youtube" (free, paste-a-link)
+   * keeps only the public YouTube video id. The Mux stream KEY is never stored.
+   * Public reads project to status / playback ids / vodAssetId only; the Mux
+   * live-stream id never transits a public query (see getStreamByFixture).
    */
   gameStreams: defineTable({
     fixtureId: v.id("fixtures"),
-    muxLiveStreamId: v.string(), // server-side; never returned by a public read
-    muxPlaybackId: v.string(), // public HLS id
+    provider: v.optional(v.string()), // "mux" | "youtube" (legacy rows = mux)
+    muxLiveStreamId: v.optional(v.string()), // mux: server-side; never public
+    muxPlaybackId: v.optional(v.string()), // mux: public HLS id
+    youtubeVideoId: v.optional(v.union(v.string(), v.null())), // youtube: public
     status: v.string(), // "idle" | "active" | "ended"
     vodAssetId: v.union(v.string(), v.null()),
     startedBy: v.string(),
