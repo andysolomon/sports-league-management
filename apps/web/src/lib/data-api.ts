@@ -675,6 +675,10 @@ const refs = {
     { seasonId: string },
     SeasonStatCategoryLeaders[]
   >("sports:getSeasonStatLeaders"),
+  getSeasonStatLeadersPublic: queryRef<
+    { leagueId: string },
+    { seasonName: string; categories: SeasonStatCategoryLeaders[] } | null
+  >("sports:getSeasonStatLeadersPublic"),
   // Live game-state (WSM-000152, keystone v3)
   startLiveGame: mutationRef<
     { fixtureId: string; actorUserId: string },
@@ -1961,6 +1965,14 @@ export async function getSeasonStatLeaders(
   seasonId: string,
 ): Promise<SeasonStatCategoryLeaders[]> {
   return queryConvex(refs.getSeasonStatLeaders, { seasonId });
+}
+
+/** Public stat-leaders for a league (fan-facing). Convex re-checks the league
+ *  is public and resolves the season; returns null if not public / no season. */
+export async function getSeasonStatLeadersPublic(
+  leagueId: string,
+): Promise<{ seasonName: string; categories: SeasonStatCategoryLeaders[] } | null> {
+  return queryConvex(refs.getSeasonStatLeadersPublic, { leagueId });
 }
 
 export interface HsSprtRating {

@@ -4771,41 +4771,79 @@ const statLeadersValidator = v.array(
   }),
 );
 
+/** Shared: compute a season's ranked stat-leaders from entered game stats. */
+async function seasonStatLeaders(
+  ctx: QueryCtx,
+  seasonId: Id<"seasons">,
+): Promise<ReturnType<typeof computeStatLeaders>> {
+  const rows = await ctx.db
+    .query("playerGameStats")
+    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+    .collect();
+
+  const byPlayer = new Map<string, string[]>();
+  for (const r of rows) {
+    const arr = byPlayer.get(r.playerId) ?? [];
+    arr.push(r.statsJson);
+    byPlayer.set(r.playerId, arr);
+  }
+
+  const players: LeaderInput[] = [];
+  for (const [playerId, jsons] of byPlayer) {
+    const totals = aggregateStatLines(jsons.map(parseStatLine));
+    const values = categoryValues(totals);
+    // Skip players with no leaderboard-relevant stats this season.
+    if (Object.values(values).every((v2) => v2 === 0)) continue;
+    const player = await ctx.db.get(playerId as Id<"players">);
+    if (!player) continue;
+    const team = await ctx.db.get(player.teamId);
+    players.push({
+      playerId,
+      playerName: player.name,
+      teamName: team?.name ?? "(unknown)",
+      jerseyNumber: player.jerseyNumber ?? null,
+      values,
+    });
+  }
+
+  return computeStatLeaders(players, 5);
+}
+
 export const getSeasonStatLeaders = query({
   args: { seasonId: v.id("seasons") },
   returns: statLeadersValidator,
+  handler: async (ctx, args) => seasonStatLeaders(ctx, args.seasonId),
+});
+
+/*
+ * Public stat-leaders (WSM-000186) — fan-facing, NO Clerk session. Re-checks
+ * `league.isPublic` here (defense in depth, mirroring computeStandingsPublic)
+ * so a stale/skipped middleware can't leak a private league's data, and
+ * resolves the season internally. Null when the league isn't public or has no
+ * season.
+ */
+export const getSeasonStatLeadersPublic = query({
+  args: { leagueId: v.id("leagues") },
+  returns: v.union(
+    v.object({ seasonName: v.string(), categories: statLeadersValidator }),
+    v.null(),
+  ),
   handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query("playerGameStats")
-      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+    const league = await ctx.db.get(args.leagueId);
+    if (!league || !league.isPublic) return null;
+
+    const seasonRows = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
       .collect();
+    if (seasonRows.length === 0) return null;
+    const activeSeason =
+      seasonRows.find((s) => s.status === "active") ?? seasonRows[0];
 
-    const byPlayer = new Map<string, string[]>();
-    for (const r of rows) {
-      const arr = byPlayer.get(r.playerId) ?? [];
-      arr.push(r.statsJson);
-      byPlayer.set(r.playerId, arr);
-    }
-
-    const players: LeaderInput[] = [];
-    for (const [playerId, jsons] of byPlayer) {
-      const totals = aggregateStatLines(jsons.map(parseStatLine));
-      const values = categoryValues(totals);
-      // Skip players with no leaderboard-relevant stats this season.
-      if (Object.values(values).every((v2) => v2 === 0)) continue;
-      const player = await ctx.db.get(playerId as Id<"players">);
-      if (!player) continue;
-      const team = await ctx.db.get(player.teamId);
-      players.push({
-        playerId,
-        playerName: player.name,
-        teamName: team?.name ?? "(unknown)",
-        jerseyNumber: player.jerseyNumber ?? null,
-        values,
-      });
-    }
-
-    return computeStatLeaders(players, 5);
+    return {
+      seasonName: activeSeason.name,
+      categories: await seasonStatLeaders(ctx, activeSeason._id),
+    };
   },
 });
 
