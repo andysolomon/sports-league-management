@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 import { getDivisions, getTeams, getLeagueOrgId } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
 import { getUserRoleInOrg } from "@/lib/org-context";
+import { statKeepingV1 } from "@/lib/flags";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import { Trophy, BarChart3, CalendarDays } from "lucide-react";
+import { Trophy, BarChart3, CalendarDays, ListOrdered } from "lucide-react";
 import { LeagueSwitcher } from "../_components/league-switcher";
 import {
   CreateLeagueButton,
@@ -44,6 +45,7 @@ export default async function LeaguesPage() {
   const orgId = await getLeagueOrgId(activeLeague.id);
   const role = orgId ? await getUserRoleInOrg(orgId, userId) : null;
   const isAdmin = role === "org:admin";
+  const statsEnabled = await statKeepingV1();
 
   const [divisions, teams] = await Promise.all([
     getDivisions([activeLeague.id]),
@@ -120,6 +122,15 @@ export default async function LeaguesPage() {
               <CalendarDays className="h-4 w-4" />
               Schedule
             </Link>
+            {statsEnabled ? (
+              <Link
+                href={`/dashboard/leagues/${activeLeague.id}/stats`}
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                <ListOrdered className="h-4 w-4" />
+                Stat leaders
+              </Link>
+            ) : null}
           </div>
           <LeaguesAccordion
             leagueId={activeLeague.id}

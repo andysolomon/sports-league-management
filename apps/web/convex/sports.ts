@@ -11,6 +11,11 @@ import { writeAuditLog } from "./lib/auditLog";
 import { computeStandingsPure } from "./lib/standings";
 import { aggregateStatLines, parseStatLine } from "./lib/playerStats";
 import {
+  categoryValues,
+  computeStatLeaders,
+  type LeaderInput,
+} from "./lib/statLeaders";
+import {
   computeHsSprtRatings,
   positionToRatingGroup,
   type HsRatingInput,
@@ -4741,6 +4746,66 @@ export const computeSeasonSprt = query({
       });
     }
     return out;
+  },
+});
+
+/*
+ * Season stat-leaders (WSM-000186) — top players per category for a season,
+ * computed on-read from entered game stats. Aggregates each player's lines,
+ * flattens to leaderboard scalars, and ranks (see lib/statLeaders.ts). Called
+ * server-side (admin-keyed) by the dashboard league stats page.
+ */
+const statLeadersValidator = v.array(
+  v.object({
+    key: v.string(),
+    label: v.string(),
+    leaders: v.array(
+      v.object({
+        playerId: v.string(),
+        playerName: v.string(),
+        teamName: v.string(),
+        jerseyNumber: v.union(v.number(), v.null()),
+        value: v.number(),
+      }),
+    ),
+  }),
+);
+
+export const getSeasonStatLeaders = query({
+  args: { seasonId: v.id("seasons") },
+  returns: statLeadersValidator,
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerGameStats")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+
+    const byPlayer = new Map<string, string[]>();
+    for (const r of rows) {
+      const arr = byPlayer.get(r.playerId) ?? [];
+      arr.push(r.statsJson);
+      byPlayer.set(r.playerId, arr);
+    }
+
+    const players: LeaderInput[] = [];
+    for (const [playerId, jsons] of byPlayer) {
+      const totals = aggregateStatLines(jsons.map(parseStatLine));
+      const values = categoryValues(totals);
+      // Skip players with no leaderboard-relevant stats this season.
+      if (Object.values(values).every((v2) => v2 === 0)) continue;
+      const player = await ctx.db.get(playerId as Id<"players">);
+      if (!player) continue;
+      const team = await ctx.db.get(player.teamId);
+      players.push({
+        playerId,
+        playerName: player.name,
+        teamName: team?.name ?? "(unknown)",
+        jerseyNumber: player.jerseyNumber ?? null,
+        values,
+      });
+    }
+
+    return computeStatLeaders(players, 5);
   },
 });
 
