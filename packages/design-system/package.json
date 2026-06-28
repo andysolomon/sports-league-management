@@ -1,0 +1,43 @@
+{
+  "name": "@sports-management/design-system",
+  "version": "1.0.0",
+  "description": "Sports League — a token-driven, dual-theme design system (CSS variables + React components) for league-management dashboards.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "main": "react/src/index.ts",
+  "exports": {
+    ".": "./react/src/index.ts",
+    "./styles.css": "./styles.css",
+    "./tokens/*": "./tokens/*"
+  },
+  "files": [
+    "styles.css",
+    "tokens",
+    "components",
+    "react",
+    "guidelines",
+    "ui_kits",
+    "README.md",
+    "SKILL.md"
+  ],
+  "keywords": [
+    "design-system",
+    "design-tokens",
+    "react",
+    "css-variables",
+    "dark-mode",
+    "sports-league"
+  ],
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    }
+  }
+}

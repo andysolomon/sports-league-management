@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Generated design-system bundle (rebuilt by the compiler)
+_ds_bundle.js
+_ds_manifest.json
+_adherence.oxlintrc.json
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.log
+
+# Local working artifacts (not part of the system)
+*.standalone-src.html
+*-print-*.html
+uploads/

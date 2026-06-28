@@ -1,0 +1,3 @@
+/* Webfonts. Hanken Grotesk (UI + prose) and JetBrains Mono (data + keys).
+   Hosted via Google Fonts; the @font-face rules live in the imported sheet. */
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
