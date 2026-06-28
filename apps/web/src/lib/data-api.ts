@@ -98,6 +98,20 @@ export interface PlayoffBracketDto {
   matchups: PlayoffMatchupDto[];
 }
 
+/** Season stat-leaders (WSM-000186). */
+export interface StatLeaderEntry {
+  playerId: string;
+  playerName: string;
+  teamName: string;
+  jerseyNumber: number | null;
+  value: number;
+}
+export interface SeasonStatCategoryLeaders {
+  key: string;
+  label: string;
+  leaders: StatLeaderEntry[];
+}
+
 const refs = {
   getVisibleLeagueContext: queryRef<
     { orgIds: string[]; userId: string },
@@ -657,6 +671,10 @@ const refs = {
       attributesJson: string;
     }>
   >("sports:computeSeasonSprt"),
+  getSeasonStatLeaders: queryRef<
+    { seasonId: string },
+    SeasonStatCategoryLeaders[]
+  >("sports:getSeasonStatLeaders"),
   // Live game-state (WSM-000152, keystone v3)
   startLiveGame: mutationRef<
     { fixtureId: string; actorUserId: string },
@@ -1935,6 +1953,14 @@ export async function getPlayerSeasonTotals(
 ): Promise<{ stats: PlayerGameStatLine; gameCount: number }> {
   const res = await queryConvex(refs.getPlayerSeasonTotals, { playerId, seasonId });
   return { stats: parseStatLine(res.statsJson), gameCount: res.gameCount };
+}
+
+/** Season stat-leaders per category (WSM-000186). Server-side read; callers
+ *  resolve the season via getSeason first, which enforces league access. */
+export async function getSeasonStatLeaders(
+  seasonId: string,
+): Promise<SeasonStatCategoryLeaders[]> {
+  return queryConvex(refs.getSeasonStatLeaders, { seasonId });
 }
 
 export interface HsSprtRating {
