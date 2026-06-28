@@ -73,6 +73,8 @@ export default async function LeaguePlayoffsPage({
               seasonId={activeSeason.id}
               seasonName={activeSeason.name}
               hasBracket={bracket !== null}
+              defaultSize={activeSeason.playoffTeams}
+              defaultFormat={activeSeason.playoffFormat}
             />
           ) : null}
         </div>

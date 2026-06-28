@@ -185,7 +185,7 @@ describe("playoff bracket (WSM-000164)", () => {
     await expect(
       t.mutation(internal.sports.generatePlayoffBracket, {
         seasonId,
-        size: 6,
+        size: 1, // < 2 is invalid (any count ≥ 2 is now supported)
         actorUserId: "user_1",
       }),
     ).rejects.toThrow("invalid_bracket_size");
@@ -193,7 +193,7 @@ describe("playoff bracket (WSM-000164)", () => {
     await expect(
       t.mutation(internal.sports.generatePlayoffBracket, {
         seasonId,
-        size: 8,
+        size: 8, // only 4 teams seeded
         actorUserId: "user_1",
       }),
     ).rejects.toThrow("not_enough_teams");
@@ -234,5 +234,203 @@ describe("playoff bracket (WSM-000164)", () => {
     }));
     expect(counts.results).toBe(0);
     expect(counts.fixtures).toBe(2);
+  });
+});
+
+describe("playoff bracket — byes (WSM-flex-brackets)", () => {
+  it("a 6-team bracket gives the top 2 seeds first-round byes (no fixture)", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeague(t, 6);
+
+    const res = await t.mutation(internal.sports.generatePlayoffBracket, {
+      seasonId,
+      size: 6,
+      actorUserId: "user_1",
+    });
+    // Bracket rounds up to 8 → 3 rounds, 7 matchup nodes.
+    expect(res).toMatchObject({ size: 8, rounds: 3, matchups: 7 });
+
+    const r1 = await roundOneMatchups(t, seasonId);
+    const byes = r1.filter((m) => m.awayTeamId == null && m.homeTeamId != null);
+    const games = r1.filter((m) => m.awayTeamId != null);
+    expect(byes).toHaveLength(2); // seeds 1 and 2 get byes
+    expect(games).toHaveLength(2); // the other 4 teams play
+
+    // Bye matchups: winner pre-set, NO fixture spawned.
+    for (const b of byes) {
+      expect(b.winnerTeamId).toBe(b.homeTeamId);
+      expect(b.fixtureId).toBeNull();
+      expect(b.homeSeed).toBeLessThanOrEqual(2);
+    }
+    // Bye winners are already placed into their round-2 parent slots.
+    const all = await allMatchups(t, seasonId);
+    const r2WithBye = all.filter(
+      (m) => m.round === 2 && (m.homeTeamId != null || m.awayTeamId != null),
+    );
+    expect(r2WithBye.length).toBeGreaterThan(0);
+
+    // Only the two real round-1 games spawned fixtures.
+    const fixtures = await t.run(async (ctx) =>
+      (await ctx.db.query("fixtures").collect()).filter(
+        (f) => f.seasonId === seasonId,
+      ),
+    );
+    expect(fixtures).toHaveLength(2);
+  });
+
+  it("a bye team advances to play the winner of its sibling round-1 game", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeague(t, 6);
+    await t.mutation(internal.sports.generatePlayoffBracket, {
+      seasonId,
+      size: 6,
+      actorUserId: "user_1",
+    });
+
+    // Decide both real round-1 games (home wins).
+    const r1 = await roundOneMatchups(t, seasonId);
+    for (const m of r1.filter((x) => x.fixtureId)) {
+      await t.mutation(internal.sports.recordGameResult, {
+        fixtureId: m.fixtureId as Id<"fixtures">,
+        homeScore: 21,
+        awayScore: 7,
+        actorUserId: "user_1",
+      });
+    }
+
+    // Both round-2 (semifinal) matchups now have two teams + a fixture.
+    const r2 = (await allMatchups(t, seasonId)).filter((m) => m.round === 2);
+    expect(r2).toHaveLength(2);
+    for (const m of r2) {
+      expect(m.homeTeamId).not.toBeNull();
+      expect(m.awayTeamId).not.toBeNull();
+      expect(m.fixtureId).not.toBeNull();
+    }
+  });
+});
+
+describe("playoff bracket — double elimination (WSM-flex-brackets)", () => {
+  it("generates winners + losers brackets and a single grand final", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeague(t, 4);
+
+    const res = await t.mutation(internal.sports.generatePlayoffBracket, {
+      seasonId,
+      size: 4,
+      actorUserId: "user_1",
+      format: "double",
+    });
+    // WB(3) + LB(2) + GF(1) = 6 matchups for size 4.
+    expect(res).toMatchObject({ size: 4, rounds: 2, matchups: 6 });
+
+    const all = await allMatchups(t, seasonId);
+    const wb = all.filter((m) => m.bracketType === "winners");
+    const lb = all.filter((m) => m.bracketType === "losers");
+    const gf = all.filter((m) => m.bracketType === "grandFinal");
+    expect(wb).toHaveLength(3);
+    expect(lb).toHaveLength(2);
+    expect(gf).toHaveLength(1);
+
+    // WB round-1 matchups carry loser-routing into the LB.
+    const wbR1 = wb.filter((m) => m.round === 1);
+    for (const m of wbR1) {
+      expect(m.loserNextMatchupId).not.toBeNull();
+      expect(["home", "away"]).toContain(m.loserNextSlot);
+    }
+    // The bracket is recorded as double-elim.
+    const bracket = await t.run(async (ctx) =>
+      (await ctx.db.query("playoffBrackets").collect()).find(
+        (b) => b.seasonId === seasonId,
+      ),
+    );
+    expect(bracket?.format).toBe("double");
+  });
+
+  it("WB losers drop into the losers bracket and the LB resolves to the grand final", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeague(t, 4);
+    await t.mutation(internal.sports.generatePlayoffBracket, {
+      seasonId,
+      size: 4,
+      actorUserId: "user_1",
+      format: "double",
+    });
+
+    // Play the two WB semifinals — home wins both, so two losers drop to LB r1.
+    const wbSemis = (await allMatchups(t, seasonId)).filter(
+      (m) => m.bracketType === "winners" && m.round === 1,
+    );
+    for (const m of wbSemis) {
+      await t.mutation(internal.sports.recordGameResult, {
+        fixtureId: m.fixtureId as Id<"fixtures">,
+        homeScore: 24,
+        awayScore: 10,
+        actorUserId: "user_1",
+      });
+    }
+
+    // LB round 1 now holds both WB losers and has a spawned fixture.
+    let all = await allMatchups(t, seasonId);
+    const lbR1 = all.filter((m) => m.bracketType === "losers" && m.round === 1);
+    expect(lbR1).toHaveLength(1);
+    expect(lbR1[0].homeTeamId).not.toBeNull();
+    expect(lbR1[0].awayTeamId).not.toBeNull();
+    expect(lbR1[0].fixtureId).not.toBeNull();
+    // WB losers are exactly the away teams of the two semifinals.
+    const wbLoserIds = new Set(wbSemis.map((m) => m.awayTeamId));
+    expect(wbLoserIds.has(lbR1[0].homeTeamId)).toBe(true);
+    expect(wbLoserIds.has(lbR1[0].awayTeamId)).toBe(true);
+
+    // Decide the WB final and the LB r1 game → both feed the LB final / GF.
+    const wbFinal = all.find(
+      (m) => m.bracketType === "winners" && m.round === 2,
+    )!;
+    await t.mutation(internal.sports.recordGameResult, {
+      fixtureId: wbFinal.fixtureId as Id<"fixtures">,
+      homeScore: 30,
+      awayScore: 13,
+      actorUserId: "user_1",
+    });
+    await t.mutation(internal.sports.recordGameResult, {
+      fixtureId: lbR1[0].fixtureId as Id<"fixtures">,
+      homeScore: 17,
+      awayScore: 14,
+      actorUserId: "user_1",
+    });
+
+    all = await allMatchups(t, seasonId);
+    const lbFinal = all.find((m) => m.bracketType === "losers" && m.round === 2)!;
+    // LB final = LB r1 winner (home) vs WB final loser (away).
+    expect(lbFinal.homeTeamId).toBe(lbR1[0].homeTeamId);
+    expect(lbFinal.awayTeamId).toBe(wbFinal.awayTeamId);
+    expect(lbFinal.fixtureId).not.toBeNull();
+
+    // Grand final has the WB champion in the home slot already.
+    const gf = all.find((m) => m.bracketType === "grandFinal")!;
+    expect(gf.homeTeamId).toBe(wbFinal.homeTeamId);
+
+    // Decide the LB final → its winner fills the grand-final away slot + a game.
+    await t.mutation(internal.sports.recordGameResult, {
+      fixtureId: lbFinal.fixtureId as Id<"fixtures">,
+      homeScore: 20,
+      awayScore: 19,
+      actorUserId: "user_1",
+    });
+    all = await allMatchups(t, seasonId);
+    const gf2 = all.find((m) => m.bracketType === "grandFinal")!;
+    expect(gf2.homeTeamId).toBe(wbFinal.homeTeamId);
+    expect(gf2.awayTeamId).toBe(lbFinal.homeTeamId);
+    expect(gf2.fixtureId).not.toBeNull();
+
+    // Decide the grand final → a champion (the WB champ here).
+    await t.mutation(internal.sports.recordGameResult, {
+      fixtureId: gf2.fixtureId as Id<"fixtures">,
+      homeScore: 31,
+      awayScore: 28,
+      actorUserId: "user_1",
+    });
+    all = await allMatchups(t, seasonId);
+    const champGf = all.find((m) => m.bracketType === "grandFinal")!;
+    expect(champGf.winnerTeamId).toBe(wbFinal.homeTeamId);
   });
 });

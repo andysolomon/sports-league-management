@@ -54,3 +54,80 @@ export function winnerSide(
   if (m.winnerTeamId === m.awayTeamId) return "away";
   return null;
 }
+
+/*
+ * Double-elimination presentation helpers (WSM-flex-brackets). A double-elim
+ * bracket carries `bracketType` per matchup; the UI renders three regions:
+ * the winners bracket (single-elim layout), the losers bracket, and a single
+ * grand final.
+ */
+
+export interface BracketSection {
+  /** "winners" | "losers" | "grandFinal" */
+  type: string;
+  title: string;
+  rounds: BracketRound[];
+}
+
+/** Generic round label for the losers bracket (no fixed "Final/Semis" names). */
+function loserRoundLabel(round: number, totalRounds: number): string {
+  return round === totalRounds ? "Losers Final" : `Losers R${round}`;
+}
+
+/**
+ * Split a (single- or double-elim) bracket into ordered display sections.
+ * Single-elim → one untitled "winners" section using the standard round names.
+ * Double-elim → winners bracket, losers bracket, and the grand final.
+ */
+export function bracketSections(
+  matchups: PlayoffMatchupDto[],
+  wbRounds: number,
+  format: string,
+): BracketSection[] {
+  if (format !== "double") {
+    return [
+      {
+        type: "winners",
+        title: "",
+        rounds: groupMatchupsByRound(matchups, wbRounds),
+      },
+    ];
+  }
+
+  const wb = matchups.filter((m) => (m.bracketType ?? "winners") === "winners");
+  const lb = matchups.filter((m) => m.bracketType === "losers");
+  const gf = matchups.filter((m) => m.bracketType === "grandFinal");
+
+  const sections: BracketSection[] = [
+    {
+      type: "winners",
+      title: "Winners Bracket",
+      rounds: groupMatchupsByRound(wb, wbRounds),
+    },
+  ];
+
+  if (lb.length > 0) {
+    const lbRounds = Math.max(...lb.map((m) => m.round));
+    const rounds: BracketRound[] = [];
+    for (let round = 1; round <= lbRounds; round++) {
+      rounds.push({
+        round,
+        label: loserRoundLabel(round, lbRounds),
+        matchups: lb
+          .filter((m) => m.round === round)
+          .sort((a, b) => a.slot - b.slot),
+      });
+    }
+    sections.push({ type: "losers", title: "Losers Bracket", rounds });
+  }
+
+  if (gf.length > 0) {
+    sections.push({
+      type: "grandFinal",
+      title: "Grand Final",
+      rounds: [{ round: 1, label: "Grand Final", matchups: gf }],
+    });
+  }
+
+  return sections;
+}
