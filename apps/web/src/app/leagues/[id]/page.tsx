@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { cache } from "react";
 import type { PlayerDto, TeamDto } from "@sports-management/shared-types";
-import { playerAttributesV1, schedulesStandingsV1 } from "@/lib/flags";
+import {
+  playerAttributesV1,
+  schedulesStandingsV1,
+  statKeepingV1,
+} from "@/lib/flags";
 import {
   getPlayers,
   getPublicLeagueImportTree,
@@ -68,9 +72,10 @@ export default async function PublicLeagueLandingPage({
   const league = await getPublicLeague(leagueId);
   if (!league) notFound();
 
-  const [standingsOn, attributesOn] = await Promise.all([
+  const [standingsOn, attributesOn, statsOn] = await Promise.all([
     schedulesStandingsV1(),
     playerAttributesV1(),
+    statKeepingV1(),
   ]);
 
   // Schedule shares the schedules_standings_v1 flag with standings. Surfacing
@@ -137,6 +142,19 @@ export default async function PublicLeagueLandingPage({
                 <CardTitle>Standings</CardTitle>
                 <CardDescription>
                   Season records, points for/against, and rankings.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+        ) : null}
+
+        {statsOn ? (
+          <Link href={`/leagues/${leagueId}/stats`} className="group">
+            <Card className="h-full transition-colors group-hover:border-primary">
+              <CardHeader>
+                <CardTitle>Stat leaders</CardTitle>
+                <CardDescription>
+                  Season passing, rushing, receiving, and defensive leaders.
                 </CardDescription>
               </CardHeader>
             </Card>
