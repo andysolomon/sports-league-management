@@ -1,0 +1,20 @@
+/* ============================================================
+   SPACING + SHAPE TOKENS
+   4px base grid. Radius is its own axis ([data-round]).
+   ============================================================ */
+:root {
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --space-8:32px;
+  --space-10:40px;
+
+  /* radius — control vs card */
+  --r:10px;
+  --r-lg:14px;
+}
+[data-round='sharp'] { --r:6px;  --r-lg:9px;  }
+[data-round='soft']  { --r:14px; --r-lg:20px; }

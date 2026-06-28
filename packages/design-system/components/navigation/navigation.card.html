@@ -1,0 +1,31 @@
+<!-- @dsCard group="Components" viewport="700x250" name="Navigation" subtitle="Nav, tabs, segmented, breadcrumb" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0}.sl-root{padding:22px;background:var(--bg);display:grid;grid-template-columns:200px 1fr;gap:24px}.stack{display:flex;flex-direction:column;gap:14px;min-width:0}</style>
+</head>
+<body>
+<div class="sl-root" data-theme="dark" data-accent="green">
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <button class="sl-nav"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>Overview</button>
+    <button class="sl-nav is-active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-2 5-4 1 2-5z"/></svg>Discover</button>
+    <button class="sl-nav"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6"/><path d="M20.5 20a5 5 0 0 0-4-4.9"/></svg>Teams</button>
+  </div>
+  <div class="stack">
+    <nav style="display:flex;align-items:center;gap:8px;font:500 13px/1 var(--font-sans);color:var(--text-muted)"><span>Dashboard</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg><span style="color:var(--text)">Discover</span></nav>
+    <div class="sl-tabs">
+      <button class="sl-tab is-active">Roster</button>
+      <button class="sl-tab">Schedule</button>
+      <button class="sl-tab">Depth Chart</button>
+    </div>
+    <div class="sl-segmented" style="align-self:flex-start">
+      <button class="sl-segmented__item is-active">Active</button>
+      <button class="sl-segmented__item">Completed</button>
+      <button class="sl-segmented__item">Upcoming</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
