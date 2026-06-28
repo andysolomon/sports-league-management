@@ -31,6 +31,7 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@sports-management/api-contracts": "workspace:*",
+    "@sports-management/design-system": "workspace:*",
     "@sports-management/shared-types": "workspace:*",
     "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.7.1",
