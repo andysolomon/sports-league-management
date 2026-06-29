@@ -28,7 +28,7 @@ export function SeasonStatsCard({
     <Card className="mt-6">
       <CardContent className="pt-6">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-lg font-semibold text-foreground">Season stats</h3>
+          <h3 className="text-heading-18 text-foreground">Season stats</h3>
           <span className="text-sm text-muted-foreground">
             {seasonName} · {gameCount} game{gameCount === 1 ? "" : "s"}
           </span>
@@ -42,13 +42,15 @@ export function SeasonStatsCard({
           <div className="mt-4 space-y-4">
             {groups.map(({ def, groupStats, fields }) => (
               <div key={def.key}>
-                <p className="mb-1.5 text-xs font-semibold text-foreground">
+                <p className="mb-1.5 text-caption-12 font-semibold uppercase tracking-wide text-foreground">
                   {def.label}
                 </p>
                 <dl className="flex flex-wrap gap-x-5 gap-y-1.5">
                   {fields.map((f) => (
                     <div key={f.key} className="flex items-baseline gap-1.5">
-                      <dt className="text-xs text-muted-foreground">{f.label}</dt>
+                      <dt className="text-caption-12 uppercase tracking-wide text-muted-foreground">
+                        {f.label}
+                      </dt>
                       <dd className="font-mono text-sm font-medium tabular-nums text-foreground">
                         {groupStats?.[f.key]}
                       </dd>

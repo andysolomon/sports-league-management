@@ -180,7 +180,7 @@ export default function StatsEntry({
                         </span>
                       </span>
                       {isSaved && (
-                        <Badge variant="secondary" className="gap-1">
+                        <Badge variant="success" className="gap-1">
                           <Check className="h-3 w-3" /> Entered
                         </Badge>
                       )}
@@ -198,7 +198,7 @@ export default function StatsEntry({
                           if (!def) return null;
                           return (
                             <div key={groupKey}>
-                              <p className="mb-1.5 text-xs font-semibold text-foreground">
+                              <p className="mb-1.5 text-caption-12 font-semibold uppercase tracking-wide text-foreground">
                                 {def.label}
                               </p>
                               <div className="flex flex-wrap gap-3">
@@ -210,7 +210,7 @@ export default function StatsEntry({
                                       key={f.key}
                                       className="flex flex-col gap-1"
                                     >
-                                      <span className="text-[11px] text-muted-foreground">
+                                      <span className="text-caption-12 uppercase tracking-wide text-muted-foreground">
                                         {f.label}
                                       </span>
                                       <input
@@ -228,7 +228,7 @@ export default function StatsEntry({
                                               : Number(e.target.value),
                                           )
                                         }
-                                        className="h-10 w-16 rounded-md border border-input bg-background px-2 text-center text-sm tabular-nums outline-none focus:border-primary"
+                                        className="h-10 w-16 rounded-md border border-input bg-background px-2 text-center font-mono text-sm tabular-nums outline-none focus:border-primary"
                                       />
                                     </label>
                                   );
