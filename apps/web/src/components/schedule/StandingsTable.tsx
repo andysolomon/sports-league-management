@@ -17,16 +17,32 @@ export default function StandingsTable({ rows }: StandingsTableProps) {
     <div className="w-full overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b-2 border-border bg-muted text-left text-foreground">
-            <th className="px-4 py-2 font-mono text-xs uppercase">Rank</th>
-            <th className="px-4 py-2 font-mono text-xs uppercase">Team</th>
-            <th className="px-4 py-2 text-right font-mono text-xs uppercase">W</th>
-            <th className="px-4 py-2 text-right font-mono text-xs uppercase">L</th>
-            <th className="px-4 py-2 text-right font-mono text-xs uppercase">T</th>
-            <th className="px-4 py-2 text-right font-mono text-xs uppercase">PF</th>
-            <th className="px-4 py-2 text-right font-mono text-xs uppercase">PA</th>
-            <th className="px-4 py-2 text-right font-mono text-xs uppercase">+/−</th>
-            <th className="px-4 py-2 text-right font-mono text-xs uppercase">
+          <tr className="border-b-2 border-border bg-muted text-left">
+            <th className="px-4 py-2 font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              Rank
+            </th>
+            <th className="px-4 py-2 font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              Team
+            </th>
+            <th className="px-4 py-2 text-right font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              W
+            </th>
+            <th className="px-4 py-2 text-right font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              L
+            </th>
+            <th className="px-4 py-2 text-right font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              T
+            </th>
+            <th className="px-4 py-2 text-right font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              PF
+            </th>
+            <th className="px-4 py-2 text-right font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              PA
+            </th>
+            <th className="px-4 py-2 text-right font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              +/−
+            </th>
+            <th className="px-4 py-2 text-right font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
               Div Rank
             </th>
           </tr>
@@ -36,27 +52,27 @@ export default function StandingsTable({ rows }: StandingsTableProps) {
             const diff = row.pointsFor - row.pointsAgainst;
             return (
               <tr key={row.teamId} className="border-b border-border">
-                <td className="px-4 py-2 font-mono text-foreground">
+                <td className="px-4 py-2 font-mono tabular-nums text-foreground">
                   {row.leagueRank}
                 </td>
                 <td className="px-4 py-2 text-foreground">{row.teamName}</td>
-                <td className="px-4 py-2 text-right font-mono text-foreground">
+                <td className="px-4 py-2 text-right font-mono tabular-nums text-foreground">
                   {row.wins}
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-foreground">
+                <td className="px-4 py-2 text-right font-mono tabular-nums text-foreground">
                   {row.losses}
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-foreground">
+                <td className="px-4 py-2 text-right font-mono tabular-nums text-foreground">
                   {row.ties}
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-foreground">
+                <td className="px-4 py-2 text-right font-mono tabular-nums text-foreground">
                   {row.pointsFor}
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-foreground">
+                <td className="px-4 py-2 text-right font-mono tabular-nums text-foreground">
                   {row.pointsAgainst}
                 </td>
                 <td
-                  className={`px-4 py-2 text-right font-mono ${
+                  className={`px-4 py-2 text-right font-mono tabular-nums ${
                     diff > 0
                       ? "text-accent"
                       : diff < 0
@@ -67,7 +83,7 @@ export default function StandingsTable({ rows }: StandingsTableProps) {
                   {diff > 0 ? "+" : ""}
                   {diff}
                 </td>
-                <td className="px-4 py-2 text-right font-mono text-muted-foreground">
+                <td className="px-4 py-2 text-right font-mono tabular-nums text-muted-foreground">
                   {row.divisionRank}
                 </td>
               </tr>

@@ -142,10 +142,10 @@ export function SimulateChampionButton({
         ].filter(Boolean);
         toast.success(
           res.champion
-            ? `🏆 ${res.champion} wins! Simulated ${parts.join(" + ")}.`
+            ? `${res.champion} wins — simulated ${parts.join(" + ")}`
             : parts.length > 0
-              ? `Simulated ${parts.join(" + ")}.`
-              : "Nothing left to simulate.",
+              ? `Simulated ${parts.join(" + ")}`
+              : "Nothing left to simulate",
         );
         router.refresh();
       } else {
