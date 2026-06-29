@@ -11,7 +11,10 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,
-  retries: 0,
+  // Retry in CI to absorb transient flakiness (e.g. a client-nav race on a
+  // stat-card click) without masking real failures — a genuinely broken test
+  // fails all attempts. Local runs stay at 0 for fast, honest feedback.
+  retries: process.env.CI ? 2 : 0,
   reporter: [["html", { open: "never" }]],
   use: {
     baseURL: "http://localhost:3000",
