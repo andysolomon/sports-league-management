@@ -87,6 +87,15 @@ jobs:
         if: steps.secrets.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
+      # api-contracts ships from built ./dist (tsc), unlike the src-export
+      # workspace packages. `pnpm dev` (no turbo) won't build it, so without this
+      # Next fails the players/teams routes with "Module not found:
+      # @sports-management/api-contracts" — the error boundary then bounces the
+      # data specs (WSM-000172).
+      - name: Build workspace packages (api-contracts)
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/api-contracts build
+
       # Push the PR's Convex functions to the shared dev deployment so the
       # backend matches the code under test (WSM-000172). Uses the admin key +
       # URL (self-hosted addressing); CONVEX_DEPLOYMENT must be UNSET here or
@@ -170,6 +179,12 @@ jobs:
       - name: Install dependencies
         if: steps.secrets.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
+
+      # See the blocking job: api-contracts ships built dist, so `pnpm dev` needs
+      # it built first or routes that import it 500.
+      - name: Build workspace packages (api-contracts)
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/api-contracts build
 
       - name: Install Playwright browser
         if: steps.secrets.outputs.run == 'true'
