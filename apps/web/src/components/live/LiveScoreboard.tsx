@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Flag, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   startLiveGameAction,
   addLiveScoreAction,
@@ -112,9 +113,16 @@ export default function LiveScoreboard({
           <div className="flex items-center justify-around gap-4 text-center">
             <ScoreCol name={homeTeamName} score={state.homeScore} />
             <div className="text-xs uppercase tracking-wider text-muted-foreground">
-              <div className="font-semibold text-foreground">
-                {statusLabel(state.status)}
-              </div>
+              {state.status === "in_progress" ? (
+                <Badge variant="success" className="gap-1.5">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-current" />
+                  Live
+                </Badge>
+              ) : (
+                <div className="font-semibold text-foreground">
+                  {statusLabel(state.status)}
+                </div>
+              )}
               <div className="mt-1">Period {state.period}</div>
               {state.clock ? (
                 <div className="mt-1 font-mono tabular-nums">{state.clock}</div>
@@ -217,7 +225,7 @@ function ScoreCol({ name, score }: { name: string; score: number }) {
       <div className="truncate text-sm font-medium text-muted-foreground">
         {name}
       </div>
-      <div className="text-5xl font-bold tabular-nums text-foreground">
+      <div className="font-mono text-5xl font-bold tabular-nums text-foreground">
         {score}
       </div>
     </div>

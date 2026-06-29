@@ -45,7 +45,7 @@ export default function PublicLiveScore({
             <p className="truncate text-sm text-muted-foreground">
               {homeTeamName}
             </p>
-            <p className="text-5xl font-bold tabular-nums text-foreground">
+            <p className="font-mono text-5xl font-bold tabular-nums text-foreground">
               {live.homeScore}
             </p>
           </div>
@@ -62,7 +62,7 @@ export default function PublicLiveScore({
             <p className="truncate text-sm text-muted-foreground">
               {awayTeamName}
             </p>
-            <p className="text-5xl font-bold tabular-nums text-foreground">
+            <p className="font-mono text-5xl font-bold tabular-nums text-foreground">
               {live.awayScore}
             </p>
           </div>

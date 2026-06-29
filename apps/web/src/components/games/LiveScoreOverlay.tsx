@@ -50,7 +50,7 @@ export default function LiveScoreOverlay({
     >
       <div className="flex items-stretch overflow-hidden rounded-md bg-black/75 text-xs font-medium text-white shadow-lg backdrop-blur-sm">
         <div className="flex items-center gap-1.5 px-2.5 py-1.5">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
           <span className="tabular-nums">
             <span className="text-white/70">{abbreviateTeam(homeTeamName)}</span>{" "}
             <span className="font-bold">{live.homeScore}</span>
