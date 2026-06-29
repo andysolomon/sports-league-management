@@ -108,3 +108,27 @@ test.describe("Team Detail Page", () => {
     ).toHaveCount(0);
   });
 });
+
+// Regression for WSM-000190: a bad/legacy team id (e.g. a Salesforce id leaking
+// in via a stale link) used to crash the page with an unhandled
+// ArgumentValidationError from Convex's `v.id("teams")` validator → 500. The
+// route must now 404 instead. No fixture/active-league needed — a bad id 404s
+// regardless of seeded data; just an authed session.
+test.describe("Team Detail Page — invalid id", () => {
+  test.beforeEach(async ({ page }) => {
+    await setupClerkTestingToken({ page });
+  });
+
+  test("a Salesforce-format team id returns 404, not 500", async ({ page }) => {
+    // The exact 18-char SF id from the prod runtime log (WSM-000190).
+    const resp = await page.goto("/dashboard/teams/a00bm00001npL2UAAU");
+    expect(resp?.status()).toBe(404);
+  });
+
+  test("an arbitrary malformed team id returns 404", async ({ page }) => {
+    // Any id that doesn't resolve to a team (validation failure or unknown id)
+    // must 404 — the guard catches both and falls through to notFound().
+    const resp = await page.goto("/dashboard/teams/not-a-real-team-id");
+    expect(resp?.status()).toBe(404);
+  });
+});
