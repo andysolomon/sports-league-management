@@ -1,6 +1,6 @@
 name: E2E
 
-# Playwright end-to-end suite for apps/web (WSM-000141).
+# Playwright end-to-end suite for apps/web (WSM-000141, stabilized in WSM-000172).
 #
 # Safe-by-default: the suite needs a seedable Convex dev deployment + a Clerk
 # test instance, so this job is GATED on repo secrets. When they're absent the
@@ -10,12 +10,21 @@ name: E2E
 #
 # Required repo SECRETS:
 #   CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-#   CONVEX_ADMIN_KEY (the DEV deployment's admin/deploy key — used to seed),
+#   CONVEX_ADMIN_KEY (the DEV deployment's admin/deploy key — used to deploy
+#     functions AND to seed),
 #   E2E_CLERK_USER_ID, E2E_CLERK_USER_ID_B, E2E_CLERK_ORG_ID, E2E_CLERK_ORG_ID_B
 # Required repo VARIABLES (non-secret):
 #   NEXT_PUBLIC_CONVEX_URL, NEXT_PUBLIC_CONVEX_SITE_URL, CONVEX_DEPLOYMENT
 # Also: set CONVEX_ENABLE_E2E_SEED=1 on the target Convex DEV deployment so the
 # internal e2eSeed mutations accept fixture calls.
+#
+# WSM-000172: the suite kept failing because the shared dev Convex deployment
+# drifted behind main (a player-validator change shipped in code but was never
+# pushed to dev → data-dependent 500s on the dashboard, which bounced the health
+# gate and skipped everything). The "Deploy Convex functions to dev" step pushes
+# the PR's functions before testing, so the backend always matches the code under
+# test. Visual regression is a separate, non-blocking job (its OS-specific
+# screenshot baselines aren't committed for Linux, so it must not gate PRs).
 
 on:
   pull_request:
@@ -26,26 +35,28 @@ concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Dev server + specs read these from the process env (see e2e helpers).
+  NEXT_PUBLIC_CONVEX_URL: ${{ vars.NEXT_PUBLIC_CONVEX_URL }}
+  NEXT_PUBLIC_CONVEX_SITE_URL: ${{ vars.NEXT_PUBLIC_CONVEX_SITE_URL }}
+  CONVEX_DEPLOYMENT: ${{ vars.CONVEX_DEPLOYMENT }}
+  CONVEX_ADMIN_KEY: ${{ secrets.CONVEX_ADMIN_KEY }}
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+  CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+  NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+  NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  E2E_CLERK_USER_ID: ${{ secrets.E2E_CLERK_USER_ID }}
+  E2E_CLERK_USER_ID_B: ${{ secrets.E2E_CLERK_USER_ID_B }}
+  E2E_CLERK_ORG_ID: ${{ secrets.E2E_CLERK_ORG_ID }}
+  E2E_CLERK_ORG_ID_B: ${{ secrets.E2E_CLERK_ORG_ID_B }}
+
 jobs:
+  # Blocking suite: health gate → auth-gated chromium specs (api-auth runs
+  # unauthenticated within the chromium project and asserts 401). Gates PRs.
   playwright:
     name: Playwright (apps/web)
     runs-on: ubuntu-latest
-    env:
-      # Dev server + specs read these from the process env (see e2e helpers).
-      NEXT_PUBLIC_CONVEX_URL: ${{ vars.NEXT_PUBLIC_CONVEX_URL }}
-      NEXT_PUBLIC_CONVEX_SITE_URL: ${{ vars.NEXT_PUBLIC_CONVEX_SITE_URL }}
-      CONVEX_DEPLOYMENT: ${{ vars.CONVEX_DEPLOYMENT }}
-      CONVEX_ADMIN_KEY: ${{ secrets.CONVEX_ADMIN_KEY }}
-      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-      NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
-      NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
-      E2E_CLERK_USER_ID: ${{ secrets.E2E_CLERK_USER_ID }}
-      E2E_CLERK_USER_ID_B: ${{ secrets.E2E_CLERK_USER_ID_B }}
-      E2E_CLERK_ORG_ID: ${{ secrets.E2E_CLERK_ORG_ID }}
-      E2E_CLERK_ORG_ID_B: ${{ secrets.E2E_CLERK_ORG_ID_B }}
-
     steps:
       - name: Check e2e secrets
         id: secrets
@@ -76,23 +87,103 @@ jobs:
         if: steps.secrets.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
+      # Push the PR's Convex functions to the shared dev deployment so the
+      # backend matches the code under test (WSM-000172). Uses the admin key +
+      # URL (self-hosted addressing); CONVEX_DEPLOYMENT must be UNSET here or
+      # the CLI refuses the self-hosted form.
+      - name: Deploy Convex functions to dev
+        if: steps.secrets.outputs.run == 'true'
+        working-directory: apps/web
+        env:
+          CONVEX_DEPLOYMENT: ''
+          CONVEX_SELF_HOSTED_URL: ${{ vars.NEXT_PUBLIC_CONVEX_URL }}
+          CONVEX_SELF_HOSTED_ADMIN_KEY: ${{ secrets.CONVEX_ADMIN_KEY }}
+        run: pnpm exec convex deploy --yes
+
       - name: Install Playwright browser
         if: steps.secrets.outputs.run == 'true'
         run: pnpm --filter @sports-management/web exec playwright install --with-deps chromium
 
       - name: Run e2e (apps/web)
         if: steps.secrets.outputs.run == 'true'
-        # Run the functional projects only: `--project=chromium` auto-includes its
-        # `health` dependency. The `visual` project asserts against per-OS
-        # screenshot baselines and only darwin baselines are committed, so it can
-        # only run locally until Linux baselines are generated (WSM-000172 f/u).
-        run: pnpm --filter @sports-management/web test:e2e -- --project=chromium
+        # `test:e2e:ci` runs `--project=chromium`, which auto-includes its
+        # `health` dependency; the `visual` project runs in its own non-blocking
+        # job below. (A dedicated script avoids `pnpm … -- --project=…` arg
+        # forwarding mangling the flag into a positional "no tests found" filter.)
+        run: pnpm --filter @sports-management/web test:e2e:ci
+
+      # The HTML report is an artifact, invisible in the job log. Surface the
+      # failed-spec page snapshots inline so a red run is diagnosable from the
+      # log alone (the WSM-000172 run had to be reverse-engineered from the
+      # downloaded report).
+      - name: Print Playwright failures
+        if: ${{ failure() && steps.secrets.outputs.run == 'true' }}
+        working-directory: apps/web
+        run: |
+          echo "::group::Playwright failure page snapshots"
+          find test-results -name 'error-context.md' -print -exec sed -n '1,40p' {} \; 2>/dev/null || true
+          echo "::endgroup::"
 
       - name: Upload Playwright report
         if: ${{ always() && steps.secrets.outputs.run == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Visual regression: NON-BLOCKING. OS-specific screenshot baselines aren't
+  # committed for Linux, so a first run "fails" by writing actuals. continue-
+  # on-error keeps this off the required PR gate; the uploaded report lets a
+  # maintainer review/commit Linux baselines later (WSM-000172 / WSM-000082).
+  # No Convex/Clerk: the /dev/visual harness routes need only the dev server.
+  visual:
+    name: Visual regression (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Check convex var
+        id: secrets
+        run: |
+          if [ -z "${NEXT_PUBLIC_CONVEX_URL}" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.secrets.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        if: steps.secrets.outputs.run == 'true'
+        run: corepack enable
+
+      - name: Setup Node.js
+        if: steps.secrets.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/web exec playwright install --with-deps chromium
+
+      - name: Run visual regression
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/web test:visual
+
+      - name: Upload visual report
+        if: ${{ always() && steps.secrets.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-report
           path: apps/web/playwright-report
           retention-days: 7
           if-no-files-found: ignore

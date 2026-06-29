@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "test:e2e:ci": "playwright test --config e2e/playwright.config.ts --project=chromium",
     "test:e2e:headed": "playwright test --config e2e/playwright.config.ts --headed",
     "test:e2e:report": "playwright test --config e2e/playwright.config.ts --reporter=html && playwright show-report",
     "test:visual": "playwright test --config e2e/playwright.config.ts --project visual",
