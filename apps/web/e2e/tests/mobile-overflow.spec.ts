@@ -5,7 +5,6 @@ import {
   getTestOrgId,
   type RosterFixtureResult,
 } from "../helpers/seed-roster";
-import { signInTestUser } from "../helpers/clerk-signin";
 
 // WSM-000085: no dashboard page may scroll horizontally on a phone.
 // Wide tables must scroll inside their own container (overflow-x-auto),
@@ -53,7 +52,6 @@ test.describe.serial("Mobile — no horizontal page overflow (WSM-000085)", () =
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(PHONE);
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
   });
 
   test("dashboard overview fits the viewport", async ({ page }) => {

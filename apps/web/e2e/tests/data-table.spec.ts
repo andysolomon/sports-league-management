@@ -1,32 +1,32 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
-import { signInTestUser } from "../helpers/clerk-signin";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { PLAYERS } from "../helpers/test-data";
 
 test.describe("DataTable Interactions", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
     await page.goto("/dashboard/players");
     await expect(page.getByRole("heading", { name: "Players" })).toBeVisible();
   });
 
   test("search filters table rows", async ({ page }) => {
-    await page.getByPlaceholder("Search...").fill("Prescott");
+    await page.getByPlaceholder("Search players...").fill("Prescott");
     const rows = page.locator("tbody tr");
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText(PLAYERS.PRESCOTT.name);
   });
 
   test("search is case-insensitive", async ({ page }) => {
-    await page.getByPlaceholder("Search...").fill("PRESCOTT");
+    await page.getByPlaceholder("Search players...").fill("PRESCOTT");
     const rows = page.locator("tbody tr");
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText(PLAYERS.PRESCOTT.name);
   });
 
   test("search with no results shows empty state", async ({ page }) => {
-    await page.getByPlaceholder("Search...").fill("ZZZZNONEXISTENT");
+    await page.getByPlaceholder("Search players...").fill("ZZZZNONEXISTENT");
     await expect(page.getByText("No results found.")).toBeVisible();
     await expect(page.locator("tbody tr")).toHaveCount(1); // empty state row
   });

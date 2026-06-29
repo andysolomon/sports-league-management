@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
-import { signInTestUser } from "../helpers/clerk-signin";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { LEAGUES } from "../helpers/test-data";
 
 test.describe("Divisions Page", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
     await page.goto("/dashboard/divisions");
   });
 

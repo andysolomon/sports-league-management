@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
-import { signInTestUser } from "../helpers/clerk-signin";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { PLAYERS } from "../helpers/test-data";
 
 test.describe("Players Page", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
     await page.goto("/dashboard/players");
   });
 
@@ -22,30 +22,25 @@ test.describe("Players Page", () => {
     await expect(headers.nth(3)).toHaveText("Status");
   });
 
-  test("displays at least 12 player rows", async ({ page }) => {
-    const rows = page.locator("tbody tr");
-    await expect(rows.first()).toBeVisible();
-    expect(await rows.count()).toBeGreaterThanOrEqual(12);
+  test("shows the full active-league roster of 12", async ({ page }) => {
+    // The table paginates at 10/page, so assert the footer total rather than
+    // counting visible rows (WSM-000187).
+    await expect(page.getByText(/Showing 1–10 of 12/)).toBeVisible();
   });
 
   test("known players show correct data", async ({ page }) => {
+    // Search to surface each player — pagination (10/page) means some live on
+    // page 2, so filtering by name is how a user finds them (WSM-000187).
+    const search = page.getByPlaceholder("Search players...");
     const tbody = page.locator("tbody");
 
-    // Dak Prescott
-    const prescottRow = tbody.locator("tr", { hasText: PLAYERS.PRESCOTT.name });
-    await expect(prescottRow).toBeVisible();
-    await expect(prescottRow).toContainText(PLAYERS.PRESCOTT.position);
-    await expect(prescottRow).toContainText(String(PLAYERS.PRESCOTT.jersey));
-
-    // Jordan Morris
-    const morrisRow = tbody.locator("tr", { hasText: PLAYERS.MORRIS.name });
-    await expect(morrisRow).toBeVisible();
-    await expect(morrisRow).toContainText(PLAYERS.MORRIS.position);
-    await expect(morrisRow).toContainText(String(PLAYERS.MORRIS.jersey));
-
-    // Riqui Puig
-    const puigRow = tbody.locator("tr", { hasText: PLAYERS.PUIG.name });
-    await expect(puigRow).toBeVisible();
-    await expect(puigRow).toContainText(PLAYERS.PUIG.position);
+    for (const player of [PLAYERS.PRESCOTT, PLAYERS.MORRIS, PLAYERS.PUIG]) {
+      await search.fill(player.name);
+      const row = tbody.locator("tr", { hasText: player.name });
+      await expect(row).toBeVisible();
+      await expect(row).toContainText(player.position);
+      await expect(row).toContainText(String(player.jersey));
+      await search.clear();
+    }
   });
 });

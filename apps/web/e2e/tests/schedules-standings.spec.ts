@@ -5,7 +5,6 @@ import {
   type ScheduleFixtureResult,
 } from "../helpers/seed-schedule";
 import { getTestOrgId } from "../helpers/seed-roster";
-import { signInTestUser } from "../helpers/clerk-signin";
 
 /*
  * Schedules & standings (Phase 3 / WSM-000074) e2e smoke.
@@ -48,7 +47,6 @@ test.describe.serial(
 
     test.beforeEach(async ({ page }) => {
       await setupClerkTestingToken({ page });
-      await signInTestUser(page);
     });
 
     test("admin creates a fixture, records the result, standings update", async ({

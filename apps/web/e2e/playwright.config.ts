@@ -1,4 +1,10 @@
+import path from "node:path";
 import { defineConfig } from "@playwright/test";
+
+// Shared Clerk session persisted by auth.setup.ts and reused by authed projects
+// (WSM-000172). Resolved from the package cwd (apps/web), like the canonical
+// fixture handoff in seed-canonical.ts. Kept in sync with auth.setup.ts.
+const STORAGE_STATE = path.resolve("e2e", ".auth", "user.json");
 
 export default defineConfig({
   testDir: "./tests",
@@ -29,26 +35,38 @@ export default defineConfig({
   },
   globalSetup: "./global-setup.ts",
   projects: [
+    // Sign in ONCE and persist the Clerk session; authed projects reuse it via
+    // `storageState`. Replaces ~110 per-test ticket sign-ins that rate-limited
+    // Clerk's dev instance and timed out mid-run (WSM-000172). The session
+    // cookie auto-refreshes the short-lived JWT, so it survives the serial run.
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    // Signed-OUT API enforcement: its own project with NO storageState and NO
+    // setup dependency, so requests carry no session — asserts protected BFF
+    // routes return 401. (Sharing the chromium project would leak the session.)
+    {
+      name: "api",
+      testMatch: "api-auth.spec.ts",
+      use: { browserName: "chromium" },
+    },
     {
       name: "health",
       testMatch: "health.spec.ts",
-      use: { browserName: "chromium" },
+      use: { browserName: "chromium", storageState: STORAGE_STATE },
+      dependencies: ["setup"],
     },
     {
       name: "chromium",
-      // Auth-gated specs sign in per-test (setupClerkTestingToken +
-      // signInTestUser) rather than via a shared storageState: Clerk's
-      // dev-instance session JWT is short-lived, so a saved session goes stale
-      // partway through a serial suite (WSM-000172). api-auth runs
-      // unauthenticated here on purpose and asserts 401.
-      testIgnore: ["health.spec.ts", "visual-regression.spec.ts"],
-      use: { browserName: "chromium" },
-      dependencies: ["health"],
+      testIgnore: [
+        "health.spec.ts",
+        "visual-regression.spec.ts",
+        "api-auth.spec.ts",
+      ],
+      use: { browserName: "chromium", storageState: STORAGE_STATE },
+      dependencies: ["setup", "health"],
     },
     // Visual regression runs the pure-component harnesses (no Convex/auth),
-    // at a fixed viewport for deterministic screenshots. No health dependency:
-    // the harness routes need only the dev server (started by webServer), not
-    // an authenticated session like the smoke/data specs.
+    // at a fixed viewport for deterministic screenshots. No auth/state needed:
+    // the harness routes need only the dev server (started by webServer).
     {
       name: "visual",
       testMatch: "visual-regression.spec.ts",

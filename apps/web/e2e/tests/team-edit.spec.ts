@@ -1,12 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
-import { signInTestUser } from "../helpers/clerk-signin";
 import { TEAMS } from "../helpers/test-data";
 
 test.describe.serial("Team Edit", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
     // Navigate to Cowboys team detail page
     await page.goto("/dashboard/teams");
     await page.getByText(TEAMS.COWBOYS.name).click();

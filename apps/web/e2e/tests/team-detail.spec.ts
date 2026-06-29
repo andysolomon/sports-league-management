@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
-import { signInTestUser } from "../helpers/clerk-signin";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { TEAMS, PLAYERS } from "../helpers/test-data";
 
 test.describe("Team Detail Page", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
     // Navigate to Cowboys detail via the teams list
     await page.goto("/dashboard/teams");
     await page.locator("a", { hasText: TEAMS.COWBOYS.name }).click();
@@ -17,12 +17,22 @@ test.describe("Team Detail Page", () => {
   });
 
   test("shows team detail fields", async ({ page }) => {
-    await expect(page.getByText("City")).toBeVisible();
-    await expect(page.getByText(TEAMS.COWBOYS.city)).toBeVisible();
-    await expect(page.getByText("Stadium")).toBeVisible();
-    await expect(page.getByText(TEAMS.COWBOYS.stadium)).toBeVisible();
-    await expect(page.getByText("Founded")).toBeVisible();
-    await expect(page.getByText(String(TEAMS.COWBOYS.foundedYear))).toBeVisible();
+    // Detail fields render in a <dl>: <dt>City</dt><dd>Dallas</dd>, etc.
+    // Scope to the definition list and match exactly so the dd value "Dallas"
+    // doesn't collide with the "Dallas Cowboys" page heading (strict mode).
+    const details = page.locator("dl");
+    await expect(details.getByText("City", { exact: true })).toBeVisible();
+    await expect(
+      details.getByText(TEAMS.COWBOYS.city, { exact: true }),
+    ).toBeVisible();
+    await expect(details.getByText("Stadium", { exact: true })).toBeVisible();
+    await expect(
+      details.getByText(TEAMS.COWBOYS.stadium, { exact: true }),
+    ).toBeVisible();
+    await expect(details.getByText("Founded", { exact: true })).toBeVisible();
+    await expect(
+      details.getByText(String(TEAMS.COWBOYS.foundedYear), { exact: true }),
+    ).toBeVisible();
   });
 
   test("shows Player Roster section with count", async ({ page }) => {

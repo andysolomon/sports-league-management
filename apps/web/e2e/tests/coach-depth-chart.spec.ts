@@ -6,7 +6,6 @@ import {
   getTestOrgId,
   type RosterFixtureResult,
 } from "../helpers/seed-roster";
-import { signInTestUser } from "../helpers/clerk-signin";
 
 test.describe("Depth Chart (WSM-000007)", () => {
   test.beforeEach(async ({ page }) => {
@@ -65,7 +64,6 @@ test.describe.serial("Depth Chart — mobile touch targets (WSM-000085)", () => 
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize(PHONE);
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
   });
 
   test("drag handles render and meet the 44px touch target", async ({

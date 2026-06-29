@@ -5,7 +5,6 @@ import {
   getTestOrgId,
   type RosterFixtureResult,
 } from "../helpers/seed-roster";
-import { signInTestUser } from "../helpers/clerk-signin";
 
 /*
  * Player attributes (Phase 2 / WSM-000064) e2e smoke.
@@ -52,7 +51,6 @@ test.describe.serial(
 
     test.beforeEach(async ({ page }) => {
       await setupClerkTestingToken({ page });
-      await signInTestUser(page);
     });
 
     test("admin uploads canonical JSON; chart + table render the row", async ({

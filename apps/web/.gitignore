@@ -8,3 +8,9 @@ test-results/
 # Convex ai-files install (local tooling guidance, not source)
 /AGENTS.md
 /CLAUDE.md
+
+# e2e canonical fixture handoff (global-setup → specs), WSM-000187
+e2e/.canonical-fixture.json
+
+# e2e shared Clerk session persisted by auth.setup.ts, WSM-000172
+e2e/.auth/
