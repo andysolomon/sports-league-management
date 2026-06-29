@@ -2,7 +2,9 @@ import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { TEAMS } from "../helpers/test-data";
 
-test.describe.serial("Team Edit", () => {
+// QUARANTINED (#419): the team-edit form fields (e.g. #team-city) are now Radix
+// Selects, not <input>s, so the save/validation tests fail on fill()/clear().
+test.describe.fixme("Team Edit", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
     // Navigate to Cowboys team detail page

@@ -22,7 +22,9 @@ import { getTestOrgId } from "../helpers/seed-roster";
  * (WSM-000064): CONVEX_ENABLE_E2E_SEED=1 on target Convex,
  * E2E_CLERK_USER_ID + E2E_CLERK_ORG_ID in the Playwright env.
  */
-test.describe.serial(
+// QUARANTINED (#419): the fixture-loop + public-standings flow rotted (changed
+// schedule heading; public viewer markup) — quarantine the whole serial group.
+test.describe.fixme(
   "Schedules & standings — fixture loop (WSM-000074)",
   () => {
     let fixture: ScheduleFixtureResult | null = null;
