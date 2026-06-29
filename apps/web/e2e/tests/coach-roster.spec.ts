@@ -194,11 +194,14 @@ test.describe.serial(
       if (!fixture) test.skip();
       await page.goto(`/dashboard/teams/${fixture!.teamId}/roster`);
 
+      // The slots badge renders in both the desktop and mobile layouts (one is
+      // CSS-hidden), so scope to the visible instance to avoid a strict-mode
+      // clash on the duplicate aria-label.
       await expect(
-        page.getByLabel("2 of 2 roster slots used"),
+        page.getByLabel("2 of 2 roster slots used").filter({ visible: true }),
       ).toBeVisible();
       await expect(
-        page.getByRole("button", { name: "Add to Roster" }),
+        page.getByRole("button", { name: "Add to Roster" }).first(),
       ).toBeDisabled();
     });
   },
