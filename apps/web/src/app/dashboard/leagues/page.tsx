@@ -8,7 +8,13 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
-import { Trophy, BarChart3, CalendarDays, ListOrdered } from "lucide-react";
+import {
+  Trophy,
+  BarChart3,
+  CalendarDays,
+  ListOrdered,
+  Settings,
+} from "lucide-react";
 import { LeagueSwitcher } from "../_components/league-switcher";
 import {
   CreateLeagueButton,
@@ -129,6 +135,15 @@ export default async function LeaguesPage() {
               >
                 <ListOrdered className="h-4 w-4" />
                 Stat leaders
+              </Link>
+            ) : null}
+            {isAdmin ? (
+              <Link
+                href={`/dashboard/leagues/${activeLeague.id}`}
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                <Settings className="h-4 w-4" />
+                Manage
               </Link>
             ) : null}
           </div>
