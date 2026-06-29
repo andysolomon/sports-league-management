@@ -22,16 +22,24 @@ function nullableDate(value: string): string | null {
   return value.trim() === "" ? null : value;
 }
 
-/** Playoff setup fields shared by the create + edit season forms (WSM-000184).
- *  Single-elimination only for now; double-elim is a future option. */
+/** Bye-friendly playoff team counts (any value ≥ 2 is supported; the bracket
+ *  rounds up to the next power of two and gives top seeds first-round byes). */
+const PLAYOFF_TEAM_OPTIONS = [2, 4, 6, 8, 10, 12, 16] as const;
+
+/** Playoff setup fields shared by the create + edit season forms (WSM-000184,
+ *  WSM-flex-brackets: bye-friendly counts + single/double elimination). */
 function PlayoffConfigFields({
   playoffTeams,
   setPlayoffTeams,
+  playoffFormat,
+  setPlayoffFormat,
   divisionWinnersQualify,
   setDivisionWinnersQualify,
 }: {
   playoffTeams: number;
   setPlayoffTeams: (n: number) => void;
+  playoffFormat: string;
+  setPlayoffFormat: (f: string) => void;
   divisionWinnersQualify: boolean;
   setDivisionWinnersQualify: (b: boolean) => void;
 }) {
@@ -46,9 +54,24 @@ function PlayoffConfigFields({
           aria-label="Number of playoff teams"
         >
           <option value={0}>None</option>
-          <option value={4}>4 teams (single-elim)</option>
-          <option value={8}>8 teams (single-elim)</option>
-          <option value={16}>16 teams (single-elim)</option>
+          {PLAYOFF_TEAM_OPTIONS.map((n) => (
+            <option key={n} value={n}>
+              {n} teams
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex items-center gap-1 text-xs text-muted-foreground">
+        Format
+        <select
+          className={inputClass}
+          value={playoffFormat}
+          onChange={(e) => setPlayoffFormat(e.target.value)}
+          aria-label="Playoff format"
+          disabled={playoffTeams === 0}
+        >
+          <option value="single">Single elimination</option>
+          <option value="double">Double elimination</option>
         </select>
       </label>
       <label className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -70,6 +93,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [playoffTeams, setPlayoffTeams] = useState(8);
+  const [playoffFormat, setPlayoffFormat] = useState("single");
   const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -78,6 +102,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
     setStartDate("");
     setEndDate("");
     setPlayoffTeams(8);
+    setPlayoffFormat("single");
     setDivisionWinnersQualify(false);
     setOpen(false);
   }
@@ -92,6 +117,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
       startDate: nullableDate(startDate),
       endDate: nullableDate(endDate),
       playoffTeams,
+      playoffFormat,
       divisionWinnersQualify,
     });
     setBusy(false);
@@ -147,6 +173,8 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
       <PlayoffConfigFields
         playoffTeams={playoffTeams}
         setPlayoffTeams={setPlayoffTeams}
+        playoffFormat={playoffFormat}
+        setPlayoffFormat={setPlayoffFormat}
         divisionWinnersQualify={divisionWinnersQualify}
         setDivisionWinnersQualify={setDivisionWinnersQualify}
       />
@@ -223,6 +251,9 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
   const [startDate, setStartDate] = useState(season.startDate ?? "");
   const [endDate, setEndDate] = useState(season.endDate ?? "");
   const [playoffTeams, setPlayoffTeams] = useState(season.playoffTeams ?? 8);
+  const [playoffFormat, setPlayoffFormat] = useState(
+    season.playoffFormat ?? "single",
+  );
   const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(
     season.divisionWinnersQualify ?? false,
   );
@@ -252,6 +283,7 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
       startDate: nullableDate(startDate),
       endDate: nullableDate(endDate),
       playoffTeams,
+      playoffFormat,
       divisionWinnersQualify,
     });
     setBusy(false);
@@ -313,6 +345,8 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
         <PlayoffConfigFields
           playoffTeams={playoffTeams}
           setPlayoffTeams={setPlayoffTeams}
+          playoffFormat={playoffFormat}
+          setPlayoffFormat={setPlayoffFormat}
           divisionWinnersQualify={divisionWinnersQualify}
           setDivisionWinnersQualify={setDivisionWinnersQualify}
         />

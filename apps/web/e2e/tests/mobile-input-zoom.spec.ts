@@ -5,7 +5,6 @@ import {
   getTestOrgId,
   type RosterFixtureResult,
 } from "../helpers/seed-roster";
-import { signInTestUser } from "../helpers/clerk-signin";
 
 /*
  * WSM-000085: iOS Safari auto-zooms the page when you focus a form control
@@ -42,7 +41,6 @@ test.describe.serial("Mobile — no input auto-zoom on focus (WSM-000085)", () =
 
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
-    await signInTestUser(page);
   });
 
   test("roster search input renders at >= 16px (no iOS zoom)", async ({

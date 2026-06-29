@@ -83,13 +83,33 @@ export interface PlayoffMatchupDto {
   status: string | null;
   homeScore: number | null;
   awayScore: number | null;
+  /** "winners" | "losers" | "grandFinal" — null for single-elim brackets. */
+  bracketType: string | null;
+  /** First-round bye: the present team auto-advanced with no game. */
+  isBye: boolean;
 }
 
 export interface PlayoffBracketDto {
   bracketId: string;
   size: number;
   rounds: number;
+  /** "single" | "double". */
+  format: string;
   matchups: PlayoffMatchupDto[];
+}
+
+/** Season stat-leaders (WSM-000186). */
+export interface StatLeaderEntry {
+  playerId: string;
+  playerName: string;
+  teamName: string;
+  jerseyNumber: number | null;
+  value: number;
+}
+export interface SeasonStatCategoryLeaders {
+  key: string;
+  label: string;
+  leaders: StatLeaderEntry[];
 }
 
 const refs = {
@@ -545,6 +565,7 @@ const refs = {
       actorUserId: string;
       confirm?: boolean;
       divisionWinnersQualify?: boolean;
+      format?: string;
     },
     { bracketId: string; size: number; rounds: number; matchups: number }
   >("sports:generatePlayoffBracket"),
@@ -650,6 +671,14 @@ const refs = {
       attributesJson: string;
     }>
   >("sports:computeSeasonSprt"),
+  getSeasonStatLeaders: queryRef<
+    { seasonId: string },
+    SeasonStatCategoryLeaders[]
+  >("sports:getSeasonStatLeaders"),
+  getSeasonStatLeadersPublic: queryRef<
+    { leagueId: string },
+    { seasonName: string; categories: SeasonStatCategoryLeaders[] } | null
+  >("sports:getSeasonStatLeadersPublic"),
   // Live game-state (WSM-000152, keystone v3)
   startLiveGame: mutationRef<
     { fixtureId: string; actorUserId: string },
@@ -1742,6 +1771,7 @@ export async function generatePlayoffBracket(input: {
   actorUserId: string;
   confirm?: boolean;
   divisionWinnersQualify?: boolean;
+  format?: string;
 }): Promise<{
   bracketId: string;
   size: number;
@@ -1927,6 +1957,22 @@ export async function getPlayerSeasonTotals(
 ): Promise<{ stats: PlayerGameStatLine; gameCount: number }> {
   const res = await queryConvex(refs.getPlayerSeasonTotals, { playerId, seasonId });
   return { stats: parseStatLine(res.statsJson), gameCount: res.gameCount };
+}
+
+/** Season stat-leaders per category (WSM-000186). Server-side read; callers
+ *  resolve the season via getSeason first, which enforces league access. */
+export async function getSeasonStatLeaders(
+  seasonId: string,
+): Promise<SeasonStatCategoryLeaders[]> {
+  return queryConvex(refs.getSeasonStatLeaders, { seasonId });
+}
+
+/** Public stat-leaders for a league (fan-facing). Convex re-checks the league
+ *  is public and resolves the season; returns null if not public / no season. */
+export async function getSeasonStatLeadersPublic(
+  leagueId: string,
+): Promise<{ seasonName: string; categories: SeasonStatCategoryLeaders[] } | null> {
+  return queryConvex(refs.getSeasonStatLeadersPublic, { leagueId });
 }
 
 export interface HsSprtRating {

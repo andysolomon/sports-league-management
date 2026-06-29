@@ -14,7 +14,9 @@ the Clerk dashboard. Verify each with the preflight at the end.
 ## Prerequisites
 - Owner access to the Clerk dashboard and the DNS for `andrewsolomon.dev`.
 - Vercel CLI logged in (`vercel whoami`), linked to the `sprtsmng` project.
-- Google OAuth console access (the app offers Google sign-in).
+- Google OAuth console access **only if** you enable Google sign-in (the app
+  renders Clerk's prebuilt `<SignIn />`, which shows whatever methods the
+  instance has on — so step 3 is optional; step 4 email/password is required).
 
 ## Steps
 
@@ -29,15 +31,17 @@ In the prod instance → **Domains**, add `sprtsmng.andrewsolomon.dev`. Clerk li
 mail records). Add them at the DNS provider for `andrewsolomon.dev` and wait for
 Clerk to show **Verified** (can take minutes to hours).
 
-### 3. Configure Google OAuth for prod
-In the prod instance → **SSO connections → Google**, supply production Google
-OAuth client credentials and add Clerk's prod redirect URL to the Google console
-(the dev OAuth client won't work against the prod instance).
+### 3. Configure Google OAuth for prod (optional — only if you offer Google sign-in)
+If the dev instance has Google enabled and you want it in prod: prod instance →
+**SSO connections → Google**, supply production Google OAuth client credentials
+and add Clerk's prod redirect URL to the Google console (the dev OAuth client
+won't work against the prod instance). Skip this if you launch with
+email/password only — `<SignIn />` simply won't render a Google button.
 
-### 4. Confirm sign-in methods
+### 4. Confirm sign-in methods (required)
 Prod instance → **User & Authentication → Email/Password** — ensure password
-(and/or email-code) is enabled, matching the dev instance, so existing flows and
-the seeded test users work.
+is enabled (the seeded test users sign in with email + password, and the seed
+script requires it). Match whatever else the dev instance had on.
 
 ### 5. Swap the Vercel Production env vars
 Copy the prod **publishable** + **secret** keys, then overwrite the Production

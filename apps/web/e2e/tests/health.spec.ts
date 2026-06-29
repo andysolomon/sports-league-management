@@ -2,6 +2,10 @@ import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 
 test.describe("Health & Smoke Tests", () => {
+  // These assertions hit auth-gated surfaces (/dashboard, /api/leagues). The
+  // signed-in session comes from the shared `storageState` (auth.setup.ts) on
+  // the `health` project; here we only inject the per-page Clerk bot-bypass
+  // token. `health` gates the `chromium` project, so if it fails the suite skips.
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
   });

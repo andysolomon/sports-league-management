@@ -1,0 +1,156 @@
+<!-- @dsCard group="Dashboard" viewport="1280x720" name="Discover" subtitle="League discovery — sidebar, league cards, division accordions" -->
+<!-- @startingPoint section="Dashboard" subtitle="Full app shell: sidebar, topbar, league discovery" viewport="1280x720" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sports League — Discover</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  html,body{margin:0;height:100%}
+  .app{height:100%;display:flex;background:var(--bg)}
+  .side{width:212px;flex:none;border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;gap:4px}
+  .brand{display:flex;align-items:center;gap:9px;padding:4px 8px 16px}
+  .brand .tile{width:24px;height:24px;border-radius:7px;background:var(--primary);color:var(--primary-fg);display:flex;align-items:center;justify-content:center}
+  .brand .name{font:700 15px/1 var(--font-sans);letter-spacing:-.2px;color:var(--text)}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .top{display:flex;align-items:center;gap:12px;height:56px;flex:none;padding:0 22px;border-bottom:1px solid var(--border)}
+  .switcher{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--border);background:var(--surface);font:600 13px/1 var(--font-sans);color:var(--text)}
+  .content{flex:1;overflow:auto;padding:22px 26px}
+  .crumb{display:flex;align-items:center;gap:8px;font:500 13px/1 var(--font-sans);color:var(--text-muted);margin-bottom:12px}
+  .h1{margin:0;font:700 25px/1 var(--font-sans);letter-spacing:-.7px;color:var(--text)}
+  .lead{margin:8px 0 22px;font:400 14px/1.5 var(--font-sans);color:var(--text-muted);max-width:620px}
+  .lhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .ltitle{display:flex;align-items:center;gap:10px;color:var(--text)}
+  .ltitle .nm{font:700 18px/1 var(--font-sans)}
+  .div{border-top:1px solid var(--border)}
+  .div:first-of-type{border-top:none}
+  .drow{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 0;background:none;border:none;cursor:pointer;color:var(--text);font:inherit}
+  .dleft{display:flex;align-items:center;gap:9px}
+  .dname{font:700 15px/1 var(--font-sans)}
+  .dcount{font:500 13px/1 var(--font-sans);color:var(--text-subtle)}
+  .added-lbl{display:inline-flex;align-items:center;gap:5px;color:var(--accent);font:600 12px/1 var(--font-sans)}
+  .teams{display:none;grid-template-columns:1fr 1fr;gap:12px;margin:2px 0 12px}
+  .div.open .teams{display:grid}
+  .div.open .chev{transform:rotate(180deg)}
+  .chev{transition:transform .15s ease;color:var(--text-muted);display:inline-flex}
+  .chip{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg)}
+  .chip .tn{font:600 14px/1 var(--font-sans);color:var(--text)}
+  svg{display:block}
+</style>
+</head>
+<body>
+<div class="app sl-root" id="app" data-theme="dark" data-accent="green" data-round="default">
+  <aside class="side" id="nav"></aside>
+  <div class="main">
+    <div class="top">
+      <div class="switcher">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 0 12 0V4H6Z"/><path d="M9 20h6M12 14v6"/></svg>
+        Cobb County Football
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 9 4-4 4 4M8 15l4 4 4-4"/></svg>
+      </div>
+      <label class="sl-search" style="flex:1;max-width:360px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-3.6-3.6"/></svg>
+        <input placeholder="Search…"><span class="sl-kbd">⌘K</span>
+      </label>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <button class="sl-iconbtn" id="themeBtn" aria-label="Toggle theme"></button>
+        <span class="sl-avatar">AS</span>
+      </div>
+    </div>
+    <div class="content">
+      <nav class="crumb"><span>Dashboard</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg><span style="color:var(--text)">Discover</span></nav>
+      <h1 class="h1">Discover Leagues</h1>
+      <p class="lead">Browse leagues and add teams to your dashboard. Each team you add becomes your own private copy to manage.</p>
+      <div id="leagues"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var ICON = {
+    trophy:'<path d="M6 9a6 6 0 0 0 12 0V4H6Z"/><path d="M9 20h6M12 14v6"/>',
+    grid:'<rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/>',
+    compass:'<circle cx="12" cy="12" r="9"/><path d="m15 9-2 5-4 1 2-5z"/>',
+    users:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 6.2a3 3 0 0 1 0 5.6"/><path d="M20.5 20a5 5 0 0 0-4-4.9"/>',
+    target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/>',
+    calendar:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/>',
+    layers:'<path d="m12 3 9 5-9 5-9-5Z"/><path d="m3 13 9 5 9-5"/>',
+    upload:'<path d="M12 15V3M8 7l4-4 4 4"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/>',
+    card:'<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    x:'<path d="M18 6 6 18M6 6l12 12"/>',
+    checkc:'<circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/>',
+    chevd:'<path d="m6 9 6 6 6-6"/>',
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"/>',
+    moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>'
+  };
+  function svg(name, size, sw){
+    return '<svg width="'+(size||16)+'" height="'+(size||16)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round">'+ICON[name]+'</svg>';
+  }
+
+  var NAV = [['grid','Overview'],['compass','Discover',1],['users','Teams'],['target','Players'],['calendar','Seasons'],['layers','Divisions'],['upload','Import'],['card','Billing']];
+  var nav = document.getElementById('nav');
+  nav.innerHTML = '<div class="brand"><span class="tile">'+svg('trophy',14,2.4)+'</span><span class="name">Sports League</span></div>' +
+    NAV.map(function(n){ return '<button class="sl-nav'+(n[2]?' is-active':'')+'">'+svg(n[0],18)+n[1]+'</button>'; }).join('');
+
+  var LEAGUES = [
+    { name:'Cobb County Football', addAll:false, divisions:[
+      { name:'Class 4A', teams:['Allatoona','Kell'], all:true, open:true },
+      { name:'Class 5A', teams:['Harrison','Hillgrove','Kennesaw Mtn'], all:true },
+      { name:'Class 6A', teams:['Marietta','Walton','Lassiter','Pope'], all:false }
+    ]},
+    { name:'NFL', addAll:true, divisions:[
+      { name:'AFC East', teams:['Bills','Dolphins','Patriots','Jets'], all:false },
+      { name:'AFC North', teams:['Ravens','Bengals','Browns','Steelers'], all:false }
+    ]}
+  ];
+
+  function teamChip(t, added){
+    return '<div class="chip"><span class="tn">'+t+'</span>'+
+      (added
+        ? '<span style="display:flex;align-items:center;gap:8px"><span class="added-lbl">'+svg('checkc',13,2.4)+'Added</span><button class="sl-iconbtn js-rm" style="width:26px;height:26px">'+svg('x',13,2)+'</button></span>'
+        : '<button class="sl-btn sl-btn--secondary sl-btn--sm js-add">'+svg('plus',13,2.2)+'Add</button>')+
+      '</div>';
+  }
+  function division(d){
+    return '<div class="div'+(d.open?' open':'')+'">'+
+      '<button class="drow js-toggle"><span class="dleft"><span class="dname">'+d.name+'</span>'+
+        '<span class="dcount">('+d.teams.length+')</span>'+
+        (d.all?'<span class="added-lbl">'+svg('checkc',13,2.4)+'All added</span>':'')+
+      '</span><span class="chev">'+svg('chevd',16,2)+'</span></button>'+
+      '<div class="teams">'+d.teams.map(function(t){return teamChip(t, d.all);}).join('')+'</div>'+
+    '</div>';
+  }
+  function league(l){
+    return '<div class="sl-card" style="margin-bottom:16px">'+
+      '<div class="lhead"><div class="ltitle">'+svg('trophy',18)+'<span class="nm">'+l.name+'</span>'+
+        '<span class="sl-badge sl-badge--outline">Public</span></div>'+
+        (l.addAll?'<button class="sl-btn sl-btn--secondary sl-btn--sm">Add all (32)</button>':'')+
+      '</div>'+ l.divisions.map(division).join('') +'</div>';
+  }
+  document.getElementById('leagues').innerHTML = LEAGUES.map(league).join('');
+
+  // interactions
+  document.getElementById('leagues').addEventListener('click', function(e){
+    var tog = e.target.closest('.js-toggle');
+    if(tog){ tog.parentNode.classList.toggle('open'); return; }
+    var add = e.target.closest('.js-add');
+    if(add){ add.closest('.chip').outerHTML = teamChip(add.closest('.chip').querySelector('.tn').textContent, true); return; }
+    var rm = e.target.closest('.js-rm');
+    if(rm){ rm.closest('.chip').outerHTML = teamChip(rm.closest('.chip').querySelector('.tn').textContent, false); return; }
+  });
+
+  var app = document.getElementById('app');
+  var tb = document.getElementById('themeBtn');
+  function paintTheme(){ tb.innerHTML = svg(app.getAttribute('data-theme')==='dark'?'sun':'moon',17); }
+  tb.addEventListener('click', function(){
+    app.setAttribute('data-theme', app.getAttribute('data-theme')==='dark'?'light':'dark'); paintTheme();
+  });
+  paintTheme();
+})();
+</script>
+</body>
+</html>

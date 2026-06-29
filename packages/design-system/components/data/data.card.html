@@ -1,0 +1,30 @@
+<!-- @dsCard group="Components" viewport="700x230" name="Data display" subtitle="Badges, stats, avatars, card, table" -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0}.sl-root{padding:22px;background:var(--bg)}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}.row:last-child{margin-bottom:0}</style>
+</head>
+<body>
+<div class="sl-root" data-theme="dark" data-accent="green">
+  <div class="row">
+    <span class="sl-badge sl-badge--outline">Public</span>
+    <span class="sl-badge sl-badge--neutral">2 seasons</span>
+    <span class="sl-badge sl-badge--solid"><span class="sl-badge__dot"></span>active</span>
+    <span class="sl-badge sl-badge--success"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>All added</span>
+    <span class="sl-badge sl-badge--danger">Sync failed</span>
+    <span style="display:inline-flex;margin-left:8px">
+      <span class="sl-avatar" style="border:2px solid var(--bg)">AS</span>
+      <span class="sl-avatar" style="background:var(--surface-3);color:var(--text);border:2px solid var(--bg);margin-left:-10px">MK</span>
+      <span class="sl-avatar" style="background:var(--surface-2);color:var(--text-muted);border:2px solid var(--bg);margin-left:-10px;font-size:11px">+9</span>
+    </span>
+  </div>
+  <div class="sl-card" style="display:flex;gap:30px">
+    <span style="display:flex;flex-direction:column;gap:3px"><span class="sl-stat__value">56</span><span class="sl-stat__label">Divisions</span></span>
+    <span style="display:flex;flex-direction:column;gap:3px"><span class="sl-stat__value">413</span><span class="sl-stat__label">Teams</span></span>
+    <span style="display:flex;flex-direction:column;gap:3px"><span class="sl-stat__value" style="color:var(--accent)">2,929</span><span class="sl-stat__label">Players</span></span>
+  </div>
+</div>
+</body>
+</html>

@@ -11,6 +11,11 @@ import { writeAuditLog } from "./lib/auditLog";
 import { computeStandingsPure } from "./lib/standings";
 import { aggregateStatLines, parseStatLine } from "./lib/playerStats";
 import {
+  categoryValues,
+  computeStatLeaders,
+  type LeaderInput,
+} from "./lib/statLeaders";
+import {
   computeHsSprtRatings,
   positionToRatingGroup,
   type HsRatingInput,
@@ -21,7 +26,11 @@ import {
   doubleRoundRobinSchedule,
   weekKickoff,
 } from "./lib/roundRobin";
-import { buildBracket } from "./lib/bracket";
+import {
+  buildBracket,
+  buildDoubleElimBracket,
+  nextPowerOfTwo,
+} from "./lib/bracket";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -4741,6 +4750,104 @@ export const computeSeasonSprt = query({
 });
 
 /*
+ * Season stat-leaders (WSM-000186) — top players per category for a season,
+ * computed on-read from entered game stats. Aggregates each player's lines,
+ * flattens to leaderboard scalars, and ranks (see lib/statLeaders.ts). Called
+ * server-side (admin-keyed) by the dashboard league stats page.
+ */
+const statLeadersValidator = v.array(
+  v.object({
+    key: v.string(),
+    label: v.string(),
+    leaders: v.array(
+      v.object({
+        playerId: v.string(),
+        playerName: v.string(),
+        teamName: v.string(),
+        jerseyNumber: v.union(v.number(), v.null()),
+        value: v.number(),
+      }),
+    ),
+  }),
+);
+
+/** Shared: compute a season's ranked stat-leaders from entered game stats. */
+async function seasonStatLeaders(
+  ctx: QueryCtx,
+  seasonId: Id<"seasons">,
+): Promise<ReturnType<typeof computeStatLeaders>> {
+  const rows = await ctx.db
+    .query("playerGameStats")
+    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+    .collect();
+
+  const byPlayer = new Map<string, string[]>();
+  for (const r of rows) {
+    const arr = byPlayer.get(r.playerId) ?? [];
+    arr.push(r.statsJson);
+    byPlayer.set(r.playerId, arr);
+  }
+
+  const players: LeaderInput[] = [];
+  for (const [playerId, jsons] of byPlayer) {
+    const totals = aggregateStatLines(jsons.map(parseStatLine));
+    const values = categoryValues(totals);
+    // Skip players with no leaderboard-relevant stats this season.
+    if (Object.values(values).every((v2) => v2 === 0)) continue;
+    const player = await ctx.db.get(playerId as Id<"players">);
+    if (!player) continue;
+    const team = await ctx.db.get(player.teamId);
+    players.push({
+      playerId,
+      playerName: player.name,
+      teamName: team?.name ?? "(unknown)",
+      jerseyNumber: player.jerseyNumber ?? null,
+      values,
+    });
+  }
+
+  return computeStatLeaders(players, 5);
+}
+
+export const getSeasonStatLeaders = query({
+  args: { seasonId: v.id("seasons") },
+  returns: statLeadersValidator,
+  handler: async (ctx, args) => seasonStatLeaders(ctx, args.seasonId),
+});
+
+/*
+ * Public stat-leaders (WSM-000186) — fan-facing, NO Clerk session. Re-checks
+ * `league.isPublic` here (defense in depth, mirroring computeStandingsPublic)
+ * so a stale/skipped middleware can't leak a private league's data, and
+ * resolves the season internally. Null when the league isn't public or has no
+ * season.
+ */
+export const getSeasonStatLeadersPublic = query({
+  args: { leagueId: v.id("leagues") },
+  returns: v.union(
+    v.object({ seasonName: v.string(), categories: statLeadersValidator }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league || !league.isPublic) return null;
+
+    const seasonRows = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    if (seasonRows.length === 0) return null;
+    const activeSeason =
+      seasonRows.find((s) => s.status === "active") ?? seasonRows[0];
+
+    return {
+      seasonName: activeSeason.name,
+      categories: await seasonStatLeaders(ctx, activeSeason._id),
+    };
+  },
+});
+
+/*
  * Admin-auth probe (WSM-000151). A no-op internalQuery — callable only by an
  * admin-keyed client. /api/health calls it through getConvexClient to verify
  * CONVEX_ADMIN_KEY actually authenticates as admin, so a misconfigured key
@@ -5108,9 +5215,15 @@ async function spawnPlayoffFixture(
 }
 
 /**
- * Idempotent bracket recompute. In round order: spawn a fixture when both teams
- * are known, resolve a decisive game's winner, and propagate that winner into
- * its parent matchup's slot. A tie leaves the matchup unresolved (no advance).
+ * Idempotent bracket recompute. In (bracket, round, slot) order: spawn a
+ * fixture when both teams are known and the matchup is not a bye, resolve a
+ * decisive game's winner, propagate that winner into its parent slot, and — for
+ * double-elimination — drop the LOSER into its losers-bracket slot. First-round
+ * byes carry a pre-set winner (no fixture) and only need propagation. A tie
+ * leaves the matchup unresolved (playoff games are recorded decisive).
+ *
+ * The pass repeats until it reaches a fixed point so a chain of byes feeding
+ * one another (and bye-vs-bye round-2 matchups) all resolve in one call.
  */
 async function advanceBracketForSeason(
   ctx: MutationCtx,
@@ -5127,56 +5240,112 @@ async function advanceBracketForSeason(
     .withIndex("by_bracketId", (q) => q.eq("bracketId", bracket._id))
     .collect();
   const byId = new Map(matchups.map((m) => [m._id, m]));
+  const bracketRank = (t: string | undefined) =>
+    t === "losers" ? 1 : t === "grandFinal" ? 2 : 0; // winners first
   const ordered = [...matchups].sort(
-    (a, b) => a.round - b.round || a.slot - b.slot,
+    (a, b) =>
+      bracketRank(a.bracketType) - bracketRank(b.bracketType) ||
+      a.round - b.round ||
+      a.slot - b.slot,
   );
 
-  for (const m of ordered) {
-    // 1. Spawn this matchup's fixture once both teams are known.
-    if (m.homeTeamId && m.awayTeamId && !m.fixtureId) {
-      const fid = await spawnPlayoffFixture(ctx, m, "system");
-      await ctx.db.patch(m._id, { fixtureId: fid });
-      m.fixtureId = fid;
+  const setSide = async (
+    parentId: Id<"playoffMatchups">,
+    side: string,
+    teamId: Id<"teams">,
+  ) => {
+    const parent = byId.get(parentId);
+    if (!parent) return;
+    if (side === "home" && parent.homeTeamId !== teamId) {
+      await ctx.db.patch(parent._id, { homeTeamId: teamId });
+      parent.homeTeamId = teamId;
+    } else if (side === "away" && parent.awayTeamId !== teamId) {
+      await ctx.db.patch(parent._id, { awayTeamId: teamId });
+      parent.awayTeamId = teamId;
     }
-    // 2. Resolve a decisive winner from the played fixture.
-    if (m.fixtureId && !m.winnerTeamId) {
-      const fx = await ctx.db.get(m.fixtureId);
-      if (fx && fx.status === "final") {
-        const res = await ctx.db
-          .query("gameResults")
-          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", m.fixtureId!))
-          .first();
-        if (res && res.homeScore !== res.awayScore) {
-          const winner =
-            res.homeScore > res.awayScore ? fx.homeTeamId : fx.awayTeamId;
-          await ctx.db.patch(m._id, { winnerTeamId: winner });
-          m.winnerTeamId = winner;
+  };
+
+  // Iterate to a fixed point: bye winners can cascade into later matchups.
+  let changed = true;
+  let guard = 0;
+  while (changed && guard++ < matchups.length + 2) {
+    changed = false;
+    for (const m of ordered) {
+      // 1. Spawn this matchup's fixture once both teams are known (not a bye).
+      const isBye = !m.awayTeamId && m.homeSeed != null && m.awaySeed == null;
+      if (m.homeTeamId && m.awayTeamId && !m.fixtureId) {
+        const fid = await spawnPlayoffFixture(ctx, m, "system");
+        await ctx.db.patch(m._id, { fixtureId: fid });
+        m.fixtureId = fid;
+        changed = true;
+      }
+      // 2. Resolve a decisive winner from the played fixture.
+      if (m.fixtureId && !m.winnerTeamId) {
+        const fx = await ctx.db.get(m.fixtureId);
+        if (fx && fx.status === "final") {
+          const res = await ctx.db
+            .query("gameResults")
+            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", m.fixtureId!))
+            .first();
+          if (res && res.homeScore !== res.awayScore) {
+            const winner =
+              res.homeScore > res.awayScore ? fx.homeTeamId : fx.awayTeamId;
+            await ctx.db.patch(m._id, { winnerTeamId: winner });
+            m.winnerTeamId = winner;
+            changed = true;
+          }
         }
       }
-    }
-    // 3. Propagate the winner into the parent slot.
-    if (m.winnerTeamId && m.nextMatchupId && m.nextSlot) {
-      const parent = byId.get(m.nextMatchupId as Id<"playoffMatchups">);
-      if (parent) {
-        if (m.nextSlot === "home" && parent.homeTeamId !== m.winnerTeamId) {
-          await ctx.db.patch(parent._id, { homeTeamId: m.winnerTeamId });
-          parent.homeTeamId = m.winnerTeamId;
-        } else if (
-          m.nextSlot === "away" &&
-          parent.awayTeamId !== m.winnerTeamId
-        ) {
-          await ctx.db.patch(parent._id, { awayTeamId: m.winnerTeamId });
-          parent.awayTeamId = m.winnerTeamId;
-        }
+      // The loser is the non-winning known side (null for byes / TBD games).
+      const loserTeamId: Id<"teams"> | null =
+        m.winnerTeamId && m.homeTeamId && m.awayTeamId
+          ? m.winnerTeamId === m.homeTeamId
+            ? m.awayTeamId
+            : m.homeTeamId
+          : null;
+      // 3. Propagate the winner into the parent slot.
+      if (m.winnerTeamId && m.nextMatchupId && m.nextSlot) {
+        const before = byId.get(m.nextMatchupId as Id<"playoffMatchups">);
+        const had =
+          m.nextSlot === "home"
+            ? before?.homeTeamId === m.winnerTeamId
+            : before?.awayTeamId === m.winnerTeamId;
+        await setSide(
+          m.nextMatchupId as Id<"playoffMatchups">,
+          m.nextSlot,
+          m.winnerTeamId,
+        );
+        if (!had) changed = true;
+      }
+      // 4. Double-elim: drop the loser of a decided game into the LB slot.
+      if (loserTeamId && !isBye && m.loserNextMatchupId && m.loserNextSlot) {
+        const target = byId.get(
+          m.loserNextMatchupId as Id<"playoffMatchups">,
+        );
+        const had =
+          m.loserNextSlot === "home"
+            ? target?.homeTeamId === loserTeamId
+            : target?.awayTeamId === loserTeamId;
+        await setSide(
+          m.loserNextMatchupId as Id<"playoffMatchups">,
+          m.loserNextSlot,
+          loserTeamId,
+        );
+        if (!had) changed = true;
       }
     }
   }
 }
 
 /**
- * Generate a single-elimination bracket from the season's standings. Sizes
- * 4/8/16. Re-running re-snapshots seeds, but refuses to wipe a bracket that has
- * a played/in-progress game unless `confirm` is set.
+ * Generate a playoff bracket from the season's standings (WSM-flex-brackets).
+ *
+ * `size` is the qualifying team count — any value ≥ 2 (e.g. 5, 6, 10, 12). The
+ * bracket size is rounded up to the next power of two and the top
+ * `(bracketSize - teamCount)` seeds get first-round byes (auto-advanced, no
+ * game). `format` selects single- or double-elimination (defaults to the
+ * season's `playoffFormat`). Re-running re-snapshots seeds, but refuses to wipe
+ * a bracket that has a played/in-progress game unless `confirm` is set.
  */
 export const generatePlayoffBracket = internalMutationGeneric({
   args: {
@@ -5185,6 +5354,7 @@ export const generatePlayoffBracket = internalMutationGeneric({
     actorUserId: v.string(),
     confirm: v.optional(v.boolean()),
     divisionWinnersQualify: v.optional(v.boolean()),
+    format: v.optional(v.string()), // "single" | "double"
   },
   returns: v.object({
     bracketId: v.string(),
@@ -5193,11 +5363,14 @@ export const generatePlayoffBracket = internalMutationGeneric({
     matchups: v.number(),
   }),
   handler: async (ctx, args) => {
-    if (![4, 8, 16].includes(args.size)) {
+    const teamCount = args.size;
+    if (!Number.isInteger(teamCount) || teamCount < 2 || teamCount > 64) {
       throw new Error("invalid_bracket_size");
     }
     const season = await ctx.db.get(args.seasonId);
     if (!season) throw new Error("season_not_found");
+    const format =
+      (args.format ?? season.playoffFormat) === "double" ? "double" : "single";
     // Honor the season's configured qualification rule (overridable per call).
     const divisionWinnersQualify =
       args.divisionWinnersQualify ?? season.divisionWinnersQualify ?? false;
@@ -5251,30 +5424,42 @@ export const generatePlayoffBracket = internalMutationGeneric({
       season,
       divisionWinnersQualify,
     );
-    if (seeds.length < args.size) throw new Error("not_enough_teams");
+    if (seeds.length < teamCount) throw new Error("not_enough_teams");
 
-    const plan = buildBracket(args.size);
+    const plan =
+      format === "double"
+        ? buildDoubleElimBracket(teamCount)
+        : buildBracket(teamCount);
+    const bracketSize = nextPowerOfTwo(teamCount);
     const createdAt = new Date().toISOString();
     const bracketId = await ctx.db.insert("playoffBrackets", {
       seasonId: args.seasonId,
       leagueId: season.leagueId,
-      size: args.size,
+      size: bracketSize,
       rounds: plan.rounds,
       createdAt,
       createdBy: args.actorUserId,
+      format,
+      teamCount,
     });
 
-    // Insert matchups, then wire parent pointers, then spawn round-1 fixtures.
+    // Keying must distinguish sub-brackets in double-elim (winners/losers each
+    // have their own round/slot space; grand final is its own bucket).
+    const keyOf = (
+      bracketType: string | undefined,
+      round: number,
+      slot: number,
+    ) => `${bracketType ?? "winners"}:${round}:${slot}`;
+
+    // Insert matchups, then wire parent + loser pointers, then spawn fixtures.
     const idByKey = new Map<string, Id<"playoffMatchups">>();
     for (const mp of plan.matchups) {
       const homeTeamId =
-        mp.homeSeed != null
-          ? (seeds[mp.homeSeed - 1] as Id<"teams">)
-          : null;
+        mp.homeSeed != null ? (seeds[mp.homeSeed - 1] as Id<"teams">) : null;
       const awayTeamId =
-        mp.awaySeed != null
-          ? (seeds[mp.awaySeed - 1] as Id<"teams">)
-          : null;
+        mp.awaySeed != null ? (seeds[mp.awaySeed - 1] as Id<"teams">) : null;
+      // A bye: the present (home) team auto-advances at generation time.
+      const isBye = mp.isBye === true && homeTeamId != null;
       const id = await ctx.db.insert("playoffMatchups", {
         bracketId,
         seasonId: args.seasonId,
@@ -5286,29 +5471,75 @@ export const generatePlayoffBracket = internalMutationGeneric({
         awayTeamId,
         nextMatchupId: null,
         nextSlot: null,
-        winnerTeamId: null,
+        winnerTeamId: isBye ? homeTeamId : null,
         fixtureId: null,
+        ...(mp.bracketType ? { bracketType: mp.bracketType } : {}),
+        loserNextMatchupId: null,
+        loserNextSlot: null,
       });
-      idByKey.set(`${mp.round}:${mp.slot}`, id);
+      idByKey.set(keyOf(mp.bracketType, mp.round, mp.slot), id);
     }
+
+    // Winner-advancement pointers (parent slot/side within the same bracket).
     for (const mp of plan.matchups) {
       if (mp.parentSlot == null || mp.parentSide == null) continue;
-      await ctx.db.patch(idByKey.get(`${mp.round}:${mp.slot}`)!, {
-        nextMatchupId: idByKey.get(`${mp.round + 1}:${mp.parentSlot}`)!,
-        nextSlot: mp.parentSide,
+      await ctx.db.patch(
+        idByKey.get(keyOf(mp.bracketType, mp.round, mp.slot))!,
+        {
+          nextMatchupId: idByKey.get(
+            keyOf(mp.bracketType, mp.round + 1, mp.parentSlot),
+          )!,
+          nextSlot: mp.parentSide,
+        },
+      );
+    }
+
+    // Double-elim: winners-bracket losers route into the losers bracket; the
+    // last LB matchup and the WB final's winner both feed the grand final.
+    if (format === "double") {
+      for (const mp of plan.matchups) {
+        if (
+          mp.loserParentRound == null ||
+          mp.loserParentSlot == null ||
+          mp.loserParentSide == null
+        ) {
+          continue;
+        }
+        await ctx.db.patch(
+          idByKey.get(keyOf(mp.bracketType, mp.round, mp.slot))!,
+          {
+            loserNextMatchupId: idByKey.get(
+              keyOf("losers", mp.loserParentRound, mp.loserParentSlot),
+            )!,
+            loserNextSlot: mp.loserParentSide,
+          },
+        );
+      }
+      // WB champion → grand final home; LB champion → grand final away.
+      const gfId = idByKey.get(keyOf("grandFinal", 1, 0))!;
+      const wbFinalKey = keyOf("winners", plan.rounds, 0);
+      await ctx.db.patch(idByKey.get(wbFinalKey)!, {
+        nextMatchupId: gfId,
+        nextSlot: "home",
       });
+      const lbRounds = plan.rounds > 1 ? 2 * (plan.rounds - 1) : 0;
+      const lbFinalKey = keyOf("losers", lbRounds, 0);
+      const lbFinalId = idByKey.get(lbFinalKey);
+      if (lbFinalId) {
+        await ctx.db.patch(lbFinalId, {
+          nextMatchupId: gfId,
+          nextSlot: "away",
+        });
+      }
     }
-    for (const mp of plan.matchups) {
-      if (mp.round !== 1) continue;
-      const id = idByKey.get(`1:${mp.slot}`)!;
-      const m = (await ctx.db.get(id))!;
-      const fid = await spawnPlayoffFixture(ctx as MutationCtx, m, args.actorUserId);
-      await ctx.db.patch(id, { fixtureId: fid });
-    }
+
+    // Resolve any first-round byes immediately (auto-advance, no fixture), then
+    // spawn fixtures for every matchup whose two teams are now known.
+    await advanceBracketForSeason(ctx as MutationCtx, args.seasonId);
 
     return {
       bracketId,
-      size: args.size,
+      size: bracketSize,
       rounds: plan.rounds,
       matchups: plan.matchups.length,
     };
@@ -5341,6 +5572,10 @@ const playoffMatchupDtoValidator = v.object({
   status: v.union(v.string(), v.null()),
   homeScore: v.union(v.number(), v.null()),
   awayScore: v.union(v.number(), v.null()),
+  // "winners" | "losers" | "grandFinal" — null for single-elim brackets.
+  bracketType: v.union(v.string(), v.null()),
+  // First-round bye marker (team auto-advanced, no game).
+  isBye: v.boolean(),
 });
 
 /** Bracket tree DTO for the UI (WSM-000165). Null when no bracket exists. */
@@ -5351,6 +5586,7 @@ export const getPlayoffBracket = queryGeneric({
       bracketId: v.string(),
       size: v.number(),
       rounds: v.number(),
+      format: v.string(), // "single" | "double"
       matchups: v.array(playoffMatchupDtoValidator),
     }),
     v.null(),
@@ -5390,6 +5626,9 @@ export const getPlayoffBracket = queryGeneric({
               awayScore = res?.awayScore ?? null;
             }
           }
+          // A first-round bye: a single present team with no opponent/game.
+          const isBye =
+            m.homeSeed != null && m.awaySeed == null && !m.awayTeamId;
           return {
             id: m._id,
             round: m.round,
@@ -5405,6 +5644,8 @@ export const getPlayoffBracket = queryGeneric({
             status,
             homeScore,
             awayScore,
+            bracketType: m.bracketType ?? null,
+            isBye,
           };
         }),
     );
@@ -5413,6 +5654,7 @@ export const getPlayoffBracket = queryGeneric({
       bracketId: bracket._id,
       size: bracket.size,
       rounds: bracket.rounds,
+      format: bracket.format ?? "single",
       matchups: dtos,
     };
   },

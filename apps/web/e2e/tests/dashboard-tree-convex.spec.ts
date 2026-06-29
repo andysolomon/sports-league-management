@@ -5,7 +5,6 @@ import {
   getTestOrgId,
   type RosterFixtureResult,
 } from "../helpers/seed-roster";
-import { signInTestUser } from "../helpers/clerk-signin";
 
 /*
  * Sprint 5 smoke (WSM-000049).
@@ -50,7 +49,6 @@ test.describe.serial(
 
     test.beforeEach(async ({ page }) => {
       await setupClerkTestingToken({ page });
-      await signInTestUser(page);
     });
 
     test("dashboard root renders Overview + 5 stat cards (no error)", async ({

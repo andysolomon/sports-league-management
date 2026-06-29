@@ -1,10 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { SEASONS } from "../helpers/test-data";
 
 test.describe("Seasons Page", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
     await page.goto("/dashboard/seasons");
   });
 
@@ -12,35 +14,62 @@ test.describe("Seasons Page", () => {
     await expect(page.getByRole("heading", { name: "Seasons" })).toBeVisible();
   });
 
-  test("table has correct columns", async ({ page }) => {
-    const headers = page.locator("thead th");
-    await expect(headers.nth(0)).toHaveText("Name");
-    await expect(headers.nth(1)).toHaveText("Start Date");
-    await expect(headers.nth(2)).toHaveText("End Date");
-    await expect(headers.nth(3)).toHaveText("Status");
+  // The page now groups seasons under per-league Cards (CardHeader = league name
+  // + a secondary "<n> season(s)" Badge; CardContent = a <ul class="divide-y">
+  // of <li> season rows). There is no longer an HTML table (WSM-000136).
+  test("league card shows the league name and a season-count badge", async ({
+    page,
+  }) => {
+    // The canonical fixture seeds every season under one "National Football
+    // League" card.
+    const nflCard = page.locator('[data-slot="card"]', {
+      has: page.getByText("National Football League"),
+    });
+    await expect(nflCard).toBeVisible();
+    // CardHeader: league name (CardTitle) + secondary Badge with the count.
+    await expect(nflCard.getByText("National Football League")).toBeVisible();
+    await expect(nflCard.getByText(/\d+ seasons?/)).toBeVisible();
   });
 
   test("displays at least 3 season rows", async ({ page }) => {
-    const rows = page.locator("tbody tr");
+    // Season rows are <li> inside the CardContent <ul class="divide-y">.
+    const rows = page.locator('[data-slot="card-content"] ul.divide-y > li');
     await expect(rows.first()).toBeVisible();
     expect(await rows.count()).toBeGreaterThanOrEqual(3);
   });
 
   test("2025-2026 NFL Season is present with Active status", async ({ page }) => {
-    const row = page.locator("tbody tr", { hasText: SEASONS.NFL_2025.name });
+    const row = page.locator('[data-slot="card-content"] ul.divide-y > li', {
+      hasText: SEASONS.NFL_2025.name,
+    });
     await expect(row).toBeVisible();
-    await expect(row).toContainText(SEASONS.NFL_2025.status);
+    // StatusBadge renders the canonical label text (not a table cell).
+    await expect(
+      row.getByText(SEASONS.NFL_2025.status, { exact: true }),
+    ).toBeVisible();
   });
 
-  test("season statuses are valid values", async ({ page }) => {
+  // The seasons page is org-wide (all visible leagues), so other leagues' data
+  // would make a "every row is valid" assertion non-deterministic. Assert the
+  // canonical seasons specifically (WSM-000187). The canonical fixture puts all
+  // three under the single "National Football League" card.
+  test("canonical seasons render their expected status badge", async ({ page }) => {
     const validStatuses = ["Active", "Completed", "Upcoming"];
-    const rows = page.locator("tbody tr");
-    const count = await rows.count();
+    const canonical = [SEASONS.NFL_2025, SEASONS.NFL_2024, SEASONS.MLS_2025];
+    const nflCard = page.locator('[data-slot="card"]', {
+      has: page.getByText("National Football League"),
+    });
 
-    for (let i = 0; i < count; i++) {
-      const statusCell = rows.nth(i).locator("td").nth(3);
-      const text = await statusCell.textContent();
-      expect(validStatuses).toContain(text?.trim());
+    for (const season of canonical) {
+      expect(validStatuses).toContain(season.status);
+      const row = nflCard.locator("li", { hasText: season.name });
+      await expect(row).toBeVisible();
+      // Season name <span>.
+      await expect(row.getByText(season.name, { exact: true })).toBeVisible();
+      // StatusBadge label via resolveStatusBadge — assert the visible label.
+      await expect(
+        row.getByText(season.status, { exact: true }),
+      ).toBeVisible();
     }
   });
 });

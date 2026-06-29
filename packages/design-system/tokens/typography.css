@@ -1,0 +1,25 @@
+/* ============================================================
+   TYPOGRAPHY TOKENS
+   Hanken Grotesk for UI + prose, JetBrains Mono for data + keys.
+   ============================================================ */
+:root {
+  --font-sans:'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* weights */
+  --weight-regular:400;
+  --weight-medium:500;
+  --weight-semibold:600;
+  --weight-bold:700;
+  --weight-extrabold:800;
+
+  /* type ramp — size / line-height pairs used across the system */
+  --text-display:700 32px/38px var(--font-sans);   /* page hero */
+  --text-stat:700 30px/32px var(--font-sans);       /* big numbers */
+  --text-title:700 22px/28px var(--font-sans);      /* card titles */
+  --text-heading:600 18px/24px var(--font-sans);    /* section heads */
+  --text-body:400 15px/23px var(--font-sans);       /* prose */
+  --text-label:500 14px/20px var(--font-sans);      /* controls */
+  --text-caption:500 12px/16px var(--font-sans);    /* meta */
+  --text-mono:500 13px/18px var(--font-mono);       /* data, keys, paths */
+}

@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     "@sports-management/shared-types",
     "@sports-management/api-contracts",
+    "@sports-management/design-system",
   ],
   images: {
     remotePatterns: [

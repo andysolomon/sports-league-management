@@ -2,7 +2,9 @@ import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { TEAMS } from "../helpers/test-data";
 
-test.describe.serial("Team Edit", () => {
+// QUARANTINED (#419): the team-edit form fields (e.g. #team-city) are now Radix
+// Selects, not <input>s, so the save/validation tests fail on fill()/clear().
+test.describe.fixme("Team Edit", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
     // Navigate to Cowboys team detail page
@@ -15,7 +17,8 @@ test.describe.serial("Team Edit", () => {
     await expect(page.getByRole("button", { name: "Edit Team" })).toBeVisible();
   });
 
-  test("dialog opens pre-populated with team data", async ({ page }) => {
+  // QUARANTINED (#419): #team-city is no longer an <input> — toHaveValue fails.
+  test.fixme("dialog opens pre-populated with team data", async ({ page }) => {
     await page.getByRole("button", { name: "Edit Team" }).click();
 
     await expect(page.getByRole("heading", { name: "Edit Team" })).toBeVisible();

@@ -1,0 +1,15 @@
+<!-- @dsCard group="Spacing" viewport="700x150" name="Radius & elevation" subtitle="Control vs card radius; shadow token" -->
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>body{margin:0}.sl-root{padding:22px;background:var(--bg);display:flex;gap:24px;align-items:center}.s{text-align:center}.box{width:64px;height:64px;background:var(--surface);border:1px solid var(--border-strong)}.lbl{font:500 11px/1.4 var(--font-mono);color:var(--text-muted);margin-top:8px}</style></head>
+<body>
+<div class="sl-root" data-theme="dark">
+  <div class="s"><div class="box" style="border-radius:var(--r)"></div><div class="lbl">--r · control</div></div>
+  <div class="s"><div class="box" style="border-radius:var(--r-lg)"></div><div class="lbl">--r-lg · card</div></div>
+  <div class="s"><div class="box" style="border-radius:999px"></div><div class="lbl">pill</div></div>
+  <div class="s" data-round="sharp"><div class="box" style="border-radius:var(--r-lg)"></div><div class="lbl">round=sharp</div></div>
+  <div class="s" data-round="soft"><div class="box" style="border-radius:var(--r-lg)"></div><div class="lbl">round=soft</div></div>
+  <div class="s"><div class="box" style="border-radius:var(--r-lg);box-shadow:var(--shadow);border-color:var(--border)"></div><div class="lbl">--shadow</div></div>
+</div>
+</body></html>

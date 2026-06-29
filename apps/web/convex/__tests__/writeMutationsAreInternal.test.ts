@@ -147,6 +147,8 @@ type AllowedPublicSportsReads =
   | "getRosterBySeasonTeam"
   | "getSeason"
   | "getSeasonAttributesByPosition"
+  | "getSeasonStatLeaders"
+  | "getSeasonStatLeadersPublic"
   | "getStreamByFixture"
   | "getSyncConfig"
   | "getTeam"

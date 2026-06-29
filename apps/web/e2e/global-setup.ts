@@ -1,5 +1,7 @@
 import { clerkSetup } from "@clerk/testing/playwright";
 import { FullConfig } from "@playwright/test";
+import { seedCanonicalFixture } from "./helpers/seed-canonical";
+import { getTestOrgId } from "./helpers/seed-roster";
 
 async function checkSalesforceConnection(baseURL: string) {
   // Hit the dev server root to confirm it's up, then check the API
@@ -46,4 +48,12 @@ export default async function globalSetup(config: FullConfig) {
   const baseURL =
     config.projects[0]?.use?.baseURL ?? "http://localhost:3000";
   await checkSalesforceConnection(baseURL);
+
+  // Seed the canonical NFL/MLS dataset ONCE (WSM-000187). The data-dependent
+  // specs read the resulting leagueId and set the active-league cookie to it.
+  // Idempotent on the Convex side, so re-runs are deterministic.
+  const fixture = await seedCanonicalFixture(getTestOrgId());
+  console.log(
+    `✓ Canonical fixture seeded: league ${fixture.leagueId} (${fixture.teamIds.length} teams, ${fixture.playerIds.length} players, ${fixture.seasonIds.length} seasons)`,
+  );
 }
