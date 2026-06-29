@@ -36,6 +36,11 @@ export default defineConfig({
     },
     {
       name: "chromium",
+      // Auth-gated specs sign in per-test (setupClerkTestingToken +
+      // signInTestUser) rather than via a shared storageState: Clerk's
+      // dev-instance session JWT is short-lived, so a saved session goes stale
+      // partway through a serial suite (WSM-000172). api-auth runs
+      // unauthenticated here on purpose and asserts 401.
       testIgnore: ["health.spec.ts", "visual-regression.spec.ts"],
       use: { browserName: "chromium" },
       dependencies: ["health"],
@@ -56,5 +61,13 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     cwd: "..",
     timeout: 30_000,
+    // Surface the Next dev-server console (incl. Server Component / Convex
+    // ReturnsValidationError stacks) in the CI job log. Without this Playwright
+    // swallows webServer output, so a page that renders the error boundary only
+    // shows up as a missing-element assertion with no server-side cause — the
+    // failure mode that hid the WSM-000172 dashboard drift behind a stale
+    // shared-dev Convex deploy.
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });

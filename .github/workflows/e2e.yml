@@ -82,7 +82,11 @@ jobs:
 
       - name: Run e2e (apps/web)
         if: steps.secrets.outputs.run == 'true'
-        run: pnpm --filter @sports-management/web test:e2e
+        # Run the functional projects only: `--project=chromium` auto-includes its
+        # `health` dependency. The `visual` project asserts against per-OS
+        # screenshot baselines and only darwin baselines are committed, so it can
+        # only run locally until Linux baselines are generated (WSM-000172 f/u).
+        run: pnpm --filter @sports-management/web test:e2e -- --project=chromium
 
       - name: Upload Playwright report
         if: ${{ always() && steps.secrets.outputs.run == 'true' }}
