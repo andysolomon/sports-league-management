@@ -39,7 +39,11 @@ export default defineConfig({
     // `storageState`. Replaces ~110 per-test ticket sign-ins that rate-limited
     // Clerk's dev instance and timed out mid-run (WSM-000172). The session
     // cookie auto-refreshes the short-lived JWT, so it survives the serial run.
-    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    // `testDir: "."` overrides the global `./tests` so this project finds
+    // auth.setup.ts (which lives in e2e/, not e2e/tests/). Without it the project
+    // collects zero tests, the storageState is never written, and every authed
+    // project fails to read it (WSM-000172).
+    { name: "setup", testDir: ".", testMatch: /auth\.setup\.ts/ },
     // Signed-OUT API enforcement: its own project with NO storageState and NO
     // setup dependency, so requests carry no session — asserts protected BFF
     // routes return 401. (Sharing the chromium project would leak the session.)
