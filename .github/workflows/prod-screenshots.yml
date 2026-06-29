@@ -1,0 +1,91 @@
+name: Prod Screenshots
+
+# Manually-triggered visual sweep of PRODUCTION (WSM-000188). Signs in once as
+# the example e2e user against the live deployment and full-page-screenshots
+# every authed app page at desktop + mobile widths, uploaded as an artifact.
+# Read-only: it never seeds or mutates prod data.
+#
+# Reuses the same Clerk creds as the functional suite — works today because prod
+# still runs the Clerk DEVELOPMENT instance (#386 cutover pending). After the
+# cutover, set these to a prod-instance secret key + a prod test user.
+#
+# Required repo SECRETS: CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+#   E2E_CLERK_USER_ID
+# Optional repo VARIABLE: PROD_BASE_URL (defaults to the custom domain).
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Base URL to screenshot (overrides PROD_BASE_URL / default)"
+        required: false
+        type: string
+
+concurrency:
+  group: prod-screenshots
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Prod screenshot sweep
+    runs-on: ubuntu-latest
+    env:
+      PROD_BASE_URL: ${{ inputs.base_url || vars.PROD_BASE_URL || 'https://sprtsmng.andrewsolomon.dev' }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      E2E_CLERK_USER_ID: ${{ secrets.E2E_CLERK_USER_ID }}
+    steps:
+      - name: Check Clerk secrets
+        id: secrets
+        run: |
+          if [ -z "${CLERK_SECRET_KEY}" ] || [ -z "${E2E_CLERK_USER_ID}" ]; then
+            echo "::warning::Clerk secrets not configured (CLERK_SECRET_KEY / E2E_CLERK_USER_ID) — skipping the prod screenshot sweep."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.secrets.outputs.run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        if: steps.secrets.outputs.run == 'true'
+        run: corepack enable
+
+      - name: Setup Node.js
+        if: steps.secrets.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/web exec playwright install --with-deps chromium
+
+      - name: Run prod screenshot sweep
+        if: steps.secrets.outputs.run == 'true'
+        run: pnpm --filter @sports-management/web test:prod:screenshots
+
+      - name: Upload screenshots
+        if: ${{ always() && steps.secrets.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-screenshots
+          path: apps/web/prod-screenshots
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload Playwright report (on failure)
+        if: ${{ failure() && steps.secrets.outputs.run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-screenshots-report
+          path: apps/web/playwright-report
+          retention-days: 7
+          if-no-files-found: ignore

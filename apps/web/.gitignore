@@ -14,3 +14,6 @@ e2e/.canonical-fixture.json
 
 # e2e shared Clerk session persisted by auth.setup.ts, WSM-000172
 e2e/.auth/
+
+# Prod screenshot sweep artifacts (WSM-000188)
+prod-screenshots/
