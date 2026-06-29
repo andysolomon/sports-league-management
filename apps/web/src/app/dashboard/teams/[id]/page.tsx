@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   getTeam,
   getPlayersByTeam,
@@ -38,10 +38,18 @@ export default async function TeamDetailPage({
         : { href: "/dashboard/teams", label: "Back to Teams" };
   const orgContext = await resolveOrgContext(userId);
 
+  // Resolve the team first, guarded: a bad/legacy team id (e.g. a Salesforce
+  // id like `a00b…` leaking in via a stale link) fails Convex's `v.id("teams")`
+  // validation and throws ArgumentValidationError; an unknown-but-valid id
+  // resolves to null. Either way the route must 404, not 500 (WSM-000190).
+  // Matches the players/[id] + divisions/[id] guard pattern.
+  const team = await getTeam(id, orgContext).catch(() => null);
+  if (!team) notFound();
+
   // canManage = admin or coach (roster/players/edit); canDelete = admin only
-  // (removing the whole team). WSM-000121 intra-org roles.
-  const [team, players, canManage, canDelete] = await Promise.all([
-    getTeam(id, orgContext),
+  // (removing the whole team). WSM-000121 intra-org roles. Safe to run now that
+  // the team id is known-valid.
+  const [players, canManage, canDelete] = await Promise.all([
     getPlayersByTeam(id, orgContext),
     canManageTeam(id, userId),
     canAdministerTeam(id, userId),
