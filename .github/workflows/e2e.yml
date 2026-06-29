@@ -107,13 +107,16 @@ jobs:
       - name: Start local Convex backend + deploy functions
         if: steps.secrets.outputs.run == 'true'
         working-directory: apps/web
-        env:
-          CONVEX_AGENT_MODE: anonymous
-          CONVEX_DEPLOYMENT: ''
-          CONVEX_ADMIN_KEY: ''
-          CONVEX_SELF_HOSTED_URL: ''
         run: |
-          nohup pnpm exec convex dev > /tmp/convex-dev.log 2>&1 &
+          # UNSET the cloud Convex env the workflow injected — an empty-but-set
+          # CONVEX_DEPLOYMENT makes the CLI error "No CONVEX_DEPLOYMENT set"
+          # instead of falling back to the local config it writes.
+          unset CONVEX_DEPLOYMENT CONVEX_ADMIN_KEY CONVEX_SELF_HOSTED_URL
+          unset NEXT_PUBLIC_CONVEX_URL NEXT_PUBLIC_CONVEX_SITE_URL
+          export CONVEX_AGENT_MODE=anonymous
+          # `--local` configures + serves an anonymous local deployment on a fresh
+          # runner (no prior .convex/local); AGENT_MODE alone isn't enough there.
+          nohup pnpm exec convex dev --local > /tmp/convex-dev.log 2>&1 &
           echo "Waiting for the local Convex backend to deploy functions..."
           for i in $(seq 1 150); do
             grep -q "Convex functions ready" /tmp/convex-dev.log && break
