@@ -25,7 +25,7 @@ function Side({
     >
       <span className="flex min-w-0 items-center gap-1.5">
         {seed != null ? (
-          <span className="shrink-0 rounded bg-muted px-1 font-mono text-[10px] text-muted-foreground">
+          <span className="shrink-0 rounded bg-muted px-1 font-mono text-caption-12 tabular-nums text-muted-foreground">
             {seed}
           </span>
         ) : null}
@@ -113,7 +113,7 @@ export default function PlayoffBracket({
                   key={`${section.type}-${r.round}`}
                   className="flex w-56 shrink-0 flex-col"
                 >
-                  <h4 className="mb-3 font-mono text-xs uppercase tracking-wide text-muted-foreground">
+                  <h4 className="mb-3 font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
                     {r.label}
                   </h4>
                   <div className="flex flex-1 flex-col justify-around gap-4">

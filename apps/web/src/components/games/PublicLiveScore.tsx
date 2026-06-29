@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Scoreboard } from "@/components/live/Scoreboard";
 import { useLiveScore, type LiveScorePublic } from "@/lib/use-live-score";
 import { isLiveVisible, cardStatusLabel } from "@/lib/live-score-view";
 
@@ -34,39 +34,16 @@ export default function PublicLiveScore({
   return (
     <Card className="mb-6">
       <CardContent className="py-6">
-        <div className="mb-3 flex justify-center">
-          <Badge variant="success" className="gap-1.5">
-            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-current" />
-            LIVE
-          </Badge>
-        </div>
-        <div className="flex items-center justify-around gap-4 text-center">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm text-muted-foreground">
-              {homeTeamName}
-            </p>
-            <p className="text-5xl font-bold tabular-nums text-foreground">
-              {live.homeScore}
-            </p>
-          </div>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">
-            <div className="font-semibold text-foreground">
-              {cardStatusLabel(live)}
-            </div>
-            <div className="mt-1">Period {live.period}</div>
-            {live.clock ? (
-              <div className="mt-1 font-mono tabular-nums">{live.clock}</div>
-            ) : null}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm text-muted-foreground">
-              {awayTeamName}
-            </p>
-            <p className="text-5xl font-bold tabular-nums text-foreground">
-              {live.awayScore}
-            </p>
-          </div>
-        </div>
+        <Scoreboard
+          homeTeamName={homeTeamName}
+          awayTeamName={awayTeamName}
+          homeScore={live.homeScore}
+          awayScore={live.awayScore}
+          status={live.status}
+          period={live.period}
+          clock={live.clock}
+          statusLabel={cardStatusLabel(live)}
+        />
       </CardContent>
     </Card>
   );

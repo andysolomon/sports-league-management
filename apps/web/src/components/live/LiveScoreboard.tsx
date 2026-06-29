@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Flag, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Scoreboard } from "@/components/live/Scoreboard";
 import {
   startLiveGameAction,
   addLiveScoreAction,
@@ -109,19 +110,16 @@ export default function LiveScoreboard({
       {/* Scoreboard */}
       <Card>
         <CardContent className="py-6">
-          <div className="flex items-center justify-around gap-4 text-center">
-            <ScoreCol name={homeTeamName} score={state.homeScore} />
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">
-              <div className="font-semibold text-foreground">
-                {statusLabel(state.status)}
-              </div>
-              <div className="mt-1">Period {state.period}</div>
-              {state.clock ? (
-                <div className="mt-1 font-mono tabular-nums">{state.clock}</div>
-              ) : null}
-            </div>
-            <ScoreCol name={awayTeamName} score={state.awayScore} />
-          </div>
+          <Scoreboard
+            homeTeamName={homeTeamName}
+            awayTeamName={awayTeamName}
+            homeScore={state.homeScore}
+            awayScore={state.awayScore}
+            status={state.status}
+            period={state.period}
+            clock={state.clock}
+            statusLabel={statusLabel(state.status)}
+          />
         </CardContent>
       </Card>
 
@@ -207,19 +205,6 @@ export default function LiveScoreboard({
           Final score recorded. This game is closed.
         </p>
       )}
-    </div>
-  );
-}
-
-function ScoreCol({ name, score }: { name: string; score: number }) {
-  return (
-    <div className="min-w-0 flex-1">
-      <div className="truncate text-sm font-medium text-muted-foreground">
-        {name}
-      </div>
-      <div className="text-5xl font-bold tabular-nums text-foreground">
-        {score}
-      </div>
     </div>
   );
 }
