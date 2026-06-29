@@ -56,17 +56,25 @@ export default async function DashboardPage() {
 
   const orgContext = await resolveOrgContext(userId);
   const ids = orgContext.visibleLeagueIds;
-  const [leagues, teams, players, seasons, divisions] = await Promise.all([
-    getLeagues(ids),
-    getTeams(ids),
-    getPlayers(ids),
-    getSeasons(ids),
-    getDivisions(ids),
-  ]);
 
+  // `leagues` stays org-wide — it feeds the "Leagues" count, the switcher, and
+  // active-league resolution. Everything else in the overview is only ever
+  // shown for the ACTIVE league (see the league-scoped slices below), so scope
+  // those reads to it. Fetching teams/players/etc. across ALL visible leagues
+  // can exceed Convex's 8192-element return-array cap — an org with ~19.9k
+  // players across its leagues 500'd the whole dashboard (WSM-000189).
+  const leagues = await getLeagues(ids);
   const { activeLeagueId } = await resolveActiveLeague(userId);
   const activeLeague =
     leagues.find((l) => l.id === activeLeagueId) ?? leagues[0] ?? null;
+
+  const leagueScope = activeLeague ? [activeLeague.id] : [];
+  const [teams, players, seasons, divisions] = await Promise.all([
+    getTeams(leagueScope),
+    getPlayers(leagueScope),
+    getSeasons(leagueScope),
+    getDivisions(leagueScope),
+  ]);
 
   // Role-aware bento (WSM-000136 P4): an admin of the active league's org gets
   // an extra org/members widget; coaches & viewers get the team-and-season view.
