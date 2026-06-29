@@ -1,10 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { signInTestUser } from "../helpers/clerk-signin";
 import { PLAYERS } from "../helpers/test-data";
 
 test.describe("DataTable Interactions", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
     await page.goto("/dashboard/players");
     await expect(page.getByRole("heading", { name: "Players" })).toBeVisible();
   });

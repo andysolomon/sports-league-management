@@ -1,10 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { signInTestUser } from "../helpers/clerk-signin";
 import { PLAYERS, TEAMS, SEASONS } from "../helpers/test-data";
 
 test.describe("Status Badges and Date Formatting", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
   });
 
   test("Active player has green badge", async ({ page }) => {

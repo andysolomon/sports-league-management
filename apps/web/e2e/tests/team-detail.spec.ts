@@ -1,10 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { signInTestUser } from "../helpers/clerk-signin";
 import { TEAMS, PLAYERS } from "../helpers/test-data";
 
 test.describe("Team Detail Page", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
     // Navigate to Cowboys detail via the teams list
     await page.goto("/dashboard/teams");
     await page.locator("a", { hasText: TEAMS.COWBOYS.name }).click();

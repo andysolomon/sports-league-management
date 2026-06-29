@@ -1,10 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { signInTestUser } from "../helpers/clerk-signin";
 import { TEAMS } from "../helpers/test-data";
 
 test.describe("Teams Page", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
     await page.goto("/dashboard/teams");
   });
 

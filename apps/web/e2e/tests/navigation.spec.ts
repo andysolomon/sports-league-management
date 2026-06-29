@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { signInTestUser } from "../helpers/clerk-signin";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/dashboard" },
@@ -13,6 +14,7 @@ const NAV_ITEMS = [
 test.describe("Dashboard Navigation", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
   });
 
   test("sidebar shows heading and all nav links", async ({ page }) => {

@@ -1,9 +1,16 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { signInTestUser } from "../helpers/clerk-signin";
 
 test.describe("Health & Smoke Tests", () => {
+  // Every assertion here hits an auth-gated surface (/dashboard, /api/leagues),
+  // so the testing token (bot-bypass only) is not enough — we must establish a
+  // signed-in session, exactly like the auth-gated specs do. Without this the
+  // dashboard bounces to the Clerk sign-in page and, because the `chromium`
+  // project depends on `health`, the whole suite is skipped (WSM-000172).
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
   });
 
   test("dashboard loads without Salesforce error", async ({ page }) => {

@@ -1,11 +1,13 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { signInTestUser } from "../helpers/clerk-signin";
 
 const NAV_LABELS = ["Overview", "Leagues", "Teams", "Players", "Seasons", "Divisions"];
 
 test.describe("Mobile Responsive Navigation", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await signInTestUser(page);
   });
 
   test("hamburger visible on mobile, sidebar hidden", async ({ page }) => {
