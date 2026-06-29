@@ -62,6 +62,18 @@ export default clerkMiddleware(async (auth, request) => {
     return;
   }
   if (!isPublicRoute(request)) {
+    // BFF API routes must answer an unauthenticated caller with a 401 JSON body
+    // (every handler already implements `{ error: "Unauthorized" }`), NOT a 307
+    // redirect to /sign-in — a redirect hands an API client an HTML page it
+    // can't consume. `auth.protect()` redirects by default, so branch on /api
+    // here and let page routes keep the sign-in redirect (WSM-000172).
+    if (pathname.startsWith("/api/")) {
+      const { userId } = await auth();
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      return;
+    }
     await auth.protect();
   }
 });

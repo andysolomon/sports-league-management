@@ -14,7 +14,9 @@ import { signInTestUser } from "../helpers/clerk-signin";
  * a valid payload reaches it without any backend; we never click "Start
  * Import" (that would POST to /api/cli/import).
  */
-test.use({ ...devices["iPhone 13"] });
+// Signs in per-test, so it must not inherit the shared signed-in storageState
+// (else clerk.signIn throws "already signed in") — start signed-out (WSM-000172).
+test.use({ ...devices["iPhone 13"], storageState: { cookies: [], origins: [] } });
 
 const MIN_TOUCH_PX = 44;
 

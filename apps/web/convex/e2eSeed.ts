@@ -18,6 +18,44 @@ import type { Id } from "./_generated/dataModel";
 const FIXTURE_LEAGUE_PREFIX = "E2E:";
 const SEED_ACTOR = "e2e_seed_harness";
 
+// Canonical read-only dataset (WSM-000187). Mirrors apps/web/e2e/helpers/
+// test-data.ts EXACTLY — the data-dependent specs (team-detail, players,
+// data-table, status-badges, seasons, divisions, leagues, dashboard-overview)
+// assert on these names/jerseys/statuses. All 4 teams + 12 players + 3 seasons
+// live in ONE league so the active-league-scoped pages (e.g. /dashboard/players
+// asserts exactly 12) are deterministic. The league is named "National Football
+// League" because divisions.spec/leagues.spec assert that literal name.
+const CANONICAL_LEAGUE_NAME = "National Football League";
+const CANONICAL_DIVISION_NAME = "League Division";
+
+const CANONICAL_TEAMS = [
+  { name: "Dallas Cowboys", city: "Dallas", stadium: "AT&T Stadium", foundedYear: 1960 },
+  { name: "New England Patriots", city: "Foxborough", stadium: "Gillette Stadium", foundedYear: 1960 },
+  { name: "LA Galaxy", city: "Los Angeles", stadium: "Dignity Health Sports Park", foundedYear: 1996 },
+  { name: "Seattle Sounders FC", city: "Seattle", stadium: "Lumen Field", foundedYear: 2007 },
+] as const;
+
+const CANONICAL_PLAYERS = [
+  { team: "Dallas Cowboys", name: "Dak Prescott", position: "QB", jersey: 4, status: "Active" },
+  { team: "Dallas Cowboys", name: "CeeDee Lamb", position: "WR", jersey: 88, status: "Active" },
+  { team: "Dallas Cowboys", name: "Micah Parsons", position: "LB", jersey: 11, status: "Injured" },
+  { team: "New England Patriots", name: "Drake Maye", position: "QB", jersey: 10, status: "Active" },
+  { team: "New England Patriots", name: "Hunter Henry", position: "TE", jersey: 85, status: "Active" },
+  { team: "New England Patriots", name: "Christian Barmore", position: "DT", jersey: 90, status: "Inactive" },
+  { team: "LA Galaxy", name: "Riqui Puig", position: "MF", jersey: 10, status: "Active" },
+  { team: "LA Galaxy", name: "Dejan Joveljic", position: "FW", jersey: 9, status: "Active" },
+  { team: "LA Galaxy", name: "Maya Yoshida", position: "DF", jersey: 4, status: "Injured" },
+  { team: "Seattle Sounders FC", name: "Joao Paulo", position: "MF", jersey: 6, status: "Active" },
+  { team: "Seattle Sounders FC", name: "Jordan Morris", position: "FW", jersey: 13, status: "Active" },
+  { team: "Seattle Sounders FC", name: "Stefan Frei", position: "GK", jersey: 24, status: "Inactive" },
+] as const;
+
+const CANONICAL_SEASONS = [
+  { name: "2025-2026 NFL Season", startDate: "2025-09-04", endDate: "2026-02-08", status: "Active" },
+  { name: "2024-2025 NFL Season", startDate: "2024-09-05", endDate: "2025-02-09", status: "Completed" },
+  { name: "2025 MLS Season", startDate: "2025-02-22", endDate: "2025-10-25", status: "Upcoming" },
+] as const;
+
 function assertSeedEnabled(): void {
   if (process.env.CONVEX_ENABLE_E2E_SEED !== "1") {
     throw new Error("e2e_seed_disabled");
@@ -37,17 +75,110 @@ const fixtureResultValidator = v.object({
   activeAssignmentIds: v.array(v.id("rosterAssignments")),
 });
 
+// Cascade-delete a single league and every child row that references it.
+// Shared by the fixture teardown (`deleteFixtureByKey`) and the canonical
+// reset (`createCanonicalFixture`) — the canonical league additionally has
+// `divisions`, which fixtures never create (so the extra query is a harmless
+// no-op for fixture leagues). Returns the number of rows deleted.
+async function cascadeDeleteLeague(
+  ctx: any,
+  leagueId: Id<"leagues">,
+): Promise<number> {
+  let deleted = 0;
+  const [seasons, teams, players, assignments, auditRows, divisions] =
+    await Promise.all([
+      ctx.db
+        .query("seasons")
+        .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+        .collect(),
+      ctx.db
+        .query("teams")
+        .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+        .collect(),
+      ctx.db
+        .query("players")
+        .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+        .collect(),
+      ctx.db
+        .query("rosterAssignments")
+        .withIndex("by_leagueId_seasonId", (q: any) =>
+          q.eq("leagueId", leagueId),
+        )
+        .collect(),
+      ctx.db
+        .query("rosterAuditLog")
+        .withIndex("by_leagueId_createdAt", (q: any) =>
+          q.eq("leagueId", leagueId),
+        )
+        .collect(),
+      ctx.db
+        .query("divisions")
+        .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+        .collect(),
+    ]);
+
+  for (const row of assignments) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  for (const row of auditRows) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  for (const team of teams as Array<{ _id: Id<"teams"> }>) {
+    const teamDepth = (await ctx.db
+      .query("depthChartEntries")
+      .withIndex("by_team_season", (q: any) => q.eq("teamId", team._id))
+      .collect()) as Array<{ _id: Id<"depthChartEntries"> }>;
+    for (const row of teamDepth) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+  }
+
+  // Phase 3 cascade — drop any fixtures + gameResults attached to the league's
+  // seasons before the parent rows go away (schedules e2e, WSM-000074).
+  for (const season of seasons as Array<{ _id: Id<"seasons"> }>) {
+    const seasonFixtures = (await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
+      .collect()) as Array<{ _id: Id<"fixtures"> }>;
+    for (const fixture of seasonFixtures) {
+      const results = (await ctx.db
+        .query("gameResults")
+        .withIndex("by_fixtureId", (q: any) => q.eq("fixtureId", fixture._id))
+        .collect()) as Array<{ _id: Id<"gameResults"> }>;
+      for (const row of results) {
+        await ctx.db.delete(row._id);
+        deleted += 1;
+      }
+      await ctx.db.delete(fixture._id);
+      deleted += 1;
+    }
+  }
+  for (const row of players) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  for (const row of teams) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  for (const row of divisions) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  for (const row of seasons) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  await ctx.db.delete(leagueId);
+  deleted += 1;
+  return deleted;
+}
+
 async function deleteFixtureByKey(
-  ctx: {
-    db: {
-      query: (table: string) => {
-        withIndex: (name: string, fn: (q: any) => any) => {
-          collect: () => Promise<any[]>;
-        };
-      };
-      delete: (id: any) => Promise<void>;
-    };
-  },
+  ctx: any,
   fixtureKey: string,
 ): Promise<number> {
   const leagueName = fixtureLeagueName(fixtureKey);
@@ -58,99 +189,7 @@ async function deleteFixtureByKey(
 
   let deleted = 0;
   for (const league of leagues) {
-    const [
-      seasons,
-      teams,
-      players,
-      assignments,
-      auditRows,
-      depthEntries,
-    ] = await Promise.all([
-      ctx.db
-        .query("seasons")
-        .withIndex("by_leagueId", (q: any) => q.eq("leagueId", league._id))
-        .collect(),
-      ctx.db
-        .query("teams")
-        .withIndex("by_leagueId", (q: any) => q.eq("leagueId", league._id))
-        .collect(),
-      ctx.db
-        .query("players")
-        .withIndex("by_leagueId", (q: any) => q.eq("leagueId", league._id))
-        .collect(),
-      ctx.db
-        .query("rosterAssignments")
-        .withIndex("by_leagueId_seasonId", (q: any) =>
-          q.eq("leagueId", league._id),
-        )
-        .collect(),
-      ctx.db
-        .query("rosterAuditLog")
-        .withIndex("by_leagueId_createdAt", (q: any) =>
-          q.eq("leagueId", league._id),
-        )
-        .collect(),
-      // depth chart rows aren't indexed on leagueId — walk via teams below
-      Promise.resolve([] as Array<{ _id: Id<"depthChartEntries"> }>),
-    ]);
-
-    for (const row of assignments) {
-      await ctx.db.delete(row._id);
-      deleted += 1;
-    }
-    for (const row of auditRows) {
-      await ctx.db.delete(row._id);
-      deleted += 1;
-    }
-    for (const team of teams as Array<{ _id: Id<"teams"> }>) {
-      const teamDepth = (await ctx.db
-        .query("depthChartEntries")
-        .withIndex("by_team_season", (q: any) => q.eq("teamId", team._id))
-        .collect()) as Array<{ _id: Id<"depthChartEntries"> }>;
-      for (const row of teamDepth) {
-        await ctx.db.delete(row._id);
-        deleted += 1;
-      }
-    }
-
-    // Phase 3 cascade — drop any fixtures + gameResults attached to the
-    // league's seasons before the parent rows go away. Required for the
-    // schedules e2e (WSM-000074).
-    for (const season of seasons as Array<{ _id: Id<"seasons"> }>) {
-      const seasonFixtures = (await ctx.db
-        .query("fixtures")
-        .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
-        .collect()) as Array<{ _id: Id<"fixtures"> }>;
-      for (const fixture of seasonFixtures) {
-        const results = (await ctx.db
-          .query("gameResults")
-          .withIndex("by_fixtureId", (q: any) =>
-            q.eq("fixtureId", fixture._id),
-          )
-          .collect()) as Array<{ _id: Id<"gameResults"> }>;
-        for (const row of results) {
-          await ctx.db.delete(row._id);
-          deleted += 1;
-        }
-        await ctx.db.delete(fixture._id);
-        deleted += 1;
-      }
-    }
-    for (const row of players) {
-      await ctx.db.delete(row._id);
-      deleted += 1;
-    }
-    for (const row of teams) {
-      await ctx.db.delete(row._id);
-      deleted += 1;
-    }
-    for (const row of seasons) {
-      await ctx.db.delete(row._id);
-      deleted += 1;
-    }
-    void depthEntries;
-    await ctx.db.delete(league._id);
-    deleted += 1;
+    deleted += await cascadeDeleteLeague(ctx, league._id);
   }
   return deleted;
 }
@@ -345,5 +384,137 @@ export const createScheduleFixture = internalMutation({
       homeTeamName,
       awayTeamName,
     };
+  },
+});
+
+/*
+ * Canonical read-only dataset (WSM-000187).
+ *
+ * Seeds the fixed NFL/MLS dataset the data-dependent specs assert on into a
+ * single league owned by the test org. Idempotent: any prior canonical league
+ * owned by THIS org (matched by name) is cascade-deleted first, so re-running
+ * is safe and deterministic. Scoped to `clerkOrgId` so it can never touch a
+ * real "National Football League" in another org.
+ *
+ * Specs set the `activeLeagueId` cookie to the returned `leagueId` so the
+ * active-league-scoped pages (teams/players/divisions/leagues) render exactly
+ * this data; org-wide pages (overview/seasons) see it additively.
+ */
+const canonicalFixtureResultValidator = v.object({
+  leagueId: v.id("leagues"),
+  leagueName: v.string(),
+  divisionId: v.id("divisions"),
+  teamIds: v.array(v.id("teams")),
+  seasonIds: v.array(v.id("seasons")),
+  playerIds: v.array(v.id("players")),
+});
+
+export const createCanonicalFixture = internalMutation({
+  args: { clerkOrgId: v.union(v.string(), v.null()) },
+  returns: canonicalFixtureResultValidator,
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+
+    // Idempotent reset — drop any prior canonical league owned by this org.
+    const prior = (
+      await ctx.db
+        .query("leagues")
+        .withIndex("by_name", (q: any) => q.eq("name", CANONICAL_LEAGUE_NAME))
+        .collect()
+    ).filter((l: { orgId: string | null }) => l.orgId === args.clerkOrgId);
+    for (const league of prior) {
+      await cascadeDeleteLeague(ctx, league._id);
+    }
+
+    const leagueId = await ctx.db.insert("leagues", {
+      name: CANONICAL_LEAGUE_NAME,
+      orgId: args.clerkOrgId,
+      isPublic: false,
+      inviteToken: null,
+    });
+
+    const divisionId = await ctx.db.insert("divisions", {
+      name: CANONICAL_DIVISION_NAME,
+      leagueId,
+    });
+
+    const teamIdByName = new Map<string, Id<"teams">>();
+    const teamIds: Id<"teams">[] = [];
+    for (const team of CANONICAL_TEAMS) {
+      const teamId = await ctx.db.insert("teams", {
+        name: team.name,
+        leagueId,
+        divisionId,
+        city: team.city,
+        stadium: team.stadium,
+        foundedYear: team.foundedYear,
+        // Distinct from `city` so an exact-text match on the city value
+        // ("Dallas") doesn't also match the Location field (WSM-000187).
+        location: `${team.city}, USA`,
+        logoUrl: null,
+        rosterLimit: 53,
+      });
+      teamIdByName.set(team.name, teamId);
+      teamIds.push(teamId);
+    }
+
+    const playerIds: Id<"players">[] = [];
+    for (const player of CANONICAL_PLAYERS) {
+      const teamId = teamIdByName.get(player.team);
+      if (!teamId) continue;
+      const playerId = await ctx.db.insert("players", {
+        name: player.name,
+        leagueId,
+        teamId,
+        position: player.position,
+        positionGroup: null,
+        jerseyNumber: player.jersey,
+        dateOfBirth: null,
+        status: player.status,
+        headshotUrl: null,
+      });
+      playerIds.push(playerId);
+    }
+
+    const seasonIds: Id<"seasons">[] = [];
+    for (const season of CANONICAL_SEASONS) {
+      const seasonId = await ctx.db.insert("seasons", {
+        name: season.name,
+        leagueId,
+        startDate: season.startDate,
+        endDate: season.endDate,
+        status: season.status,
+        rosterLocked: false,
+      });
+      seasonIds.push(seasonId);
+    }
+
+    return {
+      leagueId,
+      leagueName: CANONICAL_LEAGUE_NAME,
+      divisionId,
+      teamIds,
+      seasonIds,
+      playerIds,
+    };
+  },
+});
+
+export const resetCanonicalFixture = internalMutation({
+  args: { clerkOrgId: v.union(v.string(), v.null()) },
+  returns: v.object({ deleted: v.number() }),
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+    const prior = (
+      await ctx.db
+        .query("leagues")
+        .withIndex("by_name", (q: any) => q.eq("name", CANONICAL_LEAGUE_NAME))
+        .collect()
+    ).filter((l: { orgId: string | null }) => l.orgId === args.clerkOrgId);
+    let deleted = 0;
+    for (const league of prior) {
+      deleted += await cascadeDeleteLeague(ctx, league._id);
+    }
+    return { deleted };
   },
 });

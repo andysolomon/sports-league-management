@@ -45,16 +45,24 @@ test.describe("Dashboard Navigation", () => {
     await expect(overviewLink).not.toHaveClass(/bg-primary/);
   });
 
-  test("header shows Dashboard text", async ({ page }) => {
+  test("header shows the league switcher", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await expect(page.locator("header").getByText("Dashboard")).toBeVisible();
+    // The redesigned header (WSM-000136) anchors on the league switcher rather
+    // than a literal "Dashboard" label.
+    await expect(
+      page.locator("header").getByRole("button", { name: /switch league/i }),
+    ).toBeVisible();
   });
 
-  test("Clerk UserButton is present", async ({ page }) => {
+  test("Clerk user menu is present", async ({ page }) => {
     await page.goto("/dashboard");
 
-    await expect(page.locator("[data-clerk-component='user-button']")).toBeVisible();
+    // Clerk v6 renders the UserButton as a trigger button labelled "Open user
+    // menu" (the old data-clerk-component attribute is gone).
+    await expect(
+      page.locator("header").getByRole("button", { name: /open user menu/i }),
+    ).toBeVisible();
   });
 
   test("Leagues nav active highlighting", async ({ page }) => {

@@ -8,6 +8,12 @@ import {
 } from "../helpers/seed-roster";
 import { signInTestUser } from "../helpers/clerk-signin";
 
+// This spec manages its own sign-ins per test (it switches between the org-A and
+// org-B test users for cross-org isolation), so it must NOT inherit the shared
+// signed-in storageState — `clerk.signIn` throws "already signed in" otherwise
+// (WSM-000172). Start every test from a clean, signed-out context.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 // Reachability smoke for the roster + audit routes. Originally these
 // drove the dashboard team list and clicked through to a Salesforce-mirrored
 // Cowboys team — that coupled the spec to whatever local seed state happened
