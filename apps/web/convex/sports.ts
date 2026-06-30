@@ -5101,6 +5101,56 @@ export const getLiveGameState = query({
   },
 });
 
+// Single-call public live-state read for the client poll (cost: WSM-000192).
+// The poll route used to run FOUR separate public queries every few seconds
+// (league visibility + fixture + season + live state) — the dominant prod
+// function-call driver. This folds the same public + cross-league leak guard
+// and the live-state read into ONE function call.
+//   - returns `null`            → guard failed → the route answers 404
+//   - returns `{ live: ... }`   → guard passed (live may be null = not started)
+export const getPublicLiveGameState = queryGeneric({
+  args: { leagueId: v.id("leagues"), fixtureId: v.id("fixtures") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      live: v.union(
+        v.object({
+          homeScore: v.number(),
+          awayScore: v.number(),
+          period: v.number(),
+          clock: v.union(v.string(), v.null()),
+          status: v.string(),
+        }),
+        v.null(),
+      ),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league || !league.isPublic) return null;
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) return null;
+    // Cross-league leak guard: the fixture's season must belong to THIS league.
+    const season = await ctx.db.get(fixture.seasonId);
+    if (!season || season.leagueId !== args.leagueId) return null;
+    const row = await ctx.db
+      .query("liveGameState")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    return {
+      live: row
+        ? {
+            homeScore: row.homeScore,
+            awayScore: row.awayScore,
+            period: row.period,
+            clock: row.clock,
+            status: row.status,
+          }
+        : null,
+    };
+  },
+});
+
 /* ───────────────────────── Playoffs (WSM-000164) ───────────────────────── */
 
 /** Ordered team ids by league standings (regular season only), seeds 1..N. */
