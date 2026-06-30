@@ -112,11 +112,24 @@ test.describe("Team Detail Page", () => {
 // Regression for WSM-000190: a bad/legacy team id (e.g. a Salesforce id leaking
 // in via a stale link) used to crash the page with an unhandled
 // ArgumentValidationError from Convex's `v.id("teams")` validator → 500. The
-// route must now 404 instead. No fixture/active-league needed — a bad id 404s
-// regardless of seeded data; just an authed session.
+// route must now 404 instead.
+//
+// The beforeEach WARMS the authed session with a valid navigation first
+// (matching the other authed specs). Without it, hitting a `notFound()` route
+// as the very first navigation races Clerk's session-handshake redirect — the
+// request bounces to /sign-in (200) or loops (ERR_TOO_MANY_REDIRECTS) before it
+// ever reaches the page, so the 404 status is never observed. After a warm-up
+// nav the handshake is settled and the bad-id navigation cleanly resolves to the
+// notFound() 404. setActiveLeague keeps the dashboard shell scoped like the rest
+// of the suite.
 test.describe("Team Detail Page — invalid id", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
+    // Warm-up: a valid authed navigation settles the Clerk handshake so the
+    // subsequent bad-id navigation isn't redirected away from its 404.
+    await page.goto("/dashboard/teams");
+    await expect(page.getByRole("heading", { name: "Teams" })).toBeVisible();
   });
 
   test("a Salesforce-format team id returns 404, not 500", async ({ page }) => {
