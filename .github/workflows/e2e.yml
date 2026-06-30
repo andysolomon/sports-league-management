@@ -134,10 +134,12 @@ jobs:
           # The test step sources this so `export` overrides the (cloud) workflow
           # env for the dev server + Playwright seed harness without GITHUB_ENV
           # precedence quirks.
+          # Single-quote values: the anonymous admin key contains a '|' which
+          # bash would otherwise read as a pipe (exit 127, "command not found").
           {
-            echo "export NEXT_PUBLIC_CONVEX_URL=http://127.0.0.1:${CLOUD_PORT}"
-            echo "export NEXT_PUBLIC_CONVEX_SITE_URL=http://127.0.0.1:${SITE_PORT}"
-            echo "export CONVEX_ADMIN_KEY=${ADMIN_KEY}"
+            echo "export NEXT_PUBLIC_CONVEX_URL='http://127.0.0.1:${CLOUD_PORT}'"
+            echo "export NEXT_PUBLIC_CONVEX_SITE_URL='http://127.0.0.1:${SITE_PORT}'"
+            echo "export CONVEX_ADMIN_KEY='${ADMIN_KEY}'"
             echo "export CONVEX_DEPLOYMENT="
           } > /tmp/convex-local.env
           # e2eSeed mutations are gated on this flag set ON the deployment.
