@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { liveScoringV1 } from "@/lib/flags";
-import {
-  getFixture,
-  getLeagueVisibility,
-  getPublicSeason,
-  getLiveGameState,
-} from "@/lib/data-api";
+import { getPublicLiveGameState } from "@/lib/data-api";
 
 /*
  * Public live game-state poll (WSM-000152, keystone v3). The seam #302's
@@ -37,30 +32,29 @@ export async function GET(
 
   const { id: leagueId, gameId } = await params;
 
-  const visibility = await getLeagueVisibility(leagueId);
-  if (!visibility || !visibility.isPublic) {
+  // ONE Convex call does the public + cross-league leak guard AND the live-state
+  // read (was four separate queries polled every few seconds — WSM-000192). A
+  // null result means the guard failed; otherwise `{ live }` (live null = not
+  // started yet). Invalid ids throw at Convex arg validation → treat as 404.
+  let result: Awaited<ReturnType<typeof getPublicLiveGameState>>;
+  try {
+    result = await getPublicLiveGameState(leagueId, gameId);
+  } catch {
+    result = null;
+  }
+  if (!result) {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 
-  const fixture = await getFixture(gameId);
-  if (!fixture) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
-  // Cross-league leak guard — the fixture must live in THIS public league.
-  const season = await getPublicSeason(fixture.seasonId);
-  if (!season || season.leagueId !== leagueId) {
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
-  }
-
-  const live = await getLiveGameState(gameId);
-
-  // Short-lived edge cache so a crowd refreshing doesn't hammer Convex, while
-  // the score still feels live (≤5s stale). The overlay polls on its own cadence.
+  // Edge cache long enough to collapse a crowd's polls of the SAME game into ~one
+  // Convex hit per window, aligned with the client's 10s cadence — while staying
+  // live-feeling (stale-while-revalidate serves instantly and refreshes behind).
   return NextResponse.json(
-    { live },
+    { live: result.live },
     {
       headers: {
-        "Cache-Control": "public, max-age=0, s-maxage=3, stale-while-revalidate=5",
+        "Cache-Control":
+          "public, max-age=0, s-maxage=10, stale-while-revalidate=20",
       },
     },
   );

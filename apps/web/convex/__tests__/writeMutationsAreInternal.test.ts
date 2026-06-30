@@ -141,6 +141,7 @@ type AllowedPublicSportsReads =
   | "getPlayerMaddenRating"
   | "getPlayerSeasonAttributes"
   | "getPlayerSeasonTotals"
+  | "getPublicLiveGameState"
   | "getActiveStreamCountForLeague"
   | "getResultByFixture"
   | "getRosterAssignmentHistory"

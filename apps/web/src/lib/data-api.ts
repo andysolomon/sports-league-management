@@ -709,6 +709,10 @@ const refs = {
     { fixtureId: string },
     LiveGameStatePublic | null
   >("sports:getLiveGameState"),
+  getPublicLiveGameState: queryRef<
+    { leagueId: string; fixtureId: string },
+    { live: LiveGameStatePublic | null } | null
+  >("sports:getPublicLiveGameState"),
 };
 
 /** Full live game-state (operator UI). */
@@ -2048,6 +2052,19 @@ export async function getLiveGameState(
   fixtureId: string,
 ): Promise<LiveGameStatePublic | null> {
   return queryConvex(refs.getLiveGameState, { fixtureId });
+}
+
+/**
+ * Single-call public live-state read for the poll (WSM-000192): folds the
+ * public + cross-league leak guard and the live-state read into ONE Convex
+ * function call (the poll used to make four). Returns null when the guard fails
+ * (the route answers 404), else `{ live }` (live is null until the game starts).
+ */
+export async function getPublicLiveGameState(
+  leagueId: string,
+  fixtureId: string,
+): Promise<{ live: LiveGameStatePublic | null } | null> {
+  return queryConvex(refs.getPublicLiveGameState, { leagueId, fixtureId });
 }
 
 // --- Phase 3 — standings wrappers ---

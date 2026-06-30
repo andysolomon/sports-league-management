@@ -29,7 +29,10 @@ export function useLiveScore(
   leagueId: string,
   gameId: string,
   initial: LiveScorePublic | null,
-  intervalMs = 5000,
+  // 10s cadence (was 5s): a scoreboard reads fine at 10s, and it halves poll
+  // volume — paired with the route's single-call read + s-maxage=10 edge cache,
+  // this cuts prod Convex function calls from this surface ~8x (WSM-000192).
+  intervalMs = 10_000,
 ): LiveScorePublic | null {
   const router = useRouter();
   const [live, setLive] = useState<LiveScorePublic | null>(initial);
