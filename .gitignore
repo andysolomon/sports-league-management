@@ -92,3 +92,6 @@ validation.md
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Local dogfood sweep artifacts (report + screenshots/videos)
+dogfood-output/
