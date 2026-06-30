@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { TEAMS } from "../helpers/test-data";
 
-// QUARANTINED (#419): the team-edit form fields (e.g. #team-city) are now Radix
-// Selects, not <input>s, so the save/validation tests fail on fill()/clear().
-test.describe.fixme("Team Edit", () => {
+test.describe("Team Edit", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
     // Navigate to Cowboys team detail page
     await page.goto("/dashboard/teams");
-    await page.getByText(TEAMS.COWBOYS.name).click();
+    await page.locator("a", { hasText: TEAMS.COWBOYS.name }).click();
     await expect(page.getByRole("heading", { name: TEAMS.COWBOYS.name })).toBeVisible();
   });
 
@@ -17,16 +17,20 @@ test.describe.fixme("Team Edit", () => {
     await expect(page.getByRole("button", { name: "Edit Team" })).toBeVisible();
   });
 
-  // QUARANTINED (#419): #team-city is no longer an <input> — toHaveValue fails.
-  test.fixme("dialog opens pre-populated with team data", async ({ page }) => {
+  test("dialog opens pre-populated with team data", async ({ page }) => {
     await page.getByRole("button", { name: "Edit Team" }).click();
 
     await expect(page.getByRole("heading", { name: "Edit Team" })).toBeVisible();
+    // #team-name is still a text <input>; #team-city is now a Radix Select
+    // trigger (a combobox button) whose selected value renders as its text, so
+    // assert on the rendered city rather than an input value.
     await expect(page.locator("#team-name")).toHaveValue(TEAMS.COWBOYS.name);
-    await expect(page.locator("#team-city")).toHaveValue(TEAMS.COWBOYS.city);
+    await expect(page.locator("#team-city")).toContainText(TEAMS.COWBOYS.city);
   });
 
-  test("saves changes and restores", async ({ page }) => {
+  // QUARANTINED (#434): #team-city is a Radix Select; this test still
+  // .clear()/.fill()s it. Rewrite to drive the Select via option clicks.
+  test.fixme("saves changes and restores", async ({ page }) => {
     await page.getByRole("button", { name: "Edit Team" }).click();
 
     await page.locator("#team-city").clear();

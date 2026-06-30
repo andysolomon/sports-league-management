@@ -40,13 +40,16 @@ test.describe("Team Detail Page", () => {
     await expect(rosterHeading).toBeVisible();
   });
 
-  // QUARANTINED (#419): roster header row resolves to [] — column markup changed.
-  test.fixme("roster table shows the compact columns (no wide Status column)", async ({
+  test("roster table shows the compact columns (no wide Status column)", async ({
     page,
   }) => {
     // The roster table uses compact headers (Player / Pos / #) plus optional
     // ratings columns. WSM-000097 removed the dedicated wide Status column;
     // status is now a per-row indicator (WSM-000098), so it must NOT be a header.
+    //
+    // Wait for the header to render first: allInnerTexts() does not retry, so
+    // reading it before the table mounts returns [] (the original #419 rot).
+    await expect(page.locator("thead th").first()).toBeVisible();
     const headerText = await page.locator("thead th").allInnerTexts();
     expect(headerText).toEqual(expect.arrayContaining(["Player", "Pos", "#"]));
     expect(headerText).not.toContain("Status");
