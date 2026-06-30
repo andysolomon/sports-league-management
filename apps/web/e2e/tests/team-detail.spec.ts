@@ -111,37 +111,47 @@ test.describe("Team Detail Page", () => {
 
 // Regression for WSM-000190: a bad/legacy team id (e.g. a Salesforce id leaking
 // in via a stale link) used to crash the page with an unhandled
-// ArgumentValidationError from Convex's `v.id("teams")` validator → 500. The
-// route must now 404 instead.
+// ArgumentValidationError from Convex's `v.id("teams")` validator → a 500 error
+// boundary. The route must now degrade gracefully to the not-found page.
+//
+// We assert on the RENDERED not-found UI, not the HTTP status. A `/dashboard/*`
+// route streams the layout shell (flushing 200 response headers) before the
+// page's `notFound()` resolves, so `response.status()` is structurally 200 here
+// even when not-found renders — unlike public `/leagues/*` routes, which render
+// fully server-side and can set 404. The user-visible contract is "the
+// not-found page shows, not the error boundary," which the heading check below
+// captures directly (and would have failed on the pre-fix 500).
 //
 // The beforeEach WARMS the authed session with a valid navigation first
-// (matching the other authed specs). Without it, hitting a `notFound()` route
-// as the very first navigation races Clerk's session-handshake redirect — the
-// request bounces to /sign-in (200) or loops (ERR_TOO_MANY_REDIRECTS) before it
-// ever reaches the page, so the 404 status is never observed. After a warm-up
-// nav the handshake is settled and the bad-id navigation cleanly resolves to the
-// notFound() 404. setActiveLeague keeps the dashboard shell scoped like the rest
-// of the suite.
+// (matching the other authed specs). Without it, hitting the bad-id route as the
+// very first navigation races Clerk's session handshake — the request bounces to
+// /sign-in or loops (ERR_TOO_MANY_REDIRECTS) before it reaches the page.
 test.describe("Team Detail Page — invalid id", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
     await setActiveLeague(page, readCanonicalFixture().leagueId);
     // Warm-up: a valid authed navigation settles the Clerk handshake so the
-    // subsequent bad-id navigation isn't redirected away from its 404.
+    // subsequent bad-id navigation isn't redirected away from its not-found.
     await page.goto("/dashboard/teams");
     await expect(page.getByRole("heading", { name: "Teams" })).toBeVisible();
   });
 
-  test("a Salesforce-format team id returns 404, not 500", async ({ page }) => {
+  test("a Salesforce-format team id renders not-found, not a 500", async ({
+    page,
+  }) => {
     // The exact 18-char SF id from the prod runtime log (WSM-000190).
-    const resp = await page.goto("/dashboard/teams/a00bm00001npL2UAAU");
-    expect(resp?.status()).toBe(404);
+    await page.goto("/dashboard/teams/a00bm00001npL2UAAU");
+    await expect(
+      page.getByRole("heading", { name: "This page could not be found." }),
+    ).toBeVisible();
   });
 
-  test("an arbitrary malformed team id returns 404", async ({ page }) => {
+  test("an arbitrary malformed team id renders not-found", async ({ page }) => {
     // Any id that doesn't resolve to a team (validation failure or unknown id)
-    // must 404 — the guard catches both and falls through to notFound().
-    const resp = await page.goto("/dashboard/teams/not-a-real-team-id");
-    expect(resp?.status()).toBe(404);
+    // must fall through to notFound() — the guard catches both.
+    await page.goto("/dashboard/teams/not-a-real-team-id");
+    await expect(
+      page.getByRole("heading", { name: "This page could not be found." }),
+    ).toBeVisible();
   });
 });
