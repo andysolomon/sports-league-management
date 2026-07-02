@@ -2,7 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { liveStreamingV1 } from "@/lib/flags";
+import { liveStreamingV1, lowLatencyStreamingV1 } from "@/lib/flags";
 import {
   getFixture,
   getPublicSeason,
@@ -93,11 +93,16 @@ export async function startGameStream(
   }
 
   try {
-    const mux = await createMuxLiveStream(MAX_STREAM_DURATION_MINUTES);
+    // #303 track 2: LL-HLS is a per-env opt-in; off/unset = standard HLS.
+    const lowLatency = await lowLatencyStreamingV1();
+    const mux = await createMuxLiveStream(MAX_STREAM_DURATION_MINUTES, {
+      lowLatency,
+    });
     await createGameStream({
       fixtureId,
       muxLiveStreamId: mux.liveStreamId,
       muxPlaybackId: mux.playbackId,
+      latencyMode: lowLatency ? "low" : "standard",
       startedBy: guard.userId,
       maxDurationMinutes: MAX_STREAM_DURATION_MINUTES,
     });

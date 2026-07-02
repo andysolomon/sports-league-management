@@ -29,6 +29,7 @@ import {
   rosterSnapshotsV1,
   playerAttributesV1,
   schedulesStandingsV1,
+  lowLatencyStreamingV1,
   pageGuard,
   apiGuard,
 } from "../flags";
@@ -72,6 +73,35 @@ describe("schedulesStandingsV1 flag declaration", () => {
     expect(schedulesStandingsV1.description).toMatch(
       /schedule|standing|fixture/i,
     );
+  });
+});
+
+describe("lowLatencyStreamingV1 flag declaration (WSM-000200)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("uses the canonical key", () => {
+    expect(lowLatencyStreamingV1.key).toBe("low_latency_streaming_v1");
+  });
+
+  it("has a description for the Vercel Toolbar", () => {
+    expect(lowLatencyStreamingV1.description).toMatch(/low.latency|LL-HLS/i);
+  });
+
+  it("is DARK by default — unset stays off even outside production", async () => {
+    // Unlike resolveFlag()-based flags (on outside prod), this must be off.
+    expect(await lowLatencyStreamingV1()).toBe(false);
+  });
+
+  it('only "on" enables it', async () => {
+    vi.stubEnv("FLAG_LOW_LATENCY_STREAMING_V1", "on");
+    expect(await lowLatencyStreamingV1()).toBe(true);
+  });
+
+  it("ignores other values", async () => {
+    vi.stubEnv("FLAG_LOW_LATENCY_STREAMING_V1", "true");
+    expect(await lowLatencyStreamingV1()).toBe(false);
   });
 });
 

@@ -317,6 +317,10 @@ export default defineSchema({
     // live muxPlaybackId only serves the live edge — replays need the asset's
     // own playback id. Optional: legacy rows predate it.
     vodPlaybackId: v.optional(v.union(v.string(), v.null())),
+    // "low" | "standard" (mux only; legacy/unset = standard). Records the
+    // LL-HLS opt-in per stream (WSM-000200) so the cost/quality tradeoff can
+    // be evaluated per pilot. Not exposed publicly.
+    latencyMode: v.optional(v.string()),
     startedBy: v.string(),
     startedAt: v.string(),
     endedAt: v.union(v.string(), v.null()),

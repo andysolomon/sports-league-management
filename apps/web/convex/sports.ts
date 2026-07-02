@@ -4442,6 +4442,7 @@ export const createGameStream = internalMutationGeneric({
     muxLiveStreamId: v.optional(v.string()),
     muxPlaybackId: v.optional(v.string()),
     youtubeVideoId: v.optional(v.union(v.string(), v.null())),
+    latencyMode: v.optional(v.string()), // "low" | "standard" (mux only)
     startedBy: v.string(),
     maxDurationMinutes: v.number(),
   },
@@ -4461,6 +4462,7 @@ export const createGameStream = internalMutationGeneric({
       muxLiveStreamId: args.muxLiveStreamId,
       muxPlaybackId: args.muxPlaybackId,
       youtubeVideoId: args.youtubeVideoId ?? null,
+      latencyMode: args.latencyMode,
       // A pasted YouTube link is already live, so it starts "active"; Mux waits
       // for its webhook (video.live_stream.active) to confirm before flipping.
       status: provider === "youtube" ? "active" : "idle",

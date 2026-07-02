@@ -47,9 +47,16 @@ export interface CreatedMuxLiveStream {
 /**
  * Create a public live stream with a hard max-duration cap so a forgotten
  * stream can never bill indefinitely. Recordings become public VOD assets.
+ *
+ * `lowLatency` (WSM-000200, #303 track 2) creates the stream in Mux LL-HLS
+ * mode (~5s glass-to-glass vs ~25-30s standard). Playback needs no player
+ * change — Mux Player >=1.0 handles LL-HLS natively, and non-supporting
+ * players fall back to standard HLS. Latency mode is fixed at creation and
+ * pinned explicitly so a Mux default change can never flip it under us.
  */
 export async function createMuxLiveStream(
   maxDurationMinutes: number,
+  options?: { lowLatency?: boolean },
 ): Promise<CreatedMuxLiveStream> {
   const mux = getMux();
   let liveStream;
@@ -59,6 +66,7 @@ export async function createMuxLiveStream(
       new_asset_settings: { playback_policy: ["public"] },
       // Mux expects seconds; this is the guardrail auto-stop.
       max_continuous_duration: maxDurationMinutes * 60,
+      latency_mode: options?.lowLatency ? "low" : "standard",
     });
   } catch (err) {
     // Mux rejects live-stream creation on the free plan with a 400. Surface a
