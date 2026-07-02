@@ -590,6 +590,9 @@ const refs = {
   getResultByFixture: queryRef<{ fixtureId: string }, GameResultDto | null>(
     "sports:getResultByFixture",
   ),
+  listResultsBySeason: queryRef<{ seasonId: string }, SeasonResultLine[]>(
+    "sports:listResultsBySeason",
+  ),
   computeStandings: queryRef<{ seasonId: string }, Standing[]>(
     "sports:computeStandings",
   ),
@@ -1822,6 +1825,24 @@ export async function getResultByFixture(
   fixtureId: string,
 ): Promise<GameResultDto | null> {
   return queryConvex(refs.getResultByFixture, { fixtureId });
+}
+
+/** Score-only result line for a season, keyed by fixture (WSM-000193). */
+export interface SeasonResultLine {
+  fixtureId: string;
+  homeScore: number;
+  awayScore: number;
+}
+
+/**
+ * All recorded results for a season in ONE Convex call — replaces the dashboard's
+ * per-fixture `getResultByFixture` N+1. Score-only; use `getResultByFixture` when
+ * you need the full result (incl. `playerStatsJson`) for a single game.
+ */
+export async function listResultsBySeason(
+  seasonId: string,
+): Promise<SeasonResultLine[]> {
+  return queryConvex(refs.listResultsBySeason, { seasonId });
 }
 
 // --- Phase 1 live streaming wrappers (WSM-000144) ---
