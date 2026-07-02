@@ -4,6 +4,7 @@ import Link from "next/link";
 import { depthChartV1 } from "@/lib/flags";
 import {
   getTeam,
+  getTeamLeagueId,
   getPlayersByTeam,
   getSeasons,
   getDepthChartByTeamSeason,
@@ -26,10 +27,17 @@ export default async function DepthChartPage({
 
   const { id: teamId } = await params;
 
+  // Resolve leagueId first so the access check inside getTeam has the
+  // correct visibleLeagueIds (an empty list made getTeam throw for every
+  // team, 404ing the whole route — #435); real auth runs against the
+  // league's Clerk org a few lines below via getLeagueOrgId + resolveOrgRole.
+  // Matches the roster + audit pages.
+  const leagueId = await getTeamLeagueId(teamId).catch(() => null);
+  if (!leagueId) notFound();
   const team = await getTeam(teamId, {
     userId,
     orgIds: [],
-    visibleLeagueIds: [],
+    visibleLeagueIds: [leagueId],
     subscribedLeagueIds: [],
     subscriptionTeamScopes: {},
   }).catch(() => null);

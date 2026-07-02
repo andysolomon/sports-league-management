@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { TEAMS } from "../helpers/test-data";
 import {
   withRosterFixture,
@@ -7,11 +8,14 @@ import {
   type RosterFixtureResult,
 } from "../helpers/seed-roster";
 
-// QUARANTINED (#419): the flag-gated depth-chart route now 404s in CI, so the
-// whole feature group is unreachable. Un-fixme once the route/flag is restored.
-test.describe.fixme("Depth Chart (WSM-000007)", () => {
+// Was quarantined via #419/#435: the route 404'd for EVERY team — the page
+// passed an empty visibleLeagueIds to getTeam, whose access check then always
+// threw, and the .catch() collapsed that into notFound(). Fixed by resolving
+// the team's leagueId first (page.tsx), the same pattern as roster/audit.
+test.describe("Depth Chart (WSM-000007)", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
   });
 
   test("flag-gated route is reachable in dev (flag default: on)", async ({
@@ -23,12 +27,14 @@ test.describe.fixme("Depth Chart (WSM-000007)", () => {
     const href = await teamLink.getAttribute("href");
     expect(href).toBeTruthy();
     await page.goto(`${href}/depth-chart`);
-    const body = page.locator("body");
-    await expect(body).toBeVisible();
-    const notFoundHeading = page.getByRole("heading", {
-      name: /404|Not Found|Page not found/i,
-    });
-    await expect(notFoundHeading).toHaveCount(0);
+    // Assert the board actually rendered — checking for the ABSENCE of a 404
+    // heading is too weak (Next's not-found heading, "This page could not be
+    // found.", didn't even match the old regex, so a 404 could slip through).
+    await expect(
+      page.getByRole("heading", {
+        name: `${TEAMS.COWBOYS.name} — Depth Chart`,
+      }),
+    ).toBeVisible();
   });
 });
 
@@ -39,8 +45,7 @@ test.describe.fixme("Depth Chart (WSM-000007)", () => {
 // is brittle across engines.
 const PHONE = { width: 375, height: 812 };
 
-// QUARANTINED (#419): same depth-chart route + drag-handle markup rot.
-test.describe.fixme("Depth Chart — mobile touch targets (WSM-000085)", () => {
+test.describe("Depth Chart — mobile touch targets (WSM-000085)", () => {
   let fixture: RosterFixtureResult | null = null;
   let teardown: (() => Promise<void>) | null = null;
 
@@ -69,8 +74,10 @@ test.describe.fixme("Depth Chart — mobile touch targets (WSM-000085)", () => {
     await setupClerkTestingToken({ page });
   });
 
-  // QUARANTINED (#419): drag-handle button no longer matches name /^Drag /.
-  test.fixme("drag handles render and meet the 44px touch target", async ({
+  // The "selector rot" suspected in #419 was a misdiagnosis: the handle is
+  // still <button aria-label="Drag {name}">. The handles never rendered
+  // because the route itself 404'd (see the fix note at the top of this file).
+  test("drag handles render and meet the 44px touch target", async ({
     page,
   }) => {
     await page.goto(`/dashboard/teams/${fixture!.teamId}/depth-chart`);
