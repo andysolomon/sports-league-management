@@ -10,7 +10,7 @@ import { pickSelectOption } from "../helpers/select";
 /*
  * Schedules & standings (Phase 3 / WSM-000074) e2e smoke.
  *
- * Walks the admin's schedule loop end-to-end:
+ * Walks the admin's schedule loop end-to-end, then the public viewer:
  *   1. Admin opens /dashboard/leagues/[id]/schedule.
  *   2. Creates a fixture between two seeded teams via FixtureFormDialog.
  *   3. Opens RecordResultDialog, enters a final score.
@@ -28,8 +28,14 @@ import { pickSelectOption } from "../helpers/select";
  * subtitle ("Season standings" is a CardTitle div, not a heading role), and
  * the StatusBadge renders the canonical capitalized label ("Final", not the
  * raw "final" status). The seeded league is named "E2E:{fixtureKey}" by the
- * Convex harness. The two tests are an ordered chain: the public-viewer test
- * asserts the fixture + result recorded by the first.
+ * Convex harness.
+ *
+ * This is deliberately ONE test, not a create/verify pair: on a test failure
+ * Playwright restarts the worker for the retry, which re-runs beforeAll and
+ * re-seeds a FRESH league — any later test that consumed state written by an
+ * earlier one would find an empty league and fail unrelatedly. A single test
+ * replays the whole flow against whatever beforeAll seeded, so retries stay
+ * self-consistent.
  */
 const FIXTURE_KEY = "schedules-standings-smoke";
 const LEAGUE_NAME = `E2E:${FIXTURE_KEY}`;
@@ -59,7 +65,7 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     await setupClerkTestingToken({ page });
   });
 
-  test("admin creates a fixture, records the result, standings update", async ({
+  test("admin schedule loop: create fixture, record result, standings, public viewer", async ({
     page,
   }) => {
     if (!fixture) test.skip();
@@ -87,10 +93,12 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
       .click();
     await expect(fixtureDialog).toBeHidden();
 
-    // The new row appears in Week 1.
+    // The new row appears in Week 1. `exact` matters: the row's Actions cell
+    // ("Record result / Simulate / Delete …") also CONTAINS the team name, so
+    // a substring match is a strict-mode violation.
     await expect(page.getByText("Week 1")).toBeVisible();
     await expect(
-      page.getByRole("cell", { name: "E2E Home Hawks" }),
+      page.getByRole("cell", { name: "E2E Home Hawks", exact: true }),
     ).toBeVisible();
 
     // 3. Record the result.
@@ -119,15 +127,8 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     await expect(hawksRow).toBeVisible();
     await expect(hawksRow).toContainText("21");
     await expect(hawksRow).toContainText("+11");
-  });
 
-  test("league public toggle gates the public standings viewer", async ({
-    page,
-  }) => {
-    if (!fixture) test.skip();
-    const leagueId = fixture!.leagueId;
-
-    // Public viewers with a private league → 404 (standings + landing hub).
+    // 5. Public viewers with a private league → 404 (standings + landing).
     // Public /leagues/* routes render fully server-side, so the HTTP status
     // is trustworthy here (unlike streamed /dashboard/* routes, WSM-000190).
     const privateResp = await page.goto(`/leagues/${leagueId}/standings`);
@@ -135,31 +136,31 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     const privateLanding = await page.goto(`/leagues/${leagueId}`);
     expect(privateLanding?.status()).toBe(404);
 
-    // Flip public via the admin toggle on the league detail page.
+    // 6. Flip public via the admin toggle on the league detail page.
     await page.goto(`/dashboard/leagues/${leagueId}`);
     await page.getByRole("button", { name: /Make public/ }).click();
     await expect(
       page.getByRole("button", { name: /Make private/ }),
     ).toBeVisible();
 
-    // Public route now renders the same standings table.
+    // 7a. Public route now renders the same standings table.
     await page.goto(`/leagues/${leagueId}/standings`);
     await expect(
       page.getByRole("heading", { name: "Standings" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("cell", { name: "E2E Home Hawks" }),
+      page.getByRole("cell", { name: "E2E Home Hawks", exact: true }),
     ).toBeVisible();
 
-    // Landing hub (WSM-000083) renders and links to the standings viewer.
+    // 7b. Landing hub (WSM-000083) renders and links to the standings viewer.
     const publicLanding = await page.goto(`/leagues/${leagueId}`);
     expect(publicLanding?.ok()).toBe(true);
     await expect(
       page.getByRole("link", { name: /Standings/ }),
     ).toBeVisible();
 
-    // Schedule section (WSM-000143) lists the game and links to its public
-    // viewer; the viewer shows the final score for the matchup.
+    // 7c. Schedule section (WSM-000143) lists the game and links to its
+    // public viewer; the viewer shows the final score for the matchup.
     const gameLink = page.getByRole("link", {
       name: /E2E Home Hawks vs E2E Away Owls/,
     });
