@@ -89,7 +89,7 @@ export default async function LeagueDetailPage({
             <div className="space-y-6">
               <InviteForm orgId={league.orgId} />
               <InvitationList orgId={league.orgId} />
-              <InviteLinkSection orgId={league.orgId} />
+              <InviteLinkSection leagueId={id} />
               <LeaguePublicToggle
                 leagueId={id}
                 initialIsPublic={visibility?.isPublic ?? false}

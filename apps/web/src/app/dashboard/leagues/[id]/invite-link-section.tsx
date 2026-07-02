@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Copy, Link2, Trash2 } from "lucide-react";
 
-export default function InviteLinkSection({ orgId }: { orgId: string }) {
+export default function InviteLinkSection({ leagueId }: { leagueId: string }) {
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -13,7 +13,7 @@ export default function InviteLinkSection({ orgId }: { orgId: string }) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/orgs/${orgId}/invite-link`);
+        const res = await fetch(`/api/leagues/${leagueId}/invite-link`);
         if (res.ok) {
           const data = await res.json();
           setLinkUrl(data.url);
@@ -23,12 +23,12 @@ export default function InviteLinkSection({ orgId }: { orgId: string }) {
       }
     }
     load();
-  }, [orgId]);
+  }, [leagueId]);
 
   async function handleGenerate() {
     setGenerating(true);
     try {
-      const res = await fetch(`/api/orgs/${orgId}/invite-link`, {
+      const res = await fetch(`/api/leagues/${leagueId}/invite-link`, {
         method: "POST",
       });
       if (res.ok) {
@@ -41,7 +41,7 @@ export default function InviteLinkSection({ orgId }: { orgId: string }) {
   }
 
   async function handleRevoke() {
-    const res = await fetch(`/api/orgs/${orgId}/invite-link`, {
+    const res = await fetch(`/api/leagues/${leagueId}/invite-link`, {
       method: "DELETE",
     });
     if (res.ok) {

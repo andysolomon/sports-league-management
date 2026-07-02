@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mocks = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockRequireOrgAdmin: vi.fn(),
-  mockGetLeagueForOrg: vi.fn(),
+  mockGetLeagueInviteInfo: vi.fn(),
   mockSetLeagueInviteToken: vi.fn(),
   mockHandleApiError: vi.fn((_err: unknown, _route?: string) => {
     const { NextResponse } = require("next/server");
@@ -21,7 +21,7 @@ vi.mock("@/lib/org-context", () => ({
 }));
 
 vi.mock("@/lib/data-api", () => ({
-  getLeagueForOrg: mocks.mockGetLeagueForOrg,
+  getLeagueInviteInfo: mocks.mockGetLeagueInviteInfo,
   setLeagueInviteToken: mocks.mockSetLeagueInviteToken,
 }));
 
@@ -38,12 +38,14 @@ import { GET, POST, DELETE } from "../route";
 import { NextRequest } from "next/server";
 
 function makeRequest(method: string) {
-  return new NextRequest("http://localhost:3000/api/orgs/org_123/invite-link", { method });
+  return new NextRequest("http://localhost:3000/api/leagues/league_1/invite-link", {
+    method,
+  });
 }
 
-const params = Promise.resolve({ orgId: "org_123" });
+const params = Promise.resolve({ id: "league_1" });
 
-describe("invite-link API", () => {
+describe("league invite-link API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -58,20 +60,42 @@ describe("invite-link API", () => {
       expect(body.error).toBe("Unauthorized");
     });
 
-    it("returns 403 for non-admin", async () => {
+    it("returns 404 when the league does not exist", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue(null);
+
+      const res = await GET(makeRequest("GET"), { params });
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.error).toBe("League not found");
+      expect(mocks.mockRequireOrgAdmin).not.toHaveBeenCalled();
+    });
+
+    it("returns 404 for a league no org owns", async () => {
+      mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue({ orgId: null, token: null });
+
+      const res = await GET(makeRequest("GET"), { params });
+      expect(res.status).toBe(404);
+      expect(mocks.mockRequireOrgAdmin).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 for non-admin of the owning org", async () => {
+      mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue({ orgId: "org_123", token: null });
       mocks.mockRequireOrgAdmin.mockRejectedValue(new Error("User must be an admin"));
 
       const res = await GET(makeRequest("GET"), { params });
       expect(res.status).toBe(403);
       const body = await res.json();
       expect(body.error).toBe("Forbidden");
+      expect(mocks.mockRequireOrgAdmin).toHaveBeenCalledWith("org_123", "user_1");
     });
 
     it("returns null when no invite link exists", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue({ orgId: "org_123", token: null });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({ id: "league_1", token: null });
 
       const res = await GET(makeRequest("GET"), { params });
       expect(res.status).toBe(200);
@@ -82,8 +106,8 @@ describe("invite-link API", () => {
 
     it("returns invite link URL when token exists", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue({ orgId: "org_123", token: "abc-123" });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({ id: "league_1", token: "abc-123" });
 
       const res = await GET(makeRequest("GET"), { params });
       expect(res.status).toBe(200);
@@ -94,10 +118,10 @@ describe("invite-link API", () => {
   });
 
   describe("POST", () => {
-    it("generates a new token and returns 201", async () => {
+    it("generates a new token for the league and returns 201", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue({ orgId: "org_123", token: null });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({ id: "league_1", token: null });
       mocks.mockSetLeagueInviteToken.mockResolvedValue(undefined);
 
       const res = await POST(makeRequest("POST"), { params });
@@ -107,13 +131,22 @@ describe("invite-link API", () => {
       expect(body.token).toBe("test-uuid-1234");
       expect(mocks.mockSetLeagueInviteToken).toHaveBeenCalledWith("league_1", "test-uuid-1234");
     });
+
+    it("returns 404 for a league no org owns without writing", async () => {
+      mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue({ orgId: null, token: null });
+
+      const res = await POST(makeRequest("POST"), { params });
+      expect(res.status).toBe(404);
+      expect(mocks.mockSetLeagueInviteToken).not.toHaveBeenCalled();
+    });
   });
 
   describe("DELETE", () => {
-    it("revokes the token", async () => {
+    it("revokes the league's token", async () => {
       mocks.mockAuth.mockResolvedValue({ userId: "user_1" });
+      mocks.mockGetLeagueInviteInfo.mockResolvedValue({ orgId: "org_123", token: "abc-123" });
       mocks.mockRequireOrgAdmin.mockResolvedValue(undefined);
-      mocks.mockGetLeagueForOrg.mockResolvedValue({ id: "league_1", token: "abc-123" });
       mocks.mockSetLeagueInviteToken.mockResolvedValue(undefined);
 
       const res = await DELETE(makeRequest("DELETE"), { params });

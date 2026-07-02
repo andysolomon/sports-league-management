@@ -127,7 +127,7 @@ type AllowedPublicSportsReads =
   | "getLeagueByInviteToken"
   | "getLeagueByName"
   | "getLeagueClaimable"
-  | "getLeagueForOrg"
+  | "getLeagueInviteInfo"
   | "getLeagueOrgId"
   | "getLeagueVisibility"
   | "getLiveGameState"
