@@ -335,12 +335,16 @@ export default function TeamManagement({
         </CardContent>
       </Card>
 
-      <div className="mb-4 flex items-center justify-between">
+      {/* Wraps on a phone: the h3 + up to four action buttons exceed a 375px
+          viewport in a single no-wrap row, scrolling the whole page sideways
+          (WSM-000188/#419). flex-wrap drops the button group to its own line,
+          and the inner group wraps its buttons rather than overflowing. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-lg font-semibold text-foreground">
           Player Roster ({players.length})
         </h3>
         {canManage && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canGenerateRoster && (
               <>
                 <SyntheticRosterButton kind="team" id={team.id} />
