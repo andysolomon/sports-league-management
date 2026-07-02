@@ -128,10 +128,10 @@ const refs = {
     { token: string },
     { leagueId: string; orgId: string | null; name: string } | null
   >("sports:getLeagueByInviteToken"),
-  getLeagueForOrg: queryRef<
-    { orgId: string },
-    { id: string; token: string | null } | null
-  >("sports:getLeagueForOrg"),
+  getLeagueInviteInfo: queryRef<
+    { leagueId: string },
+    { orgId: string | null; token: string | null } | null
+  >("sports:getLeagueInviteInfo"),
   getLeagueOrgId: queryRef<{ leagueId: string }, string | null>(
     "sports:getLeagueOrgId",
   ),
@@ -813,10 +813,10 @@ export async function getLeagueByInviteToken(
   return queryConvex(refs.getLeagueByInviteToken, { token });
 }
 
-export async function getLeagueForOrg(
-  orgId: string,
-): Promise<{ id: string; token: string | null } | null> {
-  return queryConvex(refs.getLeagueForOrg, { orgId });
+export async function getLeagueInviteInfo(
+  leagueId: string,
+): Promise<{ orgId: string | null; token: string | null } | null> {
+  return queryConvex(refs.getLeagueInviteInfo, { leagueId });
 }
 
 export async function setLeagueInviteToken(

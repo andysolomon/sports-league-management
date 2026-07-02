@@ -414,23 +414,22 @@ export const getLeagueByInviteToken = queryGeneric({
   },
 });
 
-export const getLeagueForOrg = queryGeneric({
-  args: { orgId: v.string() },
+// WSM-000199: invite links are per-league (the token lives on the league row),
+// so this is keyed by leagueId. The old getLeagueForOrg used .unique() on
+// by_orgId, which throws once an org owns 2+ leagues (workspace forks, claims).
+export const getLeagueInviteInfo = queryGeneric({
+  args: { leagueId: v.id("leagues") },
   returns: v.union(
     v.object({
-      id: v.string(),
+      orgId: v.union(v.string(), v.null()),
       token: v.union(v.string(), v.null()),
     }),
     v.null(),
   ),
   handler: async (ctx, args) => {
-    const doc = await ctx.db
-      .query("leagues")
-      .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
-      .unique();
-
+    const doc = await ctx.db.get(args.leagueId);
     if (!doc) return null;
-    return { id: doc._id, token: doc.inviteToken ?? null };
+    return { orgId: doc.orgId ?? null, token: doc.inviteToken ?? null };
   },
 });
 
