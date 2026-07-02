@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
+import { pickSelectOption } from "../helpers/select";
 import { TEAMS } from "../helpers/test-data";
 
 test.describe("Team Edit", () => {
@@ -28,25 +29,33 @@ test.describe("Team Edit", () => {
     await expect(page.locator("#team-city")).toContainText(TEAMS.COWBOYS.city);
   });
 
-  // QUARANTINED (#434): #team-city is a Radix Select; this test still
-  // .clear()/.fill()s it. Rewrite to drive the Select via option clicks.
-  test.fixme("saves changes and restores", async ({ page }) => {
-    await page.getByRole("button", { name: "Edit Team" }).click();
+  // #team-city is a Radix Select fed by a state-scoped city pick list (no
+  // free text since WSM-000136). The canonical Cowboys team has no location,
+  // so the State select is driven first — that scopes the city options (and
+  // lazy-loads the cities dataset). Success closes the dialog and refreshes
+  // the page, so the assertions read the team detail <dl> rather than the
+  // toast (a second identical toast would make the toast locator ambiguous).
+  test("saves changes and restores", async ({ page }) => {
+    const details = page.locator("dl");
 
-    await page.locator("#team-city").clear();
-    await page.locator("#team-city").fill("Dallas-FW");
+    await page.getByRole("button", { name: "Edit Team" }).click();
+    await pickSelectOption(page, "#team-state", "Texas");
+    await pickSelectOption(page, "#team-city", "Fort Worth");
     await page.getByRole("button", { name: "Save Changes" }).click();
 
-    await expect(page.locator("[data-sonner-toast]")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("Dallas-FW")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Edit Team" })).toBeHidden();
+    await expect(details.getByText("Fort Worth", { exact: true })).toBeVisible();
 
-    // Restore original value
+    // Restore original value (the state now parses from "Fort Worth, TX",
+    // so only the city needs re-picking).
     await page.getByRole("button", { name: "Edit Team" }).click();
-    await page.locator("#team-city").clear();
-    await page.locator("#team-city").fill(TEAMS.COWBOYS.city);
+    await pickSelectOption(page, "#team-city", TEAMS.COWBOYS.city);
     await page.getByRole("button", { name: "Save Changes" }).click();
 
-    await expect(page.locator("[data-sonner-toast]")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "Edit Team" })).toBeHidden();
+    await expect(
+      details.getByText(TEAMS.COWBOYS.city, { exact: true }),
+    ).toBeVisible();
   });
 
   test("form validation prevents empty name", async ({ page }) => {
