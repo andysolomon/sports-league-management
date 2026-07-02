@@ -1,6 +1,8 @@
 # Sports League Management — Web App
 
-External-facing Next.js application for sports league management, backed by Salesforce via JWT bearer flow.
+External-facing Next.js application for sports league management.
+
+> **Backend:** the app's primary data backend is **[Convex](https://convex.dev)** (see [CLAUDE.md](./CLAUDE.md) and the `convex/` directory). Sections of this README below describe an earlier **Salesforce JWT bearer** design and are being reconciled — treat CLAUDE.md + the code as authoritative for the current data layer. Deploy: [docs/development/DEPLOY.md](../../docs/development/DEPLOY.md). E2E: [docs/guides/WEB_E2E_TESTING_GUIDE.md](../../docs/guides/WEB_E2E_TESTING_GUIDE.md).
 
 ## Tech Stack
 
@@ -12,7 +14,7 @@ External-facing Next.js application for sports league management, backed by Sale
 - **Lucide React** for icons
 - **Sonner** for toast notifications
 - **Zod** for runtime validation (via `@sports-management/api-contracts`)
-- **Playwright** for E2E testing (81 tests across 14 specs)
+- **Playwright** for E2E testing (~93 passing across 24 specs — see [WEB_E2E_TESTING_GUIDE.md](../../docs/guides/WEB_E2E_TESTING_GUIDE.md))
 
 ## Getting Started
 

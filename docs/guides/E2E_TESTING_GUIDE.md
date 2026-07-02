@@ -1,6 +1,12 @@
-# E2E Testing Guide
+# E2E Testing Guide (legacy Salesforce-Lightning suite)
 
-End-to-end tests for the Sports League Management app use [Playwright](https://playwright.dev/) to test against real Salesforce scratch orgs.
+> **Scope:** this documents the **Salesforce Lightning** e2e suite at the repo-root
+> `e2e/` (scratch orgs, `frontdoor.jsp` login, `c-*` Shadow-DOM locators, `.js`
+> specs). For the **Next.js web app** suite (`apps/web/e2e/`, Clerk + Convex,
+> TypeScript) — the one wired into the PR-gating CI workflow — see
+> [WEB_E2E_TESTING_GUIDE.md](./WEB_E2E_TESTING_GUIDE.md).
+
+End-to-end tests for the Salesforce Lightning app use [Playwright](https://playwright.dev/) to test against real Salesforce scratch orgs.
 
 ## Prerequisites
 

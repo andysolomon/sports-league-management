@@ -21,10 +21,12 @@ name: E2E
 # WSM-000172: the suite kept failing because the shared dev Convex deployment
 # drifted behind main (a player-validator change shipped in code but was never
 # pushed to dev → data-dependent 500s on the dashboard, which bounced the health
-# gate and skipped everything). The "Deploy Convex functions to dev" step pushes
-# the PR's functions before testing, so the backend always matches the code under
-# test. Visual regression is a separate, non-blocking job (its OS-specific
-# screenshot baselines aren't committed for Linux, so it must not gate PRs).
+# gate and skipped everything). Fixed in #428 by running an ANONYMOUS LOCAL Convex
+# backend inside the runner (the "Start local Convex backend + deploy functions"
+# step below) instead of the shared cloud dev deployment: each run gets a hermetic
+# backend that matches its own code, and it costs zero cloud function calls.
+# Visual regression is a separate, non-blocking job (its OS-specific screenshot
+# baselines aren't committed for Linux, so it must not gate PRs).
 
 on:
   pull_request:
