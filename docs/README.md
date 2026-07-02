@@ -7,12 +7,14 @@
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Branch naming, conventional-commit format, PR process |
 | [development/RELEASE_STRATEGY.md](development/RELEASE_STRATEGY.md) | Lockstep versioning model, commit→version mapping, semantic-release flow |
 | [development/BRANCH_PROTECTION.md](development/BRANCH_PROTECTION.md) | Branch-protection rules on `main` (required checks, bypass paths) |
+| [development/DEPLOY.md](development/DEPLOY.md) | Production deploy runbook — web via Vercel (auto) + manual Convex deploy, deploy-order rule, verification |
 
 ## Guides
 
 | Document | Description |
 |---|---|
-| [guides/E2E_TESTING_GUIDE.md](guides/E2E_TESTING_GUIDE.md) | Playwright E2E test setup, patterns, and running tests |
+| [guides/WEB_E2E_TESTING_GUIDE.md](guides/WEB_E2E_TESTING_GUIDE.md) | Web app (apps/web) Playwright E2E — Clerk + Convex, canonical fixture, and the local-Convex CI setup |
+| [guides/E2E_TESTING_GUIDE.md](guides/E2E_TESTING_GUIDE.md) | **Legacy** Salesforce-Lightning E2E suite (root `e2e/`, scratch orgs) |
 | [guides/USER_SETUP.md](guides/USER_SETUP.md) | Scratch org user creation and permission set assignment |
 | [guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md](guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md) | Salesforce CLI commands and custom object reference |
 

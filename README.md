@@ -43,6 +43,8 @@ A full-stack sports league management platform combining a Salesforce backend (A
 
 **Tooling:** pnpm workspaces + Turborepo for task orchestration, Corepack for pnpm version management.
 
+> **Backend note (current):** the web app (`apps/web`) now uses **[Convex](https://convex.dev)** as its primary data backend — see [apps/web/CLAUDE.md](apps/web/CLAUDE.md). The Salesforce-REST arrows in the diagram above and parts of [apps/web/README.md](apps/web/README.md) describe the original design and are being reconciled. Production deploy of the web app + Convex is documented in [docs/development/DEPLOY.md](docs/development/DEPLOY.md).
+
 ## Prerequisites
 
 - Node.js 18+
@@ -139,7 +141,7 @@ pnpm --filter @sports-management/tui test:unit
 # Web app tests (74 tests)
 pnpm --filter @sports-management/web test:unit
 
-# E2E tests — Playwright (81 tests across 14 specs)
+# E2E tests — Playwright, apps/web (~93 passing across 24 specs)
 pnpm --filter @sports-management/web test:e2e          # Headless
 pnpm --filter @sports-management/web test:e2e:headed    # Visible browser
 pnpm --filter @sports-management/web test:e2e:report    # With HTML report
@@ -202,7 +204,9 @@ sf project deploy validate --source-dir sportsmgmt
 | [sportsmgmt/README.md](sportsmgmt/README.md) | Core Salesforce package — objects, Apex classes, LWC |
 | [sportsmgmt-football/README.md](sportsmgmt-football/README.md) | Football extension package |
 | [docs/README.md](docs/README.md) | Documentation index |
-| [docs/guides/E2E_TESTING_GUIDE.md](docs/guides/E2E_TESTING_GUIDE.md) | E2E testing setup and patterns |
+| [docs/development/DEPLOY.md](docs/development/DEPLOY.md) | Production deploy runbook (web via Vercel + manual Convex deploy) |
+| [docs/guides/WEB_E2E_TESTING_GUIDE.md](docs/guides/WEB_E2E_TESTING_GUIDE.md) | Web app (apps/web) Playwright E2E — Clerk + Convex, and the CI setup |
+| [docs/guides/E2E_TESTING_GUIDE.md](docs/guides/E2E_TESTING_GUIDE.md) | E2E testing — **legacy Salesforce-Lightning** suite (root `e2e/`) |
 | [docs/guides/USER_SETUP.md](docs/guides/USER_SETUP.md) | User and permission configuration |
 | [docs/guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md](docs/guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md) | Salesforce CLI reference |
 
