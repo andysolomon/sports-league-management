@@ -105,6 +105,30 @@ export const liveStreamingV1 = flag<boolean>({
   },
 });
 
+/*
+ * Low-latency (LL-HLS) sub-flag of `live_streaming_v1` (WSM-000200, #303
+ * track 2). Same dark idiom: default OFF in EVERY environment — low latency
+ * changes the cost/quality tradeoff of real paid Mux streams, so a pilot env
+ * opts in explicitly with `FLAG_LOW_LATENCY_STREAMING_V1=on`. Off (or unset)
+ * keeps standard HLS exactly as before. Only consulted at stream START, and
+ * only on the Mux path — it does nothing while `live_streaming_v1` is dark.
+ */
+export const lowLatencyStreamingV1 = flag<boolean>({
+  key: "low_latency_streaming_v1",
+  description:
+    "DARK — Mux low-latency (LL-HLS) stream creation (#303 track 2). OFF in every env unless FLAG_LOW_LATENCY_STREAMING_V1=on.",
+  defaultValue: false,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = process.env.FLAG_LOW_LATENCY_STREAMING_V1 === "on";
+    void trackFlagExposure("low_latency_streaming_v1", enabled);
+    return enabled;
+  },
+});
+
 export const statKeepingV1 = flag<boolean>({
   key: "stat_keeping_v1",
   description:

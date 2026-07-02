@@ -4,14 +4,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("server-only", () => ({}));
 
 // Mock the Mux SDK so we can drive liveStreams.create's outcome without a
-// real account. The mock's create() reads from `createImpl`, set per test.
+// real account. The mock's create() reads from `createImpl`, set per test,
+// and records its params so tests can assert the creation payload.
 let createImpl: () => Promise<unknown>;
+let lastCreateParams: Record<string, unknown> | undefined;
 vi.mock("@mux/mux-node", () => {
   return {
     default: class MockMux {
       video = {
         liveStreams: {
-          create: () => createImpl(),
+          create: (params: Record<string, unknown>) => {
+            lastCreateParams = params;
+            return createImpl();
+          },
         },
       };
     },
@@ -23,6 +28,7 @@ describe("createMuxLiveStream", () => {
     vi.resetModules();
     vi.stubEnv("MUX_TOKEN_ID", "test-id");
     vi.stubEnv("MUX_TOKEN_SECRET", "test-secret");
+    lastCreateParams = undefined;
   });
 
   it("maps Mux's free-plan rejection to a clean mux_plan_required error", async () => {
@@ -59,5 +65,33 @@ describe("createMuxLiveStream", () => {
       playbackId: "pb_xyz",
       rtmpUrl: "rtmps://global-live.mux.com:443/app",
     });
+  });
+
+  // WSM-000200 (#303 track 2): latency mode is pinned explicitly at creation.
+  it("creates in standard latency mode by default", async () => {
+    createImpl = () =>
+      Promise.resolve({
+        id: "ls_123",
+        stream_key: "sk_abc",
+        playback_ids: [{ id: "pb_xyz" }],
+      });
+    const { createMuxLiveStream } = await import("../mux");
+    await createMuxLiveStream(180);
+    expect(lastCreateParams?.latency_mode).toBe("standard");
+  });
+
+  it("creates in low latency (LL-HLS) mode when opted in", async () => {
+    createImpl = () =>
+      Promise.resolve({
+        id: "ls_123",
+        stream_key: "sk_abc",
+        playback_ids: [{ id: "pb_xyz" }],
+      });
+    const { createMuxLiveStream } = await import("../mux");
+    await createMuxLiveStream(180, { lowLatency: true });
+    expect(lastCreateParams?.latency_mode).toBe("low");
+    // The rest of the payload is unchanged by the latency opt-in.
+    expect(lastCreateParams?.max_continuous_duration).toBe(180 * 60);
+    expect(lastCreateParams?.playback_policy).toEqual(["public"]);
   });
 });

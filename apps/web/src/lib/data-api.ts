@@ -611,6 +611,7 @@ const refs = {
       muxLiveStreamId?: string;
       muxPlaybackId?: string;
       youtubeVideoId?: string | null;
+      latencyMode?: string;
       startedBy: string;
       maxDurationMinutes: number;
     },
@@ -1868,6 +1869,7 @@ export interface CreateGameStreamInput {
   muxLiveStreamId?: string;
   muxPlaybackId?: string;
   youtubeVideoId?: string | null;
+  latencyMode?: string; // "low" | "standard" (mux only, WSM-000200)
   startedBy: string;
   maxDurationMinutes: number;
 }

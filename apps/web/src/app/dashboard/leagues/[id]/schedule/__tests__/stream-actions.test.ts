@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const {
   mockLiveStreamingV1,
+  mockLowLatencyStreamingV1,
   mockAuth,
   mockGetFixture,
   mockGetPublicSeason,
@@ -15,6 +16,7 @@ const {
   mockDisableMuxLiveStream,
 } = vi.hoisted(() => ({
   mockLiveStreamingV1: vi.fn(),
+  mockLowLatencyStreamingV1: vi.fn(),
   mockAuth: vi.fn(),
   mockGetFixture: vi.fn(),
   mockGetPublicSeason: vi.fn(),
@@ -28,7 +30,10 @@ const {
   mockDisableMuxLiveStream: vi.fn(),
 }));
 
-vi.mock("@/lib/flags", () => ({ liveStreamingV1: mockLiveStreamingV1 }));
+vi.mock("@/lib/flags", () => ({
+  liveStreamingV1: mockLiveStreamingV1,
+  lowLatencyStreamingV1: mockLowLatencyStreamingV1,
+}));
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
 vi.mock("@/lib/data-api", () => ({
   getFixture: mockGetFixture,
@@ -59,6 +64,8 @@ const FIXTURE = "fixture_1";
 
 function happyFixture() {
   mockLiveStreamingV1.mockResolvedValue(true);
+  // LL-HLS is a separate opt-in (WSM-000200); default = standard HLS.
+  mockLowLatencyStreamingV1.mockResolvedValue(false);
   mockAuth.mockResolvedValue({ userId: "user_1" });
   mockGetFixture.mockResolvedValue({
     id: FIXTURE,
@@ -165,9 +172,31 @@ describe("startGameStream", () => {
       fixtureId: FIXTURE,
       muxLiveStreamId: "ls_1",
       muxPlaybackId: "pb_1",
+      latencyMode: "standard",
       startedBy: "user_1",
       maxDurationMinutes: 180,
     });
+  });
+
+  // WSM-000200 (#303 track 2): the LL-HLS opt-in flows flag → Mux creation →
+  // persisted latencyMode; with the flag off, standard mode is pinned.
+  it("creates the Mux stream in standard mode when the LL flag is off", async () => {
+    await startGameStream(LEAGUE, FIXTURE);
+    expect(mockCreateMuxLiveStream).toHaveBeenCalledWith(180, {
+      lowLatency: false,
+    });
+  });
+
+  it("creates the Mux stream in low-latency mode when the LL flag is on", async () => {
+    mockLowLatencyStreamingV1.mockResolvedValue(true);
+    const res = await startGameStream(LEAGUE, FIXTURE);
+    expect(res.ok).toBe(true);
+    expect(mockCreateMuxLiveStream).toHaveBeenCalledWith(180, {
+      lowLatency: true,
+    });
+    expect(mockCreateGameStream).toHaveBeenCalledWith(
+      expect.objectContaining({ latencyMode: "low" }),
+    );
   });
 });
 
