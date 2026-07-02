@@ -1,16 +1,27 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
+import { pickSelectOption } from "../helpers/select";
 import { TEAMS, PLAYERS } from "../helpers/test-data";
 
-// QUARANTINED (#419): the create/edit form fields are now Radix Selects
-// (role=combobox buttons), not <input>s, so every form-mutation test fails on
-// fill(). Whole serial group fixme'd until the specs adopt the Select pattern.
-test.describe.fixme("Player CRUD", () => {
+// Rewritten for #434: position/jersey/status are Radix <Select>s (combobox
+// trigger buttons), driven via pickSelectOption — only name/DOB/hometown are
+// still text inputs. Two more renames since the original spec: the roster
+// table abbreviates names ("E2E Test Player" renders as "E. Test Player"),
+// so rows match on the preserved tail; and the row actions are icon-only
+// buttons selected by their aria-labels ("Edit {name}" / "Delete {name}").
+//
+// The tests form an ordered chain (create → edit → delete) against the
+// canonical Cowboys roster; the suite runs serially (workers=1), and the
+// canonical fixture is re-seeded per run, so leftovers from a failed chain
+// don't leak across runs.
+test.describe("Player CRUD", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
     // Navigate to Cowboys team detail page
     await page.goto("/dashboard/teams");
-    await page.getByText(TEAMS.COWBOYS.name).click();
+    await page.locator("a", { hasText: TEAMS.COWBOYS.name }).click();
     await expect(page.getByRole("heading", { name: TEAMS.COWBOYS.name })).toBeVisible();
   });
 
@@ -24,31 +35,29 @@ test.describe.fixme("Player CRUD", () => {
     await expect(page.locator("#player-status")).toBeVisible();
   });
 
-  // QUARANTINED (#419): #player-position is now a Radix Select (role=combobox
-  // button), not an <input> — the test fill()s it. Update to click + pick option.
-  test.fixme("create player with valid data", async ({ page }) => {
+  test("create player with valid data", async ({ page }) => {
     await page.getByRole("button", { name: "Add Player" }).click();
 
     await page.locator("#player-name").fill("E2E Test Player");
-    await page.locator("#player-position").fill("TE");
-    await page.locator("#player-jersey").fill("99");
+    await pickSelectOption(page, "#player-position", "TE");
+    await pickSelectOption(page, "#player-jersey", "99");
     // Status defaults to Active
 
     await page.getByRole("button", { name: "Add Player" }).last().click();
 
-    // Wait for success toast
     await expect(page.locator("[data-sonner-toast]")).toBeVisible({ timeout: 10000 });
 
-    // Verify player appears in roster
-    await expect(page.getByText("E2E Test Player")).toBeVisible();
+    // Verify player appears in roster (names render abbreviated).
+    await expect(
+      page.locator("tbody tr", { hasText: "Test Player" }),
+    ).toBeVisible();
   });
 
   test("form validation prevents empty name", async ({ page }) => {
     await page.getByRole("button", { name: "Add Player" }).click();
 
-    // Clear name and try to submit
-    await page.locator("#player-name").clear();
-    await page.locator("#player-position").fill("TE");
+    // Pick a position but leave the required name empty and try to submit.
+    await pickSelectOption(page, "#player-position", "TE");
     await page.getByRole("button", { name: "Add Player" }).last().click();
 
     // Dialog should stay open (validation error)
@@ -56,48 +65,53 @@ test.describe.fixme("Player CRUD", () => {
   });
 
   test("edit opens pre-populated dialog", async ({ page }) => {
-    // Find E2E Test Player row and click edit
-    const row = page.locator("tbody tr", { hasText: "E2E Test Player" });
-    await row.locator("button").first().click(); // Pencil icon button
+    const row = page.locator("tbody tr", { hasText: "Test Player" });
+    await row.getByRole("button", { name: /^Edit / }).click();
 
     await expect(page.getByRole("heading", { name: "Edit Player" })).toBeVisible();
     await expect(page.locator("#player-name")).toHaveValue("E2E Test Player");
+    // Select triggers render their selected value as text, not an input value.
+    await expect(page.locator("#player-position")).toContainText("TE");
+    await expect(page.locator("#player-jersey")).toContainText("99");
   });
 
   test("edit saves changes", async ({ page }) => {
-    const row = page.locator("tbody tr", { hasText: "E2E Test Player" });
-    await row.locator("button").first().click();
+    const row = page.locator("tbody tr", { hasText: "Test Player" });
+    await row.getByRole("button", { name: /^Edit / }).click();
 
-    await page.locator("#player-position").clear();
-    await page.locator("#player-position").fill("WR");
+    await pickSelectOption(page, "#player-position", "WR");
     await page.getByRole("button", { name: "Save Changes" }).click();
 
     await expect(page.locator("[data-sonner-toast]")).toBeVisible({ timeout: 10000 });
-    await expect(page.locator("tbody tr", { hasText: "E2E Test Player" })).toContainText("WR");
+    await expect(
+      page.locator("tbody tr", { hasText: "Test Player" }),
+    ).toContainText("WR");
   });
 
   test("delete with confirmation removes player", async ({ page }) => {
-    const row = page.locator("tbody tr", { hasText: "E2E Test Player" });
-    // Click delete button (the red-colored trash button)
-    await row.locator("button.text-red-600").click();
+    const row = page.locator("tbody tr", { hasText: "Test Player" });
+    await row.getByRole("button", { name: /^Delete / }).click();
 
     await expect(page.getByRole("heading", { name: "Delete Player" })).toBeVisible();
-    await page.getByRole("button", { name: "Delete" }).click();
+    await page.getByRole("button", { name: "Delete", exact: true }).click();
 
     await expect(page.locator("[data-sonner-toast]")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("E2E Test Player")).toBeHidden();
+    await expect(
+      page.locator("tbody tr", { hasText: "Test Player" }),
+    ).toHaveCount(0);
   });
 
   test("delete cancel keeps player in roster", async ({ page }) => {
-    // Find Prescott's row and click delete
-    const row = page.locator("tbody tr", { hasText: PLAYERS.PRESCOTT.name });
-    await row.locator("button.text-red-600").click();
+    // Rows show abbreviated names, so match on the surname.
+    const row = page.locator("tbody tr", { hasText: "Prescott" });
+    await row.getByRole("button", { name: /^Delete / }).click();
 
     await expect(page.getByRole("heading", { name: "Delete Player" })).toBeVisible();
     await page.getByRole("button", { name: "Cancel" }).click();
 
     // Prescott should still be visible
-    await expect(page.getByText(PLAYERS.PRESCOTT.name)).toBeVisible();
+    await expect(row).toBeVisible();
+    await expect(row).toContainText(String(PLAYERS.PRESCOTT.jersey));
   });
 
   test("error toast on failed mutation", async ({ page }) => {
@@ -111,7 +125,7 @@ test.describe.fixme("Player CRUD", () => {
 
     await page.getByRole("button", { name: "Add Player" }).click();
     await page.locator("#player-name").fill("Error Test Player");
-    await page.locator("#player-position").fill("QB");
+    await pickSelectOption(page, "#player-position", "QB");
     await page.getByRole("button", { name: "Add Player" }).last().click();
 
     // Error toast should appear

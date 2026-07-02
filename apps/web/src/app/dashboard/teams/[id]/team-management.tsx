@@ -392,6 +392,7 @@ export default function TeamManagement({
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label={`Edit ${player.name}`}
                           onClick={() =>
                             setModal({
                               type: "editPlayer",
@@ -405,6 +406,7 @@ export default function TeamManagement({
                           variant="ghost"
                           size="sm"
                           className="text-destructive hover:text-destructive"
+                          aria-label={`Delete ${player.name}`}
                           onClick={() =>
                             setModal({
                               type: "deletePlayer",
