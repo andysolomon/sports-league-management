@@ -12,6 +12,7 @@ import {
   getLiveGameState,
 } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
+import { resolveStreamView } from "@/lib/stream-view";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import GameStreamPlayer from "@/components/games/GameStreamPlayer";
@@ -127,13 +128,13 @@ export default async function PublicGamePage({
     liveEnabled && view.fixture.status !== "final"
       ? await getLiveGameState(gameId).catch(() => null)
       : null;
-  const liveActive = stream?.status === "active";
-  // A replay exists when Mux has attached a VOD asset, or — for YouTube — the
-  // same broadcast video id keeps serving the recording after it ends.
-  const hasReplay =
-    stream?.status === "ended" &&
-    (stream.vodAssetId !== null || stream.youtubeVideoId !== null);
-  const streamEndedNoReplay = stream?.status === "ended" && !hasReplay;
+  // Replay-vs-live decision (WSM-000198): live plays the live playback id;
+  // an ended Mux stream replays the recorded asset's own public playback id
+  // (vodPlaybackId); an ended YouTube stream replays the same video id.
+  const streamView = resolveStreamView(stream);
+  const liveActive = streamView.mode === "live";
+  const hasReplay = streamView.mode === "replay";
+  const streamEndedNoReplay = streamView.mode === "ended-no-replay";
 
   const { fixture, result, seasonName } = view;
   const isFinal = fixture.status === "final" && result !== null;
@@ -191,8 +192,8 @@ export default async function PublicGamePage({
             <div className="relative">
               <GameStreamPlayer
                 provider={stream!.provider}
-                muxPlaybackId={stream!.muxPlaybackId}
-                youtubeVideoId={stream!.youtubeVideoId}
+                muxPlaybackId={streamView.muxPlaybackId}
+                youtubeVideoId={streamView.youtubeVideoId}
                 live={liveActive}
                 title={`${fixture.homeTeamName} vs ${fixture.awayTeamName}`}
               />

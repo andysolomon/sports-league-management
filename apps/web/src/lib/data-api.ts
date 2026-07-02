@@ -625,6 +625,7 @@ const refs = {
       muxLiveStreamId: string;
       status?: string;
       vodAssetId?: string | null;
+      vodPlaybackId?: string | null;
       endedAt?: string | null;
     },
     boolean
@@ -1856,6 +1857,9 @@ export interface PublicGameStream {
   muxPlaybackId: string | null;
   youtubeVideoId: string | null;
   vodAssetId: string | null;
+  /** Public playback id of the recorded asset (WSM-000198) — what a replay
+   *  plays. The live muxPlaybackId only serves the live edge. */
+  vodPlaybackId: string | null;
 }
 
 export interface CreateGameStreamInput {
@@ -1890,6 +1894,7 @@ export async function updateGameStreamStatus(input: {
   muxLiveStreamId: string;
   status?: string;
   vodAssetId?: string | null;
+  vodPlaybackId?: string | null;
   endedAt?: string | null;
 }): Promise<boolean> {
   return mutateConvex(refs.updateGameStreamStatus, input);

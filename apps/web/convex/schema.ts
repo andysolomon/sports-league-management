@@ -313,6 +313,10 @@ export default defineSchema({
     youtubeVideoId: v.optional(v.union(v.string(), v.null())), // youtube: public
     status: v.string(), // "idle" | "active" | "ended"
     vodAssetId: v.union(v.string(), v.null()),
+    // Public playback id of the RECORDED asset (WSM-000198, #303 track 1). The
+    // live muxPlaybackId only serves the live edge — replays need the asset's
+    // own playback id. Optional: legacy rows predate it.
+    vodPlaybackId: v.optional(v.union(v.string(), v.null())),
     startedBy: v.string(),
     startedAt: v.string(),
     endedAt: v.union(v.string(), v.null()),

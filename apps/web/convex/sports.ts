@@ -4429,6 +4429,9 @@ const publicStreamDtoValidator = v.union(
     muxPlaybackId: v.union(v.string(), v.null()),
     youtubeVideoId: v.union(v.string(), v.null()),
     vodAssetId: v.union(v.string(), v.null()),
+    // Public playback id of the recorded asset — what a replay actually plays
+    // (WSM-000198). Distinct from muxPlaybackId, which serves the live edge.
+    vodPlaybackId: v.union(v.string(), v.null()),
   }),
   v.null(),
 );
@@ -4463,6 +4466,7 @@ export const createGameStream = internalMutationGeneric({
       // for its webhook (video.live_stream.active) to confirm before flipping.
       status: provider === "youtube" ? "active" : "idle",
       vodAssetId: null,
+      vodPlaybackId: null,
       startedBy: args.startedBy,
       startedAt: new Date().toISOString(),
       endedAt: null,
@@ -4513,10 +4517,11 @@ export const endGameStreamByFixture = internalMutationGeneric({
 export const updateGameStreamStatus = internalMutationGeneric({
   args: {
     muxLiveStreamId: v.string(),
-    // Optional so a `video.asset.ready` webhook can attach the VOD id without
-    // changing status (the stream has already ended by then).
+    // Optional so a `video.asset.ready` webhook can attach the VOD ids without
+    // changing status (status flips separately on live_stream.idle).
     status: v.optional(v.string()),
     vodAssetId: v.optional(v.union(v.string(), v.null())),
+    vodPlaybackId: v.optional(v.union(v.string(), v.null())),
     endedAt: v.optional(v.union(v.string(), v.null())),
   },
   returns: v.boolean(),
@@ -4534,10 +4539,13 @@ export const updateGameStreamStatus = internalMutationGeneric({
     const patch: {
       status?: string;
       vodAssetId?: string | null;
+      vodPlaybackId?: string | null;
       endedAt?: string | null;
     } = {};
     if (args.status !== undefined) patch.status = args.status;
     if (args.vodAssetId !== undefined) patch.vodAssetId = args.vodAssetId;
+    if (args.vodPlaybackId !== undefined)
+      patch.vodPlaybackId = args.vodPlaybackId;
     if (args.endedAt !== undefined) patch.endedAt = args.endedAt;
 
     await ctx.db.patch(row._id, patch);
@@ -4561,6 +4569,7 @@ export const getStreamByFixture = queryGeneric({
       muxPlaybackId: row.muxPlaybackId ?? null,
       youtubeVideoId: row.youtubeVideoId ?? null,
       vodAssetId: row.vodAssetId,
+      vodPlaybackId: row.vodPlaybackId ?? null,
     };
   },
 });
