@@ -168,6 +168,7 @@ type AllowedPublicSportsReads =
   | "listPlayers"
   | "listPlayersByTeam"
   | "listPublicLeagues"
+  | "listResultsBySeason"
   | "listSeasons"
   | "listTeams"
   | "listTeamsByLeague";

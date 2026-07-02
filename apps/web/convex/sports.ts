@@ -4149,6 +4149,51 @@ export const getResultByFixture = queryGeneric({
 });
 
 /*
+ * Batch results for a whole season in ONE query (WSM-000193).
+ *
+ * The dashboard used to call `getResultByFixture` once per fixture — an N+1 that
+ * fired ~one Convex function call per game per render (90+ for a full season),
+ * the dominant driver of prod function-call volume. This collapses that fan-out
+ * to a single call: the per-fixture `gameResults` lookups now happen as in-process
+ * DB reads inside one invocation (same pattern `computeStandings` already uses).
+ *
+ * Returns a SCORE-ONLY projection (no `playerStatsJson`) — the dashboard needs
+ * only scores keyed by fixture, and omitting the stats blob keeps the array
+ * payload small even for a fully stat-kept season.
+ */
+const seasonResultValidator = v.object({
+  fixtureId: v.string(),
+  homeScore: v.number(),
+  awayScore: v.number(),
+});
+
+export const listResultsBySeason = queryGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(seasonResultValidator),
+  handler: async (ctx, args) => {
+    const fixtures = await ctx.db
+      .query("fixtures")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+    const rows = await Promise.all(
+      fixtures.map((f) =>
+        ctx.db
+          .query("gameResults")
+          .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+          .first(),
+      ),
+    );
+    return rows
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .map((r) => ({
+        fixtureId: r.fixtureId,
+        homeScore: r.homeScore,
+        awayScore: r.awayScore,
+      }));
+  },
+});
+
+/*
  * Phase 3 — Standings compute (Sprint 7 / WSM-000070).
  *
  * Pure math lives in `convex/lib/standings.ts`. The queries below

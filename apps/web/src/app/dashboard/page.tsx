@@ -8,7 +8,7 @@ import {
   getDivisions,
   getLeagues,
   listFixturesBySeason,
-  getResultByFixture,
+  listResultsBySeason,
   computeStandings,
   listOrgMemberRoles,
 } from "@/lib/data-api";
@@ -140,12 +140,15 @@ export default async function DashboardPage() {
     // Incident hardening: a single failing season-data read must not crash the
     // whole dashboard. Degrade to empty widgets (defaults initialized above).
     try {
-    const fixtures = await listFixturesBySeason(activeSeason.id);
-    const results = await Promise.all(
-      fixtures.map((f) => getResultByFixture(f.id)),
-    );
+    // One batched read for the whole season instead of one call per fixture
+    // (WSM-000193): the old `getResultByFixture` fan-out fired ~one Convex
+    // function call per game on every dashboard render.
+    const [fixtures, results] = await Promise.all([
+      listFixturesBySeason(activeSeason.id),
+      listResultsBySeason(activeSeason.id),
+    ]);
     const resultByFixture = new Map(
-      fixtures.map((f, i) => [f.id, results[i]] as const),
+      results.map((r) => [r.fixtureId, r] as const),
     );
     fixturesTotal = fixtures.length;
     fixturesFinal = fixtures.filter((f) => f.status === "final").length;
