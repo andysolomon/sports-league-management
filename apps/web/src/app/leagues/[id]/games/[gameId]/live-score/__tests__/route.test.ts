@@ -1,25 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const {
-  mockLiveScoringV1,
-  mockGetFixture,
-  mockGetLeagueVisibility,
-  mockGetPublicSeason,
-  mockGetLiveGameState,
-} = vi.hoisted(() => ({
+const { mockLiveScoringV1, mockGetPublicLiveGameState } = vi.hoisted(() => ({
   mockLiveScoringV1: vi.fn(),
-  mockGetFixture: vi.fn(),
-  mockGetLeagueVisibility: vi.fn(),
-  mockGetPublicSeason: vi.fn(),
-  mockGetLiveGameState: vi.fn(),
+  mockGetPublicLiveGameState: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({ liveScoringV1: mockLiveScoringV1 }));
 vi.mock("@/lib/data-api", () => ({
-  getFixture: mockGetFixture,
-  getLeagueVisibility: mockGetLeagueVisibility,
-  getPublicSeason: mockGetPublicSeason,
-  getLiveGameState: mockGetLiveGameState,
+  getPublicLiveGameState: mockGetPublicLiveGameState,
 }));
 
 import { GET } from "../route";
@@ -41,10 +29,9 @@ const LIVE = {
 
 function happy() {
   mockLiveScoringV1.mockResolvedValue(true);
-  mockGetLeagueVisibility.mockResolvedValue({ isPublic: true });
-  mockGetFixture.mockResolvedValue({ id: GAME, seasonId: "season_1" });
-  mockGetPublicSeason.mockResolvedValue({ id: "season_1", leagueId: LEAGUE });
-  mockGetLiveGameState.mockResolvedValue(LIVE);
+  // One Convex call does the public + cross-league guard AND the live-state
+  // read (WSM-000192); a non-null result means every guard passed.
+  mockGetPublicLiveGameState.mockResolvedValue({ live: LIVE });
 }
 
 beforeEach(() => {
@@ -57,40 +44,31 @@ describe("GET /leagues/[id]/games/[gameId]/live-score", () => {
     mockLiveScoringV1.mockResolvedValue(false);
     const res = await call();
     expect(res.status).toBe(404);
-    expect(mockGetLiveGameState).not.toHaveBeenCalled();
+    expect(mockGetPublicLiveGameState).not.toHaveBeenCalled();
   });
 
-  it("404s when the league isn't public", async () => {
-    mockGetLeagueVisibility.mockResolvedValue({ isPublic: false });
-    const res = await call();
-    expect(res.status).toBe(404);
-    expect(mockGetLiveGameState).not.toHaveBeenCalled();
-  });
-
-  it("404s when the fixture doesn't exist", async () => {
-    mockGetFixture.mockResolvedValue(null);
+  it("404s when the guarded read denies (private league / missing / cross-league fixture)", async () => {
+    mockGetPublicLiveGameState.mockResolvedValue(null);
     expect((await call()).status).toBe(404);
   });
 
-  it("404s on a cross-league fixture (leak guard)", async () => {
-    mockGetPublicSeason.mockResolvedValue({
-      id: "season_1",
-      leagueId: "other_league",
-    });
-    const res = await call();
-    expect(res.status).toBe(404);
-    expect(mockGetLiveGameState).not.toHaveBeenCalled();
+  it("404s when the read throws (e.g. invalid Convex id)", async () => {
+    mockGetPublicLiveGameState.mockRejectedValue(
+      new Error("ArgumentValidationError"),
+    );
+    expect((await call()).status).toBe(404);
   });
 
   it("returns the live projection for a public, in-league fixture", async () => {
     const res = await call();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ live: LIVE });
-    expect(res.headers.get("Cache-Control")).toContain("s-maxage=3");
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=10");
+    expect(mockGetPublicLiveGameState).toHaveBeenCalledWith(LEAGUE, GAME);
   });
 
   it("returns { live: null } before kickoff", async () => {
-    mockGetLiveGameState.mockResolvedValue(null);
+    mockGetPublicLiveGameState.mockResolvedValue({ live: null });
     const res = await call();
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ live: null });

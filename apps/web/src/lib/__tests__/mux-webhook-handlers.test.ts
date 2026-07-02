@@ -55,6 +55,65 @@ describe("mapMuxEventToUpdate (pure)", () => {
     ).toEqual({ muxLiveStreamId: "ls_1", vodAssetId: "asset_9" });
   });
 
+  it("attaches the asset's PUBLIC playback id on asset.ready (WSM-000198)", () => {
+    expect(
+      mapMuxEventToUpdate(
+        {
+          type: "video.asset.ready",
+          data: {
+            id: "asset_9",
+            live_stream_id: "ls_1",
+            playback_ids: [
+              { id: "pb_signed", policy: "signed" },
+              { id: "pb_public", policy: "public" },
+            ],
+          },
+        },
+        NOW,
+      ),
+    ).toEqual({
+      muxLiveStreamId: "ls_1",
+      vodAssetId: "asset_9",
+      vodPlaybackId: "pb_public",
+    });
+  });
+
+  it("attaches VOD ids on asset.live_stream_completed (finalized recording)", () => {
+    expect(
+      mapMuxEventToUpdate(
+        {
+          type: "video.asset.live_stream_completed",
+          data: {
+            id: "asset_9",
+            live_stream_id: "ls_1",
+            playback_ids: [{ id: "pb_public", policy: "public" }],
+          },
+        },
+        NOW,
+      ),
+    ).toEqual({
+      muxLiveStreamId: "ls_1",
+      vodAssetId: "asset_9",
+      vodPlaybackId: "pb_public",
+    });
+  });
+
+  it("omits vodPlaybackId when the asset has no PUBLIC playback id", () => {
+    expect(
+      mapMuxEventToUpdate(
+        {
+          type: "video.asset.ready",
+          data: {
+            id: "asset_9",
+            live_stream_id: "ls_1",
+            playback_ids: [{ id: "pb_signed", policy: "signed" }],
+          },
+        },
+        NOW,
+      ),
+    ).toEqual({ muxLiveStreamId: "ls_1", vodAssetId: "asset_9" });
+  });
+
   it("ignores asset.ready for uploads (no live_stream_id)", () => {
     expect(
       mapMuxEventToUpdate(
