@@ -73,6 +73,7 @@ const fixtureResultValidator = v.object({
   teamId: v.id("teams"),
   playerIds: v.array(v.id("players")),
   activeAssignmentIds: v.array(v.id("rosterAssignments")),
+  depthChartEntryIds: v.array(v.id("depthChartEntries")),
 });
 
 // Cascade-delete a single league and every child row that references it.
@@ -204,6 +205,10 @@ export const createRosterFixture = internalMutation({
     seedActivePlayers: v.optional(v.number()),
     extraBenchPlayers: v.optional(v.number()),
     positionSlot: v.optional(v.string()),
+    // Depth-chart e2e (WSM-000197): also insert one depthChartEntries row per
+    // active player (sortOrder = seed index) so the board renders a
+    // deterministic initial order that reorders can be asserted against.
+    seedDepthChartEntries: v.optional(v.boolean()),
   },
   returns: fixtureResultValidator,
   handler: async (ctx, args) => {
@@ -280,6 +285,21 @@ export const createRosterFixture = internalMutation({
       activeAssignmentIds.push(assignmentId);
     }
 
+    const depthChartEntryIds: Id<"depthChartEntries">[] = [];
+    if (args.seedDepthChartEntries) {
+      for (let i = 0; i < seedActive; i++) {
+        const entryId = await ctx.db.insert("depthChartEntries", {
+          teamId,
+          seasonId,
+          playerId: playerIds[i],
+          positionSlot,
+          sortOrder: i,
+          updatedAt: assignedAt,
+        });
+        depthChartEntryIds.push(entryId);
+      }
+    }
+
     return {
       fixtureKey: args.fixtureKey,
       leagueId,
@@ -287,6 +307,7 @@ export const createRosterFixture = internalMutation({
       teamId,
       playerIds,
       activeAssignmentIds,
+      depthChartEntryIds,
     };
   },
 });

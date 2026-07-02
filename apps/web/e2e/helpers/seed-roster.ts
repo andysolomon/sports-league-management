@@ -23,6 +23,8 @@ export interface RosterFixtureConfig {
   seedActivePlayers?: number;
   extraBenchPlayers?: number;
   positionSlot?: string;
+  /** Also insert depthChartEntries for the active players (WSM-000197). */
+  seedDepthChartEntries?: boolean;
 }
 
 export interface RosterFixtureResult {
@@ -32,6 +34,7 @@ export interface RosterFixtureResult {
   teamId: string;
   playerIds: string[];
   activeAssignmentIds: string[];
+  depthChartEntryIds: string[];
 }
 
 const createFixtureRef = makeFunctionReference<

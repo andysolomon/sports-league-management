@@ -16,6 +16,7 @@ interface FixtureResult {
   teamId: Id<"teams">;
   playerIds: Id<"players">[];
   activeAssignmentIds: Id<"rosterAssignments">[];
+  depthChartEntryIds: Id<"depthChartEntries">[];
 }
 
 function asFixture(r: unknown): FixtureResult {
@@ -141,6 +142,61 @@ describe("e2eSeed", () => {
       const team = await ctx.db.get(second.teamId);
       expect(team?.rosterLimit).toBe(40);
     });
+  });
+
+  it("seeds depthChartEntries for the active players when requested", async () => {
+    const t = convexTest(schema, modules);
+    const result = asFixture(
+      await t.mutation(anyApi.e2eSeed.createRosterFixture, {
+        fixtureKey: FIXTURE_KEY,
+        clerkOrgId: null,
+        rosterLimit: 53,
+        seedActivePlayers: 3,
+        extraBenchPlayers: 0,
+        positionSlot: "QB",
+        seedDepthChartEntries: true,
+      }),
+    );
+
+    expect(result.depthChartEntryIds).toHaveLength(3);
+
+    await t.run(async (ctx) => {
+      const entries = await ctx.db
+        .query("depthChartEntries")
+        .withIndex("by_team_season_position", (q) =>
+          q
+            .eq("teamId", result.teamId)
+            .eq("seasonId", result.seasonId)
+            .eq("positionSlot", "QB"),
+        )
+        .collect();
+      expect(entries).toHaveLength(3);
+      const bySortOrder = [...entries].sort((a, b) => a.sortOrder - b.sortOrder);
+      expect(bySortOrder.map((e) => e.sortOrder)).toEqual([0, 1, 2]);
+      expect(bySortOrder.map((e) => e.playerId)).toEqual(result.playerIds);
+    });
+
+    // Teardown cascades through the new rows too.
+    await t.mutation(anyApi.e2eSeed.resetRosterFixture, {
+      fixtureKey: FIXTURE_KEY,
+    });
+    await t.run(async (ctx) => {
+      const stray = await ctx.db.get(result.depthChartEntryIds[0]);
+      expect(stray).toBeNull();
+    });
+  });
+
+  it("omits depthChartEntries by default", async () => {
+    const t = convexTest(schema, modules);
+    const result = asFixture(
+      await t.mutation(anyApi.e2eSeed.createRosterFixture, {
+        fixtureKey: FIXTURE_KEY,
+        clerkOrgId: null,
+        rosterLimit: 53,
+        seedActivePlayers: 2,
+      }),
+    );
+    expect(result.depthChartEntryIds).toHaveLength(0);
   });
 
   it("respects rosterLocked=true when requested", async () => {
