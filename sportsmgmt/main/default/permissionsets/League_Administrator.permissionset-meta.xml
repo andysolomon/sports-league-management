@@ -109,6 +109,17 @@
         <readable>true</readable>
     </fieldPermissions>
 
+    <!-- League__c Record Types (WSM-000203): admins pick the league class at
+         creation; visibility here makes both selectable for this permission set. -->
+    <recordTypeVisibilities>
+        <recordType>League__c.Amateur</recordType>
+        <visible>true</visible>
+    </recordTypeVisibilities>
+    <recordTypeVisibilities>
+        <recordType>League__c.Professional</recordType>
+        <visible>true</visible>
+    </recordTypeVisibilities>
+
     <!-- Tab Visibility -->
     <tabSettings>
         <tab>League__c</tab>
