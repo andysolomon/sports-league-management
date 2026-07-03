@@ -91,6 +91,58 @@ export async function createMuxLiveStream(
   };
 }
 
+export interface CreatedMuxClip {
+  assetId: string;
+  /** Public playback id — present from creation; playable once the asset is
+   *  ready (the webhook flips our row's status). */
+  playbackId: string | null;
+}
+
+/**
+ * Cut a highlight clip from an existing asset (WSM-000201, #303 track 3). Mux
+ * clipping = create a NEW asset whose input is `mux://assets/{sourceAssetId}`
+ * with start/end offsets in seconds (Mux minimum clip length: 500ms). The clip
+ * gets its own public playback id; `video_quality: "basic"` pins per-clip
+ * encoding cost at the floor — highlights don't need the premium ladder.
+ */
+export async function createMuxClip(
+  sourceAssetId: string,
+  startTimeSec: number,
+  endTimeSec: number,
+): Promise<CreatedMuxClip> {
+  const mux = getMux();
+  const asset = await mux.video.assets.create({
+    inputs: [
+      {
+        url: `mux://assets/${sourceAssetId}`,
+        start_time: startTimeSec,
+        end_time: endTimeSec,
+      },
+    ],
+    playback_policies: ["public"],
+    video_quality: "basic",
+  });
+  if (!asset.id) throw new Error("mux_clip_incomplete");
+  return {
+    assetId: asset.id,
+    playbackId:
+      asset.playback_ids?.find((p) => p.policy === "public")?.id ?? null,
+  };
+}
+
+/** Delete a clip's Mux asset (admin moderation/cleanup). Mux 404s are swallowed
+ *  so a double-delete converges instead of surfacing an error. */
+export async function deleteMuxAsset(assetId: string): Promise<void> {
+  const mux = getMux();
+  try {
+    await mux.video.assets.delete(assetId);
+  } catch (err) {
+    const status = (err as { status?: number } | null)?.status;
+    if (status === 404) return;
+    throw err;
+  }
+}
+
 /** Disable a live stream (admin manual stop). Idempotent-ish: Mux 404s are
  *  swallowed so a double-stop doesn't surface an error to the coach. */
 export async function disableMuxLiveStream(liveStreamId: string): Promise<void> {

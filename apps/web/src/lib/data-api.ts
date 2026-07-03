@@ -643,6 +643,33 @@ const refs = {
     { fixtureId: string },
     { provider: string; muxLiveStreamId: string | null; status: string } | null
   >("sports:getStreamAdminByFixture"),
+  // Highlight clips (WSM-000201, #303 track 3)
+  createGameClip: mutationRef<
+    {
+      fixtureId: string;
+      muxAssetId: string;
+      playbackId: string | null;
+      label: string;
+      startTime: number;
+      endTime: number;
+      createdBy: string;
+    },
+    { id: string }
+  >("sports:createGameClip"),
+  updateGameClipStatus: mutationRef<
+    { muxAssetId: string; status: string; playbackId?: string | null },
+    boolean
+  >("sports:updateGameClipStatus"),
+  deleteGameClip: mutationRef<{ clipId: string; fixtureId: string }, boolean>(
+    "sports:deleteGameClip",
+  ),
+  listClipsByFixture: queryRef<{ fixtureId: string }, PublicGameClip[]>(
+    "sports:listClipsByFixture",
+  ),
+  // Internal query (not on public api) — admin-keyed server code only.
+  listClipsAdminByFixture: queryRef<{ fixtureId: string }, AdminGameClip[]>(
+    "sports:listClipsAdminByFixture",
+  ),
   // Stat-keeping keystone (WSM-000112)
   upsertPlayerGameStats: mutationRef<
     {
@@ -1913,6 +1940,72 @@ export async function getActiveStreamCountForLeague(
   leagueId: string,
 ): Promise<number> {
   return queryConvex(refs.getActiveStreamCountForLeague, { leagueId });
+}
+
+// --- Highlight clips (WSM-000201, #303 track 3) ---
+
+/** Public projection of a clip — READY clips only, playback fields only. */
+export interface PublicGameClip {
+  playbackId: string;
+  label: string;
+  createdAt: string;
+}
+
+/** Admin projection — includes the server-side Mux asset id and lifecycle
+ *  status. Server-side use only; strip `muxAssetId` before anything reaches a
+ *  client component. */
+export interface AdminGameClip {
+  id: string;
+  muxAssetId: string;
+  playbackId: string | null;
+  label: string;
+  startTime: number;
+  endTime: number;
+  status: string; // "preparing" | "ready" | "errored"
+  createdAt: string;
+}
+
+export async function createGameClip(input: {
+  fixtureId: string;
+  muxAssetId: string;
+  playbackId: string | null;
+  label: string;
+  startTime: number;
+  endTime: number;
+  createdBy: string;
+}): Promise<{ id: string }> {
+  return mutateConvex(refs.createGameClip, input);
+}
+
+/** Flip a clip's lifecycle status from the Mux asset webhooks (keyed by the
+ *  clip's own asset id). */
+export async function updateGameClipStatus(input: {
+  muxAssetId: string;
+  status: string;
+  playbackId?: string | null;
+}): Promise<boolean> {
+  return mutateConvex(refs.updateGameClipStatus, input);
+}
+
+export async function deleteGameClip(
+  clipId: string,
+  fixtureId: string,
+): Promise<boolean> {
+  return mutateConvex(refs.deleteGameClip, { clipId, fixtureId });
+}
+
+/** Public read — READY clips only, projected to playback fields only. */
+export async function listClipsByFixture(
+  fixtureId: string,
+): Promise<PublicGameClip[]> {
+  return queryConvex(refs.listClipsByFixture, { fixtureId });
+}
+
+/** Internal admin read — all clips (incl. preparing/errored) with asset ids. */
+export async function listClipsAdminByFixture(
+  fixtureId: string,
+): Promise<AdminGameClip[]> {
+  return queryConvex(refs.listClipsAdminByFixture, { fixtureId });
 }
 
 /** Internal admin read — returns the server-side Mux live-stream id so a server

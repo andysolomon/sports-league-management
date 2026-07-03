@@ -332,6 +332,31 @@ export default defineSchema({
     .index("by_muxLiveStreamId", ["muxLiveStreamId"]),
 
   /*
+   * Shareable highlight clips cut from a game's stream recording (WSM-000201,
+   * #303 track 3). Each clip is its OWN Mux asset (created from the VOD asset
+   * via a `mux://assets/{id}` input) with its own public playback id. Writes
+   * are internalMutation only; the public read lists READY clips projected to
+   * playback-only fields — the clip's Mux asset id never transits a public
+   * query.
+   */
+  gameClips: defineTable({
+    fixtureId: v.id("fixtures"),
+    muxAssetId: v.string(), // the clip's own asset id — server-side only
+    playbackId: v.union(v.string(), v.null()), // public playback id
+    label: v.string(),
+    // Clip range in seconds within the source recording (admin display).
+    startTime: v.number(),
+    endTime: v.number(),
+    // "preparing" | "ready" | "errored" — flipped by the Mux asset webhooks.
+    status: v.string(),
+    createdBy: v.string(),
+    createdAt: v.string(),
+  })
+    .index("by_fixtureId", ["fixtureId"])
+    // Mux asset webhooks identify a clip by its own asset id.
+    .index("by_muxAssetId", ["muxAssetId"]),
+
+  /*
    * Stat-keeping keystone (WSM-000112). One row per player per game — the
    * player's box-score line, stored as typed JSON (`statsJson`, validated at the
    * edge like playerAttributes). Supersedes the reserved gameResults.player-

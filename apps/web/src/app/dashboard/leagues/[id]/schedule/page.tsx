@@ -18,6 +18,7 @@ import {
   getStreamByFixture,
   getTeamsByLeague,
   listFixturesBySeason,
+  type PublicGameStream,
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
@@ -28,6 +29,7 @@ import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
 import GoLiveControl from "@/components/schedule/GoLiveControl";
+import ClipsControl from "@/components/schedule/ClipsControl";
 import {
   SimulateGameButton,
   SimulateSeasonButton,
@@ -99,14 +101,15 @@ export default async function LeagueSchedulePage({
     }),
   );
 
-  // Per-fixture live-stream status — only fetched when the dark flag is on for
-  // an admin, so the default (flag off) path adds zero reads.
-  const streamStatuses = new Map<string, StreamStatus | null>();
+  // Per-fixture live-stream state — only fetched when the dark flag is on for
+  // an admin, so the default (flag off) path adds zero reads. The full public
+  // projection is kept (not just status): the clips control (WSM-000201)
+  // needs vodAssetId/vodPlaybackId to know a recording exists.
+  const streams = new Map<string, PublicGameStream | null>();
   if (canStream) {
     await Promise.all(
       fixtures.map(async (f) => {
-        const stream = await getStreamByFixture(f.id);
-        streamStatuses.set(f.id, (stream?.status as StreamStatus) ?? null);
+        streams.set(f.id, await getStreamByFixture(f.id));
       }),
     );
   }
@@ -304,8 +307,26 @@ export default async function LeagueSchedulePage({
                                     fixtureId={fixture.id}
                                     homeTeamName={fixture.homeTeamName}
                                     awayTeamName={fixture.awayTeamName}
-                                    status={streamStatuses.get(fixture.id) ?? null}
+                                    status={
+                                      (streams.get(fixture.id)?.status as
+                                        | StreamStatus
+                                        | undefined) ?? null
+                                    }
                                     gameStatus={fixture.status}
+                                  />
+                                ) : null}
+                                {canStream &&
+                                streams.get(fixture.id)?.provider === "mux" &&
+                                streams.get(fixture.id)?.vodAssetId ? (
+                                  <ClipsControl
+                                    leagueId={leagueId}
+                                    fixtureId={fixture.id}
+                                    homeTeamName={fixture.homeTeamName}
+                                    awayTeamName={fixture.awayTeamName}
+                                    vodPlaybackId={
+                                      streams.get(fixture.id)?.vodPlaybackId ??
+                                      null
+                                    }
                                   />
                                 ) : null}
                                 {statsEnabled ? (

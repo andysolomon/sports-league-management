@@ -30,6 +30,8 @@ const {
   mockDisableMuxLiveStream: vi.fn(),
 }));
 
+// stream-auth.ts (the extracted auth chain) is `import "server-only"`.
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/flags", () => ({
   liveStreamingV1: mockLiveStreamingV1,
   lowLatencyStreamingV1: mockLowLatencyStreamingV1,

@@ -4627,6 +4627,143 @@ export const getActiveStreamCountForLeague = queryGeneric({
 });
 
 /*
+ * Highlight clips (WSM-000201, #303 track 3). A clip is its own Mux asset cut
+ * from the stream's VOD recording. Writes are internalMutation (trusted server
+ * code only); the public read lists READY clips projected to playback-only
+ * fields — the clip's Mux asset id never transits a public query, mirroring
+ * how gameStreams hides the live-stream id.
+ */
+
+export const createGameClip = internalMutationGeneric({
+  args: {
+    fixtureId: v.id("fixtures"),
+    muxAssetId: v.string(),
+    playbackId: v.union(v.string(), v.null()),
+    label: v.string(),
+    startTime: v.number(),
+    endTime: v.number(),
+    createdBy: v.string(),
+  },
+  returns: v.object({ id: v.string() }),
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+    const id = await ctx.db.insert("gameClips", {
+      fixtureId: args.fixtureId,
+      muxAssetId: args.muxAssetId,
+      playbackId: args.playbackId,
+      label: args.label,
+      startTime: args.startTime,
+      endTime: args.endTime,
+      status: "preparing",
+      createdBy: args.createdBy,
+      createdAt: new Date().toISOString(),
+    });
+    return { id };
+  },
+});
+
+export const updateGameClipStatus = internalMutationGeneric({
+  args: {
+    muxAssetId: v.string(),
+    status: v.string(), // "ready" | "errored"
+    playbackId: v.optional(v.union(v.string(), v.null())),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("gameClips")
+      .withIndex("by_muxAssetId", (q) => q.eq("muxAssetId", args.muxAssetId))
+      .first();
+    // Idempotent: an unknown asset id (e.g. a late event for a clip deleted
+    // meanwhile, or a duplicate delivery) is a no-op, not an error.
+    if (!row) return false;
+    const patch: { status: string; playbackId?: string | null } = {
+      status: args.status,
+    };
+    if (args.playbackId !== undefined) patch.playbackId = args.playbackId;
+    await ctx.db.patch(row._id, patch);
+    return true;
+  },
+});
+
+export const deleteGameClip = internalMutationGeneric({
+  args: { clipId: v.id("gameClips"), fixtureId: v.id("fixtures") },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.clipId);
+    // The fixture check pins the delete to the fixture the caller was
+    // authorized for — a clip id from another game can't be deleted sideways.
+    if (!row || row.fixtureId !== args.fixtureId) return false;
+    await ctx.db.delete(args.clipId);
+    return true;
+  },
+});
+
+// Public projection — READY clips only, playback fields only.
+export const listClipsByFixture = queryGeneric({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.array(
+    v.object({
+      playbackId: v.string(),
+      label: v.string(),
+      createdAt: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("gameClips")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .collect();
+    // PUBLIC PROJECTION ONLY — never return muxAssetId here.
+    return rows
+      .filter((r) => r.status === "ready" && r.playbackId)
+      .map((r) => ({
+        playbackId: r.playbackId as string,
+        label: r.label,
+        createdAt: r.createdAt,
+      }));
+  },
+});
+
+/*
+ * INTERNAL read — full clip rows (incl. the Mux asset id + status) for the
+ * admin-keyed server: the clips dialog also lists preparing/errored clips, and
+ * deleting a clip needs its asset id to tear down the Mux asset.
+ */
+export const listClipsAdminByFixture = internalQueryGeneric({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      muxAssetId: v.string(),
+      playbackId: v.union(v.string(), v.null()),
+      label: v.string(),
+      startTime: v.number(),
+      endTime: v.number(),
+      status: v.string(),
+      createdAt: v.string(),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("gameClips")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .collect();
+    return rows.map((r) => ({
+      id: r._id,
+      muxAssetId: r.muxAssetId,
+      playbackId: r.playbackId,
+      label: r.label,
+      startTime: r.startTime,
+      endTime: r.endTime,
+      status: r.status,
+      createdAt: r.createdAt,
+    }));
+  },
+});
+
+/*
  * Stat-keeping keystone (WSM-000112) — per-player box-score lines.
  *
  * Writes are internalMutation (only the admin-keyed server reaches them). One
