@@ -25,8 +25,8 @@ name: E2E
 # backend inside the runner (the "Start local Convex backend + deploy functions"
 # step below) instead of the shared cloud dev deployment: each run gets a hermetic
 # backend that matches its own code, and it costs zero cloud function calls.
-# Visual regression is a separate, non-blocking job (its OS-specific screenshot
-# baselines aren't committed for Linux, so it must not gate PRs).
+# Visual regression is a separate job. Linux baselines are committed (WSM-000204),
+# but it stays non-blocking until it proves stable across runner-image updates.
 
 on:
   pull_request:
@@ -186,10 +186,14 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # Visual regression: NON-BLOCKING. OS-specific screenshot baselines aren't
-  # committed for Linux, so a first run "fails" by writing actuals. continue-
-  # on-error keeps this off the required PR gate; the uploaded report lets a
-  # maintainer review/commit Linux baselines later (WSM-000172 / WSM-000082).
+  # Visual regression: NON-BLOCKING (continue-on-error), but expected green —
+  # Linux baselines are committed as of WSM-000204 (adopted from this job's own
+  # rendering; darwin baselines regenerated to the current design tokens at the
+  # same time). Kept off the required PR gate until it proves stable across
+  # runner-image/font updates; a red run here is a REAL diff worth reviewing in
+  # the uploaded report, not baseline rot. To refresh baselines: download the
+  # visual-report artifact and commit the actuals, or run --update-snapshots
+  # locally for darwin (WSM-000172 / WSM-000082 / WSM-000204).
   # No Convex/Clerk: the /dev/visual harness routes need only the dev server.
   visual:
     name: Visual regression (non-blocking)
