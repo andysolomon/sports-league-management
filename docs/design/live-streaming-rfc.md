@@ -127,6 +127,11 @@ Guardrails (all ACs):
 | Phase 2: live-score overlay (DOM layer synced to live game-state) | WSM-000145 | 144 + keystone **v3** (WSM-000112) | M |
 | Phase 3: polish — VOD replay UX, clips/highlights, multi-cam (Mevo Studio), low-latency mode | WSM-000146 | 144 | L |
 
+Multi-cam resolved via the cheap path (WSM-000202): Mevo Studio mixes angles
+on-device into one feed the existing ingest already accepts — see
+[`docs/guides/MEVO_MULTICAM_STREAMING.md`](../guides/MEVO_MULTICAM_STREAMING.md).
+True in-app angle switching is deferred indefinitely.
+
 ## 7. Open questions (resolve at greenlight)
 
 1. **Validation** — do coaches/parents actually want *in-app* streaming, or is the school's
