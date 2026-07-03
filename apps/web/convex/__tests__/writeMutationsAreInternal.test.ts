@@ -160,6 +160,7 @@ type AllowedPublicSportsReads =
   | "getTeamRosterLimitStatus"
   | "getVisibleLeagueContext"
   | "healthSummary"
+  | "listClipsByFixture"
   | "listConferences"
   | "listDivisions"
   | "listFixturesBySeason"

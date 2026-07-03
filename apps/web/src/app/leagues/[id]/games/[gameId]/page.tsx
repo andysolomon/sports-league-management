@@ -10,6 +10,7 @@ import {
   getResultByFixture,
   getStreamByFixture,
   getLiveGameState,
+  listClipsByFixture,
 } from "@/lib/data-api";
 import { publicLeagueGuard } from "@/lib/public-league-guard";
 import { resolveStreamView } from "@/lib/stream-view";
@@ -119,6 +120,12 @@ export default async function PublicGamePage({
   const stream = streamingEnabled
     ? await getStreamByFixture(gameId).catch(() => null)
     : null;
+  // Highlight clips (WSM-000201, #303 track 3) — READY clips only, via the
+  // playback-only public projection. Clips can only exist where a stream row
+  // does, so the read is skipped otherwise; same fail-soft posture as above.
+  const clips = stream
+    ? await listClipsByFixture(gameId).catch(() => [])
+    : [];
 
   // Live scoring (WSM-000152): when on, seed the running scoreboard from the
   // server so first paint has the score; the client component then polls. Skip
@@ -216,6 +223,30 @@ export default async function PublicGamePage({
         <Card className="mb-6">
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
             The live stream has ended.
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {clips.length > 0 ? (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Highlights</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {clips.map((clip) => (
+              <div key={clip.playbackId}>
+                <p className="mb-1 text-sm font-medium text-foreground">
+                  {clip.label}
+                </p>
+                <GameStreamPlayer
+                  provider="mux"
+                  muxPlaybackId={clip.playbackId}
+                  youtubeVideoId={null}
+                  live={false}
+                  title={clip.label}
+                />
+              </div>
+            ))}
           </CardContent>
         </Card>
       ) : null}

@@ -1,4 +1,4 @@
-import { updateGameStreamStatus } from "@/lib/data-api";
+import { updateGameStreamStatus, updateGameClipStatus } from "@/lib/data-api";
 
 /*
  * Mux webhook event handling (WSM-000144). The event→action mapping is a PURE
@@ -36,6 +36,9 @@ export interface MuxWebhookEvent {
   data: {
     id?: string;
     live_stream_id?: string | null;
+    // Present ONLY on assets created FROM another asset — i.e. clips
+    // (WSM-000201). The stream's own recording never carries it.
+    source_asset_id?: string | null;
     playback_ids?: { id?: string; policy?: string }[];
   };
 }
@@ -73,6 +76,11 @@ export function mapMuxEventToUpdate(
       const liveStreamId = event.data.live_stream_id;
       const assetId = event.data.id;
       if (!liveStreamId || !assetId) return null;
+      // A CLIP asset (WSM-000201) carries source_asset_id. Whether or not Mux
+      // also stamps live_stream_id on it, it must NEVER attach itself as the
+      // stream's VOD recording — that would clobber the real replay ids. Clip
+      // readiness is handled separately (mapMuxEventToClipUpdate).
+      if (event.data.source_asset_id) return null;
       // The asset's PUBLIC playback id is what the replay player uses. Phase 1
       // creates streams with new_asset_settings.playback_policy ["public"], so
       // one should always exist; tolerate its absence (attach the asset id only).
@@ -90,9 +98,47 @@ export function mapMuxEventToUpdate(
   }
 }
 
+export interface ClipStatusUpdate {
+  muxAssetId: string;
+  status: "ready" | "errored";
+  playbackId?: string;
+}
+
+/**
+ * Pure mapping from a Mux event to a CLIP status update (WSM-000201), or null
+ * for non-clip events. Clips are the only assets we create with a
+ * `mux://assets/…` input, so `source_asset_id` is the discriminator; the row
+ * is keyed by the clip's own asset id.
+ */
+export function mapMuxEventToClipUpdate(
+  event: MuxWebhookEvent,
+): ClipStatusUpdate | null {
+  const assetId = event.data.id;
+  if (!event.data.source_asset_id || !assetId) return null;
+  switch (event.type) {
+    case "video.asset.ready": {
+      // Belt-and-braces: the playback id is stored at creation, but re-attach
+      // it from the event in case creation raced or the row predates it.
+      const playbackId = event.data.playback_ids?.find(
+        (p) => p.policy === "public" && p.id,
+      )?.id;
+      return {
+        muxAssetId: assetId,
+        status: "ready",
+        ...(playbackId ? { playbackId } : {}),
+      };
+    }
+    case "video.asset.errored":
+      return { muxAssetId: assetId, status: "errored" };
+    default:
+      return null;
+  }
+}
+
 /** Apply a verified Mux event. No-op for ignored events and unknown streams. */
 export async function handleMuxEvent(event: MuxWebhookEvent): Promise<void> {
   const update = mapMuxEventToUpdate(event, new Date().toISOString());
-  if (!update) return;
-  await updateGameStreamStatus(update);
+  if (update) await updateGameStreamStatus(update);
+  const clipUpdate = mapMuxEventToClipUpdate(event);
+  if (clipUpdate) await updateGameClipStatus(clipUpdate);
 }

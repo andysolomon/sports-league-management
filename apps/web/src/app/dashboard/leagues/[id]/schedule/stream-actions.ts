@@ -1,20 +1,17 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { liveStreamingV1, lowLatencyStreamingV1 } from "@/lib/flags";
+import { lowLatencyStreamingV1 } from "@/lib/flags";
 import {
-  getFixture,
-  getPublicSeason,
   createGameStream,
   updateGameStreamStatus,
   endGameStreamByFixture,
   getActiveStreamCountForLeague,
   getStreamAdminByFixture,
 } from "@/lib/data-api";
-import { canAdministerTeam } from "@/lib/authorization";
 import { createMuxLiveStream, disableMuxLiveStream } from "@/lib/mux";
 import { parseYoutubeVideoId } from "@/lib/youtube";
+import { authorizeStreamAction } from "./stream-auth";
 
 /*
  * Live-stream start/stop server actions (WSM-000144, dark behind
@@ -38,41 +35,8 @@ type StartResult =
 
 type StopResult = { ok: true } | { ok: false; error: string };
 
-/**
- * Shared auth chain: dark flag on → Clerk session → caller administers EITHER
- * the home or away team (WSM-000121 team ownership) → fixture's season actually
- * belongs to the league in the URL (cross-league guard, mirrors the public page).
- * Returns the resolved leagueId for cap-checking + revalidation.
- */
-async function authorizeStreamAction(
-  leagueId: string,
-  fixtureId: string,
-): Promise<
-  { ok: true; userId: string; fixtureStatus: string } | { ok: false; error: string }
-> {
-  const enabled = await liveStreamingV1();
-  if (!enabled) return { ok: false, error: "flag_disabled" };
-
-  const { userId } = await auth();
-  if (!userId) return { ok: false, error: "unauthorized" };
-
-  const fixture = await getFixture(fixtureId);
-  if (!fixture) return { ok: false, error: "fixture_not_found" };
-
-  // Cross-league guard: the fixture's season must live in THIS league.
-  const season = await getPublicSeason(fixture.seasonId);
-  if (!season || season.leagueId !== leagueId) {
-    return { ok: false, error: "fixture_not_in_league" };
-  }
-
-  const [canHome, canAway] = await Promise.all([
-    canAdministerTeam(fixture.homeTeamId, userId),
-    canAdministerTeam(fixture.awayTeamId, userId),
-  ]);
-  if (!canHome && !canAway) return { ok: false, error: "not_authorized" };
-
-  return { ok: true, userId, fixtureStatus: fixture.status };
-}
+// Shared auth chain lives in ./stream-auth (plain server-only module, NOT a
+// "use server" action) so the clip actions (WSM-000201) reuse it verbatim.
 
 export async function startGameStream(
   leagueId: string,
