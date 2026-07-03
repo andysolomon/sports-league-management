@@ -30,6 +30,15 @@ const KEYS_TO_COMPARE = [
   "SF_PRIVATE_KEY",
 ];
 
+// Post-cutover (WSM-000168 / #386), the Clerk instance keys are EXPECTED to
+// differ: local/preview stay on the development instance (pk_test_/sk_test_)
+// while production runs the live instance (pk_live_/sk_live_). For these keys
+// "parity" means each side is on its expected instance type, not equal values.
+const CLERK_INSTANCE_KEYS = [
+  "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+  "CLERK_SECRET_KEY",
+];
+
 // Displayed for visibility but never counted as drift — flag overrides are
 // expected to differ between local dev and production (WSM-000079/80).
 const INFORMATIONAL_KEYS = [
@@ -93,12 +102,28 @@ function decodeClerkFrontendApi(publishableKey) {
   }
 }
 
+// The sanctioned post-cutover state for the Clerk instance keys: local on the
+// dev instance, prod on the live instance. Anything else (e.g. live keys in
+// .env.local, or prod back on test keys with a different value) still counts
+// as drift.
+function isExpectedClerkSplit(key, localValue, productionValue) {
+  return (
+    CLERK_INSTANCE_KEYS.includes(key) &&
+    clerkKeyType(normalizeValue(localValue)) === "test" &&
+    clerkKeyType(normalizeValue(productionValue)) === "live"
+  );
+}
+
 function formatStatusRow(key, localValue, productionValue) {
   const localNormalized = normalizeValue(localValue);
   const productionNormalized = normalizeValue(productionValue);
 
   if (!localNormalized && !productionNormalized) {
     return `${key}: missing in both local and production`;
+  }
+
+  if (isExpectedClerkSplit(key, localValue, productionValue)) {
+    return `${key}: expected split (local test / prod live)`;
   }
 
   if (!localNormalized) {
@@ -186,6 +211,7 @@ function main() {
     const hasDrift = KEYS_TO_COMPARE.some((key) => {
       const localValue = normalizeValue(localEnv[key]);
       const productionValue = normalizeValue(productionEnv[key]);
+      if (isExpectedClerkSplit(key, localValue, productionValue)) return false;
       return localValue !== productionValue;
     });
 
