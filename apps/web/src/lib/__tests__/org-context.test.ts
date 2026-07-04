@@ -1,11 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const {
   mockGetOrganizationMembershipList,
   mockGetVisibleLeagueContext,
+  mockGetOrgMemberRole,
 } = vi.hoisted(() => ({
   mockGetOrganizationMembershipList: vi.fn(),
   mockGetVisibleLeagueContext: vi.fn(),
+  mockGetOrgMemberRole: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({
@@ -18,6 +20,7 @@ vi.mock("@clerk/nextjs/server", () => ({
 
 vi.mock("../data-api", () => ({
   getVisibleLeagueContext: mockGetVisibleLeagueContext,
+  getOrgMemberRole: mockGetOrgMemberRole,
 }));
 
 vi.mock("react", () => ({
@@ -28,7 +31,33 @@ import {
   resolveOrgContext,
   requireLeagueAccess,
   requireOrgAdmin,
+  getUserRoleInOrg,
+  resolveBestOrgRole,
 } from "../org-context";
+
+/**
+ * Mirrors what Clerk's backend SDK actually throws when the Organizations
+ * feature is disabled on the instance (the WSM-000206 production incident):
+ * a ClerkAPIResponseError carrying an `errors` array of machine-readable codes.
+ */
+function clerkOrgsDisabledError(): Error {
+  const err = new Error(
+    "The organizations feature is not enabled for this instance. If you believe this is a mistake, please contact support.",
+  ) as Error & {
+    clerkError: boolean;
+    status: number;
+    errors: Array<{ code: string; message: string }>;
+  };
+  err.clerkError = true;
+  err.status = 403;
+  err.errors = [
+    {
+      code: "organization_not_enabled_in_instance",
+      message: "The organizations feature is not enabled for this instance.",
+    },
+  ];
+  return err;
+}
 
 describe("resolveOrgContext", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -188,6 +217,173 @@ describe("requireOrgAdmin", () => {
     await expect(requireOrgAdmin("org_abc", "user_123")).rejects.toThrow(
       "You must be an admin",
     );
+  });
+});
+
+// WSM-000206 / #456: the production Clerk instance lacked the Organizations
+// feature, so getOrganizationMembershipList threw a 403 ClerkAPIResponseError
+// and the unhandled throw 500'd the entire dashboard. The org-context layer
+// must fail SOFT: log one structured line and degrade to the same values a
+// user with no organizations gets.
+describe("Clerk org-API failure degrades gracefully (WSM-000206)", () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  describe("resolveOrgContext", () => {
+    it("returns the no-org context instead of throwing when Clerk orgs are disabled", async () => {
+      mockGetOrganizationMembershipList.mockRejectedValue(
+        clerkOrgsDisabledError(),
+      );
+      mockGetVisibleLeagueContext.mockResolvedValue({
+        visibleLeagueIds: [],
+        subscribedLeagueIds: [],
+        subscriptionScopes: [],
+      });
+
+      const ctx = await resolveOrgContext("user_123");
+
+      // Exactly the shape dashboard/page.tsx consumes: it reads
+      // ctx.visibleLeagueIds to fetch leagues, and with an empty array the
+      // page renders the "No leagues yet" empty-workspace bento — not a 500.
+      expect(ctx).toEqual({
+        userId: "user_123",
+        orgIds: [],
+        visibleLeagueIds: [],
+        subscribedLeagueIds: [],
+        subscriptionTeamScopes: {},
+      });
+    });
+
+    it("still resolves subscribed public leagues via Convex when Clerk fails", async () => {
+      mockGetOrganizationMembershipList.mockRejectedValue(
+        clerkOrgsDisabledError(),
+      );
+      mockGetVisibleLeagueContext.mockResolvedValue({
+        visibleLeagueIds: ["league_pub_1"],
+        subscribedLeagueIds: ["league_pub_1"],
+        subscriptionScopes: [],
+      });
+
+      const ctx = await resolveOrgContext("user_with_subs");
+
+      // Same degradation as a no-org user: Convex is still consulted with an
+      // empty org list, so subscriptions keep working.
+      expect(mockGetVisibleLeagueContext).toHaveBeenCalledWith(
+        "user_with_subs",
+        [],
+      );
+      expect(ctx.visibleLeagueIds).toEqual(["league_pub_1"]);
+      expect(ctx.subscribedLeagueIds).toEqual(["league_pub_1"]);
+    });
+
+    it("logs one structured JSON line including the Clerk error code", async () => {
+      mockGetOrganizationMembershipList.mockRejectedValue(
+        clerkOrgsDisabledError(),
+      );
+      mockGetVisibleLeagueContext.mockResolvedValue({
+        visibleLeagueIds: [],
+        subscribedLeagueIds: [],
+        subscriptionScopes: [],
+      });
+
+      await resolveOrgContext("user_123");
+
+      expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+      const logged = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string);
+      expect(logged).toMatchObject({
+        level: "error",
+        source: "org-context",
+        clerkErrorCode: "organization_not_enabled_in_instance",
+        userId: "user_123",
+      });
+    });
+
+    it("degrades on non-Clerk errors too, with a null error code", async () => {
+      mockGetOrganizationMembershipList.mockRejectedValue(
+        new Error("socket hang up"),
+      );
+      mockGetVisibleLeagueContext.mockResolvedValue({
+        visibleLeagueIds: [],
+        subscribedLeagueIds: [],
+        subscriptionScopes: [],
+      });
+
+      const ctx = await resolveOrgContext("user_123");
+
+      expect(ctx.orgIds).toEqual([]);
+      const logged = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string);
+      expect(logged.clerkErrorCode).toBeNull();
+    });
+  });
+
+  describe("resolveBestOrgRole", () => {
+    it("returns null (no role anywhere) when Clerk orgs are disabled", async () => {
+      mockGetOrganizationMembershipList.mockRejectedValue(
+        clerkOrgsDisabledError(),
+      );
+
+      await expect(
+        resolveBestOrgRole(["org_league", "org_owner"], "user_123"),
+      ).resolves.toBeNull();
+    });
+
+    it("happy path unchanged: strongest role across candidate orgs wins", async () => {
+      mockGetOrganizationMembershipList.mockResolvedValue({
+        data: [
+          { organization: { id: "org_league" }, role: "org:member" },
+          { organization: { id: "org_owner" }, role: "org:admin" },
+        ],
+      });
+      mockGetOrgMemberRole.mockResolvedValue(null);
+
+      await expect(
+        resolveBestOrgRole(["org_league", "org_owner"], "user_123"),
+      ).resolves.toBe("admin");
+    });
+  });
+
+  describe("getUserRoleInOrg", () => {
+    it("returns null when Clerk orgs are disabled", async () => {
+      mockGetOrganizationMembershipList.mockRejectedValue(
+        clerkOrgsDisabledError(),
+      );
+
+      await expect(
+        getUserRoleInOrg("org_abc", "user_123"),
+      ).resolves.toBeNull();
+    });
+
+    it("happy path unchanged: returns the raw Clerk role", async () => {
+      mockGetOrganizationMembershipList.mockResolvedValue({
+        data: [{ organization: { id: "org_abc" }, role: "org:admin" }],
+      });
+
+      await expect(getUserRoleInOrg("org_abc", "user_123")).resolves.toBe(
+        "org:admin",
+      );
+    });
+  });
+
+  describe("requireOrgAdmin", () => {
+    it("fails CLOSED with the controlled admin error (never the raw Clerk crash)", async () => {
+      mockGetOrganizationMembershipList.mockRejectedValue(
+        clerkOrgsDisabledError(),
+      );
+
+      await expect(requireOrgAdmin("org_abc", "user_123")).rejects.toThrow(
+        "You must be an admin",
+      );
+    });
   });
 });
 

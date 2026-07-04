@@ -6,6 +6,76 @@ import {
 } from "./data-api";
 import type { OrgRole } from "./permissions";
 
+/**
+ * Minimal structural shape of a Clerk org membership as consumed here. The
+ * SDK's OrganizationMembership satisfies this; keeping it structural lets the
+ * fail-soft helper below stay decoupled from Clerk SDK type churn.
+ */
+interface OrgMembershipLike {
+  organization: { id: string };
+  role: string;
+}
+
+/**
+ * Extracts the machine-readable error code from a ClerkAPIResponseError-shaped
+ * throw (e.g. "organization_not_enabled_in_instance" when the Clerk instance
+ * has the Organizations feature disabled — the WSM-000206 production incident).
+ * Returns null for non-Clerk errors.
+ */
+function extractClerkErrorCode(error: unknown): string | null {
+  if (typeof error !== "object" || error === null) return null;
+  const errors = (error as { errors?: unknown }).errors;
+  if (!Array.isArray(errors) || errors.length === 0) return null;
+  const code = (errors[0] as { code?: unknown } | null)?.code;
+  return typeof code === "string" ? code : null;
+}
+
+/**
+ * Fetches ALL of a user's Clerk org memberships (paginated), failing SOFT:
+ * any Clerk org-API error is logged as one structured JSON line and treated
+ * as "user has no organizations" instead of propagating. A Clerk outage or
+ * misconfiguration (e.g. Organizations feature disabled on the instance) must
+ * degrade the dashboard to the empty-workspace view, never 500 it
+ * (WSM-000206 / #456).
+ */
+async function listOrgMembershipsFailSoft(
+  userId: string,
+  caller: string,
+): Promise<OrgMembershipLike[]> {
+  try {
+    const client = await clerkClient();
+    const memberships: OrgMembershipLike[] = [];
+    let offset = 0;
+    const limit = 100;
+    let hasMore = true;
+
+    while (hasMore) {
+      const page = await client.users.getOrganizationMembershipList({
+        userId,
+        limit,
+        offset,
+      });
+      memberships.push(...page.data);
+      hasMore = page.data.length === limit;
+      offset += limit;
+    }
+    return memberships;
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: "error",
+        source: "org-context",
+        message: `Clerk org membership lookup failed in ${caller}; degrading to no-org context`,
+        clerkErrorCode: extractClerkErrorCode(error),
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      }),
+    );
+    return [];
+  }
+}
+
 export interface OrgContext {
   userId: string;
   orgIds: string[];
@@ -33,27 +103,14 @@ export interface OrgContext {
  */
 export const resolveOrgContext = cache(
   async (userId: string): Promise<OrgContext> => {
-    const client = await clerkClient();
-
-    // Get all orgs the user belongs to (handle pagination).
-    const orgIds: string[] = [];
-    let offset = 0;
-    const limit = 100;
-    let hasMore = true;
-
-    while (hasMore) {
-      const memberships =
-        await client.users.getOrganizationMembershipList({
-          userId,
-          limit,
-          offset,
-        });
-      for (const m of memberships.data) {
-        orgIds.push(m.organization.id);
-      }
-      hasMore = memberships.data.length === limit;
-      offset += limit;
-    }
+    // Fail-soft: a Clerk org-API failure yields no org memberships, so the
+    // user degrades to the same context as a user with no organizations
+    // (subscribed public leagues still resolve via Convex below).
+    const memberships = await listOrgMembershipsFailSoft(
+      userId,
+      "resolveOrgContext",
+    );
+    const orgIds = memberships.map((m) => m.organization.id);
 
     // Single Convex query resolves both visible-league fan-out (via the
     // `leagues.by_orgId` index for each org the user belongs to) and the
@@ -94,19 +151,21 @@ export function requireLeagueAccess(
 /**
  * Check that the user is an admin of a specific Clerk Organization.
  * Used for mutations (create team, update player, etc.)
+ *
+ * Fail-soft note: if the Clerk org API itself fails, the user is treated as a
+ * non-member and gets the controlled "must be an admin" error below (fail
+ * CLOSED for mutations, but never a raw Clerk crash).
  */
 export async function requireOrgAdmin(
   orgId: string,
   userId: string,
 ): Promise<void> {
-  const client = await clerkClient();
-  const memberships = await client.users.getOrganizationMembershipList({
+  const memberships = await listOrgMembershipsFailSoft(
     userId,
-  });
-
-  const membership = memberships.data.find(
-    (m) => m.organization.id === orgId,
+    "requireOrgAdmin",
   );
+
+  const membership = memberships.find((m) => m.organization.id === orgId);
 
   if (!membership || membership.role !== "org:admin") {
     throw new Error("You must be an admin of this league to make changes");
@@ -118,18 +177,19 @@ export async function requireOrgAdmin(
  * they are not a member. Prefer `resolveOrgRole` for capability decisions — this
  * is the low-level Clerk read, used where the literal org:admin/org:member value
  * is needed (e.g. the members admin API).
+ *
+ * Fail-soft: a Clerk org-API failure resolves to null (not a member), which
+ * also protects resolveOrgRole / resolveBestOrgRole callers.
  */
 export async function getUserRoleInOrg(
   orgId: string,
   userId: string,
 ): Promise<"org:admin" | "org:member" | null> {
-  const client = await clerkClient();
-  const memberships = await client.users.getOrganizationMembershipList({
+  const memberships = await listOrgMembershipsFailSoft(
     userId,
-  });
-  const membership = memberships.data.find(
-    (m) => m.organization.id === orgId,
+    "getUserRoleInOrg",
   );
+  const membership = memberships.find((m) => m.organization.id === orgId);
   if (!membership) return null;
   return membership.role as "org:admin" | "org:member";
 }
