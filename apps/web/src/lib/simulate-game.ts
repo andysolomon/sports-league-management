@@ -22,7 +22,7 @@ const HOME_FIELD = 2.5;
 const VARIANCE = 13;
 
 /** mulberry32 — small deterministic PRNG (same family as synthetic-roster). */
-function rng(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
     a |= 0;
@@ -31,6 +31,10 @@ function rng(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+function rng(seed: number): () => number {
+  return mulberry32(seed);
 }
 
 export interface SimulateScoreInput {
