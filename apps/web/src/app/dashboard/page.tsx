@@ -132,6 +132,8 @@ export default async function DashboardPage() {
     week: number | null;
     home: string;
     away: string;
+    homeTeamId: string;
+    awayTeamId: string;
     homeScore: number;
     awayScore: number;
   }[] = [];
@@ -190,6 +192,8 @@ export default async function DashboardPage() {
         week: x.f.week,
         home: x.f.homeTeamName,
         away: x.f.awayTeamName,
+        homeTeamId: x.f.homeTeamId,
+        awayTeamId: x.f.awayTeamId,
         homeScore: x.r!.homeScore,
         awayScore: x.r!.awayScore,
       }));
@@ -259,7 +263,12 @@ export default async function DashboardPage() {
             <div className="flex flex-1 flex-col justify-between gap-4">
               <div>
                 <p className="text-title-22 text-foreground">
-                  {activeLeague!.name}
+                  <Link
+                    href={`/dashboard/leagues/${activeLeague!.id}`}
+                    className="hover:underline"
+                  >
+                    {activeLeague!.name}
+                  </Link>
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {leagueTeams.length} team{leagueTeams.length === 1 ? "" : "s"} ·{" "}
@@ -371,9 +380,12 @@ export default async function DashboardPage() {
                     <span className="w-5 text-right font-mono text-muted-foreground">
                       {s.leagueRank}
                     </span>
-                    <span className="flex-1 truncate font-medium text-foreground">
+                    <Link
+                      href={`/dashboard/teams/${s.teamId}`}
+                      className="flex-1 truncate font-medium text-foreground hover:underline"
+                    >
                       {s.teamName}
-                    </span>
+                    </Link>
                     <span className="font-mono text-muted-foreground">
                       {s.wins}-{s.losses}
                       {s.ties ? `-${s.ties}` : ""}
@@ -402,27 +414,29 @@ export default async function DashboardPage() {
                           Wk {g.week}
                         </Badge>
                       )}
-                      <span
+                      <Link
+                        href={`/dashboard/teams/${g.homeTeamId}`}
                         className={
                           homeWon
-                            ? "font-semibold text-foreground"
-                            : "text-muted-foreground"
+                            ? "font-semibold text-foreground hover:underline"
+                            : "text-muted-foreground hover:underline"
                         }
                       >
                         {g.home}
-                      </span>
+                      </Link>
                       <span className="font-mono text-muted-foreground">
                         {g.homeScore}–{g.awayScore}
                       </span>
-                      <span
+                      <Link
+                        href={`/dashboard/teams/${g.awayTeamId}`}
                         className={
                           awayWon
-                            ? "font-semibold text-foreground"
-                            : "text-muted-foreground"
+                            ? "font-semibold text-foreground hover:underline"
+                            : "text-muted-foreground hover:underline"
                         }
                       >
                         {g.away}
-                      </span>
+                      </Link>
                     </li>
                   );
                 })}
