@@ -48,6 +48,8 @@ void internal.sports.unforkTeamFromWorkspace;
 void internal.sports.createGameStream;
 void internal.sports.updateGameStreamStatus;
 void internal.sports.upsertPlayerGameStats;
+void internal.sports.bulkUpsertPlayerGameStats;
+void internal.sports.upsertGamePlayLog;
 void internal.sports.deletePlayerGameStats;
 void internal.sports.startLiveGame;
 void internal.sports.addLiveScore;
@@ -126,6 +128,7 @@ type AllowedPublicSportsReads =
   | "getDepthChartByTeamSeason"
   | "getDivision"
   | "getFixture"
+  | "getGamePlayLog"
   | "getLeague"
   | "getLeagueByInviteToken"
   | "getLeagueByName"

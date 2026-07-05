@@ -4888,6 +4888,125 @@ export const upsertPlayerGameStats = internalMutation({
   },
 });
 
+const bulkStatLineValidator = v.object({
+  playerId: v.id("players"),
+  teamId: v.id("teams"),
+  statsJson: v.string(),
+});
+
+export const bulkUpsertPlayerGameStats = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    seasonId: v.id("seasons"),
+    actorUserId: v.string(),
+    lines: v.array(bulkStatLineValidator),
+  },
+  returns: v.object({ upserted: v.number() }),
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+
+    const updatedAt = new Date().toISOString();
+    let upserted = 0;
+
+    for (const line of args.lines) {
+      const payload = {
+        fixtureId: args.fixtureId,
+        playerId: line.playerId,
+        teamId: line.teamId,
+        seasonId: args.seasonId,
+        statsJson: line.statsJson,
+        enteredBy: args.actorUserId,
+        updatedAt,
+      };
+
+      const existing = await ctx.db
+        .query("playerGameStats")
+        .withIndex("by_fixtureId_playerId", (q) =>
+          q.eq("fixtureId", args.fixtureId).eq("playerId", line.playerId),
+        )
+        .first();
+
+      if (existing) {
+        await ctx.db.replace(existing._id, payload);
+      } else {
+        await ctx.db.insert("playerGameStats", payload);
+      }
+      upserted += 1;
+    }
+
+    return { upserted };
+  },
+});
+
+const gamePlayLogDtoValidator = v.object({
+  fixtureId: v.string(),
+  seasonId: v.string(),
+  logJson: v.string(),
+  engineVersion: v.string(),
+  createdAt: v.string(),
+  createdBy: v.string(),
+});
+
+export const upsertGamePlayLog = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    seasonId: v.id("seasons"),
+    logJson: v.string(),
+    engineVersion: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: v.object({ id: v.string() }),
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+
+    const createdAt = new Date().toISOString();
+    const payload = {
+      fixtureId: args.fixtureId,
+      seasonId: args.seasonId,
+      logJson: args.logJson,
+      engineVersion: args.engineVersion,
+      createdAt,
+      createdBy: args.actorUserId,
+    };
+
+    const existing = await ctx.db
+      .query("gamePlayLogs")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+
+    let id: string;
+    if (existing) {
+      await ctx.db.replace(existing._id, payload);
+      id = existing._id;
+    } else {
+      id = await ctx.db.insert("gamePlayLogs", payload);
+    }
+    return { id };
+  },
+});
+
+export const getGamePlayLog = query({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.union(gamePlayLogDtoValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("gamePlayLogs")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .first();
+    if (!row) return null;
+    return {
+      fixtureId: row.fixtureId,
+      seasonId: row.seasonId,
+      logJson: row.logJson,
+      engineVersion: row.engineVersion,
+      createdAt: row.createdAt,
+      createdBy: row.createdBy,
+    };
+  },
+});
+
 export const deletePlayerGameStats = internalMutation({
   args: { fixtureId: v.id("fixtures"), playerId: v.id("players") },
   returns: v.boolean(),

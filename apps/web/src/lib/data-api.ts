@@ -691,6 +691,29 @@ const refs = {
     },
     { id: string }
   >("sports:upsertPlayerGameStats"),
+  bulkUpsertPlayerGameStats: mutationRef<
+    {
+      fixtureId: string;
+      seasonId: string;
+      actorUserId: string;
+      lines: Array<{
+        playerId: string;
+        teamId: string;
+        statsJson: string;
+      }>;
+    },
+    { upserted: number }
+  >("sports:bulkUpsertPlayerGameStats"),
+  upsertGamePlayLog: mutationRef<
+    {
+      fixtureId: string;
+      seasonId: string;
+      logJson: string;
+      engineVersion: string;
+      actorUserId: string;
+    },
+    { id: string }
+  >("sports:upsertGamePlayLog"),
   deletePlayerGameStats: mutationRef<
     { fixtureId: string; playerId: string },
     boolean
@@ -699,6 +722,10 @@ const refs = {
     { fixtureId: string },
     PlayerGameStatsRow[]
   >("sports:getPlayerGameStatsByFixture"),
+  getGamePlayLog: queryRef<
+    { fixtureId: string },
+    GamePlayLogDto | null
+  >("sports:getGamePlayLog"),
   getPlayerSeasonTotals: queryRef<
     { playerId: string; seasonId: string },
     { statsJson: string; gameCount: number }
@@ -2075,6 +2102,53 @@ export async function upsertPlayerGameStats(
     statsJson: JSON.stringify(input.stats),
     actorUserId: input.actorUserId,
   });
+}
+
+export interface BulkUpsertPlayerGameStatsInput {
+  fixtureId: string;
+  seasonId: string;
+  actorUserId: string;
+  lines: Array<{
+    playerId: string;
+    teamId: string;
+    statsJson: string;
+  }>;
+}
+
+export async function bulkUpsertPlayerGameStats(
+  input: BulkUpsertPlayerGameStatsInput,
+): Promise<{ upserted: number }> {
+  return mutateConvex(refs.bulkUpsertPlayerGameStats, input);
+}
+
+export interface UpsertGamePlayLogInput {
+  fixtureId: string;
+  seasonId: string;
+  logJson: string;
+  engineVersion: string;
+  actorUserId: string;
+}
+
+export async function upsertGamePlayLog(
+  input: UpsertGamePlayLogInput,
+): Promise<{ id: string }> {
+  return mutateConvex(refs.upsertGamePlayLog, input);
+}
+
+/** Stored play-by-play log for a simulated fixture (Slice C reads this). */
+export interface GamePlayLogDto {
+  fixtureId: string;
+  seasonId: string;
+  logJson: string;
+  engineVersion: string;
+  createdAt: string;
+  createdBy: string;
+}
+
+export async function getGamePlayLog(
+  fixtureId: string,
+): Promise<GamePlayLogDto | null> {
+  return queryConvex(refs.getGamePlayLog, { fixtureId });
 }
 
 export async function deletePlayerGameStats(

@@ -298,6 +298,20 @@ export default defineSchema({
   }).index("by_fixtureId", ["fixtureId"]),
 
   /*
+   * Play-by-play game log (Slice B). One row per simulated fixture — the full
+   * `PbpGameLog` JSON blob plus engine version for Slice C Gamecast stepping.
+   * Upsert-by-fixture: re-sim replaces the prior log.
+   */
+  gamePlayLogs: defineTable({
+    fixtureId: v.id("fixtures"),
+    seasonId: v.id("seasons"),
+    logJson: v.string(),
+    engineVersion: v.string(),
+    createdAt: v.string(),
+    createdBy: v.string(),
+  }).index("by_fixtureId", ["fixtureId"]),
+
+  /*
    * One live stream per fixture (WSM-000144, streaming epic #225). Two
    * providers (WSM-000180): "mux" (RTMP ingest, paid) keeps the server-side
    * live-stream id + public HLS playback id; "youtube" (free, paste-a-link)
