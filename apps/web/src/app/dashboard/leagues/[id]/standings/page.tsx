@@ -12,12 +12,16 @@ import {
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StandingsTable from "@/components/schedule/StandingsTable";
+import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
+import { resolveViewedSeason } from "@/lib/season-view";
 import { trackStandingsView } from "@/lib/analytics";
 
 export default async function LeagueStandingsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
   const enabled = await schedulesStandingsV1();
   if (!enabled) notFound();
@@ -32,9 +36,9 @@ export default async function LeagueStandingsPage({
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
 
+  const { season: seasonParam } = await searchParams;
   const allSeasons = await getSeasons([leagueId]);
-  const activeSeason =
-    allSeasons.find((s) => s.status === "active") ?? allSeasons[0] ?? null;
+  const activeSeason = resolveViewedSeason(allSeasons, seasonParam);
 
   if (!activeSeason) {
     return (
@@ -88,7 +92,15 @@ export default async function LeagueStandingsPage({
             Standings · {activeSeason.name}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          <SeasonSwitcher
+            seasons={allSeasons.map((s) => ({
+              id: s.id,
+              name: s.name,
+              status: s.status,
+            }))}
+            currentSeasonId={activeSeason.id}
+          />
           <Link
             href={`/dashboard/leagues/${leagueId}/schedule`}
             className="text-sm text-primary hover:underline"

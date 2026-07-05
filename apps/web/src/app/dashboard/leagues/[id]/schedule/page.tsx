@@ -40,13 +40,17 @@ import {
 import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
+import { resolveViewedSeason } from "@/lib/season-view";
 
 type StreamStatus = "idle" | "active" | "ended";
 
 export default async function LeagueSchedulePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
   const enabled = await schedulesStandingsV1();
   if (!enabled) notFound();
@@ -83,10 +87,10 @@ export default async function LeagueSchedulePage({
   // detail page; the server actions re-check flag + role.
   const canGenerateRosters = canManageOrgSettings(role) && (await syntheticRostersV1());
 
-  // Pick the active season — fall back to whichever exists if none flagged active.
+  // Season being VIEWED (WSM-000214): `?season=` wins, else active, else first.
+  const { season: seasonParam } = await searchParams;
   const allSeasons = await getSeasons([leagueId]);
-  const activeSeason =
-    allSeasons.find((s) => s.status === "active") ?? allSeasons[0] ?? null;
+  const activeSeason = resolveViewedSeason(allSeasons, seasonParam);
 
   const teams = await getTeamsByLeague(leagueId, orgContext);
 
@@ -153,6 +157,16 @@ export default async function LeagueSchedulePage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {activeSeason ? (
+            <SeasonSwitcher
+              seasons={allSeasons.map((s) => ({
+                id: s.id,
+                name: s.name,
+                status: s.status,
+              }))}
+              currentSeasonId={activeSeason.id}
+            />
+          ) : null}
           <Link
             href={`/dashboard/leagues/${leagueId}/standings`}
             className="text-sm text-primary hover:underline"
