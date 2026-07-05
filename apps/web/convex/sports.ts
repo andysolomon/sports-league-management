@@ -1956,10 +1956,10 @@ export const setActiveSeason = internalMutationGeneric({
 });
 
 /**
- * Delete a season and cascade its season-scoped rows (WSM-000126): fixtures and
- * their game results, player attributes, and roster assignments. (rosterAuditLog
- * has no by-season index and is cleaned on league delete — left as harmless
- * history here. Mirrors the per-season cascade in deleteLeague.)
+ * Delete a season and cascade its season-scoped rows (WSM-000126, WSM-000209):
+ * fixtures and per-fixture game data, depth chart, playoff bracket rows, player
+ * attributes, and roster assignments. rosterAuditLog is intentionally retained
+ * (audit trail; no by_seasonId index).
  */
 export const deleteSeason = internalMutationGeneric({
   args: { seasonId: v.id("seasons") },
@@ -1978,8 +1978,54 @@ export const deleteSeason = internalMutationGeneric({
         .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
         .collect())
         await ctx.db.delete(gr._id);
+      for (const pgs of await ctx.db
+        .query("playerGameStats")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+        .collect())
+        await ctx.db.delete(pgs._id);
+      for (const gpl of await ctx.db
+        .query("gamePlayLogs")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+        .collect())
+        await ctx.db.delete(gpl._id);
+      for (const gs of await ctx.db
+        .query("gameStreams")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+        .collect())
+        await ctx.db.delete(gs._id);
+      for (const lgs of await ctx.db
+        .query("liveGameState")
+        .withIndex("by_fixtureId", (q) => q.eq("fixtureId", f._id))
+        .collect())
+        await ctx.db.delete(lgs._id);
       await ctx.db.delete(f._id);
     }
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .collect();
+    for (const team of teams) {
+      for (const dce of await ctx.db
+        .query("depthChartEntries")
+        .withIndex("by_team_season", (q) => q.eq("teamId", team._id))
+        .collect()) {
+        if (dce.seasonId !== args.seasonId) continue;
+        await ctx.db.delete(dce._id);
+      }
+    }
+
+    for (const pm of await ctx.db
+      .query("playoffMatchups")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect())
+      await ctx.db.delete(pm._id);
+
+    for (const pb of await ctx.db
+      .query("playoffBrackets")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect())
+      await ctx.db.delete(pb._id);
 
     for (const pa of await ctx.db
       .query("playerAttributes")
@@ -1994,6 +2040,8 @@ export const deleteSeason = internalMutationGeneric({
       .withIndex("by_seasonId_teamId", (q) => q.eq("seasonId", args.seasonId))
       .collect())
       await ctx.db.delete(ra._id);
+
+    // rosterAuditLog intentionally retained — audit trail; no by_seasonId index.
 
     await ctx.db.delete(args.seasonId);
     return null;
