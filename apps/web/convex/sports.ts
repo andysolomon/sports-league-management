@@ -2966,6 +2966,68 @@ export const ingestPlayerAttributes = internalMutationGeneric({
 });
 
 /*
+ * Manual coach/admin edit of one player's current-season attribute snapshot.
+ * Resolves workspace forks (source player + source league season) like
+ * getPlayerSeasonAttributes, then upserts via the same storage path as
+ * ingestPlayerAttributes. Not season-state gated — curation works mid-season.
+ */
+export const updatePlayerAttributes = internalMutationGeneric({
+  args: {
+    playerId: v.id("players"),
+    positionGroup: v.string(),
+    attributesJson: v.string(),
+    weightedOverall: v.union(v.number(), v.null()),
+  },
+  returns: v.object({
+    id: v.string(),
+    created: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const player = await ctx.db.get(args.playerId);
+    if (!player) throw new Error("player_not_found");
+
+    const attrPlayer = player.sourcePlayerId
+      ? ((await ctx.db.get(player.sourcePlayerId)) ?? player)
+      : player;
+    const seasonId = await currentSeasonId(
+      ctx as MutationCtx,
+      attrPlayer.leagueId,
+    );
+    if (!seasonId) throw new Error("no_season");
+
+    const candidates = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_playerId_seasonId", (q) =>
+        q.eq("playerId", attrPlayer._id),
+      )
+      .collect();
+    const existing =
+      candidates.find((row) => row.seasonId === seasonId) ?? null;
+
+    const ingestedAt = new Date().toISOString();
+    const payload = {
+      playerId: attrPlayer._id,
+      seasonId,
+      positionGroup: args.positionGroup,
+      attributesJson: args.attributesJson,
+      pffSourceJson: null,
+      maddenSourceJson: null,
+      pffWeight: 0,
+      maddenWeight: 1,
+      weightedOverall: args.weightedOverall,
+      ingestedAt,
+    };
+
+    if (existing) {
+      await ctx.db.replace(existing._id, payload);
+      return { id: existing._id, created: false };
+    }
+    const id = await ctx.db.insert("playerAttributes", payload);
+    return { id, created: true };
+  },
+});
+
+/*
  * WSM-000090 — bulk form of ingestPlayerAttributes for whole-league
  * ratings loads (a per-row CLI loop takes ~75 min for an NFL-sized
  * league; this does it in a handful of calls). Same upsert semantics

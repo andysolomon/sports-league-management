@@ -34,6 +34,7 @@ void internal.sports.deleteSeason;
 void internal.sports.clearSeasonPlayerAttributes;
 void internal.sports.ingestMaddenRatingsBatch;
 void internal.sports.ingestPlayerAttributesBatch;
+void internal.sports.updatePlayerAttributes;
 void internal.sports.setOrgMemberRole;
 void internal.sports.updateDivision;
 void internal.sports.deleteDivision;
@@ -67,6 +68,8 @@ void api.sports.deleteLeague;
 void api.sports.clearSeasonPlayerAttributes;
 // @ts-expect-error ingestMaddenRatingsBatch is internal, not public
 void api.sports.ingestMaddenRatingsBatch;
+// @ts-expect-error updatePlayerAttributes is internal, not public
+void api.sports.updatePlayerAttributes;
 // @ts-expect-error setOrgMemberRole is internal, not public
 void api.sports.setOrgMemberRole;
 // @ts-expect-error forkDivisionToWorkspace is internal, not public
