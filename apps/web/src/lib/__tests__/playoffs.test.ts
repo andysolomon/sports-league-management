@@ -4,6 +4,9 @@ import {
   groupMatchupsByRound,
   winnerSide,
   bracketSections,
+  deriveChampion,
+  regularSeasonProgress,
+  playoffPagePhase,
 } from "../playoffs";
 import type { PlayoffMatchupDto } from "@/lib/data-api";
 
@@ -25,6 +28,7 @@ function m(partial: Partial<PlayoffMatchupDto>): PlayoffMatchupDto {
     awayScore: null,
     bracketType: null,
     isBye: false,
+    hasPlayLog: false,
     ...partial,
   };
 }
@@ -115,5 +119,105 @@ describe("bracketSections (WSM-flex-brackets)", () => {
     const matchups = [m({ id: "w0", round: 1, slot: 0, bracketType: "winners" })];
     const sections = bracketSections(matchups, 1, "double");
     expect(sections.map((s) => s.type)).toEqual(["winners"]);
+  });
+});
+
+describe("deriveChampion", () => {
+  it("returns the winner of the highest winners-bracket round in single elim", () => {
+    const matchups = [
+      m({ id: "s0", round: 1, slot: 0, homeTeamId: "t1", homeTeamName: "A" }),
+      m({
+        id: "f",
+        round: 2,
+        slot: 0,
+        homeTeamId: "t1",
+        homeTeamName: "A",
+        awayTeamId: "t2",
+        awayTeamName: "B",
+        winnerTeamId: "t2",
+      }),
+    ];
+    expect(deriveChampion(matchups, "single")).toEqual({
+      teamId: "t2",
+      teamName: "B",
+    });
+  });
+
+  it("returns null until the final has a winner", () => {
+    const matchups = [
+      m({ id: "f", round: 2, slot: 0, homeTeamId: "t1", awayTeamId: "t2" }),
+    ];
+    expect(deriveChampion(matchups, "single")).toBeNull();
+  });
+
+  it("uses the grand final in double elim", () => {
+    const matchups = [
+      m({ id: "wf", round: 2, bracketType: "winners", winnerTeamId: "t1" }),
+      m({
+        id: "gf",
+        round: 1,
+        bracketType: "grandFinal",
+        homeTeamId: "t1",
+        homeTeamName: "A",
+        awayTeamId: "t2",
+        awayTeamName: "B",
+        winnerTeamId: "t1",
+      }),
+    ];
+    expect(deriveChampion(matchups, "double")).toEqual({
+      teamId: "t1",
+      teamName: "A",
+    });
+  });
+});
+
+describe("regularSeasonProgress", () => {
+  it("counts only non-playoff fixtures", () => {
+    const progress = regularSeasonProgress([
+      { stage: "regular", status: "final" },
+      { stage: "regular", status: "scheduled" },
+      { stage: "playoff", status: "final" },
+    ]);
+    expect(progress).toEqual({ total: 2, final: 1, complete: false });
+  });
+
+  it("marks complete when every regular game is final", () => {
+    const progress = regularSeasonProgress([
+      { stage: "regular", status: "final" },
+      { stage: "regular", status: "cancelled" },
+    ]);
+    expect(progress.complete).toBe(true);
+  });
+});
+
+describe("playoffPagePhase", () => {
+  it("returns bracket_live when a bracket exists", () => {
+    expect(
+      playoffPagePhase({
+        playoffTeams: 8,
+        bracketExists: true,
+        regularComplete: false,
+      }),
+    ).toBe("bracket_live");
+  });
+
+  it("returns ready when the regular season is complete and no bracket", () => {
+    expect(
+      playoffPagePhase({
+        playoffTeams: 8,
+        bracketExists: false,
+        regularComplete: true,
+      }),
+    ).toBe("ready");
+  });
+
+  it("returns in_progress when games remain", () => {
+    expect(
+      playoffPagePhase({
+        playoffTeams: 8,
+        bracketExists: false,
+        regularComplete: false,
+      }),
+    ).toBe("in_progress");
   });
 });

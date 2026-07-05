@@ -5999,7 +5999,53 @@ const playoffMatchupDtoValidator = v.object({
   bracketType: v.union(v.string(), v.null()),
   // First-round bye marker (team auto-advanced, no game).
   isBye: v.boolean(),
+  hasPlayLog: v.boolean(),
 });
+
+const playoffChampionDtoValidator = v.object({
+  teamId: v.string(),
+  teamName: v.union(v.string(), v.null()),
+});
+
+function championFromMatchups(
+  matchups: Array<{
+    round: number;
+    bracketType?: string | null;
+    winnerTeamId?: string | null;
+    homeTeamId?: string | null;
+    awayTeamId?: string | null;
+    homeTeamName?: string | null;
+    awayTeamName?: string | null;
+  }>,
+  format: string,
+): { teamId: string; teamName: string | null } | null {
+  if (format === "double") {
+    const grandFinal = matchups.find((m) => m.bracketType === "grandFinal");
+    if (!grandFinal?.winnerTeamId) return null;
+    return {
+      teamId: grandFinal.winnerTeamId,
+      teamName:
+        grandFinal.winnerTeamId === grandFinal.homeTeamId
+          ? (grandFinal.homeTeamName ?? null)
+          : (grandFinal.awayTeamName ?? null),
+    };
+  }
+  const final = matchups.reduce<(typeof matchups)[number] | null>(
+    (best, m) =>
+      (m.bracketType ?? "winners") === "winners" && m.round > (best?.round ?? -1)
+        ? m
+        : best,
+    null,
+  );
+  if (!final?.winnerTeamId) return null;
+  return {
+    teamId: final.winnerTeamId,
+    teamName:
+      final.winnerTeamId === final.homeTeamId
+        ? (final.homeTeamName ?? null)
+        : (final.awayTeamName ?? null),
+  };
+}
 
 /** Bracket tree DTO for the UI (WSM-000165). Null when no bracket exists. */
 export const getPlayoffBracket = queryGeneric({
@@ -6011,6 +6057,7 @@ export const getPlayoffBracket = queryGeneric({
       rounds: v.number(),
       format: v.string(), // "single" | "double"
       matchups: v.array(playoffMatchupDtoValidator),
+      champion: v.union(playoffChampionDtoValidator, v.null()),
     }),
     v.null(),
   ),
@@ -6035,6 +6082,7 @@ export const getPlayoffBracket = queryGeneric({
           let status: string | null = null;
           let homeScore: number | null = null;
           let awayScore: number | null = null;
+          let hasPlayLog = false;
           if (m.fixtureId) {
             const fx = await ctx.db.get(m.fixtureId);
             status = fx?.status ?? null;
@@ -6047,6 +6095,13 @@ export const getPlayoffBracket = queryGeneric({
                 .first();
               homeScore = res?.homeScore ?? null;
               awayScore = res?.awayScore ?? null;
+              const log = await ctx.db
+                .query("gamePlayLogs")
+                .withIndex("by_fixtureId", (q) =>
+                  q.eq("fixtureId", m.fixtureId!),
+                )
+                .first();
+              hasPlayLog = log != null;
             }
           }
           // A first-round bye: a single present team with no opponent/game.
@@ -6069,16 +6124,19 @@ export const getPlayoffBracket = queryGeneric({
             awayScore,
             bracketType: m.bracketType ?? null,
             isBye,
+            hasPlayLog,
           };
         }),
     );
 
+    const format = bracket.format ?? "single";
     return {
       bracketId: bracket._id,
       size: bracket.size,
       rounds: bracket.rounds,
-      format: bracket.format ?? "single",
+      format,
       matchups: dtos,
+      champion: championFromMatchups(dtos, format),
     };
   },
 });

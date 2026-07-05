@@ -3,7 +3,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { playoffsV1 } from "@/lib/flags";
-import { generatePlayoffBracket, getLeague, getLeagueOrgId } from "@/lib/data-api";
+import {
+  generatePlayoffBracket,
+  getLeague,
+  getLeagueOrgId,
+  getPlayoffBracket,
+  getSeasons,
+  listFixturesBySeason,
+} from "@/lib/data-api";
 import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
 
@@ -89,6 +96,67 @@ export async function generatePlayoffsAction(input: {
     if (message.includes("bracket_has_results")) {
       return { ok: false, needsConfirm: true };
     }
+    return { ok: false, error: friendlyError(message) };
+  }
+}
+
+function revalidatePlayoffPaths(leagueId: string) {
+  revalidatePath(`/dashboard/leagues/${leagueId}/playoffs`);
+  revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
+  revalidatePath(`/dashboard/leagues/${leagueId}/standings`);
+}
+
+/*
+ * Advance an active season to playoffs once every regular-season game is final
+ * (WSM-bracket-view). Seeds and first-round fixtures come from the season's
+ * configured playoff settings via the existing generatePlayoffBracket path.
+ */
+export async function advanceToPlayoffsAction(input: {
+  leagueId: string;
+}): Promise<
+  | { ok: true; bracketId: string; size: number; rounds: number; matchups: number }
+  | { ok: false; error: string }
+> {
+  const guard = await authorizePlayoffAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const allSeasons = await getSeasons([input.leagueId]);
+  const activeSeason =
+    allSeasons.find((s) => s.status === "active") ?? allSeasons[0] ?? null;
+  if (!activeSeason) return { ok: false, error: "no_season" };
+
+  const existing = await getPlayoffBracket(activeSeason.id).catch(() => null);
+  if (existing) return { ok: false, error: "already_advanced" };
+
+  const fixtures = await listFixturesBySeason(activeSeason.id).catch(() => []);
+  const regular = fixtures.filter((f) => f.stage !== "playoff");
+  const regularComplete =
+    regular.length === 0 ||
+    regular.every((f) => f.status === "final" || f.status === "cancelled");
+  if (!regularComplete) {
+    return { ok: false, error: "regular_season_incomplete" };
+  }
+
+  const size = activeSeason.playoffTeams ?? 0;
+  if (!size || size < 2) {
+    return { ok: false, error: "no_playoffs_configured" };
+  }
+
+  try {
+    const res = await generatePlayoffBracket({
+      seasonId: activeSeason.id,
+      size,
+      actorUserId: userId,
+      divisionWinnersQualify: activeSeason.divisionWinnersQualify,
+      format: activeSeason.playoffFormat ?? undefined,
+    });
+    revalidatePlayoffPaths(input.leagueId);
+    return { ok: true, ...res };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     return { ok: false, error: friendlyError(message) };
   }
 }

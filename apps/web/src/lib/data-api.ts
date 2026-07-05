@@ -87,6 +87,13 @@ export interface PlayoffMatchupDto {
   bracketType: string | null;
   /** First-round bye: the present team auto-advanced with no game. */
   isBye: boolean;
+  /** True when a simulated play-by-play log exists for the linked fixture. */
+  hasPlayLog: boolean;
+}
+
+export interface PlayoffChampionDto {
+  teamId: string;
+  teamName: string | null;
 }
 
 export interface PlayoffBracketDto {
@@ -96,6 +103,7 @@ export interface PlayoffBracketDto {
   /** "single" | "double". */
   format: string;
   matchups: PlayoffMatchupDto[];
+  champion: PlayoffChampionDto | null;
 }
 
 /** Season stat-leaders (WSM-000186). */
