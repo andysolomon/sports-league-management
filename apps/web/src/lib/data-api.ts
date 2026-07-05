@@ -374,6 +374,15 @@ const refs = {
     },
     { id: string; created: boolean }
   >("sports:ingestPlayerAttributes"),
+  updatePlayerAttributes: mutationRef<
+    {
+      playerId: string;
+      positionGroup: string;
+      attributesJson: string;
+      weightedOverall: number | null;
+    },
+    { id: string; created: boolean }
+  >("sports:updatePlayerAttributes"),
   getPlayerDevelopment: queryRef<
     { playerId: string },
     Array<{
@@ -1710,6 +1719,21 @@ export async function ingestPlayerAttributes(
     pffWeight: input.pffWeight ?? 0.5,
     maddenWeight: input.maddenWeight ?? 0.5,
     weightedOverall,
+  });
+}
+
+/** Manual coach/admin edit — upserts the player's current-season snapshot. */
+export async function updatePlayerAttributes(input: {
+  playerId: string;
+  positionGroup: string;
+  attributes: Record<string, number>;
+  weightedOverall: number;
+}): Promise<{ id: string; created: boolean }> {
+  return mutateConvex(refs.updatePlayerAttributes, {
+    playerId: input.playerId,
+    positionGroup: input.positionGroup,
+    attributesJson: JSON.stringify(input.attributes),
+    weightedOverall: input.weightedOverall,
   });
 }
 

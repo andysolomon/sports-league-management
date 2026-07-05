@@ -29,10 +29,10 @@ export type AttributeGroup =
   | "P";
 
 /** Universal athletic attributes every group carries. */
-const COMMON_KEYS: readonly string[] = ["SPD", "STR", "AGI", "ACC", "AWR", "STA"];
+export const COMMON_KEYS: readonly string[] = ["SPD", "STR", "AGI", "ACC", "AWR", "STA"];
 
 /** Madden-style position-specific attribute codes per group. */
-const GROUP_KEYS: Readonly<Record<AttributeGroup, readonly string[]>> = {
+export const GROUP_KEYS: Readonly<Record<AttributeGroup, readonly string[]>> = {
   QB: ["THP", "SAC", "MAC", "DAC", "TUP", "PAC"],
   RB: ["CAR", "BCV", "TRK", "ELU", "JKM", "BTK"],
   WR: ["CTH", "SRR", "MRR", "DRR", "CIT", "RLS"],
