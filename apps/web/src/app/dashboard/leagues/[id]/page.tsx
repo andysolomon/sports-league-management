@@ -7,7 +7,17 @@ import {
   getLeagueClaimable,
   getSeasons,
   listFixturesBySeason,
+  getPlayoffBracket,
+  getPlayers,
+  getTeamsByLeague,
 } from "@/lib/data-api";
+import { summarizeClassDistribution } from "@/lib/class-year";
+import {
+  dynastySeasonState,
+  evaluateStartNextSeason,
+  seasonDecidedContext,
+} from "@/lib/dynasty-panel";
+import { DynastyPanel } from "@/components/dynasty/DynastyPanel";
 import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,14 +65,63 @@ export default async function LeagueDetailPage({
   const canGenerateRosters = isAdmin && (await syntheticRostersV1());
 
   const seasons = await getSeasons([id]).catch(() => []);
-  const activeSeason =
-    seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+  const activeSeason = seasons.find((s) => s.status === "active") ?? null;
+  const upcomingSeason = seasons.find((s) => s.status === "upcoming") ?? null;
+  const [fixtures, bracket, leaguePlayers, teams] = await Promise.all([
+    activeSeason
+      ? listFixturesBySeason(activeSeason.id).catch(() => [])
+      : Promise.resolve([]),
+    activeSeason
+      ? getPlayoffBracket(activeSeason.id).catch(() => null)
+      : Promise.resolve(null),
+    isAdmin && league.orgId
+      ? getPlayers([id]).catch(() => [])
+      : Promise.resolve([]),
+    isAdmin && league.orgId
+      ? getTeamsByLeague(id, orgContext).catch(() => [])
+      : Promise.resolve([]),
+  ]);
+  const decidedCtx = activeSeason
+    ? seasonDecidedContext(fixtures, bracket)
+    : {
+        seasonDecided: false,
+        unplayedGames: 0,
+        playoffsUndecided: false,
+      };
   const seasonStarted = activeSeason
-    ? isSeasonStarted(
-        activeSeason,
-        await listFixturesBySeason(activeSeason.id).catch(() => []),
-      )
+    ? isSeasonStarted(activeSeason, fixtures)
     : false;
+  const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
+  const graduatedPlayers =
+    isAdmin && league.orgId
+      ? leaguePlayers
+          .filter((p) => p.status === "graduated")
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            position: p.position,
+            teamName: teamNameById.get(p.teamId) ?? null,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      : [];
+  const dynastySeasonStateLine = dynastySeasonState({
+    activeSeason: activeSeason
+      ? { name: activeSeason.name }
+      : null,
+    upcomingSeason: upcomingSeason
+      ? { name: upcomingSeason.name }
+      : null,
+    seasonDecided: decidedCtx.seasonDecided,
+  });
+  const startNextSeasonGate = evaluateStartNextSeason({
+    activeSeason: activeSeason
+      ? { id: activeSeason.id, name: activeSeason.name }
+      : null,
+    upcomingSeason: upcomingSeason
+      ? { id: upcomingSeason.id, name: upcomingSeason.name }
+      : null,
+    ...decidedCtx,
+  });
 
   return (
     <div>
@@ -121,6 +180,22 @@ export default async function LeagueDetailPage({
                 </div>
                 <AddTeamForm leagueId={id} />
               </div>
+              {isAdmin && league.orgId && (
+                <DynastyPanel
+                  leagueId={id}
+                  seasonState={dynastySeasonStateLine}
+                  gate={startNextSeasonGate}
+                  classDistribution={summarizeClassDistribution(leaguePlayers)}
+                  graduatedPlayers={graduatedPlayers}
+                  upcomingSeason={
+                    upcomingSeason
+                      ? { id: upcomingSeason.id, name: upcomingSeason.name }
+                      : null
+                  }
+                  unplayedGames={decidedCtx.unplayedGames}
+                  playoffsUndecided={decidedCtx.playoffsUndecided}
+                />
+              )}
               {canGenerateRosters && (
                 <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
                   <div className="min-w-0">

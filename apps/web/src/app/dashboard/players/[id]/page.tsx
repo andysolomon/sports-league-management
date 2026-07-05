@@ -16,6 +16,7 @@ import {
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
 import { derivePositionGroup } from "@/lib/position-group";
+import { gradeToClassYear } from "@/lib/class-year";
 import { orderedMaddenAttributes } from "@/lib/madden/attributes";
 import { playerAttributesV1, statKeepingV1 } from "@/lib/flags";
 import { SeasonStatsCard } from "@/components/stats/SeasonStatsCard";
@@ -65,6 +66,7 @@ export default async function PlayerProfilePage({
 
   const team = await getTeam(player.teamId, orgContext).catch(() => null);
   const positionGroup = derivePositionGroup(player.position);
+  const classYear = gradeToClassYear(player.grade);
   const age = player.dateOfBirth ? ageFrom(player.dateOfBirth) : null;
   const attributesEnabled = await playerAttributesV1();
 
@@ -182,6 +184,8 @@ export default async function PlayerProfilePage({
                 {positionGroup && positionGroup !== player.position
                   ? ` · ${positionGroup}`
                   : ""}
+                {classYear ? ` · ${classYear}` : ""}
+                {age != null ? ` · Age ${age}` : ""}
                 {player.jerseyNumber != null ? ` · #${player.jerseyNumber}` : ""}
                 {team ? ` · ${team.name}` : ""}
               </p>

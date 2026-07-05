@@ -12,6 +12,7 @@ import { RosterStatusIndicator } from "@/components/roster/RosterStatusIndicator
 import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
 import { orderByDepth } from "@/lib/roster/depth-order";
 import { abbreviateName } from "@/lib/position-group";
+import { gradeToClassYear } from "@/lib/class-year";
 import {
   lookupAttribute,
   presentHeadlineKeys,
@@ -153,6 +154,13 @@ export default function TeamManagement({
         ),
       },
       { key: "position", header: "Pos", sortable: true },
+      {
+        key: "classYear",
+        header: "Class",
+        sortable: true,
+        accessor: (p: RosterRow) => gradeToClassYear(p.grade),
+        render: (p) => gradeToClassYear(p.grade) ?? "\u2014",
+      },
       {
         key: "jerseyNumber",
         header: "#",
