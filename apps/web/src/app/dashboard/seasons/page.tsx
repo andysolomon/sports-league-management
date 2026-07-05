@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getSeasons, getLeagues } from "@/lib/data-api";
@@ -72,9 +73,12 @@ export default async function SeasonsPage() {
                           className="flex flex-wrap items-center justify-between gap-3 px-3 py-2"
                         >
                           <div className="flex min-w-0 flex-wrap items-center gap-3">
-                            <span className="font-medium text-foreground">
+                            <Link
+                              href={`/dashboard/leagues/${season.leagueId}/schedule`}
+                              className="font-medium text-foreground hover:underline"
+                            >
                               {season.name}
-                            </span>
+                            </Link>
                             <StatusBadge status={season.status} />
                             <span className="text-xs text-muted-foreground">
                               {formatDate(season.startDate)} &ndash;{" "}
