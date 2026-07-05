@@ -416,6 +416,15 @@ const refs = {
       ingestedAt: string;
     }>
   >("sports:getSeasonAttributesByPosition"),
+  listSeasonPlayerAttributes: queryRef<
+    { seasonId: string },
+    Array<{
+      playerId: string;
+      positionGroup: string;
+      attributes: Record<string, number>;
+      weightedOverall: number | null;
+    }>
+  >("sports:listSeasonPlayerAttributes"),
   getPlayerSeasonAttributes: queryRef<
     { playerId: string },
     {
@@ -575,6 +584,14 @@ const refs = {
       sourceSeasonId: string;
     }
   >("sports:copySeasonRosters"),
+  rolloverGraduateAndAdvancePlayers: mutationRef<
+    { leagueId: string; seasonId: string },
+    { graduatedPlayerIds: string[]; advancedPlayerIds: string[] }
+  >("sports:rolloverGraduateAndAdvancePlayers"),
+  removePlayersFromSeasonRoster: mutationRef<
+    { leagueId: string; seasonId: string; playerIds: string[] },
+    { removedAssignments: number; removedDepthEntries: number }
+  >("sports:removePlayersFromSeasonRoster"),
   generatePlayoffBracket: mutationRef<
     {
       seasonId: string;
@@ -1858,6 +1875,32 @@ export async function copySeasonRosters(input: {
   sourceSeasonId: string;
 }> {
   return mutateConvex(refs.copySeasonRosters, input);
+}
+
+export async function rolloverGraduateAndAdvancePlayers(input: {
+  leagueId: string;
+  seasonId: string;
+}): Promise<{ graduatedPlayerIds: string[]; advancedPlayerIds: string[] }> {
+  return mutateConvex(refs.rolloverGraduateAndAdvancePlayers, input);
+}
+
+export async function removePlayersFromSeasonRoster(input: {
+  leagueId: string;
+  seasonId: string;
+  playerIds: string[];
+}): Promise<{ removedAssignments: number; removedDepthEntries: number }> {
+  return mutateConvex(refs.removePlayersFromSeasonRoster, input);
+}
+
+export async function listSeasonPlayerAttributes(seasonId: string): Promise<
+  Array<{
+    playerId: string;
+    positionGroup: string;
+    attributes: Record<string, number>;
+    weightedOverall: number | null;
+  }>
+> {
+  return queryConvex(refs.listSeasonPlayerAttributes, { seasonId });
 }
 
 export async function generatePlayoffBracket(input: {

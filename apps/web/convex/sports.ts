@@ -31,6 +31,7 @@ import {
   buildDoubleElimBracket,
   nextPowerOfTwo,
 } from "./lib/bracket";
+import { squadForGrade } from "./lib/dynasty";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -3264,7 +3265,7 @@ export const getSeasonAttributesByPosition = queryGeneric({
  */
 /*
  * The season whose attributes represent a league's "current" SPRT ratings —
- * the active season, else whichever exists first. Matches the convention the
+ * the active season, else the most recently created. Matches the convention the
  * dashboard pages used to apply caller-side; centralized here so workspace
  * forks (whose own league has no seasons) resolve against their SOURCE league.
  */
@@ -3276,9 +3277,11 @@ async function currentSeasonId(
     .query("seasons")
     .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
     .collect();
-  const chosen =
-    seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
-  return chosen ? chosen._id : null;
+  const active = seasons.find((s) => s.status === "active");
+  if (active) return active._id;
+  if (seasons.length === 0) return null;
+  const sorted = [...seasons].sort((a, b) => b._creationTime - a._creationTime);
+  return sorted[0]!._id;
 }
 
 /*
@@ -4084,6 +4087,136 @@ export const copySeasonRosters = internalMutation({
       copiedDepthEntries: sourceDepthEntries.length,
       sourceSeasonId: source._id as string,
     };
+  },
+});
+
+const seasonPlayerAttributeRowValidator = v.object({
+  playerId: v.string(),
+  positionGroup: v.string(),
+  attributes: v.record(v.string(), v.number()),
+  weightedOverall: v.union(v.number(), v.null()),
+});
+
+/*
+ * All attribute snapshots for a season (dynasty rollover / progression reads).
+ * Scans each position-group bucket on the compound index — no schema change.
+ */
+export const listSeasonPlayerAttributes = queryGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(seasonPlayerAttributeRowValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerAttributes")
+      .withIndex("by_seasonId_positionGroup", (q) =>
+        q.eq("seasonId", args.seasonId),
+      )
+      .collect();
+    return rows.map((row) => ({
+      playerId: row.playerId as string,
+      positionGroup: row.positionGroup,
+      attributes: safeParseAttributes(row.attributesJson),
+      weightedOverall: row.weightedOverall,
+    }));
+  },
+});
+
+/*
+ * Dynasty rollover (D1) — graduate seniors and advance underclassmen on the
+ * active-season roster. Players with grade 12 → status "graduated"; grades
+ * 9–11 → grade+1, recomputed squad, experienceYears+1.
+ */
+export const rolloverGraduateAndAdvancePlayers = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+  },
+  returns: v.object({
+    graduatedPlayerIds: v.array(v.string()),
+    advancedPlayerIds: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const assignments = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_leagueId_seasonId", (q) =>
+        q.eq("leagueId", args.leagueId).eq("seasonId", args.seasonId),
+      )
+      .collect();
+
+    const playerIds = [...new Set(assignments.map((a) => a.playerId))];
+    const graduatedPlayerIds: string[] = [];
+    const advancedPlayerIds: string[] = [];
+
+    for (const playerId of playerIds) {
+      const player = await ctx.db.get(playerId);
+      if (!player) continue;
+      const grade = player.grade ?? null;
+
+      if (grade === 12) {
+        await ctx.db.patch(playerId, { status: "graduated" });
+        graduatedPlayerIds.push(playerId as string);
+        continue;
+      }
+
+      if (grade !== null && grade >= 9 && grade <= 11) {
+        const newGrade = grade + 1;
+        await ctx.db.patch(playerId, {
+          grade: newGrade,
+          squad: squadForGrade(newGrade, playerId as string),
+          experienceYears: (player.experienceYears ?? 0) + 1,
+        });
+        advancedPlayerIds.push(playerId as string);
+        continue;
+      }
+
+      await ctx.db.patch(playerId, {
+        experienceYears: (player.experienceYears ?? 0) + 1,
+      });
+      advancedPlayerIds.push(playerId as string);
+    }
+
+    return { graduatedPlayerIds, advancedPlayerIds };
+  },
+});
+
+/*
+ * Remove roster assignments + depth-chart rows for specific players in a season
+ * (dynasty carryover cleanup after copySeasonRosters).
+ */
+export const removePlayersFromSeasonRoster = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    playerIds: v.array(v.id("players")),
+  },
+  returns: v.object({
+    removedAssignments: v.number(),
+    removedDepthEntries: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const target = new Set(args.playerIds.map((id) => id as string));
+    let removedAssignments = 0;
+    let removedDepthEntries = 0;
+
+    const assignments = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_leagueId_seasonId", (q) =>
+        q.eq("leagueId", args.leagueId).eq("seasonId", args.seasonId),
+      )
+      .collect();
+    for (const ra of assignments) {
+      if (!target.has(ra.playerId as string)) continue;
+      await ctx.db.delete(ra._id);
+      removedAssignments += 1;
+    }
+
+    for (const d of await ctx.db.query("depthChartEntries").collect()) {
+      if (d.seasonId !== args.seasonId) continue;
+      if (!target.has(d.playerId as string)) continue;
+      await ctx.db.delete(d._id);
+      removedDepthEntries += 1;
+    }
+
+    return { removedAssignments, removedDepthEntries };
   },
 });
 

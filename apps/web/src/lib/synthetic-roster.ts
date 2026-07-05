@@ -37,6 +37,10 @@ function pad2(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
 }
 
+function clampGrade(grade: number): number {
+  return Math.max(9, Math.min(12, Math.round(grade)));
+}
+
 // A believable 48-man depth spread (concrete positions, not groups).
 const ROSTER_TEMPLATE: readonly string[] = [
   "QB", "QB", "QB",
@@ -173,6 +177,8 @@ export interface GenerateOptions {
   excludeNames?: string[];
   /** Seed for deterministic output (e.g. seedFromString(teamId)). */
   seed?: number;
+  /** When set, every generated player uses this HS grade (9–12). */
+  grade?: number;
 }
 
 function pickUniqueName(
@@ -201,6 +207,7 @@ export function generateSyntheticRoster({
   excludeJerseys = [],
   excludeNames = [],
   seed = 1,
+  grade: fixedGrade,
 }: GenerateOptions): SyntheticPlayer[] {
   const n = Math.max(0, Math.min(count, 99)); // cap at a sane jersey-bound size
   const rand = rng(seed);
@@ -224,7 +231,10 @@ export function generateSyntheticRoster({
     const name = pickUniqueName(rand, usedNames);
     usedNames.add(name);
 
-    const grade = 9 + Math.floor(rand() * 4); // 9–12
+    const grade =
+      fixedGrade !== undefined
+        ? clampGrade(fixedGrade)
+        : 9 + Math.floor(rand() * 4); // 9–12
     // Upperclassmen lean varsity; underclassmen lean JV — just a believable mix.
     const squad = grade >= 11 ? "Varsity" : rand() < 0.5 ? "Varsity" : "JV";
 
