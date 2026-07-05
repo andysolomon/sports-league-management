@@ -6,11 +6,15 @@ import { getLeague, getSeasons, getSeasonStatLeaders } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatLeadersBoard } from "@/components/stats/StatLeadersBoard";
+import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
+import { resolveViewedSeason } from "@/lib/season-view";
 
 export default async function LeagueStatLeadersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
   // Same dark-flag gate as the rest of stat-keeping (WSM-000112).
   const enabled = await statKeepingV1();
@@ -24,9 +28,9 @@ export default async function LeagueStatLeadersPage({
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
 
+  const { season: seasonParam } = await searchParams;
   const allSeasons = await getSeasons([leagueId]);
-  const activeSeason =
-    allSeasons.find((s) => s.status === "active") ?? allSeasons[0] ?? null;
+  const activeSeason = resolveViewedSeason(allSeasons, seasonParam);
 
   return (
     <div>
@@ -44,7 +48,17 @@ export default async function LeagueStatLeadersPage({
             Stat leaders{activeSeason ? ` · ${activeSeason.name}` : ""}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          {activeSeason ? (
+            <SeasonSwitcher
+              seasons={allSeasons.map((s) => ({
+                id: s.id,
+                name: s.name,
+                status: s.status,
+              }))}
+              currentSeasonId={activeSeason.id}
+            />
+          ) : null}
           <Link
             href={`/dashboard/leagues/${leagueId}/standings`}
             className="text-sm text-primary hover:underline"

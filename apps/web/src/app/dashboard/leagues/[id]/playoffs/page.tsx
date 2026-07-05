@@ -16,11 +16,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PlayoffBracket from "@/components/playoffs/PlayoffBracket";
 import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
+import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
+import { resolveViewedSeason } from "@/lib/season-view";
 
 export default async function LeaguePlayoffsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ season?: string }>;
 }) {
   const enabled = await playoffsV1();
   if (!enabled) notFound();
@@ -37,9 +41,9 @@ export default async function LeaguePlayoffsPage({
   const role = orgId ? await resolveOrgRole(orgId, userId) : null;
   const isAdmin = canManageRoster(role);
 
+  const { season: seasonParam } = await searchParams;
   const allSeasons = await getSeasons([leagueId]);
-  const activeSeason =
-    allSeasons.find((s) => s.status === "active") ?? allSeasons[0] ?? null;
+  const activeSeason = resolveViewedSeason(allSeasons, seasonParam);
 
   const fixtures = activeSeason
     ? await listFixturesBySeason(activeSeason.id)
@@ -75,6 +79,16 @@ export default async function LeaguePlayoffsPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {activeSeason ? (
+            <SeasonSwitcher
+              seasons={allSeasons.map((s) => ({
+                id: s.id,
+                name: s.name,
+                status: s.status,
+              }))}
+              currentSeasonId={activeSeason.id}
+            />
+          ) : null}
           <Link
             href={`/dashboard/leagues/${leagueId}/schedule`}
             className="text-sm text-primary hover:underline"
