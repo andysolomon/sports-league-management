@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ClipboardList, Radio } from "lucide-react";
+import { ClipboardList, Radio, Tv } from "lucide-react";
 import {
   schedulesStandingsV1,
   liveStreamingV1,
@@ -16,6 +16,7 @@ import {
   getSeasons,
   getResultByFixture,
   getStreamByFixture,
+  getGamePlayLog,
   getTeamsByLeague,
   listFixturesBySeason,
   type PublicGameStream,
@@ -102,7 +103,9 @@ export default async function LeagueSchedulePage({
     fixtures.map(async (f) => {
       const result =
         f.status === "final" ? await getResultByFixture(f.id) : null;
-      return { fixture: f, result };
+      const hasPlayLog =
+        f.status === "final" ? (await getGamePlayLog(f.id)) !== null : false;
+      return { fixture: f, result, hasPlayLog };
     }),
   );
 
@@ -266,7 +269,7 @@ export default async function LeagueSchedulePage({
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map(({ fixture, result }) => (
+                      {rows.map(({ fixture, result, hasPlayLog }) => (
                         <tr key={fixture.id} className="border-b border-border">
                           <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
                             {formatFixtureWhen(fixture.scheduledAt)}
@@ -375,6 +378,17 @@ export default async function LeagueSchedulePage({
                                       className="text-primary hover:underline"
                                     >
                                       Away
+                                    </Link>
+                                  </span>
+                                ) : null}
+                                {fixture.status === "final" && hasPlayLog ? (
+                                  <span className="flex items-center gap-1 text-xs">
+                                    <Tv className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <Link
+                                      href={`/dashboard/games/${fixture.id}/gamecast`}
+                                      className="text-primary hover:underline"
+                                    >
+                                      Gamecast
                                     </Link>
                                   </span>
                                 ) : null}
