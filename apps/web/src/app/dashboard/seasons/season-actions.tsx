@@ -1,9 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { SeasonDto } from "@sports-management/shared-types";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, CheckCircle2, Users } from "lucide-react";
 import {
@@ -96,15 +115,22 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
   const [playoffFormat, setPlayoffFormat] = useState("single");
   const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(false);
   const [busy, setBusy] = useState(false);
+  /** Name of the season just created; non-null switches the dialog to its success state. */
+  const [createdName, setCreatedName] = useState<string | null>(null);
 
-  function reset() {
+  function resetForm() {
     setName("");
     setStartDate("");
     setEndDate("");
     setPlayoffTeams(8);
     setPlayoffFormat("single");
     setDivisionWinnersQualify(false);
-    setOpen(false);
+    setCreatedName(null);
+  }
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) resetForm();
   }
 
   async function submit() {
@@ -122,69 +148,154 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
     });
     setBusy(false);
     if (res.ok) {
-      toast.success(`Created ${trimmed}.`);
-      reset();
+      setCreatedName(trimmed);
       router.refresh();
     } else {
       toast.error(res.error === "not_admin" ? "Only league admins can add seasons." : res.error);
     }
   }
 
-  if (!open) {
-    return (
-      <Button size="sm" onClick={() => setOpen(true)}>
-        <Plus className="mr-1 h-4 w-4" />
-        New season
-      </Button>
-    );
-  }
-
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") submit();
-          if (e.key === "Escape") reset();
-        }}
-        placeholder="Season name (e.g. 2026)"
-        className={inputClass}
-      />
-      <label className="flex items-center gap-1 text-xs text-muted-foreground">
-        Start
-        <input
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className={inputClass}
-        />
-      </label>
-      <label className="flex items-center gap-1 text-xs text-muted-foreground">
-        End
-        <input
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className={inputClass}
-        />
-      </label>
-      <PlayoffConfigFields
-        playoffTeams={playoffTeams}
-        setPlayoffTeams={setPlayoffTeams}
-        playoffFormat={playoffFormat}
-        setPlayoffFormat={setPlayoffFormat}
-        divisionWinnersQualify={divisionWinnersQualify}
-        setDivisionWinnersQualify={setDivisionWinnersQualify}
-      />
-      <Button size="sm" disabled={busy} onClick={submit}>
-        {busy ? "…" : "Create"}
-      </Button>
-      <Button size="sm" variant="ghost" onClick={reset}>
-        Cancel
-      </Button>
-    </div>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button size="sm">
+          <Plus className="mr-1 h-4 w-4" />
+          New season
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        {createdName === null ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>New season</DialogTitle>
+              <DialogDescription>
+                Add a season to this league to unlock rosters, schedules, and
+                player attributes.
+              </DialogDescription>
+            </DialogHeader>
+            <form
+              className="grid gap-4 py-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                submit();
+              }}
+            >
+              <div className="grid gap-2">
+                <Label htmlFor="season-name">Season name</Label>
+                <Input
+                  id="season-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. 2026"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="season-start">Start date</Label>
+                  <Input
+                    id="season-start"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="season-end">End date</Label>
+                  <Input
+                    id="season-end"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="season-playoff-teams">Playoff teams</Label>
+                  <Select
+                    value={String(playoffTeams)}
+                    onValueChange={(v) => setPlayoffTeams(Number(v))}
+                  >
+                    <SelectTrigger id="season-playoff-teams">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">None</SelectItem>
+                      {PLAYOFF_TEAM_OPTIONS.map((n) => (
+                        <SelectItem key={n} value={String(n)}>
+                          {n} teams
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="season-playoff-format">Playoff format</Label>
+                  <Select
+                    value={playoffFormat}
+                    onValueChange={setPlayoffFormat}
+                    disabled={playoffTeams === 0}
+                  >
+                    <SelectTrigger id="season-playoff-format">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single elimination</SelectItem>
+                      <SelectItem value="double">Double elimination</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={divisionWinnersQualify}
+                  onChange={(e) => setDivisionWinnersQualify(e.target.checked)}
+                />
+                Division winners automatically qualify for playoffs
+              </label>
+              <DialogFooter className="pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleOpenChange(false)}
+                  disabled={busy}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={busy || name.trim() === ""}>
+                  {busy ? "Creating…" : "Create season"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle>Season created</DialogTitle>
+              <DialogDescription>
+                {createdName} is ready. Next, generate a schedule so teams have
+                fixtures to play.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center gap-2 text-sm text-foreground">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+              <span>Created {createdName}.</span>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button variant="ghost" onClick={() => handleOpenChange(false)}>
+                Done
+              </Button>
+              <Button asChild>
+                <Link href={`/dashboard/leagues/${leagueId}/schedule`}>
+                  Generate schedule
+                </Link>
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
