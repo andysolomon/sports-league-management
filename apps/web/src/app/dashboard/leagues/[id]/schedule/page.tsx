@@ -34,8 +34,8 @@ import GoLiveControl from "@/components/schedule/GoLiveControl";
 import ClipsControl from "@/components/schedule/ClipsControl";
 import {
   SimulateGameButton,
-  SimulateSeasonButton,
-  SimulateChampionButton,
+  SimulateScopeMenu,
+  SimulateWeekButton,
 } from "@/components/schedule/SimulateControls";
 import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
 import { StatusBadge } from "@/components/status-badge";
@@ -183,16 +183,10 @@ export default async function LeagueSchedulePage({
             />
           ) : null}
           {isAdmin && activeSeason && fixtures.length > 0 ? (
-            <>
-              <SimulateSeasonButton
-                leagueId={leagueId}
-                seasonId={activeSeason.id}
-              />
-              <SimulateChampionButton
-                leagueId={leagueId}
-                seasonId={activeSeason.id}
-              />
-            </>
+            <SimulateScopeMenu
+              leagueId={leagueId}
+              seasonId={activeSeason.id}
+            />
           ) : null}
           {canGenerateRosters ? (
             <>
@@ -234,12 +228,25 @@ export default async function LeagueSchedulePage({
         <div className="space-y-6">
           {weekKeys.map((week) => {
             const rows = buckets.get(week)!;
+            const weekHasUnplayed = rows.some(
+              ({ fixture }) => fixture.status === "scheduled",
+            );
             return (
               <Card key={week ?? "unscheduled"}>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
                   <CardTitle>
                     {week === null ? "Unscheduled" : `Week ${week}`}
                   </CardTitle>
+                  {isAdmin &&
+                  activeSeason &&
+                  week !== null &&
+                  weekHasUnplayed ? (
+                    <SimulateWeekButton
+                      leagueId={leagueId}
+                      seasonId={activeSeason.id}
+                      week={week}
+                    />
+                  ) : null}
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
