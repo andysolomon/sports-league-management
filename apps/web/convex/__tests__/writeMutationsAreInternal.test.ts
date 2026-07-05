@@ -34,6 +34,8 @@ void internal.sports.deleteSeason;
 void internal.sports.clearSeasonPlayerAttributes;
 void internal.sports.ingestMaddenRatingsBatch;
 void internal.sports.ingestPlayerAttributesBatch;
+void internal.sports.rolloverGraduateAndAdvancePlayers;
+void internal.sports.removePlayersFromSeasonRoster;
 void internal.sports.updatePlayerAttributes;
 void internal.sports.setOrgMemberRole;
 void internal.sports.updateDivision;
@@ -176,6 +178,7 @@ type AllowedPublicSportsReads =
   | "listPlayersByTeam"
   | "listPublicLeagues"
   | "listResultsBySeason"
+  | "listSeasonPlayerAttributes"
   | "listSeasons"
   | "listTeams"
   | "listTeamsByLeague";

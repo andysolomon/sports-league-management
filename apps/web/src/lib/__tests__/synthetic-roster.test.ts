@@ -71,6 +71,22 @@ describe("generateSyntheticRoster", () => {
       expect(p.hometown).toMatch(/, [A-Z]{2}$/);
     }
   });
+
+  it("honors a fixed grade when provided", () => {
+    const roster = generateSyntheticRoster({ count: 12, seed: 99, grade: 9 });
+    expect(roster.every((p) => p.grade === 9)).toBe(true);
+    for (const p of roster) {
+      const year = Number(p.dateOfBirth.slice(0, 4));
+      expect(year).toBeGreaterThanOrEqual(2008);
+      expect(year).toBeLessThanOrEqual(2013);
+    }
+  });
+
+  it("defaults to mixed grades when grade is omitted", () => {
+    const roster = generateSyntheticRoster({ count: 40, seed: 13 });
+    const grades = new Set(roster.map((p) => p.grade));
+    expect(grades.size).toBeGreaterThan(1);
+  });
 });
 
 describe("seedFromString", () => {
