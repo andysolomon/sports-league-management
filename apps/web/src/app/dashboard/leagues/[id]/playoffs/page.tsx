@@ -7,13 +7,15 @@ import {
   getLeagueOrgId,
   getSeasons,
   getPlayoffBracket,
+  listFixturesBySeason,
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
+import { playoffPagePhase, regularSeasonProgress } from "@/lib/playoffs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PlayoffBracket from "@/components/playoffs/PlayoffBracket";
-import GeneratePlayoffsButton from "@/components/playoffs/GeneratePlayoffsButton";
+import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
 
 export default async function LeaguePlayoffsPage({
   params,
@@ -31,7 +33,6 @@ export default async function LeaguePlayoffsPage({
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
 
-  // Manager gate (admins + coaches), consistent with the schedule page.
   const orgId = await getLeagueOrgId(leagueId);
   const role = orgId ? await resolveOrgRole(orgId, userId) : null;
   const isAdmin = canManageRoster(role);
@@ -40,8 +41,21 @@ export default async function LeaguePlayoffsPage({
   const activeSeason =
     allSeasons.find((s) => s.status === "active") ?? allSeasons[0] ?? null;
 
+  const fixtures = activeSeason
+    ? await listFixturesBySeason(activeSeason.id)
+    : [];
+  const progress = regularSeasonProgress(fixtures);
+
   const bracket = activeSeason
     ? await getPlayoffBracket(activeSeason.id)
+    : null;
+
+  const phase = activeSeason
+    ? playoffPagePhase({
+        playoffTeams: activeSeason.playoffTeams,
+        bracketExists: bracket !== null,
+        regularComplete: progress.complete,
+      })
     : null;
 
   return (
@@ -60,23 +74,19 @@ export default async function LeaguePlayoffsPage({
             Playoffs {activeSeason ? `· ${activeSeason.name}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/dashboard/leagues/${leagueId}/schedule`}
             className="text-sm text-primary hover:underline"
           >
             &larr; Schedule
           </Link>
-          {isAdmin && activeSeason ? (
-            <GeneratePlayoffsButton
-              leagueId={leagueId}
-              seasonId={activeSeason.id}
-              seasonName={activeSeason.name}
-              hasBracket={bracket !== null}
-              defaultSize={activeSeason.playoffTeams}
-              defaultFormat={activeSeason.playoffFormat}
-            />
-          ) : null}
+          <Link
+            href={`/dashboard/leagues/${leagueId}/standings`}
+            className="text-sm text-primary hover:underline"
+          >
+            Standings &rarr;
+          </Link>
         </div>
       </header>
 
@@ -92,17 +102,43 @@ export default async function LeaguePlayoffsPage({
             </Button>
           </CardContent>
         </Card>
-      ) : !bracket ? (
+      ) : phase === "no_playoffs_config" ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
-            No bracket yet for {activeSeason.name}.
-            {isAdmin
-              ? " Pick a size and generate one — seeds come from the current standings."
-              : ""}
+            {activeSeason.name} is not configured for playoffs. Set a playoff team
+            count on the season to enable the bracket.
+          </CardContent>
+        </Card>
+      ) : phase === "bracket_live" && bracket ? (
+        <PlayoffBracket bracket={bracket} />
+      ) : phase === "ready" ? (
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Regular season complete ({progress.final} of {progress.total} games
+              final). Ready to seed the bracket from current standings.
+            </p>
+            {isAdmin ? (
+              <AdvanceToPlayoffsButton leagueId={leagueId} />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Waiting for a league manager to advance to playoffs.
+              </p>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <PlayoffBracket bracket={bracket} />
+        <Card>
+          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Regular season in progress — {progress.final} of {progress.total}{" "}
+              games final.
+            </p>
+            {isAdmin ? (
+              <AdvanceToPlayoffsButton leagueId={leagueId} disabled />
+            ) : null}
+          </CardContent>
+        </Card>
       )}
     </div>
   );

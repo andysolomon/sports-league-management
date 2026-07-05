@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { schedulesStandingsV1 } from "@/lib/flags";
+import { schedulesStandingsV1, playoffsV1 } from "@/lib/flags";
 import {
   computeStandings,
   computeDivisionStandings,
@@ -21,6 +21,8 @@ export default async function LeagueStandingsPage({
 }) {
   const enabled = await schedulesStandingsV1();
   if (!enabled) notFound();
+
+  const playoffsEnabled = await playoffsV1();
 
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
@@ -93,6 +95,14 @@ export default async function LeagueStandingsPage({
           >
             Schedule &rarr;
           </Link>
+          {playoffsEnabled ? (
+            <Link
+              href={`/dashboard/leagues/${leagueId}/playoffs`}
+              className="text-sm text-primary hover:underline"
+            >
+              Playoffs &rarr;
+            </Link>
+          ) : null}
         </div>
       </header>
 

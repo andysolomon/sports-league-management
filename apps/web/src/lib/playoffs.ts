@@ -131,3 +131,80 @@ export function bracketSections(
 
   return sections;
 }
+
+export interface ChampionInfo {
+  teamId: string;
+  teamName: string | null;
+}
+
+/** Derive the season champion from bracket matchups (null until the final is decided). */
+export function deriveChampion(
+  matchups: PlayoffMatchupDto[],
+  format: string,
+): ChampionInfo | null {
+  if (format === "double") {
+    const grandFinal = matchups.find((m) => m.bracketType === "grandFinal");
+    if (!grandFinal?.winnerTeamId) return null;
+    return {
+      teamId: grandFinal.winnerTeamId,
+      teamName:
+        grandFinal.winnerTeamId === grandFinal.homeTeamId
+          ? grandFinal.homeTeamName
+          : grandFinal.awayTeamName,
+    };
+  }
+  const final = matchups.reduce<PlayoffMatchupDto | null>(
+    (best, m) =>
+      (m.bracketType ?? "winners") === "winners" && m.round > (best?.round ?? -1)
+        ? m
+        : best,
+    null,
+  );
+  if (!final?.winnerTeamId) return null;
+  return {
+    teamId: final.winnerTeamId,
+    teamName:
+      final.winnerTeamId === final.homeTeamId
+        ? final.homeTeamName
+        : final.awayTeamName,
+  };
+}
+
+export interface RegularSeasonProgress {
+  total: number;
+  final: number;
+  complete: boolean;
+}
+
+/** Count regular-season fixture completion (playoff games excluded). */
+export function regularSeasonProgress(
+  fixtures: Array<{ stage: string; status: string }>,
+): RegularSeasonProgress {
+  const regular = fixtures.filter((f) => f.stage !== "playoff");
+  const total = regular.length;
+  const finalCount = regular.filter(
+    (f) => f.status === "final" || f.status === "cancelled",
+  ).length;
+  return {
+    total,
+    final: finalCount,
+    complete: total === 0 || finalCount === total,
+  };
+}
+
+export type PlayoffPagePhase =
+  | "no_playoffs_config"
+  | "in_progress"
+  | "ready"
+  | "bracket_live";
+
+export function playoffPagePhase(input: {
+  playoffTeams: number | null | undefined;
+  bracketExists: boolean;
+  regularComplete: boolean;
+}): PlayoffPagePhase {
+  if (!input.playoffTeams || input.playoffTeams < 2) return "no_playoffs_config";
+  if (input.bracketExists) return "bracket_live";
+  if (input.regularComplete) return "ready";
+  return "in_progress";
+}
