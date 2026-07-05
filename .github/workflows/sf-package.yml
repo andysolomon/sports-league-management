@@ -47,7 +47,10 @@ jobs:
             --username "${{ secrets.SF_DEVHUB_USERNAME }}" \
             --set-default-dev-hub \
             --alias devhub
-          rm /tmp/server.key
+          # Do NOT delete /tmp/server.key here: the CLI stores the key PATH in
+          # its auth store and re-reads it for later JWT re-grants (e.g. the
+          # Connected-App approval during `sf org create scratch`). The runner
+          # is ephemeral, so the key disappears with the job.
 
       - name: Create Scratch Org
         run: |
@@ -103,7 +106,10 @@ jobs:
             --username "${{ secrets.SF_DEVHUB_USERNAME }}" \
             --set-default-dev-hub \
             --alias devhub
-          rm /tmp/server.key
+          # Do NOT delete /tmp/server.key here: the CLI stores the key PATH in
+          # its auth store and re-reads it for later JWT re-grants (e.g. the
+          # Connected-App approval during `sf org create scratch`). The runner
+          # is ephemeral, so the key disappears with the job.
 
       - name: Create Package Version
         run: |
