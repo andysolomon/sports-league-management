@@ -15,6 +15,10 @@
  * Required env (all already present when CONVEX_ENABLE_E2E_SEED is set up):
  *   - CLERK_SECRET_KEY    — backend secret for the dev Clerk instance
  *   - E2E_CLERK_USER_ID   — the user_… ID to impersonate
+ *
+ * Prod sweep overrides (live Clerk instance after #386 cutover):
+ *   - PROD_CLERK_SECRET_KEY    — falls back to CLERK_SECRET_KEY
+ *   - PROD_E2E_CLERK_USER_ID   — falls back to E2E_CLERK_USER_ID
  */
 import type { Page } from "@playwright/test";
 import { clerk } from "@clerk/testing/playwright";
@@ -59,9 +63,14 @@ export interface SignInOptions {
 }
 
 function resolveUserId(variant: "A" | "B"): string | undefined {
-  return variant === "B"
-    ? process.env.E2E_CLERK_USER_ID_B
-    : process.env.E2E_CLERK_USER_ID;
+  if (variant === "B") {
+    return process.env.E2E_CLERK_USER_ID_B;
+  }
+  return process.env.PROD_E2E_CLERK_USER_ID ?? process.env.E2E_CLERK_USER_ID;
+}
+
+function resolveClerkSecret(): string | undefined {
+  return process.env.PROD_CLERK_SECRET_KEY ?? process.env.CLERK_SECRET_KEY;
 }
 
 export async function signInTestUser(
@@ -70,17 +79,19 @@ export async function signInTestUser(
 ): Promise<void> {
   const variant = options.userVariant ?? "A";
   const userId = resolveUserId(variant);
-  const secret = process.env.CLERK_SECRET_KEY;
+  const secret = resolveClerkSecret();
   if (!userId) {
     const envName =
-      variant === "B" ? "E2E_CLERK_USER_ID_B" : "E2E_CLERK_USER_ID";
+      variant === "B"
+        ? "E2E_CLERK_USER_ID_B"
+        : "PROD_E2E_CLERK_USER_ID or E2E_CLERK_USER_ID";
     throw new Error(
       `[clerk-signin] ${envName} is required to sign in the e2e test user.`,
     );
   }
   if (!secret) {
     throw new Error(
-      "[clerk-signin] CLERK_SECRET_KEY is required to mint a sign-in token.",
+      "[clerk-signin] PROD_CLERK_SECRET_KEY or CLERK_SECRET_KEY is required to mint a sign-in token.",
     );
   }
 
