@@ -18,11 +18,10 @@ dotenv.config({ path: path.resolve(".env.local") });
  * Target: PROD_BASE_URL (defaults to the custom domain). NO `webServer` — prod
  * is already deployed; we hit it over the network.
  *
- * Auth note: this reuses the same Clerk creds as the functional suite
- * (CLERK_SECRET_KEY + E2E_CLERK_USER_ID). That works today because prod still
- * runs the Clerk DEVELOPMENT instance (#386 cutover pending). After the cutover
- * to a production Clerk instance, point these at a prod-instance secret key +
- * a prod test user (e.g. PROD_CLERK_* secrets).
+ * Auth note: after the prod Clerk cutover (#386), local .env.local still holds
+ * dev keys — ticket sign-in against live prod fails unless you set prod-specific
+ * overrides: PROD_CLERK_SECRET_KEY + PROD_E2E_CLERK_USER_ID (see clerk-signin.ts).
+ * The `public-auth` project needs no secrets — it only checks signed-out flows.
  */
 const PROD_STORAGE_STATE = path.resolve("e2e", ".auth", "prod-user.json");
 const BASE_URL =
@@ -44,6 +43,14 @@ export default defineConfig({
     actionTimeout: 15_000,
   },
   projects: [
+    {
+      name: "public-auth",
+      testMatch: /public-auth\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+      },
+    },
     { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
       name: "desktop",

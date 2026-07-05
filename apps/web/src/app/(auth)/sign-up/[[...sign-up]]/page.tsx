@@ -21,11 +21,9 @@ export default async function SignUpPage({
     : undefined;
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <SignUp
-        forceRedirectUrl={redirectUrl}
-        fallbackRedirectUrl={redirectUrl}
-      />
-    </main>
+    <SignUp
+      forceRedirectUrl={redirectUrl}
+      fallbackRedirectUrl={redirectUrl}
+    />
   );
 }

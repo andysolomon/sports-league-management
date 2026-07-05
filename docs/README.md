@@ -8,6 +8,7 @@
 | [development/RELEASE_STRATEGY.md](development/RELEASE_STRATEGY.md) | Lockstep versioning model, commit→version mapping, semantic-release flow |
 | [development/BRANCH_PROTECTION.md](development/BRANCH_PROTECTION.md) | Branch-protection rules on `main` (required checks, bypass paths) |
 | [development/DEPLOY.md](development/DEPLOY.md) | Production deploy runbook — web via Vercel (auto) + manual Convex deploy, deploy-order rule, verification |
+| [orchestrator/README.md](orchestrator/README.md) | Orchestrator prompts — copy/paste `/fable-orchestrator` commands (Claude Code) for repo scans, reviews, implementation, and test strategy |
 
 ## Guides
 
