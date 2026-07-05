@@ -12,6 +12,8 @@ const {
   mockRecordGameResult,
   mockUpsertGamePlayLog,
   mockSimulateAndPersistFixture,
+  mockListFixturesBySeason,
+  mockGetPlayoffBracket,
 } = vi.hoisted(() => ({
   mockSchedulesStandingsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -24,6 +26,8 @@ const {
   mockRecordGameResult: vi.fn(),
   mockUpsertGamePlayLog: vi.fn(),
   mockSimulateAndPersistFixture: vi.fn(),
+  mockListFixturesBySeason: vi.fn(),
+  mockGetPlayoffBracket: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({
@@ -36,10 +40,10 @@ vi.mock("@/lib/data-api", () => ({
   upsertGamePlayLog: mockUpsertGamePlayLog,
   getLeague: mockGetLeague,
   getLeagueOrgId: mockGetLeagueOrgId,
-  listFixturesBySeason: vi.fn(),
+  listFixturesBySeason: mockListFixturesBySeason,
   getSeason: vi.fn(),
   generatePlayoffBracket: vi.fn(),
-  getPlayoffBracket: vi.fn(),
+  getPlayoffBracket: mockGetPlayoffBracket,
   createFixture: vi.fn(),
   deleteFixture: vi.fn(),
   generateSeasonSchedule: vi.fn(),
@@ -63,27 +67,40 @@ vi.mock("@/lib/simulate-fixture", () => ({
 import {
   recordGameResultAction,
   simulateGameAction,
+  simulatePlayoffsAction,
+  simulateRegularSeasonAction,
+  simulateWeekAction,
 } from "../actions";
 
 const LEAGUE = "league_1";
+const SEASON = "season_1";
 const FIX = "fixture_abc";
 const USER = "user_1";
 
-const FIXTURE = {
-  id: FIX,
-  seasonId: "season_1",
-  homeTeamId: "team_home",
-  awayTeamId: "team_away",
-  homeTeamName: "Home",
-  awayTeamName: "Away",
-  scheduledAt: null,
-  week: 1,
-  venue: null,
-  status: "scheduled" as const,
-  stage: "regular",
-  createdAt: "2026-01-01T00:00:00.000Z",
-  createdBy: USER,
-};
+function fixture(
+  overrides: Partial<{
+    id: string;
+    week: number | null;
+    stage: "regular" | "playoff";
+    status: "scheduled" | "final";
+  }> = {},
+) {
+  return {
+    id: overrides.id ?? FIX,
+    seasonId: SEASON,
+    homeTeamId: "team_home",
+    awayTeamId: "team_away",
+    homeTeamName: "Home",
+    awayTeamName: "Away",
+    scheduledAt: null,
+    week: overrides.week ?? 1,
+    venue: null,
+    status: overrides.status ?? ("scheduled" as const),
+    stage: overrides.stage ?? ("regular" as const),
+    createdAt: "2026-01-01T00:00:00.000Z",
+    createdBy: USER,
+  };
+}
 
 function authorize() {
   mockSchedulesStandingsV1.mockResolvedValue(true);
@@ -93,7 +110,12 @@ function authorize() {
   mockGetLeagueOrgId.mockResolvedValue("org_1");
   mockResolveOrgRole.mockResolvedValue("org:admin");
   mockCanManageRoster.mockReturnValue(true);
-  mockGetFixture.mockResolvedValue(FIXTURE);
+  mockGetFixture.mockResolvedValue(fixture());
+  mockSimulateAndPersistFixture.mockResolvedValue({
+    homeScore: 21,
+    awayScore: 14,
+    usedScoreFallback: false,
+  });
 }
 
 describe("simulateGameAction (PBP Slice B)", () => {
@@ -113,11 +135,134 @@ describe("simulateGameAction (PBP Slice B)", () => {
 
     expect(res).toEqual({ ok: true, homeScore: 28, awayScore: 21 });
     expect(mockSimulateAndPersistFixture).toHaveBeenCalledWith({
-      fixture: FIXTURE,
+      fixture: fixture(),
       orgContext: { visibleLeagueIds: [LEAGUE] },
       actorUserId: USER,
       decisive: false,
       profileCache: expect.any(Map),
+    });
+  });
+});
+
+describe("simulateWeekAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authorize();
+  });
+
+  it("sims only unplayed fixtures in the requested week", async () => {
+    const week1A = fixture({ id: "w1a", week: 1 });
+    const week1B = fixture({ id: "w1b", week: 1 });
+    const week2 = fixture({ id: "w2", week: 2 });
+    const week1Final = fixture({ id: "w1f", week: 1, status: "final" });
+    mockListFixturesBySeason.mockResolvedValue([
+      week1A,
+      week1B,
+      week2,
+      week1Final,
+    ]);
+
+    const res = await simulateWeekAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+      week: 1,
+    });
+
+    expect(res).toEqual({ ok: true, simulated: 2 });
+    expect(mockSimulateAndPersistFixture).toHaveBeenCalledTimes(2);
+    const calledIds = mockSimulateAndPersistFixture.mock.calls.map(
+      ([arg]) => arg.fixture.id,
+    );
+    expect(calledIds).toEqual(["w1a", "w1b"]);
+    expect(mockSimulateAndPersistFixture.mock.calls[0][0]).toMatchObject({
+      bulkStats: true,
+      profileCache: expect.any(Map),
+    });
+  });
+});
+
+describe("simulateRegularSeasonAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authorize();
+  });
+
+  it("skips playoff fixtures", async () => {
+    const regular = fixture({ id: "reg", stage: "regular" });
+    const playoff = fixture({ id: "po", stage: "playoff", week: null });
+    mockListFixturesBySeason.mockResolvedValue([regular, playoff]);
+
+    const res = await simulateRegularSeasonAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: true, simulated: 1 });
+    expect(mockSimulateAndPersistFixture).toHaveBeenCalledTimes(1);
+    expect(mockSimulateAndPersistFixture.mock.calls[0][0].fixture.id).toBe(
+      "reg",
+    );
+  });
+});
+
+describe("simulatePlayoffsAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authorize();
+  });
+
+  it("returns no_playoffs when the bracket is missing", async () => {
+    mockGetPlayoffBracket.mockResolvedValue(null);
+
+    const res = await simulatePlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "no_playoffs" });
+    expect(mockSimulateAndPersistFixture).not.toHaveBeenCalled();
+  });
+
+  it("sims playoff fixtures decisively when a bracket exists", async () => {
+    const playoff = fixture({ id: "po1", stage: "playoff", week: null });
+    mockGetPlayoffBracket
+      .mockResolvedValueOnce({
+        seasonId: SEASON,
+        matchups: [{ round: 1, homeTeamId: "team_home" }],
+      })
+      .mockResolvedValueOnce({
+        seasonId: SEASON,
+        matchups: [
+          {
+            round: 2,
+            homeTeamId: "team_home",
+            homeTeamName: "Home",
+            awayTeamName: "Away",
+            winnerTeamId: "team_home",
+          },
+        ],
+      });
+    mockListFixturesBySeason
+      .mockResolvedValueOnce([playoff])
+      .mockResolvedValueOnce([]);
+
+    const res = await simulatePlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({
+      ok: true,
+      playoffGames: 1,
+      champion: "Home",
+    });
+    expect(mockSimulateAndPersistFixture).toHaveBeenCalledWith({
+      fixture: playoff,
+      orgContext: { visibleLeagueIds: [LEAGUE] },
+      actorUserId: USER,
+      decisive: true,
+      profileCache: expect.any(Map),
+      bulkStats: true,
     });
   });
 });
