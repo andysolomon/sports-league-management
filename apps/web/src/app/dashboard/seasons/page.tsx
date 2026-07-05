@@ -1,7 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getSeasons, getLeagues } from "@/lib/data-api";
+import {
+  getSeasons,
+  getLeagues,
+  listFixturesBySeason,
+  computeStandings,
+  getPlayoffBracket,
+} from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +17,94 @@ import { Calendar, Trophy } from "lucide-react";
 import { formatDate } from "@/lib/format";
 import { CreateSeasonButton, SeasonRowActions } from "./season-actions";
 import { PageHeader } from "../_components/page-header";
+
+interface SeasonArchive {
+  gamesFinal: number;
+  gamesTotal: number;
+  leader: {
+    teamName: string;
+    wins: number;
+    losses: number;
+    ties: number;
+  } | null;
+  champion: { teamName: string | null } | null;
+}
+
+async function fetchSeasonArchive(seasonId: string): Promise<SeasonArchive> {
+  const [fixtures, standings, bracket] = await Promise.all([
+    listFixturesBySeason(seasonId).catch(() => []),
+    computeStandings(seasonId).catch(() => []),
+    getPlayoffBracket(seasonId).catch(() => null),
+  ]);
+
+  const gamesTotal = fixtures.length;
+  const gamesFinal = fixtures.filter((f) => f.status === "final").length;
+  const leaderRow =
+    gamesFinal > 0
+      ? (standings.find((s) => s.leagueRank === 1) ?? standings[0])
+      : null;
+
+  return {
+    gamesFinal,
+    gamesTotal,
+    leader: leaderRow
+      ? {
+          teamName: leaderRow.teamName,
+          wins: leaderRow.wins,
+          losses: leaderRow.losses,
+          ties: leaderRow.ties,
+        }
+      : null,
+    champion: bracket?.champion ?? null,
+  };
+}
+
+function formatRecord(wins: number, losses: number, ties: number) {
+  return `${wins}-${losses}${ties ? `-${ties}` : ""}`;
+}
+
+function SeasonArchiveSummary({ archive }: { archive: SeasonArchive | undefined }) {
+  if (!archive || archive.gamesTotal === 0) {
+    return <p className="text-xs text-muted-foreground">No games yet</p>;
+  }
+
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+      <span>
+        {archive.gamesFinal} / {archive.gamesTotal} games
+      </span>
+      {archive.leader ? (
+        <>
+          <span aria-hidden="true">&middot;</span>
+          <span>
+            {archive.leader.teamName}{" "}
+            <span className="font-mono">
+              (
+              {formatRecord(
+                archive.leader.wins,
+                archive.leader.losses,
+                archive.leader.ties,
+              )}
+              )
+            </span>
+          </span>
+        </>
+      ) : null}
+      {archive.champion ? (
+        <>
+          <span aria-hidden="true">&middot;</span>
+          <span className="inline-flex items-center gap-1 text-foreground/80">
+            <Trophy
+              className="h-3 w-3 shrink-0 text-primary"
+              aria-hidden="true"
+            />
+            <span>{archive.champion.teamName ?? "Champion"}</span>
+          </span>
+        </>
+      ) : null}
+    </p>
+  );
+}
 
 export default async function SeasonsPage() {
   const { userId } = await auth();
@@ -22,6 +116,15 @@ export default async function SeasonsPage() {
     getSeasons(ids),
     getLeagues(ids),
   ]);
+
+  const seasonArchives = new Map(
+    await Promise.all(
+      seasons.map(
+        async (season) =>
+          [season.id, await fetchSeasonArchive(season.id)] as const,
+      ),
+    ),
+  );
 
   const seasonsByLeague = new Map<string, typeof seasons>();
   for (const season of seasons) {
@@ -72,18 +175,23 @@ export default async function SeasonsPage() {
                           key={season.id}
                           className="flex flex-wrap items-center justify-between gap-3 px-3 py-2"
                         >
-                          <div className="flex min-w-0 flex-wrap items-center gap-3">
-                            <Link
-                              href={`/dashboard/seasons/${season.id}`}
-                              className="font-medium text-foreground hover:text-primary hover:underline"
-                            >
-                              {season.name}
-                            </Link>
-                            <StatusBadge status={season.status} />
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(season.startDate)} &ndash;{" "}
-                              {formatDate(season.endDate)}
-                            </span>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex min-w-0 flex-wrap items-center gap-3">
+                              <Link
+                                href={`/dashboard/seasons/${season.id}`}
+                                className="font-medium text-foreground hover:text-primary hover:underline"
+                              >
+                                {season.name}
+                              </Link>
+                              <StatusBadge status={season.status} />
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(season.startDate)} &ndash;{" "}
+                                {formatDate(season.endDate)}
+                              </span>
+                            </div>
+                            <SeasonArchiveSummary
+                              archive={seasonArchives.get(season.id)}
+                            />
                           </div>
                           <SeasonRowActions season={season} />
                         </li>
