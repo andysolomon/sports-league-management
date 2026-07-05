@@ -302,9 +302,21 @@ export default async function LeagueSchedulePage({
                             {fixture.awayTeamName}
                           </td>
                           <td className="px-4 py-2 text-right font-mono text-foreground">
-                            {result
-                              ? `${result.homeScore} – ${result.awayScore}`
-                              : "—"}
+                            {result ? (
+                              statsEnabled ? (
+                                <Link
+                                  href={`/dashboard/games/${fixture.id}/boxscore`}
+                                  className="hover:underline"
+                                  title="View box score"
+                                >
+                                  {result.homeScore} – {result.awayScore}
+                                </Link>
+                              ) : (
+                                `${result.homeScore} – ${result.awayScore}`
+                              )
+                            ) : (
+                              "—"
+                            )}
                           </td>
                           <td className="px-4 py-2">
                             <StatusBadge status={fixture.status} />
