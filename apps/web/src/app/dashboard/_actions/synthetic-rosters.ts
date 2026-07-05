@@ -8,10 +8,12 @@ import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageOrgSettings } from "@/lib/permissions";
 import {
   getPlayersByTeam,
+  getPlayers,
   getTeamsByLeague,
   getTeamLeagueId,
   getLeagueOrgId,
   getSeasons,
+  listFixturesBySeason,
   bulkCreatePlayers,
   clearSyntheticPlayers,
   ingestPlayerAttributesBatch,
@@ -21,6 +23,7 @@ import {
   seedFromString,
 } from "@/lib/synthetic-roster";
 import { generateSyntheticAttributes } from "@/lib/synthetic-attributes";
+import { isSeasonStarted } from "@/lib/season-started";
 
 /*
  * Synthetic-roster generation (WSM-000173) — fills demo/test rosters with fake
@@ -55,6 +58,29 @@ async function resolveActiveSeasonId(leagueId: string): Promise<string | null> {
   if (seasons.length === 0) return null;
   const active = seasons.find((s) => s.status === "active") ?? seasons[0];
   return active.id;
+}
+
+/** Block roster/ratings generation once the active season has started. */
+async function assertSeasonNotStarted(
+  leagueId: string,
+): Promise<{ ok: true } | { ok: false; error: "season_started" }> {
+  const seasons = await getSeasons([leagueId]).catch(() => []);
+  if (seasons.length === 0) return { ok: true };
+  const active = seasons.find((s) => s.status === "active") ?? seasons[0];
+  const fixtures = await listFixturesBySeason(active.id).catch(() => []);
+  if (isSeasonStarted(active, fixtures)) {
+    return { ok: false, error: "season_started" };
+  }
+  return { ok: true };
+}
+
+async function leaguePlayerNames(
+  leagueId: string,
+  orgContext: Awaited<ReturnType<typeof resolveOrgContext>>,
+): Promise<string[]> {
+  if (!orgContext.visibleLeagueIds.includes(leagueId)) return [];
+  const players = await getPlayers([leagueId]).catch(() => []);
+  return players.map((p) => p.name);
 }
 
 /** Build attribute-snapshot rows for a team's players (seeded per player so
@@ -92,15 +118,21 @@ export async function generateTeamRosterAction(input: {
     return { ok: false, error: "not_authorized" };
   }
 
+  const leagueId = await getTeamLeagueId(input.teamId);
+  const seasonGuard = await assertSeasonNotStarted(leagueId);
+  if (!seasonGuard.ok) return seasonGuard;
+
   const target = Math.max(1, Math.min(input.count ?? DEFAULT_ROSTER_SIZE, MAX_ROSTER_SIZE));
   const orgContext = await resolveOrgContext(userId);
   const existing = await getPlayersByTeam(input.teamId, orgContext).catch(() => []);
   const toCreate = Math.max(0, target - existing.length);
   if (toCreate === 0) return { ok: true, created: 0 };
 
+  const excludeNames = await leaguePlayerNames(leagueId, orgContext);
   const players = generateSyntheticRoster({
     count: toCreate,
     excludeJerseys: existingJerseys(existing),
+    excludeNames,
     seed: seedFromString(input.teamId) + existing.length,
   });
   try {
@@ -124,12 +156,17 @@ export async function generateLeagueRostersAction(input: {
   const role = orgId ? await resolveOrgRole(orgId, userId) : null;
   if (!canManageOrgSettings(role)) return { ok: false, error: "not_authorized" };
 
+  const seasonGuard = await assertSeasonNotStarted(input.leagueId);
+  if (!seasonGuard.ok) return seasonGuard;
+
   const target = Math.max(1, Math.min(input.perTeam ?? DEFAULT_ROSTER_SIZE, MAX_ROSTER_SIZE));
   const orgContext = await resolveOrgContext(userId);
   const teams = await getTeamsByLeague(input.leagueId, orgContext).catch(() => []);
+  const excludeNames = await leaguePlayerNames(input.leagueId, orgContext);
 
   let created = 0;
   let touched = 0;
+  const usedNames = new Set(excludeNames);
   try {
     for (const team of teams) {
       const existing = await getPlayersByTeam(team.id, orgContext).catch(() => []);
@@ -138,8 +175,10 @@ export async function generateLeagueRostersAction(input: {
       const players = generateSyntheticRoster({
         count: toCreate,
         excludeJerseys: existingJerseys(existing),
+        excludeNames: Array.from(usedNames),
         seed: seedFromString(team.id),
       });
+      for (const p of players) usedNames.add(p.name);
       const res = await bulkCreatePlayers(team.id, players);
       created += res.created;
       touched += 1;
@@ -217,6 +256,9 @@ export async function generateTeamAttributesAction(input: {
   }
 
   const leagueId = await getTeamLeagueId(input.teamId);
+  const seasonGuard = await assertSeasonNotStarted(leagueId);
+  if (!seasonGuard.ok) return seasonGuard;
+
   const seasonId = await resolveActiveSeasonId(leagueId);
   if (!seasonId) return { ok: false, error: "no_season" };
 
@@ -243,6 +285,9 @@ export async function generateLeagueAttributesAction(input: {
   const orgId = await getLeagueOrgId(input.leagueId);
   const role = orgId ? await resolveOrgRole(orgId, userId) : null;
   if (!canManageOrgSettings(role)) return { ok: false, error: "not_authorized" };
+
+  const seasonGuard = await assertSeasonNotStarted(input.leagueId);
+  if (!seasonGuard.ok) return seasonGuard;
 
   const seasonId = await resolveActiveSeasonId(input.leagueId);
   if (!seasonId) return { ok: false, error: "no_season" };

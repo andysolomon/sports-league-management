@@ -23,6 +23,7 @@ import {
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
 import { formatFixtureWhen } from "@/lib/format";
+import { isSeasonStarted } from "@/lib/season-started";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
 import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton";
@@ -91,6 +92,10 @@ export default async function LeagueSchedulePage({
   const fixtures = activeSeason
     ? await listFixturesBySeason(activeSeason.id)
     : [];
+
+  const seasonStarted = activeSeason
+    ? isSeasonStarted(activeSeason, fixtures)
+    : false;
 
   // Hydrate per-fixture result for "Record result" pre-fill + score display.
   const fixturesWithResults = await Promise.all(
@@ -188,11 +193,16 @@ export default async function LeagueSchedulePage({
           ) : null}
           {canGenerateRosters ? (
             <>
-              <SyntheticRosterButton kind="league" id={leagueId} />
+              <SyntheticRosterButton
+                kind="league"
+                id={leagueId}
+                seasonStarted={seasonStarted}
+              />
               <SyntheticRosterButton
                 kind="league"
                 id={leagueId}
                 action="attributes"
+                seasonStarted={seasonStarted}
               />
             </>
           ) : null}
@@ -332,18 +342,21 @@ export default async function LeagueSchedulePage({
                                 {statsEnabled ? (
                                   <span className="flex items-center gap-1 text-xs">
                                     <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-muted-foreground">
+                                      Box score
+                                    </span>
                                     <Link
                                       href={`/dashboard/teams/${fixture.homeTeamId}/games/${fixture.id}/stats`}
                                       className="text-primary hover:underline"
                                     >
-                                      {fixture.homeTeamName}
+                                      Home
                                     </Link>
                                     <span className="text-muted-foreground">/</span>
                                     <Link
                                       href={`/dashboard/teams/${fixture.awayTeamId}/games/${fixture.id}/stats`}
                                       className="text-primary hover:underline"
                                     >
-                                      {fixture.awayTeamName}
+                                      Away
                                     </Link>
                                   </span>
                                 ) : null}
@@ -354,14 +367,14 @@ export default async function LeagueSchedulePage({
                                       href={`/dashboard/teams/${fixture.homeTeamId}/games/${fixture.id}/live`}
                                       className="text-primary hover:underline"
                                     >
-                                      {fixture.homeTeamName}
+                                      Live (Home)
                                     </Link>
                                     <span className="text-muted-foreground">/</span>
                                     <Link
                                       href={`/dashboard/teams/${fixture.awayTeamId}/games/${fixture.id}/live`}
                                       className="text-primary hover:underline"
                                     >
-                                      {fixture.awayTeamName}
+                                      Away
                                     </Link>
                                   </span>
                                 ) : null}

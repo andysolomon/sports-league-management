@@ -7,7 +7,10 @@ import {
   getTeamAttributeSnapshots,
   getTeamMaddenOveralls,
   getLeagueClaimable,
+  getSeasons,
+  listFixturesBySeason,
 } from "@/lib/data-api";
+import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam, canAdministerTeam } from "@/lib/authorization";
 import { playerAttributesV1, syntheticRostersV1 } from "@/lib/flags";
@@ -67,6 +70,16 @@ export default async function TeamDetailPage({
   // WSM-000173: synthetic-roster generation — managers only, behind the flag.
   const canGenerateRoster = canManage && (await syntheticRostersV1());
 
+  const seasons = await getSeasons([team.leagueId]).catch(() => []);
+  const activeSeason =
+    seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+  const seasonStarted = activeSeason
+    ? isSeasonStarted(
+        activeSeason,
+        await listFixturesBySeason(activeSeason.id).catch(() => []),
+      )
+    : false;
+
   // WSM-000090: attribute snapshots feed the SPRT stat columns. Phase 2-gated;
   // the season is resolved server-side — including workspace forks, which read
   // their source league's current season (WSM-000122). Failure here must never
@@ -113,6 +126,7 @@ export default async function TeamDetailPage({
         canManage={canManage}
         canDelete={canDelete}
         canGenerateRoster={canGenerateRoster}
+        seasonStarted={seasonStarted}
         attributeSnapshots={Object.fromEntries(snapshots)}
         maddenOveralls={Object.fromEntries(maddenOveralls)}
       />

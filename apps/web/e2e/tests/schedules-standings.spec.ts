@@ -93,9 +93,8 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
       .click();
     await expect(fixtureDialog).toBeHidden();
 
-    // The new row appears in Week 1. `exact` matters: the row's Actions cell
-    // ("Record result / Simulate / Delete …") also CONTAINS the team name, so
-    // a substring match is a strict-mode violation.
+    // The new row appears in Week 1. Home/Away cells use exact team names;
+    // action links use concise labels (Box score Home/Away, Live) instead.
     await expect(page.getByText("Week 1")).toBeVisible();
     await expect(
       page.getByRole("cell", { name: "E2E Home Hawks", exact: true }),

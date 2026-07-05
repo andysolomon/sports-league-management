@@ -25,12 +25,15 @@ interface SyntheticRosterButtonProps {
   kind: "team" | "league";
   id: string;
   action?: "generate" | "clear" | "attributes";
+  /** When true, generate/attributes actions are disabled (season already started). */
+  seasonStarted?: boolean;
 }
 
 export function SyntheticRosterButton({
   kind,
   id,
   action = "generate",
+  seasonStarted = false,
 }: SyntheticRosterButtonProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -112,6 +115,7 @@ export function SyntheticRosterButton({
 
   const isClear = action === "clear";
   const isAttributes = action === "attributes";
+  const blockedBySeason = seasonStarted && !isClear;
   const Icon = isClear ? Trash2 : isAttributes ? Gauge : Sparkles;
   const label = isClear
     ? pending
@@ -132,15 +136,17 @@ export function SyntheticRosterButton({
       type="button"
       variant={isClear ? "ghost" : "outline"}
       size="sm"
-      disabled={pending}
+      disabled={pending || blockedBySeason}
       onClick={run}
       className={isClear ? "text-destructive hover:text-destructive" : undefined}
       title={
-        isClear
-          ? "Delete generated test players (keeps real players)"
-          : isAttributes
-            ? "Generate Madden-style ratings for this roster's players (test data)"
-            : "Generate fake players to populate this roster for testing/demos"
+        blockedBySeason
+          ? SEASON_STARTED_HINT
+          : isClear
+            ? "Delete generated test players (keeps real players)"
+            : isAttributes
+              ? "Generate Madden-style ratings for this roster's players (test data)"
+              : "Generate fake players to populate this roster for testing/demos"
       }
     >
       <Icon className="mr-1 h-4 w-4" />
@@ -170,6 +176,9 @@ const CONFIRM: Record<
   },
 };
 
+const SEASON_STARTED_HINT =
+  "Season has started — roster and ratings generation is locked.";
+
 function errorLabel(error: string): string {
   switch (error) {
     case "flag_disabled":
@@ -180,6 +189,8 @@ function errorLabel(error: string): string {
       return "You don't have permission to do that.";
     case "no_season":
       return "This league has no season yet — create one first.";
+    case "season_started":
+      return SEASON_STARTED_HINT;
     default:
       return error;
   }

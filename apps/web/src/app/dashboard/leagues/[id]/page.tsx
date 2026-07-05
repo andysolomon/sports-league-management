@@ -5,7 +5,10 @@ import {
   getLeague,
   getLeagueVisibility,
   getLeagueClaimable,
+  getSeasons,
+  listFixturesBySeason,
 } from "@/lib/data-api";
+import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +53,16 @@ export default async function LeagueDetailPage({
 
   // WSM-000173: league-wide synthetic-roster generation — admins only, flagged.
   const canGenerateRosters = isAdmin && (await syntheticRostersV1());
+
+  const seasons = await getSeasons([id]).catch(() => []);
+  const activeSeason =
+    seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
+  const seasonStarted = activeSeason
+    ? isSeasonStarted(
+        activeSeason,
+        await listFixturesBySeason(activeSeason.id).catch(() => []),
+      )
+    : false;
 
   return (
     <div>
@@ -113,13 +126,23 @@ export default async function LeagueDetailPage({
                   <div className="min-w-0">
                     <p className="text-label-14 text-foreground">Synthetic rosters</p>
                     <p className="text-caption-12 text-text-muted">
-                      Fill every team in this league with fake test players (~48
-                      each) for demos. Not real people.
+                      {seasonStarted
+                        ? "Season has started — roster and ratings generation is locked."
+                        : "Fill every team in this league with fake test players (~48 each) for demos. Not real people."}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <SyntheticRosterButton kind="league" id={id} />
-                    <SyntheticRosterButton kind="league" id={id} action="attributes" />
+                    <SyntheticRosterButton
+                      kind="league"
+                      id={id}
+                      seasonStarted={seasonStarted}
+                    />
+                    <SyntheticRosterButton
+                      kind="league"
+                      id={id}
+                      action="attributes"
+                      seasonStarted={seasonStarted}
+                    />
                     <SyntheticRosterButton kind="league" id={id} action="clear" />
                   </div>
                 </div>

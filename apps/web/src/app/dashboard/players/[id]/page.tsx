@@ -45,13 +45,16 @@ function ageFrom(dateOfBirth: string): number | null {
 
 export default async function PlayerProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { id: playerId } = await params;
+  const { from } = await searchParams;
 
   const orgContext = await resolveOrgContext(userId);
   const player = await getPlayer(playerId, orgContext).catch(() => null);
@@ -116,16 +119,32 @@ export default async function PlayerProfilePage({
     }
   }
 
+  const fromTeamId =
+    from?.startsWith("team-") ? from.slice("team-".length) : null;
+  const backHref =
+    fromTeamId && team && fromTeamId === team.id
+      ? `/dashboard/teams/${team.id}`
+      : team
+        ? `/dashboard/teams/${team.id}`
+        : "/dashboard/players";
+  const backLabel =
+    fromTeamId && team && fromTeamId === team.id
+      ? `Back to ${team.name}`
+      : team
+        ? `Back to ${team.name}`
+        : "Back to Players";
+  const developmentHref = from
+    ? `/dashboard/players/${player.id}/development?from=${encodeURIComponent(from)}`
+    : `/dashboard/players/${player.id}/development`;
+
   return (
     <div className="mx-auto max-w-2xl">
-      {team && (
-        <Link
-          href={`/dashboard/teams/${team.id}`}
-          className="mb-4 inline-block text-sm text-primary hover:underline"
-        >
-          &larr; Back to {team.name}
-        </Link>
-      )}
+      <Link
+        href={backHref}
+        className="mb-4 inline-block text-sm text-primary hover:underline"
+      >
+        &larr; {backLabel}
+      </Link>
 
       <Card>
         <CardContent className="pt-6">
@@ -201,7 +220,7 @@ export default async function PlayerProfilePage({
           {attributesEnabled && (
             <div className="mt-6">
               <Button asChild variant="outline" size="sm">
-                <Link href={`/dashboard/players/${player.id}/development`}>
+                <Link href={developmentHref}>
                   View development chart
                 </Link>
               </Button>

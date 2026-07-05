@@ -39,6 +39,16 @@ describe("generateSyntheticRoster", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
+  it("avoids names already used in the league when possible", () => {
+    const roster = generateSyntheticRoster({
+      count: 10,
+      seed: 11,
+      excludeNames: ["Aaron Adams", "Aaliyah Abbott"],
+    });
+    expect(roster.map((p) => p.name)).not.toContain("Aaron Adams");
+    expect(roster.map((p) => p.name)).not.toContain("Aaliyah Abbott");
+  });
+
   it("gives a believable position spread (not all one position)", () => {
     const roster = generateSyntheticRoster({ count: 48, seed: 3 });
     const positions = new Set(roster.map((p) => p.position));

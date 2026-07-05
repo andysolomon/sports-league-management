@@ -51,19 +51,96 @@ const ROSTER_TEMPLATE: readonly string[] = [
 ];
 
 const FIRST_NAMES: readonly string[] = [
-  "Jalen", "Marcus", "Devin", "Tyler", "Cameron", "Isaiah", "Mason", "Elijah",
-  "Xavier", "Caleb", "Jordan", "Brayden", "Damari", "Zion", "Carter", "Trey",
-  "Malik", "Gavin", "Bryce", "Kaden", "Jaxon", "Amari", "Dominic", "Hunter",
-  "Micah", "Tristan", "Khalil", "Owen", "Cole", "Darius", "Landon", "Jamarcus",
-  "Reece", "Aiden", "Quentin", "Silas", "Roman", "Davion", "Beckham", "Tate",
+  "Aaliyah", "Aaron", "Abigail", "Adrian", "Aiden", "Aisha", "Alejandro", "Alex",
+  "Alexis", "Ali", "Amara", "Amari", "Amir", "Ananya", "Andre", "Andrea",
+  "Andrew", "Angela", "Anthony", "Aria", "Ariana", "Arjun", "Ashley", "Ava",
+  "Benjamin", "Bianca", "Blake", "Brandon", "Brayden", "Brianna", "Bryce", "Caleb",
+  "Cameron", "Carlos", "Carmen", "Carter", "Catherine", "Cesar", "Chloe", "Christian",
+  "Christopher", "Claire", "Cole", "Connor", "Daniel", "Daniela", "Darius", "David",
+  "Destiny", "Devin", "Diego", "Dominic", "Dylan", "Elena", "Elijah", "Elizabeth",
+  "Emily", "Emma", "Enrique", "Ethan", "Eva", "Evan", "Fatima", "Gabriel",
+  "Gavin", "Genesis", "George", "Grace", "Grayson", "Hannah", "Harper", "Hassan",
+  "Hector", "Henry", "Hunter", "Ian", "Imani", "Isaac", "Isabella", "Isaiah",
+  "Ivan", "Jack", "Jackson", "Jacob", "Jaden", "Jake", "Jamal", "James",
+  "Jamie", "Jasmine", "Jason", "Javier", "Jayden", "Jenna", "Jeremiah", "Jessica",
+  "Jin", "Joel", "John", "Jose", "Joseph", "Joshua", "Juan", "Julia",
+  "Julian", "Justin", "Kai", "Kaitlyn", "Kaleb", "Karen", "Karla", "Katherine",
+  "Kayla", "Keisha", "Kenneth", "Kevin", "Khalil", "Kim", "Kyle", "Laila",
+  "Landon", "Laura", "Lauren", "Leah", "Leo", "Liam", "Lily", "Logan",
+  "Lucas", "Luis", "Luke", "Madison", "Malik", "Manuel", "Marco", "Maria",
+  "Mason", "Mateo", "Matthew", "Maya", "Megan", "Mia", "Michael", "Micah",
+  "Miguel", "Miles", "Morgan", "Nadia", "Nathan", "Nia", "Nicholas", "Nicole",
+  "Noah", "Nolan", "Oliver", "Olivia", "Omar", "Owen", "Pablo", "Paige",
+  "Patrick", "Paul", "Priya", "Quentin", "Rachel", "Rafael", "Raymond", "Rebecca",
+  "Riley", "Robert", "Roman", "Ryan", "Samantha", "Samuel", "Santiago", "Sarah",
+  "Savannah", "Sean", "Sebastian", "Serena", "Sergio", "Sofia", "Sophia", "Steven",
+  "Tariq", "Taylor", "Terrence", "Thomas", "Tiana", "Timothy", "Travis", "Trevor",
+  "Trinity", "Tyler", "Valeria", "Vanessa", "Victor", "Vincent", "Violet", "William",
+  "Xavier", "Yasmin", "Yosef", "Zachary", "Zoe", "Zion",
 ];
 
 const LAST_NAMES: readonly string[] = [
-  "Carter", "Brooks", "Hayes", "Coleman", "Reed", "Bennett", "Foster", "Bryant",
-  "Greer", "Mathis", "Dawson", "Pierce", "Ellison", "Holland", "Ferguson", "Sutton",
-  "Vance", "Whitfield", "Barlow", "Crawford", "Sterling", "Maddox", "Calloway", "Rhodes",
-  "Yates", "Beckett", "Lowery", "Tatum", "Goodwin", "Hampton", "Fields", "Mercer",
-  "Underwood", "Padgett", "Larkin", "Easton", "Boone", "Cross", "Maxwell", "Vaughn",
+  "Abbott", "Abrams", "Acosta", "Adams", "Aguilar", "Ahmed", "Alexander", "Ali",
+  "Allen", "Alvarez", "Anderson", "Andrews", "Archer", "Arias", "Armstrong", "Arnold",
+  "Ashley", "Atkins", "Austin", "Avery", "Bailey", "Baker", "Baldwin", "Banks",
+  "Barber", "Barker", "Barnes", "Barrett", "Barton", "Bates", "Beck", "Becker",
+  "Bell", "Bennett", "Benson", "Berg", "Berry", "Bishop", "Black", "Blair",
+  "Blake", "Boone", "Bowen", "Boyd", "Bradley", "Brady", "Branch", "Brennan",
+  "Briggs", "Brock", "Brooks", "Brown", "Bryant", "Buchanan", "Burke", "Burns",
+  "Butler", "Byrd", "Cabrera", "Cain", "Calderon", "Caldwell", "Campos", "Cannon",
+  "Carlson", "Carpenter", "Carr", "Carroll", "Carson", "Carter", "Castillo", "Castro",
+  "Chambers", "Chan", "Chang", "Chapman", "Chen", "Choi", "Clark", "Clarke",
+  "Clayton", "Cobb", "Cohen", "Cole", "Coleman", "Collins", "Conner", "Cook",
+  "Cooper", "Cortez", "Cox", "Craig", "Crawford", "Cross", "Cruz", "Cummings",
+  "Cunningham", "Curtis", "Daniel", "Daniels", "Davenport", "Davidson", "Davis", "Dawson",
+  "Day", "Dean", "Delgado", "Diaz", "Dixon", "Douglas", "Doyle", "Drake",
+  "Duncan", "Dunn", "Edwards", "Elliott", "Ellis", "Erickson", "Espinoza", "Evans",
+  "Farmer", "Ferguson", "Fernandez", "Fields", "Fisher", "Fleming", "Fletcher", "Flores",
+  "Ford", "Foster", "Fowler", "Fox", "Francis", "Franklin", "Freeman", "Fuller",
+  "Garcia", "Gardner", "Garner", "Garrett", "Garrison", "George", "Gibson", "Gilbert",
+  "Gill", "Gomez", "Gonzalez", "Goodwin", "Gordon", "Graham", "Grant", "Graves",
+  "Gray", "Green", "Greene", "Greer", "Griffin", "Gross", "Guerrero", "Gutierrez",
+  "Hall", "Hamilton", "Hammond", "Hampton", "Hansen", "Hanson", "Hardy", "Harmon",
+  "Harper", "Harris", "Harrison", "Hart", "Harvey", "Hawkins", "Hayes", "Heath",
+  "Henderson", "Henry", "Hernandez", "Herrera", "Hicks", "Hill", "Hines", "Hodges",
+  "Hoffman", "Holland", "Holmes", "Holt", "Hopkins", "Howard", "Howell", "Huang",
+  "Hudson", "Hughes", "Hunt", "Hunter", "Ingram", "Irwin", "Jackson", "Jacobs",
+  "James", "Jarvis", "Jenkins", "Jennings", "Jensen", "Jimenez", "Johnson", "Johnston",
+  "Jones", "Jordan", "Joseph", "Joyce", "Keller", "Kelley", "Kelly", "Kennedy",
+  "Kim", "King", "Kirk", "Klein", "Knight", "Koch", "Kramer", "Lamb",
+  "Lambert", "Lane", "Larson", "Lawrence", "Lawson", "Lee", "Leon", "Lewis",
+  "Lindsay", "Little", "Liu", "Lloyd", "Logan", "Long", "Lopez", "Lowe",
+  "Lucas", "Luna", "Lynch", "Lyons", "Mack", "Maddox", "Maldonado", "Malone",
+  "Mann", "Manning", "Marks", "Marsh", "Marshall", "Martin", "Martinez", "Mason",
+  "Matthews", "Maxwell", "May", "McBride", "McCarthy", "McCoy", "McDonald", "McGee",
+  "Medina", "Mejia", "Mendez", "Mendoza", "Mercer", "Meyer", "Miles", "Miller",
+  "Mills", "Mitchell", "Montgomery", "Moore", "Morales", "Moran", "Moreno", "Morgan",
+  "Morris", "Morrison", "Morton", "Moss", "Mueller", "Mullins", "Murphy", "Murray",
+  "Myers", "Nash", "Navarro", "Neal", "Nelson", "Newman", "Nguyen", "Nichols",
+  "Nixon", "Norman", "Norris", "Norton", "Nunez", "Obrien", "Ochoa", "Oliver",
+  "Olson", "Ortega", "Ortiz", "Osborne", "Owen", "Owens", "Padilla", "Page",
+  "Palmer", "Park", "Parker", "Parks", "Parsons", "Patel", "Patrick", "Patterson",
+  "Patton", "Paul", "Payne", "Pearson", "Peck", "Pena", "Perez", "Perkins",
+  "Perry", "Peters", "Peterson", "Pham", "Phelps", "Phillips", "Pierce", "Pittman",
+  "Porter", "Potter", "Powell", "Pratt", "Price", "Quinn", "Ramirez", "Ramos",
+  "Randall", "Ray", "Reed", "Reese", "Reeves", "Reid", "Reyes", "Reynolds",
+  "Rhodes", "Rice", "Richards", "Richardson", "Riley", "Rios", "Rivera", "Robbins",
+  "Roberts", "Robertson", "Robinson", "Rodgers", "Rodriguez", "Rogers", "Romero", "Rose",
+  "Ross", "Rowe", "Ruiz", "Russell", "Ryan", "Salazar", "Sanchez", "Sanders",
+  "Santiago", "Santos", "Saunders", "Schmidt", "Schneider", "Schultz", "Scott", "Shaw",
+  "Shelton", "Shepherd", "Sherman", "Silva", "Simmons", "Simon", "Simpson", "Sims",
+  "Singh", "Smith", "Snyder", "Soto", "Spencer", "Stanley", "Steele", "Stein",
+  "Stephens", "Stevens", "Stewart", "Stone", "Strickland", "Sullivan", "Summers", "Sutton",
+  "Swanson", "Sweeney", "Tanner", "Tate", "Taylor", "Terrell", "Thomas", "Thompson",
+  "Thornton", "Todd", "Torres", "Townsend", "Tran", "Tucker", "Turner", "Tyler",
+  "Underwood", "Valdez", "Valencia", "Vance", "Vargas", "Vasquez", "Vaughn", "Vega",
+  "Velez", "Wade", "Wagner", "Walker", "Wallace", "Waller", "Walsh", "Walter",
+  "Walters", "Ward", "Warner", "Warren", "Washington", "Waters", "Watkins", "Watson",
+  "Watts", "Weaver", "Webb", "Weber", "Webster", "Wells", "West", "Wheeler",
+  "Whitaker", "White", "Whitfield", "Wiggins", "Wilcox", "Wiley", "Wilkerson", "Wilkins",
+  "Williams", "Williamson", "Willis", "Wilson", "Winters", "Wise", "Wolfe", "Wong",
+  "Wood", "Woods", "Woodward", "Wright", "Wyatt", "Yang", "Yates", "Young",
+  "Zamora", "Zhang", "Zimmerman",
 ];
 
 /** mulberry32 — tiny deterministic PRNG so generation is seedable + testable. */
@@ -92,19 +169,43 @@ export interface GenerateOptions {
   count: number;
   /** Jersey numbers already used on the team — never reused. */
   excludeJerseys?: number[];
+  /** Player names already used in the league — avoided when possible. */
+  excludeNames?: string[];
   /** Seed for deterministic output (e.g. seedFromString(teamId)). */
   seed?: number;
+}
+
+function pickUniqueName(
+  rand: () => number,
+  usedNames: Set<string>,
+): string {
+  const maxAttempts = FIRST_NAMES.length * LAST_NAMES.length;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const first =
+      FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)] ?? FIRST_NAMES[0];
+    const last =
+      LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)] ?? LAST_NAMES[0];
+    const name = `${first} ${last}`;
+    if (!usedNames.has(name)) return name;
+  }
+  // Pool exhausted — allow a duplicate as last resort.
+  const first =
+    FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)] ?? FIRST_NAMES[0];
+  const last =
+    LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)] ?? LAST_NAMES[0];
+  return `${first} ${last}`;
 }
 
 export function generateSyntheticRoster({
   count,
   excludeJerseys = [],
+  excludeNames = [],
   seed = 1,
 }: GenerateOptions): SyntheticPlayer[] {
   const n = Math.max(0, Math.min(count, 99)); // cap at a sane jersey-bound size
   const rand = rng(seed);
   const used = new Set<number>(excludeJerseys);
-  const usedNames = new Set<string>();
+  const usedNames = new Set<string>(excludeNames);
   const players: SyntheticPlayer[] = [];
 
   for (let i = 0; i < n; i++) {
@@ -120,13 +221,7 @@ export function generateSyntheticRoster({
     }
     used.add(jersey);
 
-    // Unique name within the batch.
-    let name = `${FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)]}`;
-    let nameGuard = 0;
-    while (usedNames.has(name) && nameGuard < 200) {
-      name = `${FIRST_NAMES[Math.floor(rand() * FIRST_NAMES.length)]} ${LAST_NAMES[Math.floor(rand() * LAST_NAMES.length)]}`;
-      nameGuard++;
-    }
+    const name = pickUniqueName(rand, usedNames);
     usedNames.add(name);
 
     const grade = 9 + Math.floor(rand() * 4); // 9–12

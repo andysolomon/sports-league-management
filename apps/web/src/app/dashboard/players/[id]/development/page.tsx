@@ -19,8 +19,10 @@ import { trackPlayerAttributesView } from "@/lib/analytics";
 
 export default async function PlayerDevelopmentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const enabled = await playerAttributesV1();
   if (!enabled) notFound();
@@ -29,6 +31,7 @@ export default async function PlayerDevelopmentPage({
   if (!userId) redirect("/sign-in");
 
   const { id: playerId } = await params;
+  const { from } = await searchParams;
 
   // Resolve the user's visible leagues, then fetch the player through
   // the access check. Anything outside the user's org tree → 404.
@@ -62,13 +65,17 @@ export default async function PlayerDevelopmentPage({
   const last = development[development.length - 1] ?? null;
   const headlineDelta = last?.delta ?? null;
 
+  const playerBackHref = from
+    ? `/dashboard/players/${playerId}?from=${encodeURIComponent(from)}`
+    : `/dashboard/players/${playerId}`;
+
   return (
     <div>
       <Link
-        href={`/dashboard/players`}
+        href={playerBackHref}
         className="mb-4 inline-block text-sm text-primary hover:underline"
       >
-        &larr; Back to Players
+        &larr; Back to {player.name}
       </Link>
 
       <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

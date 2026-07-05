@@ -4,6 +4,7 @@ import Link from "next/link";
 import { schedulesStandingsV1 } from "@/lib/flags";
 import {
   computeStandings,
+  computeDivisionStandings,
   getDivisions,
   getLeague,
   getSeasons,
@@ -56,6 +57,17 @@ export default async function LeagueStandingsPage({
 
   const standings = await computeStandings(activeSeason.id);
   const divisions = await getDivisions([leagueId]);
+
+  const divisionStandings =
+    divisions.length > 0
+      ? await Promise.all(
+          divisions.map(async (division) => ({
+            division,
+            rows: await computeDivisionStandings(activeSeason.id, division.id),
+          })),
+        )
+      : [];
+
   void trackStandingsView({ leagueId, route: "dashboard" });
 
   return (
@@ -93,6 +105,18 @@ export default async function LeagueStandingsPage({
             <p className="px-6 py-8 text-center text-sm text-muted-foreground">
               No teams or no recorded results yet for {activeSeason.name}.
             </p>
+          ) : divisionStandings.length > 0 ? (
+            <div className="divide-y divide-border">
+              {divisionStandings.map(({ division, rows }) =>
+                rows.length > 0 ? (
+                  <StandingsTable
+                    key={division.id}
+                    divisionName={division.name}
+                    rows={rows}
+                  />
+                ) : null,
+              )}
+            </div>
           ) : (
             <StandingsTable rows={standings} />
           )}
