@@ -1,7 +1,10 @@
+import Link from "next/link";
 import type { Standing } from "@sports-management/shared-types";
 
 export interface StandingsTableProps {
   rows: Standing[];
+  /** When set, renders a division header above this table block. */
+  divisionName?: string;
 }
 
 /**
@@ -10,11 +13,20 @@ export interface StandingsTableProps {
  * and the public viewer (WSM-000073), so any shape changes ripple to
  * both surfaces in one place.
  */
-export default function StandingsTable({ rows }: StandingsTableProps) {
+export default function StandingsTable({
+  rows,
+  divisionName,
+}: StandingsTableProps) {
   return (
-    // Nine columns never fit a phone — scroll the table inside its own
-    // container instead of widening the page (WSM-000085).
-    <div className="w-full overflow-x-auto">
+    <div className="w-full">
+      {divisionName ? (
+        <h3 className="border-b border-border bg-muted/50 px-4 py-2 text-sm font-semibold text-foreground">
+          {divisionName}
+        </h3>
+      ) : null}
+      {/* Nine columns never fit a phone — scroll the table inside its own
+          container instead of widening the page (WSM-000085). */}
+      <div className="w-full overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b-2 border-border bg-muted text-left">
@@ -55,7 +67,14 @@ export default function StandingsTable({ rows }: StandingsTableProps) {
                 <td className="px-4 py-2 font-mono tabular-nums text-foreground">
                   {row.leagueRank}
                 </td>
-                <td className="px-4 py-2 text-foreground">{row.teamName}</td>
+                <td className="px-4 py-2 text-foreground">
+                  <Link
+                    href={`/dashboard/teams/${row.teamId}`}
+                    className="text-primary hover:underline"
+                  >
+                    {row.teamName}
+                  </Link>
+                </td>
                 <td className="px-4 py-2 text-right font-mono tabular-nums text-foreground">
                   {row.wins}
                 </td>
@@ -91,6 +110,7 @@ export default function StandingsTable({ rows }: StandingsTableProps) {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

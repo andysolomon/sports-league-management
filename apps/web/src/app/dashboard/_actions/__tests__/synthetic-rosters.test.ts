@@ -7,8 +7,12 @@ const {
   mockResolveOrgContext,
   mockResolveOrgRole,
   mockGetPlayersByTeam,
+  mockGetPlayers,
   mockGetTeamsByLeague,
+  mockGetTeamLeagueId,
   mockGetLeagueOrgId,
+  mockGetSeasons,
+  mockListFixturesBySeason,
   mockBulkCreatePlayers,
   mockClearSyntheticPlayers,
 } = vi.hoisted(() => ({
@@ -18,8 +22,12 @@ const {
   mockResolveOrgContext: vi.fn(),
   mockResolveOrgRole: vi.fn(),
   mockGetPlayersByTeam: vi.fn(),
+  mockGetPlayers: vi.fn(),
   mockGetTeamsByLeague: vi.fn(),
+  mockGetTeamLeagueId: vi.fn(),
   mockGetLeagueOrgId: vi.fn(),
+  mockGetSeasons: vi.fn(),
+  mockListFixturesBySeason: vi.fn(),
   mockBulkCreatePlayers: vi.fn(),
   mockClearSyntheticPlayers: vi.fn(),
 }));
@@ -33,8 +41,12 @@ vi.mock("@/lib/org-context", () => ({
 }));
 vi.mock("@/lib/data-api", () => ({
   getPlayersByTeam: mockGetPlayersByTeam,
+  getPlayers: mockGetPlayers,
   getTeamsByLeague: mockGetTeamsByLeague,
+  getTeamLeagueId: mockGetTeamLeagueId,
   getLeagueOrgId: mockGetLeagueOrgId,
+  getSeasons: mockGetSeasons,
+  listFixturesBySeason: mockListFixturesBySeason,
   bulkCreatePlayers: mockBulkCreatePlayers,
   clearSyntheticPlayers: mockClearSyntheticPlayers,
 }));
@@ -57,6 +69,12 @@ beforeEach(() => {
   mockFlag.mockResolvedValue(true);
   mockAuth.mockResolvedValue({ userId: "user_1" });
   mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [LEAGUE], orgIds: [ORG] });
+  mockGetTeamLeagueId.mockResolvedValue(LEAGUE);
+  mockGetSeasons.mockResolvedValue([
+    { id: "season_1", status: "active", rosterLocked: false },
+  ]);
+  mockListFixturesBySeason.mockResolvedValue([]);
+  mockGetPlayers.mockResolvedValue([]);
 });
 
 describe("generateTeamRosterAction", () => {
@@ -100,6 +118,15 @@ describe("generateTeamRosterAction", () => {
     );
     const res = await generateTeamRosterAction({ teamId: TEAM, count: 48 });
     expect(res).toEqual({ ok: true, created: 0 });
+    expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
+  });
+
+  it("blocks when the active season has started", async () => {
+    mockListFixturesBySeason.mockResolvedValue([{ status: "final" }]);
+    expect(await generateTeamRosterAction({ teamId: TEAM })).toEqual({
+      ok: false,
+      error: "season_started",
+    });
     expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
   });
 });

@@ -32,6 +32,8 @@ interface TeamManagementProps {
   canDelete?: boolean;
   /** WSM-000173: show the "Generate roster" (synthetic players) action. */
   canGenerateRoster?: boolean;
+  /** Active season started — blocks synthetic roster/ratings generation. */
+  seasonStarted?: boolean;
   /** WSM-000090: playerId → attribute snapshot; empty when Phase 2 is
       dark or the season has no ingested attributes. */
   attributeSnapshots?: Record<string, PlayerSnapshot>;
@@ -53,6 +55,7 @@ export default function TeamManagement({
   canManage,
   canDelete = false,
   canGenerateRoster = false,
+  seasonStarted = false,
   attributeSnapshots = {},
   maddenOveralls = {},
 }: TeamManagementProps) {
@@ -347,8 +350,17 @@ export default function TeamManagement({
           <div className="flex flex-wrap items-center gap-2">
             {canGenerateRoster && (
               <>
-                <SyntheticRosterButton kind="team" id={team.id} />
-                <SyntheticRosterButton kind="team" id={team.id} action="attributes" />
+                <SyntheticRosterButton
+                  kind="team"
+                  id={team.id}
+                  seasonStarted={seasonStarted}
+                />
+                <SyntheticRosterButton
+                  kind="team"
+                  id={team.id}
+                  action="attributes"
+                  seasonStarted={seasonStarted}
+                />
                 <SyntheticRosterButton kind="team" id={team.id} action="clear" />
               </>
             )}
@@ -383,7 +395,9 @@ export default function TeamManagement({
               searchPlaceholder="Search players..."
               searchKeys={["name", "position", "status"]}
               onRowClick={(p) =>
-                router.push(`/dashboard/players/${(p as RosterRow).id}`)
+                router.push(
+                  `/dashboard/players/${(p as RosterRow).id}?from=team-${team.id}`,
+                )
               }
               actions={
                 canManage
