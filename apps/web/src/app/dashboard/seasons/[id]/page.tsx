@@ -1,0 +1,249 @@
+import { auth } from "@clerk/nextjs/server";
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { Calendar, Trophy } from "lucide-react";
+import {
+  schedulesStandingsV1,
+  playoffsV1,
+  statKeepingV1,
+} from "@/lib/flags";
+import {
+  computeStandings,
+  getLeague,
+  getPlayoffBracket,
+  getSeason,
+  listFixturesBySeason,
+} from "@/lib/data-api";
+import { resolveOrgContext } from "@/lib/org-context";
+import { regularSeasonProgress } from "@/lib/playoffs";
+import { formatDate } from "@/lib/format";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/status-badge";
+
+/**
+ * Season hub (WSM-000213): one home per season. Progress, standings snapshot,
+ * champion when decided, and season-scoped links into schedule / standings /
+ * playoffs / stats (via ?season=, WSM-000214).
+ */
+export default async function SeasonHubPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const { id: seasonId } = await params;
+  const orgContext = await resolveOrgContext(userId);
+  // getSeason enforces league visibility; treat both "missing" and "not
+  // visible" as 404 so the route doesn't leak season existence.
+  const season = await getSeason(seasonId, orgContext).catch(() => null);
+  if (!season) notFound();
+
+  const league = await getLeague(season.leagueId, orgContext).catch(() => null);
+  if (!league) notFound();
+
+  const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled] =
+    await Promise.all([
+      listFixturesBySeason(season.id),
+      computeStandings(season.id),
+      getPlayoffBracket(season.id),
+      schedulesStandingsV1(),
+      playoffsV1(),
+      statKeepingV1(),
+    ]);
+
+  const progress = regularSeasonProgress(fixtures);
+  const playoffFixtures = fixtures.filter((f) => f.stage === "playoff");
+  const playoffPlayed = playoffFixtures.filter(
+    (f) => f.status === "final",
+  ).length;
+  const champion = bracket?.champion ?? null;
+  const topFive = standings.slice(0, 5);
+
+  const seasonQuery = `?season=${season.id}`;
+  const links = [
+    scheduleEnabled && {
+      href: `/dashboard/leagues/${league.id}/schedule${seasonQuery}`,
+      label: "Schedule",
+    },
+    scheduleEnabled && {
+      href: `/dashboard/leagues/${league.id}/standings${seasonQuery}`,
+      label: "Standings",
+    },
+    playoffsEnabled && {
+      href: `/dashboard/leagues/${league.id}/playoffs${seasonQuery}`,
+      label: "Playoffs",
+    },
+    statsEnabled && {
+      href: `/dashboard/leagues/${league.id}/stats${seasonQuery}`,
+      label: "Stat leaders",
+    },
+  ].filter((l): l is { href: string; label: string } => Boolean(l));
+
+  return (
+    <div className="mx-auto max-w-4xl">
+      <Link
+        href="/dashboard/seasons"
+        className="mb-4 inline-block text-sm text-primary hover:underline"
+      >
+        &larr; Back to Seasons
+      </Link>
+
+      <header className="mb-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-2xl font-bold text-foreground">{season.name}</h2>
+          <StatusBadge status={season.status} />
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          <Link
+            href={`/dashboard/leagues/${league.id}`}
+            className="text-primary hover:underline"
+          >
+            {league.name}
+          </Link>
+          {" · "}
+          {formatDate(season.startDate)} &ndash; {formatDate(season.endDate)}
+        </p>
+        {links.length > 0 && (
+          <nav className="mt-3 flex flex-wrap gap-3">
+            {links.map((l) => (
+              <Link
+                key={l.label}
+                href={l.href}
+                className="text-sm text-primary hover:underline"
+              >
+                {l.label} &rarr;
+              </Link>
+            ))}
+          </nav>
+        )}
+      </header>
+
+      {champion && (
+        <Card className="mb-6 border-primary/40">
+          <CardContent className="flex items-center gap-3 p-5">
+            <Trophy className="h-6 w-6 text-primary" aria-hidden />
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Champion
+              </p>
+              <p className="text-lg font-semibold text-foreground">
+                {champion.teamName ? (
+                  <Link
+                    href={`/dashboard/teams/${champion.teamId}`}
+                    className="hover:underline"
+                  >
+                    {champion.teamName}
+                  </Link>
+                ) : (
+                  "Decided"
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Season progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {progress.total === 0 && playoffFixtures.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-4 text-center">
+                <Calendar
+                  className="h-6 w-6 text-muted-foreground"
+                  aria-hidden
+                />
+                <p className="text-sm text-muted-foreground">
+                  No games scheduled yet.
+                </p>
+              </div>
+            ) : (
+              <dl className="space-y-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted-foreground">Regular season</dt>
+                  <dd className="font-mono tabular-nums text-foreground">
+                    {progress.final} / {progress.total} played
+                  </dd>
+                </div>
+                {playoffFixtures.length > 0 && (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Playoff games</dt>
+                    <dd className="font-mono tabular-nums text-foreground">
+                      {playoffPlayed} / {playoffFixtures.length} played
+                    </dd>
+                  </div>
+                )}
+                {season.playoffTeams ? (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Playoff format</dt>
+                    <dd className="text-foreground">
+                      {season.playoffTeams} teams
+                      {season.playoffFormat
+                        ? ` · ${season.playoffFormat} elimination`
+                        : ""}
+                    </dd>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted-foreground">Playoffs</dt>
+                    <dd className="text-foreground">Not configured</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Standings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topFive.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No recorded results yet.
+              </p>
+            ) : (
+              <ol className="space-y-2 text-sm">
+                {topFive.map((s, i) => (
+                  <li
+                    key={s.teamId}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="w-4 shrink-0 font-mono text-xs text-muted-foreground">
+                        {i + 1}
+                      </span>
+                      <Link
+                        href={`/dashboard/teams/${s.teamId}`}
+                        className="truncate text-foreground hover:underline"
+                      >
+                        {s.teamName}
+                      </Link>
+                    </span>
+                    <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
+                      {s.wins}&ndash;{s.losses}
+                      {s.ties > 0 ? `–${s.ties}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {scheduleEnabled && standings.length > 0 && (
+              <Link
+                href={`/dashboard/leagues/${league.id}/standings${seasonQuery}`}
+                className="mt-4 inline-block text-sm text-primary hover:underline"
+              >
+                Full standings &rarr;
+              </Link>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
