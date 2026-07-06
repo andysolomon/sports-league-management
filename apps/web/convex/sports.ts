@@ -4060,6 +4060,37 @@ export const generateSeasonSchedule = internalMutationGeneric({
   },
 });
 
+/**
+ * Player ids on a season roster. Assignment-backed leagues use
+ * `rosterAssignments`; synthetic leagues (Generate rosters) store membership on
+ * `players.teamId` only — fall back to active league players via `by_leagueId`.
+ */
+async function resolveSeasonRosterPlayerIds(
+  ctx: MutationCtx,
+  leagueId: Id<"leagues">,
+  seasonId: Id<"seasons">,
+): Promise<Id<"players">[]> {
+  const assignments = await ctx.db
+    .query("rosterAssignments")
+    .withIndex("by_leagueId_seasonId", (q) =>
+      q.eq("leagueId", leagueId).eq("seasonId", seasonId),
+    )
+    .collect();
+
+  if (assignments.length > 0) {
+    return [...new Set(assignments.map((a) => a.playerId))];
+  }
+
+  const players = await ctx.db
+    .query("players")
+    .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+    .collect();
+
+  return players
+    .filter((p) => p.status !== "graduated")
+    .map((p) => p._id);
+}
+
 /*
  * Roster carryover (WSM-000163). Clone the previous season's rosters into a new
  * season so a coach doesn't rebuild the depth chart from scratch each year.
@@ -4134,6 +4165,20 @@ export const copySeasonRosters = internalMutation({
       .collect();
     if (existingTargetAssignments.length > 0 && !args.confirm) {
       throw new Error("target_has_rosters");
+    }
+
+    // Synthetic leagues have no assignment/depth rows to clone; team membership
+    // lives on players.teamId and persists across seasons untouched.
+    if (
+      sourceAssignments.length === 0 &&
+      sourceDepthEntries.length === 0 &&
+      existingTargetAssignments.length === 0
+    ) {
+      return {
+        copiedAssignments: 0,
+        copiedDepthEntries: 0,
+        sourceSeasonId: source._id as string,
+      };
     }
 
     // Clean replace: clear the target's existing roster + depth-chart rows.
@@ -4224,14 +4269,11 @@ export const rolloverGraduateAndAdvancePlayers = internalMutation({
     advancedPlayerIds: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    const assignments = await ctx.db
-      .query("rosterAssignments")
-      .withIndex("by_leagueId_seasonId", (q) =>
-        q.eq("leagueId", args.leagueId).eq("seasonId", args.seasonId),
-      )
-      .collect();
-
-    const playerIds = [...new Set(assignments.map((a) => a.playerId))];
+    const playerIds = await resolveSeasonRosterPlayerIds(
+      ctx,
+      args.leagueId,
+      args.seasonId,
+    );
     const graduatedPlayerIds: string[] = [];
     const advancedPlayerIds: string[] = [];
 
