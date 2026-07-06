@@ -10,6 +10,9 @@ import {
   scoreAtPosition,
 } from "@/lib/gamecast";
 import GamecastView from "@/components/gamecast/GamecastView";
+import BroadcastLayout from "@/components/gamecast/layouts/BroadcastLayout";
+import FieldFirstLayout from "@/components/gamecast/layouts/FieldFirstLayout";
+import OperatorLayout from "@/components/gamecast/layouts/OperatorLayout";
 import PlayList from "@/components/gamecast/PlayList";
 import DriveChart from "@/components/gamecast/DriveChart";
 import { buildDriveChartSegments } from "@/lib/gamecast";
@@ -112,7 +115,58 @@ describe("GamecastView", () => {
     expect(html).toContain("Scoring summary");
     expect(html).toContain("Team stats");
     expect(html).toContain("Play-by-play");
+    expect(html).toContain('data-testid="gamecast-layout-switcher"');
     expect(html).not.toContain("Press Next play to start the gamecast.");
+  });
+
+  it("renders score testids in each layout arrangement", () => {
+    const viewHtml = renderToStaticMarkup(createElement(GamecastView, baseProps));
+    expect(viewHtml).toContain('data-testid="gamecast-score-home"');
+    expect(viewHtml).toContain('data-testid="gamecast-score-away"');
+
+    const panels = {
+      scoreboard: createElement("div", {
+        "data-testid": "gamecast-score-home",
+      }),
+      transport: null,
+      situationStrip: null,
+      fieldPosition: null,
+      fieldPositionHero: null,
+      fieldPositionMini: null,
+      driveChart: null,
+      driveChartSlim: null,
+      winProbability: null,
+      winProbabilityCompact: null,
+      boxScore: createElement("div", {
+        "data-testid": "gamecast-score-away",
+      }),
+      scoringSummary: null,
+      playByPlay: null,
+      operatorHeader: createElement("div", {
+        "data-testid": "gamecast-score-home",
+      }),
+    };
+
+    const broadcastHtml = renderToStaticMarkup(
+      createElement(BroadcastLayout, {
+        panels,
+        showSituation: false,
+      }),
+    );
+    expect(broadcastHtml).toContain('data-testid="gamecast-score-home"');
+    expect(broadcastHtml).toContain('data-testid="gamecast-score-away"');
+
+    const fieldFirstHtml = renderToStaticMarkup(
+      createElement(FieldFirstLayout, { panels }),
+    );
+    expect(fieldFirstHtml).toContain('data-testid="gamecast-score-home"');
+    expect(fieldFirstHtml).toContain('data-testid="gamecast-score-away"');
+
+    const operatorHtml = renderToStaticMarkup(
+      createElement(OperatorLayout, { panels }),
+    );
+    expect(operatorHtml).toContain('data-testid="gamecast-score-home"');
+    expect(operatorHtml).toContain('data-testid="gamecast-score-away"');
   });
 
   it("keeps empty-state copy unchanged for missing logs", () => {
