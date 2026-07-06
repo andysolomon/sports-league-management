@@ -141,6 +141,12 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
       page.getByText("Press Next play to start the gamecast."),
     ).toBeVisible();
 
+    // Return to the schedule to exercise the manual-record → empty-state path.
+    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await expect(
+      page.getByRole("heading", { name: LEAGUE_NAME }),
+    ).toBeVisible();
+
     const manualRow = page
       .locator("tbody tr")
       .filter({ has: page.getByText("Scheduled", { exact: true }) })

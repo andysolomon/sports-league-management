@@ -98,10 +98,11 @@ export async function bootstrapFourTeamSimLeague(
 }
 
 export async function openSimulateScopeMenu(page: Page) {
-  await page
-    .getByRole("button", { name: "Simulate", exact: true })
-    .filter({ has: page.locator('[data-slot="dropdown-menu-trigger"]') })
-    .click();
+  // The scope trigger is the only button named exactly "Simulate" — per-game
+  // buttons use aria-label "Simulate <home> vs <away>". Its dropdown-trigger
+  // data-slot sits ON this button (Radix asChild), not on a descendant, so a
+  // `.filter({ has: ... })` for that slot matches nothing.
+  await page.getByRole("button", { name: "Simulate", exact: true }).click();
 }
 
 export async function simRegularSeason(page: Page) {
