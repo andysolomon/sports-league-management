@@ -6,6 +6,7 @@ import {
   upsertSeason,
   updateSeason as updateSeasonMutation,
   setActiveSeason as setActiveSeasonMutation,
+  completeSeason as completeSeasonMutation,
   deleteSeason as deleteSeasonMutation,
   copySeasonRosters,
   getSeasonLeagueId,
@@ -113,6 +114,35 @@ export async function activateSeasonAction(seasonId: string): Promise<Result> {
   await setActiveSeasonMutation(seasonId);
   revalidatePath("/dashboard/seasons");
   return { ok: true };
+}
+
+/*
+ * Season completion (WSM-000217). Refuses unless the playoff bracket has a
+ * champion; the UI surfaces "no_champion" as a force-confirm so admins can
+ * close out playoff-less or abandoned seasons deliberately.
+ */
+export async function completeSeasonAction(input: {
+  seasonId: string;
+  force?: boolean;
+}): Promise<Result> {
+  const leagueId = await getSeasonLeagueId(input.seasonId);
+  const gate = await requireLeagueAdmin(leagueId);
+  if (!gate.ok) return gate;
+
+  try {
+    await completeSeasonMutation({
+      seasonId: input.seasonId,
+      force: input.force,
+    });
+    revalidatePath("/dashboard/seasons");
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("no_champion")) {
+      return { ok: false, error: "no_champion" };
+    }
+    return { ok: false, error: message };
+  }
 }
 
 export async function deleteSeasonAction(seasonId: string): Promise<Result> {

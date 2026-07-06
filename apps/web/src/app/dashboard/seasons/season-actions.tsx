@@ -24,11 +24,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, CheckCircle2, Users } from "lucide-react";
+import { Plus, Trash2, Pencil, CheckCircle2, Users, Trophy } from "lucide-react";
 import {
   createSeasonAction,
   updateSeasonAction,
   activateSeasonAction,
+  completeSeasonAction,
   deleteSeasonAction,
   copyRostersAction,
 } from "./actions";
@@ -384,6 +385,45 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
     }
   }
 
+  async function complete() {
+    if (
+      !window.confirm(
+        `Mark "${season.name}" as completed? Schedule generation, result recording, and simulations will be locked for it.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    let res = await completeSeasonAction({ seasonId: season.id });
+    if (!res.ok && res.error === "no_champion") {
+      const force = window.confirm(
+        "No playoff champion has been decided for this season. Complete it anyway?",
+      );
+      if (force) {
+        res = await completeSeasonAction({ seasonId: season.id, force: true });
+      } else {
+        setBusy(false);
+        return;
+      }
+    }
+    setBusy(false);
+    if (res.ok) {
+      toast.success(`${season.name} completed.`, {
+        description: "Run the dynasty rollover from the league page next.",
+        action: {
+          label: "League page",
+          onClick: () =>
+            router.push(`/dashboard/leagues/${season.leagueId}`),
+        },
+      });
+      router.refresh();
+    } else {
+      toast.error(
+        res.error === "not_admin" ? "Only league admins can do that." : res.error,
+      );
+    }
+  }
+
   async function save() {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -483,6 +523,18 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
         >
           <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
           Make active
+        </Button>
+      )}
+      {isActive && (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={complete}
+          aria-label={`Complete ${season.name}`}
+        >
+          <Trophy className="mr-1 h-3.5 w-3.5" />
+          Complete
         </Button>
       )}
       <CopyRostersButton season={season} />
