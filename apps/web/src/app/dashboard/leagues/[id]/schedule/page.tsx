@@ -291,7 +291,11 @@ export default async function LeagueSchedulePage({
                     </thead>
                     <tbody>
                       {rows.map(({ fixture, result, hasPlayLog }) => (
-                        <tr key={fixture.id} className="border-b border-border">
+                        <tr
+                          key={fixture.id}
+                          data-testid={`schedule-fixture-${fixture.id}`}
+                          className="border-b border-border"
+                        >
                           <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
                             {formatFixtureWhen(fixture.scheduledAt)}
                           </td>
