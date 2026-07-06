@@ -4,8 +4,11 @@ import type { PbpGameInput, TeamSimProfile, PlayerSimProfile } from "@/lib/pbp";
 import {
   scoreAtPosition,
   clockAtPosition,
+  prevPlayIndex,
   nextPlayIndex,
+  prevQuarterIndex,
   nextQuarterIndex,
+  prevHalfIndex,
   nextHalfIndex,
   entireGameIndex,
   restartIndex,
@@ -81,6 +84,40 @@ describe("gamecast reveal stepping", () => {
       expect(idx).toBe(step + 1);
     }
     expect(nextPlayIndex(idx, plays.length)).toBe(plays.length);
+  });
+
+  it("prev play steps back one at a time and clamps at game start", () => {
+    expect(prevPlayIndex(0)).toBe(0);
+    const mid = Math.floor(plays.length / 2);
+    expect(prevPlayIndex(mid)).toBe(mid - 1);
+    expect(prevPlayIndex(1)).toBe(0);
+  });
+
+  it("prev quarter jumps to the prior quarter boundary", () => {
+    expect(prevQuarterIndex(plays, 0)).toBe(0);
+
+    const q1End = nextQuarterIndex(plays, 0);
+    expect(prevQuarterIndex(plays, q1End)).toBe(0);
+    if (q1End > 1) {
+      expect(prevQuarterIndex(plays, q1End + 2)).toBe(q1End);
+    }
+
+    const mid = Math.floor(plays.length / 2);
+    const prev = prevQuarterIndex(plays, mid);
+    expect(prev).toBeLessThan(mid);
+    expect(prev).toBeGreaterThanOrEqual(0);
+  });
+
+  it("prev half jumps to the prior half boundary", () => {
+    expect(prevHalfIndex(plays, 0)).toBe(0);
+
+    const half1End = nextHalfIndex(plays, 0);
+    expect(prevHalfIndex(plays, half1End)).toBe(0);
+
+    const half2End = nextHalfIndex(plays, half1End);
+    if (half2End > half1End + 1) {
+      expect(prevHalfIndex(plays, half2End)).toBe(half1End);
+    }
   });
 
   it("score at position matches scoring plays through the reveal index", () => {
