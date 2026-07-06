@@ -1956,6 +1956,45 @@ export const setActiveSeason = internalMutationGeneric({
 });
 
 /**
+ * Mark a season completed (WSM-000217). Requires the playoff bracket to have a
+ * decided champion unless `force` is passed (admin override for seasons without
+ * playoffs or abandoned mid-way). Completed seasons are read-only for game
+ * data: createFixture / generateSeasonSchedule / recordGameResult /
+ * generatePlayoffBracket all reject with "season_completed" (which also blocks
+ * every simulation path, since sims persist through recordGameResult).
+ * Reactivating via setActiveSeason is the escape hatch.
+ */
+export const completeSeason = internalMutationGeneric({
+  args: { seasonId: v.id("seasons"), force: v.optional(v.boolean()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (season.status === "completed") return null;
+
+    if (!args.force) {
+      const bracket = await ctx.db
+        .query("playoffBrackets")
+        .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+        .first();
+      const matchups = bracket
+        ? await ctx.db
+            .query("playoffMatchups")
+            .withIndex("by_bracketId", (q) => q.eq("bracketId", bracket._id))
+            .collect()
+        : [];
+      const champion = bracket
+        ? championFromMatchups(matchups, bracket.format ?? "single")
+        : null;
+      if (!champion) throw new Error("no_champion");
+    }
+
+    await ctx.db.patch(args.seasonId, { status: "completed" });
+    return null;
+  },
+});
+
+/**
  * Delete a season and cascade its season-scoped rows (WSM-000126, WSM-000209):
  * fixtures and per-fixture game data, depth chart, playoff bracket rows, player
  * attributes, and roster assignments. rosterAuditLog is intentionally retained
@@ -3779,6 +3818,7 @@ export const createFixture = internalMutationGeneric({
 
     const season = await ctx.db.get(args.seasonId);
     if (!season) throw new Error("season_not_found");
+    if (season.status === "completed") throw new Error("season_completed");
 
     const home = await ctx.db.get(args.homeTeamId);
     const away = await ctx.db.get(args.awayTeamId);
@@ -3949,6 +3989,7 @@ export const generateSeasonSchedule = internalMutationGeneric({
   handler: async (ctx, args) => {
     const season = await ctx.db.get(args.seasonId);
     if (!season) throw new Error("season_not_found");
+    if (season.status === "completed") throw new Error("season_completed");
 
     const teams = await ctx.db
       .query("teams")
@@ -4323,6 +4364,11 @@ export const recordGameResult = internalMutationGeneric({
   handler: async (ctx, args) => {
     const fixture = await ctx.db.get(args.fixtureId);
     if (!fixture) throw new Error("fixture_not_found");
+
+    // Completed seasons are read-only (WSM-000217). This single gate also
+    // blocks all simulation paths, which persist via recordGameResult.
+    const season = await ctx.db.get(fixture.seasonId);
+    if (season?.status === "completed") throw new Error("season_completed");
 
     const recordedAt = new Date().toISOString();
     const payload = {
@@ -5973,6 +6019,7 @@ export const generatePlayoffBracket = internalMutationGeneric({
     }
     const season = await ctx.db.get(args.seasonId);
     if (!season) throw new Error("season_not_found");
+    if (season.status === "completed") throw new Error("season_completed");
     const format =
       (args.format ?? season.playoffFormat) === "double" ? "double" : "single";
     // Honor the season's configured qualification rule (overridable per call).

@@ -339,6 +339,9 @@ const refs = {
   setActiveSeason: mutationRef<{ seasonId: string }, null>(
     "sports:setActiveSeason",
   ),
+  completeSeason: mutationRef<{ seasonId: string; force?: boolean }, null>(
+    "sports:completeSeason",
+  ),
   deleteSeason: mutationRef<{ seasonId: string }, null>("sports:deleteSeason"),
   setLeagueInviteToken: mutationRef<
     { leagueId: string; token: string | null },
@@ -1376,6 +1379,13 @@ export async function updateSeason(input: {
   const dto = await mutateConvex(refs.updateSeason, input);
   if (!dto) throw new Error("Season not found");
   return dto;
+}
+
+export async function completeSeason(input: {
+  seasonId: string;
+  force?: boolean;
+}): Promise<null> {
+  return mutateConvex(refs.completeSeason, input);
 }
 
 export async function setActiveSeason(seasonId: string): Promise<null> {
