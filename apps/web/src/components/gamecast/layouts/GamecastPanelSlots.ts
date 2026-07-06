@@ -14,6 +14,7 @@ export interface GamecastPanelSlots {
   winProbabilityCompact: ReactNode;
   boxScore: ReactNode;
   scoringSummary: ReactNode;
+  playerLeaders: ReactNode;
   playByPlay: ReactNode;
   operatorHeader: ReactNode;
 }

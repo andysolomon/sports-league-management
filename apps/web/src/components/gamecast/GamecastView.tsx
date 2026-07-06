@@ -9,12 +9,15 @@ import {
   deriveTeamDisplay,
   formatDownAndDistance,
   groupPlaysByDrive,
+  leadersByCategory,
   offenseToChartYard,
+  playerStatsAtPosition,
   revealedPlays,
   scoreAtPosition,
   scoringSummaryAtPosition,
   winProbabilitySeries,
 } from "@/lib/gamecast";
+import type { GamecastPlayerNameMap } from "@/lib/gamecast";
 import { Badge } from "@/components/ui/badge";
 import GamecastScoreboard from "./GamecastScoreboard";
 import DriveChart from "./DriveChart";
@@ -23,6 +26,7 @@ import FieldPosition from "./FieldPosition";
 import WinProbability from "./WinProbability";
 import BoxScore from "./BoxScore";
 import ScoringSummary from "./ScoringSummary";
+import PlayerLeaders from "./PlayerLeaders";
 import GamecastTransport from "./GamecastTransport";
 import GamecastLayoutSwitcher from "./GamecastLayoutSwitcher";
 import { GamecastPanel, GamecastPlayByPlayCard } from "./GamecastPanel";
@@ -98,6 +102,7 @@ export interface GamecastViewProps {
   storedEngineVersion: string;
   currentEngineVersion: string;
   dynastyCta?: GamecastDynastyCta | null;
+  playerNameMap?: GamecastPlayerNameMap;
 }
 
 export default function GamecastView({
@@ -111,6 +116,7 @@ export default function GamecastView({
   storedEngineVersion,
   currentEngineVersion,
   dynastyCta = null,
+  playerNameMap = {},
 }: GamecastViewProps) {
   const plays = useMemo(() => allPlays(log), [log]);
   const totalPlays = plays.length;
@@ -160,6 +166,15 @@ export default function GamecastView({
   const isPreGame = playIndex === 0;
   const boxScore = boxScoreAtPosition(log, plays, playIndex);
   const scoringSummary = scoringSummaryAtPosition(log, plays, playIndex);
+  const playerStatLines = useMemo(
+    () => playerStatsAtPosition(log, plays, playIndex),
+    [log, plays, playIndex],
+  );
+  const playerLeaderGroups = useMemo(
+    () =>
+      leadersByCategory(playerStatLines, log.homeTeamId, log.awayTeamId),
+    [playerStatLines, log.homeTeamId, log.awayTeamId],
+  );
 
   const currentPlay =
     playIndex > 0 && playIndex <= plays.length
@@ -357,6 +372,17 @@ export default function GamecastView({
     />
   );
 
+  const playerLeadersNode = (
+    <GamecastPanel title="Player leaders">
+      <PlayerLeaders
+        groups={playerLeaderGroups}
+        playerNameMap={playerNameMap}
+        homeTeam={{ abbr: homeDisplay.abbr, color: homeDisplay.color }}
+        awayTeam={{ abbr: awayDisplay.abbr, color: awayDisplay.color }}
+      />
+    </GamecastPanel>
+  );
+
   const playByPlayNode = (
     <GamecastPlayByPlayCard>
       <PlayList
@@ -369,6 +395,7 @@ export default function GamecastView({
         mode={mode}
         animate={!reducedMotion}
         onPlaySelect={pauseAndJump}
+        playerNameMap={playerNameMap}
       />
     </GamecastPlayByPlayCard>
   );
@@ -418,6 +445,7 @@ export default function GamecastView({
         <div className="[&_svg]:h-[90px]">{winProbabilityNode}</div>
       ),
       boxScore: <GamecastPanel title="Team stats">{boxScoreNode}</GamecastPanel>,
+      playerLeaders: playerLeadersNode,
       scoringSummary: (
         <GamecastPanel title="Scoring summary">{scoringSummaryNode}</GamecastPanel>
       ),

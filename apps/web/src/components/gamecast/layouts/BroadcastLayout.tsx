@@ -55,6 +55,7 @@ export default function BroadcastLayout({
             <div className={MOBILE_ORDER.winProb}>{panels.winProbability}</div>
             <div className={MOBILE_ORDER.stats}>{panels.scoringSummary}</div>
             <div className={MOBILE_ORDER.stats}>{panels.boxScore}</div>
+            <div className={MOBILE_ORDER.stats}>{panels.playerLeaders}</div>
           </div>
         </div>
 

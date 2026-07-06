@@ -48,3 +48,18 @@ export {
   type ScoringPlayKind,
 } from "./scoring-summary";
 export { deriveTeamDisplay, type TeamDisplay } from "./team-display";
+export {
+  playerStatsAtPosition,
+  leadersByCategory,
+  normalizeStatLines,
+  type StatGroupLeaders,
+  type TeamStatLeader,
+} from "./player-stats";
+export {
+  formatShortPlayerName,
+  resolvePlayerLabel,
+  rolePositionFallback,
+  type GamecastPlayerInfo,
+  type GamecastPlayerNameMap,
+} from "./player-names";
+export { formatPlayContributors } from "./play-contributors";

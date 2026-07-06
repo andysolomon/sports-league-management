@@ -56,6 +56,9 @@ export default function FieldFirstLayout({ panels }: { panels: GamecastPanelSlot
           {panels.boxScore}
         </div>
         <div className={`hidden max-[900px]:block ${MOBILE_ORDER.stats}`}>
+          {panels.playerLeaders}
+        </div>
+        <div className={`hidden max-[900px]:block ${MOBILE_ORDER.stats}`}>
           {panels.scoringSummary}
         </div>
       </div>

@@ -114,6 +114,7 @@ describe("GamecastView", () => {
     expect(html).toContain("Win probability");
     expect(html).toContain("Scoring summary");
     expect(html).toContain("Team stats");
+    expect(html).toContain("Player leaders");
     expect(html).toContain("Play-by-play");
     expect(html).toContain('data-testid="gamecast-layout-switcher"');
     expect(html).not.toContain("Press Next play to start the gamecast.");
@@ -162,6 +163,7 @@ describe("GamecastView", () => {
       boxScore: createElement("div", {
         "data-testid": "gamecast-score-away",
       }),
+      playerLeaders: null,
       scoringSummary: null,
       playByPlay: null,
       operatorHeader: createElement("div", {
