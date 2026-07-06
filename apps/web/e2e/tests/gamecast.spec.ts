@@ -93,8 +93,20 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     ).toBeVisible();
     await expect(page.getByText(homeName).first()).toBeVisible();
     await expect(page.getByText(awayName).first()).toBeVisible();
-    await expect(page.locator('svg[aria-label="Drive chart"]')).toBeVisible();
+    await expect(page.locator('[aria-label="Drive chart"]')).toBeVisible();
 
+    await expect(
+      page.getByText("Final", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(page.getByTestId("gamecast-score-home")).toContainText(
+      String(expectedHome),
+    );
+    await expect(page.getByTestId("gamecast-score-away")).toContainText(
+      String(expectedAway),
+    );
+
+    await page.getByRole("button", { name: "Restart" }).click();
+    await page.getByRole("button", { name: "Sim", exact: true }).click();
     await expect(
       page.getByText("Press Next play to start the gamecast."),
     ).toBeVisible();
@@ -104,7 +116,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
         .locator('[data-slot="card"]', {
           has: page.getByText("Play-by-play", { exact: true }),
         })
-        .locator("ul li");
+        .locator("ul button");
 
     await page.getByRole("button", { name: "Next play" }).click();
     await expect(playRows()).not.toHaveCount(0);
@@ -120,23 +132,16 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     await expect(
       page.getByText("Final", { exact: true }).first(),
     ).toBeVisible();
-    await expect(
-      page
-        .locator(".font-mono.text-stat-30")
-        .filter({ hasText: String(expectedHome) })
-        .first(),
-    ).toBeVisible();
-    await expect(
-      page
-        .locator(".font-mono.text-stat-30")
-        .filter({ hasText: String(expectedAway) })
-        .first(),
-    ).toBeVisible();
-    await expect(
-      page.getByText(/drive/i).first(),
-    ).toBeVisible();
+    await expect(page.getByTestId("gamecast-score-home")).toContainText(
+      String(expectedHome),
+    );
+    await expect(page.getByTestId("gamecast-score-away")).toContainText(
+      String(expectedAway),
+    );
+    await expect(page.getByText(/drive/i).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Restart" }).click();
+    await page.getByRole("button", { name: "Sim", exact: true }).click();
     await expect(
       page.getByText("Press Next play to start the gamecast."),
     ).toBeVisible();

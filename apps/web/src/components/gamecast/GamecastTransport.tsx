@@ -46,6 +46,7 @@ export interface GamecastTransportProps {
   onModeChange: (mode: GamecastMode) => void;
   onPlayingChange: (playing: boolean) => void;
   onSpeedChange: (speed: GamecastSpeed) => void;
+  onComplete?: () => void;
 }
 
 function SegmentedControl<T extends string | number>({
@@ -101,6 +102,7 @@ export default function GamecastTransport({
   onModeChange,
   onPlayingChange,
   onSpeedChange,
+  onComplete,
 }: GamecastTransportProps) {
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
@@ -119,6 +121,7 @@ export default function GamecastTransport({
     playIndex,
     totalPlays,
     onPlayIndexChange,
+    onComplete,
   });
 
   const pause = () => onPlayingChange(false);
