@@ -47,3 +47,4 @@ export {
   type ScoringSummaryEntry,
   type ScoringPlayKind,
 } from "./scoring-summary";
+export { deriveTeamDisplay, type TeamDisplay } from "./team-display";
