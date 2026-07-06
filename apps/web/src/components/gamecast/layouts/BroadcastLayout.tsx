@@ -24,6 +24,7 @@ export default function BroadcastLayout({
   return (
     <>
       {panels.scoreboard}
+      {panels.postScoreboardBanner}
 
       <div className={MOBILE_STACK}>
         <div

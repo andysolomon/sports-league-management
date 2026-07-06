@@ -106,7 +106,7 @@ export function DynastyPanel({
     classDistribution.unknown;
 
   return (
-    <div className="space-y-4 border-t border-border pt-4">
+    <div id="dynasty-panel" className="space-y-4 border-t border-border pt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="inline-flex items-center gap-1.5 text-label-14 text-foreground">

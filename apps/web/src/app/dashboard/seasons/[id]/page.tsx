@@ -11,10 +11,20 @@ import {
   computeStandings,
   getLeague,
   getPlayoffBracket,
+  getPlayers,
   getSeason,
+  getSeasons,
+  getTeamsByLeague,
   listFixturesBySeason,
 } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
+import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
+import { summarizeClassDistribution } from "@/lib/class-year";
+import {
+  dynastySeasonState,
+  evaluateStartNextSeason,
+  seasonDecidedContext,
+} from "@/lib/dynasty-panel";
+import { DynastyPanel } from "@/components/dynasty/DynastyPanel";
 import { regularSeasonProgress } from "@/lib/playoffs";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,7 +53,21 @@ export default async function SeasonHubPage({
   const league = await getLeague(season.leagueId, orgContext).catch(() => null);
   if (!league) notFound();
 
-  const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled] =
+  let isAdmin = false;
+  if (league.orgId) {
+    try {
+      await requireOrgAdmin(league.orgId, userId);
+      isAdmin = true;
+    } catch {
+      // Not admin — read-only view
+    }
+  }
+
+  const seasons = await getSeasons([league.id]).catch(() => []);
+  const activeSeason = seasons.find((s) => s.status === "active") ?? null;
+  const upcomingSeason = seasons.find((s) => s.status === "upcoming") ?? null;
+
+  const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled, dynastyFixtures, dynastyBracket, leaguePlayers, teams] =
     await Promise.all([
       listFixturesBySeason(season.id),
       computeStandings(season.id),
@@ -51,7 +75,54 @@ export default async function SeasonHubPage({
       schedulesStandingsV1(),
       playoffsV1(),
       statKeepingV1(),
+      activeSeason
+        ? listFixturesBySeason(activeSeason.id).catch(() => [])
+        : Promise.resolve([]),
+      activeSeason
+        ? getPlayoffBracket(activeSeason.id).catch(() => null)
+        : Promise.resolve(null),
+      isAdmin && league.orgId
+        ? getPlayers([league.id]).catch(() => [])
+        : Promise.resolve([]),
+      isAdmin && league.orgId
+        ? getTeamsByLeague(league.id, orgContext).catch(() => [])
+        : Promise.resolve([]),
     ]);
+
+  const decidedCtx = activeSeason
+    ? seasonDecidedContext(dynastyFixtures, dynastyBracket)
+    : {
+        seasonDecided: false,
+        unplayedGames: 0,
+        playoffsUndecided: false,
+      };
+  const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
+  const graduatedPlayers =
+    isAdmin && league.orgId
+      ? leaguePlayers
+          .filter((p) => p.status === "graduated")
+          .map((p) => ({
+            id: p.id,
+            name: p.name,
+            position: p.position,
+            teamName: teamNameById.get(p.teamId) ?? null,
+          }))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      : [];
+  const dynastySeasonStateLine = dynastySeasonState({
+    activeSeason: activeSeason ? { name: activeSeason.name } : null,
+    upcomingSeason: upcomingSeason ? { name: upcomingSeason.name } : null,
+    seasonDecided: decidedCtx.seasonDecided,
+  });
+  const startNextSeasonGate = evaluateStartNextSeason({
+    activeSeason: activeSeason
+      ? { id: activeSeason.id, name: activeSeason.name }
+      : null,
+    upcomingSeason: upcomingSeason
+      ? { id: upcomingSeason.id, name: upcomingSeason.name }
+      : null,
+    ...decidedCtx,
+  });
 
   const progress = regularSeasonProgress(fixtures);
   const playoffFixtures = fixtures.filter((f) => f.stage === "playoff");
@@ -244,6 +315,27 @@ export default async function SeasonHubPage({
           </CardContent>
         </Card>
       </div>
+
+      {isAdmin && league.orgId && (
+        <Card className="mt-6">
+          <CardContent className="pt-6">
+            <DynastyPanel
+              leagueId={league.id}
+              seasonState={dynastySeasonStateLine}
+              gate={startNextSeasonGate}
+              classDistribution={summarizeClassDistribution(leaguePlayers)}
+              graduatedPlayers={graduatedPlayers}
+              upcomingSeason={
+                upcomingSeason
+                  ? { id: upcomingSeason.id, name: upcomingSeason.name }
+                  : null
+              }
+              unplayedGames={decidedCtx.unplayedGames}
+              playoffsUndecided={decidedCtx.playoffsUndecided}
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

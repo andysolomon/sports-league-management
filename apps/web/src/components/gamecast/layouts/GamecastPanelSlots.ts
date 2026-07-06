@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 export interface GamecastPanelSlots {
   scoreboard: ReactNode;
+  postScoreboardBanner: ReactNode | null;
   transport: ReactNode;
   situationStrip: ReactNode;
   fieldPosition: ReactNode;

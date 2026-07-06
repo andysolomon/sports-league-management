@@ -4,6 +4,7 @@ import {
   evaluateStartNextSeason,
   formatRolloverSuccessSummary,
   seasonDecidedContext,
+  shouldShowDynastyCta,
   startNextSeasonErrorMessage,
 } from "../dynasty-panel";
 import type { FixtureDto } from "@sports-management/shared-types";
@@ -168,5 +169,41 @@ describe("formatRolloverSuccessSummary", () => {
         freshmen: 1,
       }),
     ).toBe("1 graduated · 1 advanced · 1 freshman generated");
+  });
+});
+
+describe("shouldShowDynastyCta", () => {
+  it("shows only when the game is final, season decided, and no upcoming season", () => {
+    expect(
+      shouldShowDynastyCta({
+        gameFinal: true,
+        seasonDecided: true,
+        upcomingSeasonExists: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldShowDynastyCta({
+        gameFinal: false,
+        seasonDecided: true,
+        upcomingSeasonExists: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldShowDynastyCta({
+        gameFinal: true,
+        seasonDecided: false,
+        upcomingSeasonExists: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldShowDynastyCta({
+        gameFinal: true,
+        seasonDecided: true,
+        upcomingSeasonExists: true,
+      }),
+    ).toBe(false);
   });
 });

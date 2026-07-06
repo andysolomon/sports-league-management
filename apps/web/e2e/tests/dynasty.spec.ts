@@ -113,11 +113,11 @@ test.describe("Dynasty panel (dynasty rollover)", () => {
     await page.goto("/dashboard/seasons");
     await expect(page.getByText(/E2E Season \d{4}/)).toBeVisible();
 
-    // NOTE: the DynastyPanel "Graduated players (N)" accordion assertion was
-    // removed pending WSM investigation — the accordion did not render on the
-    // league page after a first rollover in CI, which may indicate graduated
-    // players are not surfacing on the panel (or the seeded roster lacked
-    // seniors). Class advancement below is the deterministic progression check.
+    await page.goto(`/dashboard/leagues/${leagueId}`);
+    await expect(
+      page.getByRole("button", { name: /Graduated players \(\d+\)/ }),
+    ).toBeVisible();
+
     if (jrPlayerId) {
       await page.goto(`/dashboard/players/${jrPlayerId}`);
       await expect(page.getByText(/ · SR/)).toBeVisible();

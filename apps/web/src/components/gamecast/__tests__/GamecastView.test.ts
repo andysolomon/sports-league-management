@@ -117,6 +117,27 @@ describe("GamecastView", () => {
     expect(html).toContain("Play-by-play");
     expect(html).toContain('data-testid="gamecast-layout-switcher"');
     expect(html).not.toContain("Press Next play to start the gamecast.");
+    expect(html).not.toContain('data-testid="gamecast-dynasty-banner"');
+  });
+
+  it("renders the dynasty deep-link banner when dynastyCta is set", () => {
+    const html = renderToStaticMarkup(
+      createElement(GamecastView, {
+        ...baseProps,
+        dynastyCta: { leagueId: "league-abc" },
+      }),
+    );
+    expect(html).toContain('data-testid="gamecast-dynasty-banner"');
+    expect(html).toContain("Season decided");
+    expect(html).toContain("Go to dynasty panel");
+    expect(html).toContain("/dashboard/leagues/league-abc#dynasty-panel");
+  });
+
+  it("omits the dynasty banner when dynastyCta is null", () => {
+    const html = renderToStaticMarkup(
+      createElement(GamecastView, { ...baseProps, dynastyCta: null }),
+    );
+    expect(html).not.toContain('data-testid="gamecast-dynasty-banner"');
   });
 
   it("renders score testids in each layout arrangement", () => {
@@ -128,6 +149,7 @@ describe("GamecastView", () => {
       scoreboard: createElement("div", {
         "data-testid": "gamecast-score-home",
       }),
+      postScoreboardBanner: null,
       transport: null,
       situationStrip: null,
       fieldPosition: null,

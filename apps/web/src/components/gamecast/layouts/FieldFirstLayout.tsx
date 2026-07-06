@@ -21,6 +21,7 @@ export default function FieldFirstLayout({ panels }: { panels: GamecastPanelSlot
       <div className="flex min-h-0 flex-col gap-[18px] max-[900px]:contents">
         <div className="shrink-0 [&_[data-testid=gamecast-scoreboard]]:px-4 [&_[data-testid=gamecast-scoreboard]]:py-3 max-[900px]:order-none">
           {panels.scoreboard}
+          {panels.postScoreboardBanner}
         </div>
 
         <div className={`flex min-h-0 flex-1 flex-col gap-3 max-[900px]:contents ${MOBILE_ORDER.field}`}>
