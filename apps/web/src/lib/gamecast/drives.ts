@@ -145,22 +145,60 @@ export type DriveResultToken =
   | "danger"
   | "subtle";
 
-export function driveResultToken(
+/** Semantic token names for redesigned drive chart styling. */
+export type DriveResultVisualToken =
+  | "accent"
+  | "gold"
+  | "danger"
+  | "border-strong"
+  | "text-subtle";
+
+export const DRIVE_RESULT_TOKEN_COLORS: Record<DriveResultVisualToken, string> = {
+  accent: "var(--accent)",
+  gold: "#e0b64a",
+  danger: "var(--danger)",
+  "border-strong": "var(--border-strong)",
+  "text-subtle": "var(--text-subtle)",
+};
+
+export function driveResultVisualToken(
   reason: PbpDriveEndReason,
-): DriveResultToken {
+): DriveResultVisualToken {
   switch (reason) {
     case "touchdown":
       return "accent";
     case "field_goal":
-      return "primary";
+      return "gold";
     case "turnover":
     case "downs":
     case "missed_field_goal":
       return "danger";
     case "end_of_half":
     case "end_of_game":
-      return "subtle";
+      return "border-strong";
     case "punt":
+    default:
+      return "text-subtle";
+  }
+}
+
+export function driveResultColor(reason: PbpDriveEndReason): string {
+  return DRIVE_RESULT_TOKEN_COLORS[driveResultVisualToken(reason)];
+}
+
+export function driveResultToken(
+  reason: PbpDriveEndReason,
+): DriveResultToken {
+  switch (driveResultVisualToken(reason)) {
+    case "accent":
+      return "accent";
+    case "gold":
+      return "primary";
+    case "danger":
+      return "danger";
+    case "border-strong":
+      return "subtle";
+    case "text-subtle":
     default:
       return "muted";
   }

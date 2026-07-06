@@ -6,6 +6,8 @@ import {
   groupPlaysByDrive,
   offenseToChartYard,
   driveResultToken,
+  driveResultVisualToken,
+  driveResultColor,
   driveResultLabel,
   revealedPlays,
 } from "@/lib/gamecast";
@@ -102,5 +104,20 @@ describe("gamecast drive selectors", () => {
     expect(driveResultToken("touchdown")).toBe("accent");
     expect(driveResultToken("turnover")).toBe("danger");
     expect(driveResultLabel("punt")).toBe("Punt");
+  });
+
+  it("maps drive end reasons to visual tokens and colors", () => {
+    expect(driveResultVisualToken("touchdown")).toBe("accent");
+    expect(driveResultVisualToken("field_goal")).toBe("gold");
+    expect(driveResultVisualToken("turnover")).toBe("danger");
+    expect(driveResultVisualToken("downs")).toBe("danger");
+    expect(driveResultVisualToken("missed_field_goal")).toBe("danger");
+    expect(driveResultVisualToken("end_of_half")).toBe("border-strong");
+    expect(driveResultVisualToken("end_of_game")).toBe("border-strong");
+    expect(driveResultVisualToken("punt")).toBe("text-subtle");
+
+    expect(driveResultColor("field_goal")).toBe("#e0b64a");
+    expect(driveResultColor("punt")).toBe("var(--text-subtle)");
+    expect(driveResultColor("end_of_half")).toBe("var(--border-strong)");
   });
 });

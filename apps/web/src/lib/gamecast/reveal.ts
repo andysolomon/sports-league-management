@@ -50,11 +50,69 @@ export function clockAtPosition(
   return { quarter: play.quarter, clockSeconds: play.clockSeconds };
 }
 
+export function prevPlayIndex(current: PlayRevealIndex): PlayRevealIndex {
+  return Math.max(0, current - 1);
+}
+
 export function nextPlayIndex(
   current: PlayRevealIndex,
   totalPlays: number,
 ): PlayRevealIndex {
   return Math.min(current + 1, totalPlays);
+}
+
+function quarterEndIndices(plays: PbpPlay[]): number[] {
+  if (plays.length === 0) return [];
+
+  const maxQuarter = plays.reduce((max, play) => Math.max(max, play.quarter), 0);
+  const indices: number[] = [];
+  for (let quarter = 1; quarter <= maxQuarter; quarter++) {
+    let i = 0;
+    while (i < plays.length && plays[i].quarter <= quarter) i++;
+    indices.push(i);
+  }
+  return indices;
+}
+
+function halfEndIndices(plays: PbpPlay[]): number[] {
+  if (plays.length === 0) return [];
+
+  const indices: number[] = [];
+
+  let i = 0;
+  while (i < plays.length && plays[i].quarter <= 2) i++;
+  indices.push(i);
+
+  i = 0;
+  while (i < plays.length && plays[i].quarter <= 4) i++;
+  if (indices[indices.length - 1] !== i) indices.push(i);
+
+  if (plays[plays.length - 1].quarter > 4 && indices[indices.length - 1] !== plays.length) {
+    indices.push(plays.length);
+  }
+
+  return indices;
+}
+
+function prevBoundaryIndex(
+  boundaries: number[],
+  current: PlayRevealIndex,
+): PlayRevealIndex {
+  if (current <= 0) return 0;
+
+  let result = 0;
+  for (const boundary of boundaries) {
+    if (boundary < current) result = boundary;
+    else break;
+  }
+  return result;
+}
+
+export function prevQuarterIndex(
+  plays: PbpPlay[],
+  current: PlayRevealIndex,
+): PlayRevealIndex {
+  return prevBoundaryIndex(quarterEndIndices(plays), current);
 }
 
 export function nextQuarterIndex(
@@ -76,6 +134,13 @@ export function nextQuarterIndex(
   let i = 0;
   while (i < plays.length && plays[i].quarter <= targetQuarter) i++;
   return i;
+}
+
+export function prevHalfIndex(
+  plays: PbpPlay[],
+  current: PlayRevealIndex,
+): PlayRevealIndex {
+  return prevBoundaryIndex(halfEndIndices(plays), current);
 }
 
 export function nextHalfIndex(
