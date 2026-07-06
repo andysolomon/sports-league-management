@@ -15,6 +15,7 @@ const MOBILE_ORDER = {
 export default function FieldFirstLayout({ panels }: { panels: GamecastPanelSlots }) {
   return (
     <div
+      data-testid="gamecast-field-first-layout"
       className={`grid min-h-[620px] grid-cols-1 gap-[18px] p-5 lg:grid-cols-[1fr_340px] ${MOBILE_STACK}`}
     >
       <div className="flex min-h-0 flex-col gap-[18px] max-[900px]:contents">

@@ -102,12 +102,16 @@ export default function OperatorHeader({
   const showSituation = !isPreGame && !isComplete && currentPlay;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 font-mono">
+    <div
+      data-testid="gamecast-operator-header"
+      className="flex flex-wrap items-center gap-3 font-mono"
+    >
       <span className="text-[15px] font-extrabold tracking-tight text-foreground">
         {homeDisplay.abbr} {homeScore} – {awayScore} {awayDisplay.abbr}
       </span>
 
       <span
+        data-testid="gamecast-operator-clock-chip"
         className={cn(
           "rounded-control border border-border px-2.5 py-1 text-[12px] font-bold",
           isComplete ? "text-accent" : "text-text-muted",
