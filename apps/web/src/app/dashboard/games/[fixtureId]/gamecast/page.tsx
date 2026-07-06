@@ -14,6 +14,7 @@ import { PBP_ENGINE_VERSION } from "@/lib/pbp";
 import { parseGamePlayLog } from "@/lib/gamecast/parse-log";
 import GamecastView from "@/components/gamecast/GamecastView";
 import GamecastEmptyState from "@/components/gamecast/GamecastEmptyState";
+import { getTeam } from "@/lib/data-api";
 
 export default async function GamecastPage({
   params,
@@ -46,11 +47,20 @@ export default async function GamecastPage({
   } else if (!log) {
     body = <GamecastEmptyState leagueId={leagueId} reason="parse_error" />;
   } else {
+    const [homeTeam, awayTeam] = await Promise.all([
+      getTeam(fixture.homeTeamId, orgContext).catch(() => null),
+      getTeam(fixture.awayTeamId, orgContext).catch(() => null),
+    ]);
+    const weekLabel =
+      fixture.week !== null ? `Week ${fixture.week}` : null;
     body = (
       <GamecastView
         log={log}
         homeTeamName={fixture.homeTeamName}
         awayTeamName={fixture.awayTeamName}
+        homePrimaryColor={homeTeam?.primaryColor}
+        awayPrimaryColor={awayTeam?.primaryColor}
+        weekLabel={weekLabel}
         engineVersionMismatch={row.engineVersion !== PBP_ENGINE_VERSION}
         storedEngineVersion={row.engineVersion}
         currentEngineVersion={PBP_ENGINE_VERSION}
@@ -59,7 +69,7 @@ export default async function GamecastPage({
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <Link
         href={`/dashboard/leagues/${leagueId}/schedule`}
         className="mb-4 inline-block text-sm text-primary hover:underline"
