@@ -4,8 +4,10 @@ import {
   withScheduleFixture,
   type ScheduleFixtureResult,
 } from "../helpers/seed-schedule";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { getTestOrgId } from "../helpers/seed-roster";
 import { pickSelectOption } from "../helpers/select";
+import { TEAMS } from "../helpers/test-data";
 
 /*
  * Schedules & standings (Phase 3 / WSM-000074) e2e smoke.
@@ -173,5 +175,50 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
       }),
     ).toBeVisible();
     await expect(page.getByText("Final", { exact: true })).toBeVisible();
+  });
+});
+
+test.describe("Standings — division groups (canonical)", () => {
+  test.beforeEach(async ({ page }) => {
+    await setupClerkTestingToken({ page });
+    const canonical = readCanonicalFixture();
+    await setActiveLeague(page, canonical.leagueId);
+  });
+
+  test("division headers render and team names link to team pages", async ({
+    page,
+  }) => {
+    const { leagueId } = readCanonicalFixture();
+
+    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await page.getByRole("button", { name: "New fixture" }).click();
+    const fixtureDialog = page.getByRole("dialog");
+    await pickSelectOption(page, "#fix-home", TEAMS.COWBOYS.name);
+    await pickSelectOption(page, "#fix-away", TEAMS.PATRIOTS.name);
+    await fixtureDialog.getByLabel("Week").fill("1");
+    await fixtureDialog
+      .getByRole("button", { name: "Create fixture" })
+      .click();
+    await expect(fixtureDialog).toBeHidden();
+
+    await page.getByRole("button", { name: "Record result" }).click();
+    const resultDialog = page.getByRole("dialog");
+    await resultDialog.getByLabel(/Dallas Cowboys/).fill("17");
+    await resultDialog.getByLabel(/New England Patriots/).fill("14");
+    await resultDialog.getByRole("button", { name: "Save result" }).click();
+    await expect(resultDialog).toBeHidden();
+
+    await page.goto(`/dashboard/leagues/${leagueId}/standings`);
+    await expect(page.getByText("League Division", { exact: true })).toBeVisible();
+    const cowboysLink = page.getByRole("link", {
+      name: TEAMS.COWBOYS.name,
+      exact: true,
+    });
+    await expect(cowboysLink).toBeVisible();
+    await cowboysLink.click();
+    await expect(page).toHaveURL(new RegExp(`/dashboard/teams/`));
+    await expect(
+      page.getByRole("heading", { name: TEAMS.COWBOYS.name }),
+    ).toBeVisible();
   });
 });

@@ -110,6 +110,31 @@ test.describe("Team Detail Page", () => {
       prescottRow.getByRole("button", { name: /Status:/i }),
     ).toHaveCount(0);
   });
+
+  test("team → player → development chart → back returns via ?from= flow", async ({
+    page,
+  }) => {
+    const prescottRow = page.locator("tbody tr", { hasText: "Prescott" });
+    await prescottRow.click();
+    await expect(page).toHaveURL(/\/dashboard\/players\/[^?]+\?from=team-/);
+    await expect(
+      page.getByRole("heading", { name: /Prescott/ }),
+    ).toBeVisible();
+
+    await page.getByRole("link", { name: "View development chart" }).click();
+    await expect(page).toHaveURL(
+      /\/dashboard\/players\/[^/]+\/development\?from=team-/,
+    );
+
+    await page.getByRole("link", { name: /Back to .*Prescott/ }).click();
+    await expect(page).toHaveURL(/\/dashboard\/players\/[^?]+\?from=team-/);
+
+    await page.getByRole("link", { name: /Back to Dallas Cowboys/ }).click();
+    await expect(page).toHaveURL(/\/dashboard\/teams\/[^?]+$/);
+    await expect(
+      page.getByRole("heading", { name: TEAMS.COWBOYS.name }),
+    ).toBeVisible();
+  });
 });
 
 // Regression for WSM-000190: a bad/legacy team id (e.g. a Salesforce id leaking
