@@ -9,6 +9,8 @@ import {
   formatGameClock,
   formatQuarterLabel,
 } from "@/lib/gamecast";
+import { formatPlayContributors } from "@/lib/gamecast/play-contributors";
+import type { GamecastPlayerNameMap } from "@/lib/gamecast/player-names";
 import type { PbpPlay } from "@/lib/pbp";
 import { cn } from "@/lib/utils";
 import { computePlayListScrollTop } from "./play-list-scroll";
@@ -23,6 +25,7 @@ export interface PlayListProps {
   mode: "sim" | "review";
   animate: boolean;
   onPlaySelect: (playIndex: number) => void;
+  playerNameMap?: GamecastPlayerNameMap;
 }
 
 function playFlatIndex(allPlaysFlat: PbpPlay[], playId: number): number {
@@ -39,6 +42,7 @@ export default function PlayList({
   mode,
   animate,
   onPlaySelect,
+  playerNameMap = {},
 }: PlayListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLLIElement>(null);
@@ -115,6 +119,7 @@ export default function PlayList({
                 const isCurrent = targetIndex === playIndex;
                 const isFuture = flatIdx >= playIndex;
                 const dimmed = mode === "review" && isFuture;
+                const contributors = formatPlayContributors(play, playerNameMap);
 
                 return (
                   <li
@@ -158,6 +163,11 @@ export default function PlayList({
                           </span>
                         ) : null}
                       </p>
+                      {contributors ? (
+                        <p className="mt-0.5 truncate text-caption-12 text-text-subtle">
+                          {contributors}
+                        </p>
+                      ) : null}
                     </button>
                   </li>
                 );

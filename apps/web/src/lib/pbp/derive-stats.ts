@@ -7,7 +7,7 @@ export interface DerivedPlayerStatLine {
   statLine: PlayerGameStatLine;
 }
 
-type MutableLine = {
+export type MutableLine = {
   passing: Required<NonNullable<PlayerGameStatLine["passing"]>>;
   rushing: Required<NonNullable<PlayerGameStatLine["rushing"]>>;
   receiving: Required<NonNullable<PlayerGameStatLine["receiving"]>>;
@@ -18,7 +18,7 @@ type MutableLine = {
   ballSecurity: Required<NonNullable<PlayerGameStatLine["ballSecurity"]>>;
 };
 
-function emptyLine(): MutableLine {
+export function emptyLine(): MutableLine {
   return {
     passing: { comp: 0, att: 0, yards: 0, td: 0, int: 0, sacked: 0 },
     rushing: { carries: 0, yards: 0, td: 0, long: 0 },
@@ -76,7 +76,7 @@ function isNegativePlay(play: PbpPlay): boolean {
   return play.yardsGained < 0 && (play.playType === "rush" || play.playType === "sack");
 }
 
-function applyPlay(
+export function applyPlay(
   map: Map<string, MutableLine>,
   play: PbpPlay,
 ): void {
@@ -244,7 +244,7 @@ function creditFumble(map: Map<string, MutableLine>, play: PbpPlay): void {
   }
 }
 
-function pruneLine(line: MutableLine): PlayerGameStatLine {
+export function pruneLine(line: MutableLine): PlayerGameStatLine {
   const out: PlayerGameStatLine = {};
   const groups: (keyof MutableLine)[] = [
     "passing",

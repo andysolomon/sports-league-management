@@ -11,6 +11,7 @@ import {
   getSeasons,
   listFixturesBySeason,
   getPlayoffBracket,
+  getPlayersByTeam,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { PBP_ENGINE_VERSION } from "@/lib/pbp";
@@ -21,6 +22,7 @@ import {
 } from "@/lib/dynasty-panel";
 import GamecastView from "@/components/gamecast/GamecastView";
 import GamecastEmptyState from "@/components/gamecast/GamecastEmptyState";
+import type { GamecastPlayerNameMap } from "@/lib/gamecast";
 import { getTeam } from "@/lib/data-api";
 
 export default async function GamecastPage({
@@ -75,10 +77,16 @@ export default async function GamecastPage({
   } else if (!log) {
     body = <GamecastEmptyState leagueId={leagueId} reason="parse_error" />;
   } else {
-    const [homeTeam, awayTeam] = await Promise.all([
+    const [homeTeam, awayTeam, homePlayers, awayPlayers] = await Promise.all([
       getTeam(fixture.homeTeamId, orgContext).catch(() => null),
       getTeam(fixture.awayTeamId, orgContext).catch(() => null),
+      getPlayersByTeam(fixture.homeTeamId, orgContext).catch(() => []),
+      getPlayersByTeam(fixture.awayTeamId, orgContext).catch(() => []),
     ]);
+    const playerNameMap: GamecastPlayerNameMap = {};
+    for (const p of [...homePlayers, ...awayPlayers]) {
+      playerNameMap[p.id] = { name: p.name, position: p.position };
+    }
     const weekLabel =
       fixture.week !== null ? `Week ${fixture.week}` : null;
     body = (
@@ -93,6 +101,7 @@ export default async function GamecastPage({
         storedEngineVersion={row.engineVersion}
         currentEngineVersion={PBP_ENGINE_VERSION}
         dynastyCta={dynastyCta}
+        playerNameMap={playerNameMap}
       />
     );
   }

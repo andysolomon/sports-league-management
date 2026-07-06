@@ -55,6 +55,7 @@ export default function OperatorLayout({ panels }: { panels: GamecastPanelSlots 
 
         <aside className={`space-y-[18px] bg-surface max-[900px]:contents ${MOBILE_ORDER.stats}`}>
           {panels.boxScore}
+          {panels.playerLeaders}
           {panels.scoringSummary}
         </aside>
       </div>
