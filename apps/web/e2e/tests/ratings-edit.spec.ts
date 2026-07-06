@@ -82,9 +82,12 @@ test.describe("SPRT ratings edit (WSM-000121)", () => {
     // Components render sorted by value (orderedComponents), so position is not
     // stable across an edit. Capture the edited input's aria-label and assert
     // that same labeled input after reload — not `.first()`.
+    // Components render sorted by value (orderedComponents), so position is not
+    // stable across an edit. Each input has a stable id (attr-<key>); capture it
+    // and assert that same input after reload rather than a positional .first().
     const firstInput = dialog.locator('input[type="number"]').first();
-    const editedLabel = await firstInput.getAttribute("aria-label");
-    expect(editedLabel).toBeTruthy();
+    const editedId = await firstInput.getAttribute("id");
+    expect(editedId).toBeTruthy();
     const prior = await firstInput.inputValue();
     const next = prior === "88" ? "87" : "88";
     await firstInput.fill(next);
@@ -95,9 +98,7 @@ test.describe("SPRT ratings edit (WSM-000121)", () => {
 
     await page.reload();
     await editBtn.click();
-    await expect(
-      dialog.getByLabel(editedLabel!, { exact: true }),
-    ).toHaveValue(next);
+    await expect(dialog.locator(`[id="${editedId}"]`)).toHaveValue(next);
     await dialog.getByRole("button", { name: "Cancel" }).click();
   });
 });

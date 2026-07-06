@@ -164,9 +164,12 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     await resultDialog.getByLabel(new RegExp(manualAway)).fill("7");
     await resultDialog.getByRole("button", { name: "Save result" }).click();
     await expect(resultDialog).toBeHidden();
-    await expect(manualRow.getByText("Final", { exact: true })).toBeVisible();
+    // Re-select by stable testid: the Scheduled-filtered `manualRow` stops
+    // matching once the result is recorded and the row flips to Final.
+    const recordedRow = page.getByTestId(`schedule-fixture-${manualFixtureId}`);
+    await expect(recordedRow.getByText("Final", { exact: true })).toBeVisible();
     await expect(
-      manualRow.getByRole("link", { name: "Gamecast" }),
+      recordedRow.getByRole("link", { name: "Gamecast" }),
     ).toHaveCount(0);
 
     await page.goto(`/dashboard/games/${manualFixtureId}/gamecast`);
