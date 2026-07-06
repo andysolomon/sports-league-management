@@ -8,10 +8,17 @@ import {
   getGamePlayLog,
   getLeague,
   getSeasonLeagueId,
+  getSeasons,
+  listFixturesBySeason,
+  getPlayoffBracket,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { PBP_ENGINE_VERSION } from "@/lib/pbp";
 import { parseGamePlayLog } from "@/lib/gamecast/parse-log";
+import {
+  seasonDecidedContext,
+  shouldShowDynastyCta,
+} from "@/lib/dynasty-panel";
 import GamecastView from "@/components/gamecast/GamecastView";
 import GamecastEmptyState from "@/components/gamecast/GamecastEmptyState";
 import { getTeam } from "@/lib/data-api";
@@ -37,6 +44,27 @@ export default async function GamecastPage({
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
+
+  const seasons = await getSeasons([leagueId]).catch(() => []);
+  const activeSeason = seasons.find((s) => s.status === "active") ?? null;
+  const upcomingSeason = seasons.find((s) => s.status === "upcoming") ?? null;
+  const [seasonFixtures, bracket] = await Promise.all([
+    activeSeason
+      ? listFixturesBySeason(activeSeason.id).catch(() => [])
+      : Promise.resolve([]),
+    activeSeason
+      ? getPlayoffBracket(activeSeason.id).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  const decidedCtx = activeSeason
+    ? seasonDecidedContext(seasonFixtures, bracket)
+    : { seasonDecided: false };
+  const showDynastyCta = shouldShowDynastyCta({
+    gameFinal: fixture.status === "final",
+    seasonDecided: decidedCtx.seasonDecided,
+    upcomingSeasonExists: Boolean(upcomingSeason),
+  });
+  const dynastyCta = showDynastyCta ? { leagueId } : null;
 
   const row = await getGamePlayLog(fixtureId);
   const log = row ? parseGamePlayLog(row.logJson) : null;
@@ -64,6 +92,7 @@ export default async function GamecastPage({
         engineVersionMismatch={row.engineVersion !== PBP_ENGINE_VERSION}
         storedEngineVersion={row.engineVersion}
         currentEngineVersion={PBP_ENGINE_VERSION}
+        dynastyCta={dynastyCta}
       />
     );
   }

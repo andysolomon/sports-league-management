@@ -40,6 +40,11 @@ import OperatorHeader from "./layouts/OperatorHeader";
 import type { GamecastPanelSlots } from "./layouts/GamecastPanelSlots";
 import type { GamecastMode } from "./gamecast-transport-logic";
 import type { GamecastSpeed } from "./useAutoAdvance";
+import GamecastDynastyBanner from "./GamecastDynastyBanner";
+
+export interface GamecastDynastyCta {
+  leagueId: string;
+}
 
 function subscribeReducedMotion(cb: () => void): () => void {
   const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -92,6 +97,7 @@ export interface GamecastViewProps {
   engineVersionMismatch: boolean;
   storedEngineVersion: string;
   currentEngineVersion: string;
+  dynastyCta?: GamecastDynastyCta | null;
 }
 
 export default function GamecastView({
@@ -104,6 +110,7 @@ export default function GamecastView({
   engineVersionMismatch,
   storedEngineVersion,
   currentEngineVersion,
+  dynastyCta = null,
 }: GamecastViewProps) {
   const plays = useMemo(() => allPlays(log), [log]);
   const totalPlays = plays.length;
@@ -366,8 +373,13 @@ export default function GamecastView({
     </GamecastPlayByPlayCard>
   );
 
+  const postScoreboardBanner = dynastyCta ? (
+    <GamecastDynastyBanner leagueId={dynastyCta.leagueId} />
+  ) : null;
+
   const panels: GamecastPanelSlots = {
       scoreboard: <GamecastScoreboard {...scoreboardProps} />,
+      postScoreboardBanner,
       transport,
       situationStrip,
       fieldPosition: (

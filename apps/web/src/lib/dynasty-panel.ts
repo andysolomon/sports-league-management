@@ -149,6 +149,19 @@ export function evaluateStartNextSeason(input: {
   return { canStart: true, errorCode: null, message: null };
 }
 
+/** Whether gamecast should deep-link to the league dynasty panel. */
+export function shouldShowDynastyCta(input: {
+  gameFinal: boolean;
+  seasonDecided: boolean;
+  upcomingSeasonExists: boolean;
+}): boolean {
+  return (
+    input.gameFinal &&
+    input.seasonDecided &&
+    !input.upcomingSeasonExists
+  );
+}
+
 /** Format a successful rollover summary from action counts. */
 export function formatRolloverSuccessSummary(counts: {
   graduated: number;

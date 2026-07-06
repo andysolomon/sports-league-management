@@ -26,6 +26,7 @@ export default function OperatorLayout({ panels }: { panels: GamecastPanelSlots 
       <div className="border-b border-border bg-surface px-5 py-3 max-[900px]:hidden">
         {panels.operatorHeader}
       </div>
+      {panels.postScoreboardBanner}
 
       <div className="grid grid-cols-1 gap-[18px] p-5 lg:grid-cols-[250px_1fr_300px] max-[900px]:contents max-[900px]:p-0">
         <aside className="space-y-4 bg-surface max-[900px]:contents">
