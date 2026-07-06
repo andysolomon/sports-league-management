@@ -11,6 +11,7 @@ import {
 } from "@/lib/gamecast";
 import type { PbpPlay } from "@/lib/pbp";
 import { cn } from "@/lib/utils";
+import { computePlayListScrollTop } from "./play-list-scroll";
 
 export interface PlayListProps {
   groups: DrivePlayGroup[];
@@ -39,14 +40,35 @@ export default function PlayList({
   animate,
   onPlaySelect,
 }: PlayListProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const currentRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
-    currentRef.current?.scrollIntoView({
-      behavior: animate ? "smooth" : "auto",
-      block: "nearest",
-    });
-  }, [playIndex, animate]);
+    if (mode !== "sim") return;
+
+    const container = containerRef.current;
+    const row = currentRef.current;
+    if (!container || !row) return;
+
+    const rowTop =
+      row.getBoundingClientRect().top -
+      container.getBoundingClientRect().top +
+      container.scrollTop;
+    const targetTop = computePlayListScrollTop(
+      container.scrollTop,
+      container.clientHeight,
+      rowTop,
+      row.offsetHeight,
+    );
+
+    if (targetTop === null) return;
+
+    if (animate) {
+      container.scrollTo({ top: targetTop, behavior: "smooth" });
+    } else {
+      container.scrollTop = targetTop;
+    }
+  }, [playIndex, animate, mode]);
 
   if (groups.length === 0) {
     return (
@@ -62,7 +84,7 @@ export default function PlayList({
   }));
 
   return (
-    <div className="max-h-[28rem] overflow-y-auto">
+    <div ref={containerRef} className="max-h-[28rem] overflow-y-auto">
       {displayGroups.map((group) => {
         const team =
           group.teamId === homeTeamId ? homeTeam : awayTeam;

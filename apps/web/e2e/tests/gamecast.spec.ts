@@ -439,12 +439,14 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     await expect(page.getByText(/^Play 0\//)).toBeVisible();
 
     const startCounter = await readPlayCounter(page);
+    const y0 = await page.evaluate(() => window.scrollY);
     await page.getByRole("button", { name: "Play" }).click();
     await expect
       .poll(async () => (await readPlayCounter(page)).index, {
         timeout: 30_000,
       })
-      .toBeGreaterThan(startCounter.index);
+      .toBeGreaterThan(startCounter.index + 2);
+    expect(await page.evaluate(() => window.scrollY)).toBe(y0);
 
     await page.getByRole("button", { name: "Pause" }).click();
     const pausedIndex = (await readPlayCounter(page)).index;
