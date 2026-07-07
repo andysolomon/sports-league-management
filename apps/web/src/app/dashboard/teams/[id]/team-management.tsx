@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserCircle, Pencil, Trash2, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { ReleasePlayerButton } from "@/components/offseason/ReleasePlayerButton";
 
 interface TeamManagementProps {
   team: TeamDto;
@@ -409,37 +410,48 @@ export default function TeamManagement({
               }
               actions={
                 canManage
-                  ? (player) => (
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Edit ${player.name}`}
-                          onClick={() =>
-                            setModal({
-                              type: "editPlayer",
-                              player: player as unknown as PlayerDto,
-                            })
-                          }
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          aria-label={`Delete ${player.name}`}
-                          onClick={() =>
-                            setModal({
-                              type: "deletePlayer",
-                              player: player as unknown as PlayerDto,
-                            })
-                          }
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )
+                  ? (player) => {
+                      const rosterPlayer = player as unknown as PlayerDto;
+                      const isActive =
+                        rosterPlayer.status.toLowerCase() === "active";
+                      return (
+                        <div className="flex justify-end gap-2">
+                          {isActive && (
+                            <ReleasePlayerButton
+                              playerId={rosterPlayer.id}
+                              playerName={rosterPlayer.name}
+                            />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label={`Edit ${rosterPlayer.name}`}
+                            onClick={() =>
+                              setModal({
+                                type: "editPlayer",
+                                player: rosterPlayer,
+                              })
+                            }
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            aria-label={`Delete ${rosterPlayer.name}`}
+                            onClick={() =>
+                              setModal({
+                                type: "deletePlayer",
+                                player: rosterPlayer,
+                              })
+                            }
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      );
+                    }
                   : undefined
               }
             />

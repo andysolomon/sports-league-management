@@ -16,8 +16,12 @@ import {
   getSeasons,
   getTeamsByLeague,
   listFixturesBySeason,
+  listFreeAgents,
 } from "@/lib/data-api";
-import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
+import { canManageTeam } from "@/lib/authorization";
+import { resolveOrgContext, requireOrgAdmin, resolveOrgRole } from "@/lib/org-context";
+import { canManageOrgSettings } from "@/lib/permissions";
+import { OffseasonHub } from "@/components/offseason/OffseasonHub";
 import { summarizeClassDistribution } from "@/lib/class-year";
 import {
   dynastySeasonState,
@@ -132,6 +136,45 @@ export default async function SeasonHubPage({
   const champion = bracket?.champion ?? null;
   const topFive = standings.slice(0, 5);
 
+  const isUpcomingSeason = season.status === "upcoming";
+  let freeAgents: Awaited<ReturnType<typeof listFreeAgents>> = [];
+  let offseasonTeams: Awaited<ReturnType<typeof getTeamsByLeague>> = [];
+  let offseasonOrgRole: Awaited<ReturnType<typeof resolveOrgRole>> | null =
+    null;
+
+  if (isUpcomingSeason) {
+    [freeAgents, offseasonTeams, offseasonOrgRole] = await Promise.all([
+      listFreeAgents(league.id).catch(() => []),
+      getTeamsByLeague(league.id, orgContext).catch(() => []),
+      league.orgId
+        ? resolveOrgRole(league.orgId, userId).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+  }
+
+  let manageableTeams: { id: string; name: string }[] = [];
+  if (isUpcomingSeason && offseasonTeams.length > 0) {
+    const checks = await Promise.all(
+      offseasonTeams.map(async (team) => ({
+        id: team.id,
+        name: team.name,
+        canManage: await canManageTeam(team.id, userId),
+      })),
+    );
+    manageableTeams = checks
+      .filter((entry) => entry.canManage)
+      .map((entry) => ({ id: entry.id, name: entry.name }));
+  }
+  const offseasonIsAdmin = canManageOrgSettings(offseasonOrgRole);
+  const canSignFreeAgents = manageableTeams.length > 0;
+  const coachTeam =
+    !offseasonIsAdmin && manageableTeams.length === 1
+      ? manageableTeams[0]
+      : null;
+  const signTeams = offseasonIsAdmin
+    ? offseasonTeams.map((team) => ({ id: team.id, name: team.name }))
+    : manageableTeams;
+
   const seasonQuery = `?season=${season.id}`;
   const links = [
     scheduleEnabled && {
@@ -190,6 +233,18 @@ export default async function SeasonHubPage({
           </nav>
         )}
       </header>
+
+      {isUpcomingSeason && (
+        <OffseasonHub
+          seasonId={season.id}
+          seasonName={season.name}
+          agents={freeAgents}
+          teams={signTeams}
+          canSign={canSignFreeAgents}
+          isAdmin={offseasonIsAdmin}
+          coachTeam={coachTeam}
+        />
+      )}
 
       {champion && (
         <Card className="mb-6 border-primary/40">
