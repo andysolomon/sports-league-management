@@ -106,27 +106,34 @@ test.describe("Offseason free agency", () => {
     ).toHaveCount(0, { timeout: 60_000 });
 
     await page.goto(upcomingSeasonUrl!);
-    await expect(page.getByTestId("free-agency-panel")).toBeVisible({
+    const faPanel = page.getByTestId("free-agency-panel");
+    await expect(faPanel).toBeVisible({ timeout: 60_000 });
+    // The released player reached the pool (scoped to the panel).
+    await expect(faPanel.getByText(releasedName!).first()).toBeVisible({
       timeout: 60_000,
     });
-    await expect(page.getByText(releasedName!)).toBeVisible({ timeout: 60_000 });
 
-    const signBtn = page
-      .getByRole("button", { name: "Sign", exact: true })
-      .first();
-    await signBtn.click();
+    // Sign the first free agent; read its exact name from the row so every
+    // post-sign assertion targets the SAME player (not the arbitrary released
+    // one, and not the success toast which also carries a name).
+    const firstRow = faPanel.locator("tbody tr").first();
+    const signedName = (
+      await firstRow.locator("td").first().innerText()
+    ).trim();
+    await firstRow.getByRole("button", { name: "Sign", exact: true }).click();
     await page.getByLabel("Target team").click();
     await page.getByRole("option", { name: fixture!.awayTeamName }).click();
     await page.getByRole("button", { name: "Confirm sign" }).click();
-    await expect(page.getByText(/signed/i)).toBeVisible({ timeout: 60_000 });
 
-    await expect(page.getByText(releasedName!)).not.toBeVisible({
-      timeout: 60_000,
-    });
+    // The signed player leaves the pool (panel-scoped: the toast lives outside).
+    await expect(
+      faPanel.getByText(signedName, { exact: true }),
+    ).toHaveCount(0, { timeout: 60_000 });
 
+    // ...and appears on the destination team (deterministic Release aria-label).
     await page.goto(`/dashboard/teams/${fixture!.awayTeamId}`);
-    await expect(page.getByText(releasedName!)).toBeVisible({
-      timeout: 60_000,
-    });
+    await expect(
+      page.getByRole("button", { name: `Release ${signedName}` }),
+    ).toBeVisible({ timeout: 60_000 });
   });
 });
