@@ -98,10 +98,17 @@ test.describe("Offseason draft", () => {
       expect(name).toBeTruthy();
 
       await releaseBtn.click();
-      await page.getByRole("button", { name: "Release", exact: true }).click();
+      const dialog = page.getByRole("alertdialog");
+      await expect(dialog).toBeVisible({ timeout: 15_000 });
+      await dialog
+        .getByRole("button", { name: "Release", exact: true })
+        .click();
       await expect(
         page.getByRole("button", { name: `Release ${name}` }),
       ).toHaveCount(0, { timeout: 60_000 });
+      // Wait for the dialog to fully close before the next iteration so the
+      // roster re-render can't race the next release.
+      await expect(dialog).toHaveCount(0, { timeout: 15_000 });
     }
 
     await page.goto(upcomingSeasonUrl!);
