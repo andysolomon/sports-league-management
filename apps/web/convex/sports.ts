@@ -2786,14 +2786,14 @@ async function resolvePlayerOverall(
       .withIndex("by_playerId_seasonId", (q) =>
         q.eq("playerId", ratingPlayerId).eq("seasonId", seasonId),
       )
-      .unique();
+      .first();
     if (attr?.weightedOverall != null) return attr.weightedOverall;
   }
 
   const madden = await ctx.db
     .query("maddenRatings")
     .withIndex("by_playerId", (q) => q.eq("playerId", ratingPlayerId))
-    .unique();
+    .first();
   return madden?.overall ?? null;
 }
 
