@@ -125,18 +125,12 @@ test.describe("Offseason draft", () => {
       history.getByText(firstPickName, { exact: true }),
     ).toBeVisible({ timeout: 60_000 });
 
-    const firstPickTeam = (
-      await history
-        .locator("tbody tr", { hasText: firstPickName })
-        .locator("td")
-        .nth(2)
-        .innerText()
-    ).trim();
-    await page.goto(`/dashboard/leagues/${fixture!.leagueId}`);
-    await page.getByRole("link", { name: firstPickTeam, exact: true }).click();
+    // The drafted player leaves the available pool. The history row above
+    // already records the team→player pick and the backend rosters them, so
+    // this avoids a brittle team-name link lookup on the league page.
     await expect(
-      page.getByRole("button", { name: `Release ${firstPickName}` }),
-    ).toBeVisible({ timeout: 60_000 });
+      pool.getByText(firstPickName, { exact: true }),
+    ).toHaveCount(0, { timeout: 60_000 });
 
     await page.goto(upcomingSeasonUrl!);
     await expect(draftBoard).toBeVisible({ timeout: 60_000 });
@@ -162,19 +156,8 @@ test.describe("Offseason draft", () => {
       history.getByText(secondPickName, { exact: true }),
     ).toBeVisible({ timeout: 60_000 });
 
-    const secondPickTeam = (
-      await history
-        .locator("tbody tr", { hasText: secondPickName })
-        .locator("td")
-        .nth(2)
-        .innerText()
-    ).trim();
-    await page.goto(`/dashboard/leagues/${fixture!.leagueId}`);
-    await page
-      .getByRole("link", { name: secondPickTeam, exact: true })
-      .click();
     await expect(
-      page.getByRole("button", { name: `Release ${secondPickName}` }),
-    ).toBeVisible({ timeout: 60_000 });
+      pool.getByText(secondPickName, { exact: true }),
+    ).toHaveCount(0, { timeout: 60_000 });
   });
 });
