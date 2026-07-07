@@ -11,8 +11,11 @@
 import type * as e2eSeed from "../e2eSeed.js";
 import type * as lib_auditLog from "../lib/auditLog.js";
 import type * as lib_bracket from "../lib/bracket.js";
+import type * as lib_draft from "../lib/draft.js";
+import type * as lib_dynasty from "../lib/dynasty.js";
 import type * as lib_hsSprt from "../lib/hsSprt.js";
 import type * as lib_liveScore from "../lib/liveScore.js";
+import type * as lib_offseason from "../lib/offseason.js";
 import type * as lib_playerStats from "../lib/playerStats.js";
 import type * as lib_roundRobin from "../lib/roundRobin.js";
 import type * as lib_standings from "../lib/standings.js";
@@ -32,8 +35,11 @@ declare const fullApi: ApiFromModules<{
   e2eSeed: typeof e2eSeed;
   "lib/auditLog": typeof lib_auditLog;
   "lib/bracket": typeof lib_bracket;
+  "lib/draft": typeof lib_draft;
+  "lib/dynasty": typeof lib_dynasty;
   "lib/hsSprt": typeof lib_hsSprt;
   "lib/liveScore": typeof lib_liveScore;
+  "lib/offseason": typeof lib_offseason;
   "lib/playerStats": typeof lib_playerStats;
   "lib/roundRobin": typeof lib_roundRobin;
   "lib/standings": typeof lib_standings;

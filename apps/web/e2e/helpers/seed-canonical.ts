@@ -86,6 +86,14 @@ export async function seedCanonicalFixture(
         "[seed-canonical] Convex rejected the seed mutation — set CONVEX_ENABLE_E2E_SEED=1 on the target deployment.",
       );
     }
+    if (message.includes("BadAdminKey") || message.includes("admin key")) {
+      throw new Error(
+        "[seed-canonical] Convex rejected the admin key (BadAdminKey). " +
+          "CONVEX_ADMIN_KEY does not match this backend. A local anonymous " +
+          "backend's key rotates on every re-provision — re-sync it, or use a " +
+          "stable cloud-dev deploy key. See docs/development/LOCAL_TESTING.md.",
+      );
+    }
     throw err;
   }
   fs.writeFileSync(FIXTURE_FILE, JSON.stringify(fixture), "utf8");
