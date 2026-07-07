@@ -36,6 +36,8 @@ void internal.sports.ingestMaddenRatingsBatch;
 void internal.sports.ingestPlayerAttributesBatch;
 void internal.sports.rolloverGraduateAndAdvancePlayers;
 void internal.sports.removePlayersFromSeasonRoster;
+void internal.sports.releasePlayerToFreeAgency;
+void internal.sports.signFreeAgent;
 void internal.sports.updatePlayerAttributes;
 void internal.sports.setOrgMemberRole;
 void internal.sports.updateDivision;
@@ -172,6 +174,7 @@ type AllowedPublicSportsReads =
   | "listConferences"
   | "listDivisions"
   | "listFixturesBySeason"
+  | "listFreeAgents"
   | "listLeagues"
   | "listOrgMemberRoles"
   | "listPlayers"
