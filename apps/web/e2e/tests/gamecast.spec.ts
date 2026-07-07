@@ -440,7 +440,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
 
     const startCounter = await readPlayCounter(page);
     const y0 = await page.evaluate(() => window.scrollY);
-    await page.getByRole("button", { name: "Play" }).click();
+    await page.getByRole("button", { name: "Play", exact: true }).click();
     await expect
       .poll(async () => (await readPlayCounter(page)).index, {
         timeout: 30_000,
@@ -462,7 +462,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
       .getByRole("group", { name: "Simulation speed" })
       .getByRole("button", { name: "4×" })
       .click();
-    await page.getByRole("button", { name: "Play" }).click();
+    await page.getByRole("button", { name: "Play", exact: true }).click();
 
     const { total } = await readPlayCounter(page);
     await expect
@@ -491,19 +491,24 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     );
 
     await page.getByTestId("gamecast-layout-operator").click();
-    await expect(page.getByTestId("gamecast-operator-header")).toBeVisible();
+    const operatorHeader = page.getByTestId("gamecast-operator-header");
+    await expect(operatorHeader).toBeVisible();
     await expect(page.getByTestId("gamecast-operator-clock-chip")).toContainText(
       "Final",
     );
-    await expect(page.getByTestId("gamecast-score-home")).toContainText(
-      String(ctx.expectedHome),
-    );
+    // The operator layout renders the score inline in its mono header rather
+    // than the broadcast scoreboard's gamecast-score-home/away testids.
+    await expect(operatorHeader).toContainText(String(ctx.expectedHome));
+    await expect(operatorHeader).toContainText(String(ctx.expectedAway));
 
     await page.reload();
+    // The operator layout content is the deterministic post-hydration signal
+    // that the persisted choice was restored; wait for it before asserting the
+    // switcher button's aria state (which otherwise races client hydration).
+    await expect(page.getByTestId("gamecast-operator-header")).toBeVisible();
     await expect(
       page.getByTestId("gamecast-layout-operator"),
     ).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByTestId("gamecast-operator-header")).toBeVisible();
 
     await page.getByTestId("gamecast-layout-broadcast").click();
     await expect(
