@@ -283,4 +283,22 @@ describe("startNextSeasonAction success path", () => {
       expect.arrayContaining([expect.objectContaining({ grade: 9 })]),
     );
   });
+
+  it("routes freshmen to the free-agent pool when freshmenToPool is true", async () => {
+    await startNextSeasonAction({ leagueId: LEAGUE, freshmenToPool: true });
+    expect(mockBulkCreatePlayers).toHaveBeenCalledWith(
+      "team_1",
+      expect.arrayContaining([
+        expect.objectContaining({ grade: 9, status: "free_agent" }),
+      ]),
+    );
+  });
+
+  it("auto-assigns freshmen with Active status by default", async () => {
+    await startNextSeasonAction({ leagueId: LEAGUE });
+    expect(mockBulkCreatePlayers).toHaveBeenCalledWith(
+      "team_1",
+      expect.arrayContaining([expect.objectContaining({ status: "Active" })]),
+    );
+  });
 });

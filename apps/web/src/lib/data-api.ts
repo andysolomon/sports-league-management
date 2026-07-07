@@ -608,6 +608,58 @@ const refs = {
     },
     { playerId: string; teamId: string; overCap: boolean }
   >("sports:signFreeAgent"),
+  startDraft: mutationRef<
+    { leagueId: string; seasonId: string },
+    { draftId: string; order: string[] }
+  >("sports:startDraft"),
+  makeDraftPick: mutationRef<
+    { draftId: string; playerId: string; actorUserId: string },
+    {
+      id: string;
+      leagueId: string;
+      seasonId: string;
+      type: string;
+      rounds: number;
+      order: string[];
+      status: string;
+      currentPick: number;
+      onClockTeamId: string | null;
+      picks: Array<{
+        id: string;
+        round: number;
+        pickNumber: number;
+        teamId: string;
+        playerId: string;
+        madeAt: number;
+      }>;
+    }
+  >("sports:makeDraftPick"),
+  endDraft: mutationRef<
+    { draftId: string },
+    { draftId: string; status: string }
+  >("sports:endDraft"),
+  getDraft: queryRef<
+    { seasonId: string },
+    {
+      id: string;
+      leagueId: string;
+      seasonId: string;
+      type: string;
+      rounds: number;
+      order: string[];
+      status: string;
+      currentPick: number;
+      onClockTeamId: string | null;
+      picks: Array<{
+        id: string;
+        round: number;
+        pickNumber: number;
+        teamId: string;
+        playerId: string;
+        madeAt: number;
+      }>;
+    } | null
+  >("sports:getDraft"),
   listFreeAgents: queryRef<
     { leagueId: string },
     Array<{
@@ -1939,6 +1991,51 @@ export async function signFreeAgent(input: {
   actorUserId: string;
 }): Promise<{ playerId: string; teamId: string; overCap: boolean }> {
   return mutateConvex(refs.signFreeAgent, input);
+}
+
+export type DraftDto = {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  type: string;
+  rounds: number;
+  order: string[];
+  status: string;
+  currentPick: number;
+  onClockTeamId: string | null;
+  picks: Array<{
+    id: string;
+    round: number;
+    pickNumber: number;
+    teamId: string;
+    playerId: string;
+    madeAt: number;
+  }>;
+};
+
+export async function startDraft(input: {
+  leagueId: string;
+  seasonId: string;
+}): Promise<{ draftId: string; order: string[] }> {
+  return mutateConvex(refs.startDraft, input);
+}
+
+export async function makeDraftPick(input: {
+  draftId: string;
+  playerId: string;
+  actorUserId: string;
+}): Promise<DraftDto> {
+  return mutateConvex(refs.makeDraftPick, input);
+}
+
+export async function endDraft(input: {
+  draftId: string;
+}): Promise<{ draftId: string; status: string }> {
+  return mutateConvex(refs.endDraft, input);
+}
+
+export async function getDraft(seasonId: string): Promise<DraftDto | null> {
+  return queryConvex(refs.getDraft, { seasonId });
 }
 
 export async function listFreeAgents(leagueId: string): Promise<

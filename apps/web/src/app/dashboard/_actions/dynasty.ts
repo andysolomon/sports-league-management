@@ -57,6 +57,7 @@ function activeRosterCount(players: PlayerDto[]): number {
 
 export async function startNextSeasonAction(input: {
   leagueId: string;
+  freshmenToPool?: boolean;
 }): Promise<RolloverResult> {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "unauthorized" };
@@ -193,8 +194,11 @@ export async function startNextSeasonAction(input: {
         excludeNames: Array.from(usedNames),
         seed: seedFromString(`${team.id}:${nextSeason.id}`),
       });
-      for (const p of batch) usedNames.add(p.name);
-      const { created } = await bulkCreatePlayers(team.id, batch);
+      const players = input.freshmenToPool
+        ? batch.map((p) => ({ ...p, status: "free_agent" }))
+        : batch;
+      for (const p of players) usedNames.add(p.name);
+      const { created } = await bulkCreatePlayers(team.id, players);
       freshmen += created;
     }
 
