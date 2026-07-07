@@ -7,8 +7,14 @@ import {
   listFixturesBySeason,
   computeStandings,
   getPlayoffBracket,
+  getTeamsByLeague,
+  getTeamRosterLimitStatus,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
+import {
+  teamsBelowTargetRoster,
+  type UndersizedTeam,
+} from "@/lib/offseason-activate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/status-badge";
@@ -106,6 +112,27 @@ function SeasonArchiveSummary({ archive }: { archive: SeasonArchive | undefined 
   );
 }
 
+async function fetchUndersizedTeamsForSeason(
+  seasonId: string,
+  leagueId: string,
+  orgContext: Awaited<ReturnType<typeof resolveOrgContext>>,
+): Promise<UndersizedTeam[]> {
+  const teams = await getTeamsByLeague(leagueId, orgContext).catch(() => []);
+  const rosterSizes = await Promise.all(
+    teams.map(async (team) => {
+      const status = await getTeamRosterLimitStatus(seasonId, team.id).catch(
+        () => ({ activeCount: 0 }),
+      );
+      return {
+        id: team.id,
+        name: team.name,
+        activeCount: status.activeCount,
+      };
+    }),
+  );
+  return teamsBelowTargetRoster(rosterSizes);
+}
+
 export default async function SeasonsPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
@@ -123,6 +150,21 @@ export default async function SeasonsPage() {
         async (season) =>
           [season.id, await fetchSeasonArchive(season.id)] as const,
       ),
+    ),
+  );
+
+  const undersizedBySeason = new Map(
+    await Promise.all(
+      seasons
+        .filter((season) => season.status === "upcoming")
+        .map(async (season) => {
+          const undersized = await fetchUndersizedTeamsForSeason(
+            season.id,
+            season.leagueId,
+            orgContext,
+          );
+          return [season.id, undersized] as const;
+        }),
     ),
   );
 
@@ -193,7 +235,10 @@ export default async function SeasonsPage() {
                               archive={seasonArchives.get(season.id)}
                             />
                           </div>
-                          <SeasonRowActions season={season} />
+                          <SeasonRowActions
+                            season={season}
+                            undersizedTeams={undersizedBySeason.get(season.id) ?? []}
+                          />
                         </li>
                       ))}
                     </ul>
