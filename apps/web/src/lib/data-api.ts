@@ -595,6 +595,30 @@ const refs = {
     { leagueId: string; seasonId: string; playerIds: string[] },
     { removedAssignments: number; removedDepthEntries: number }
   >("sports:removePlayersFromSeasonRoster"),
+  releasePlayerToFreeAgency: mutationRef<
+    { playerId: string },
+    { playerId: string }
+  >("sports:releasePlayerToFreeAgency"),
+  signFreeAgent: mutationRef<
+    {
+      playerId: string;
+      teamId: string;
+      seasonId: string;
+      actorUserId: string;
+    },
+    { playerId: string; teamId: string; overCap: boolean }
+  >("sports:signFreeAgent"),
+  listFreeAgents: queryRef<
+    { leagueId: string },
+    Array<{
+      id: string;
+      name: string;
+      position: string;
+      grade: number | null;
+      overall: number | null;
+      teamId: string;
+    }>
+  >("sports:listFreeAgents"),
   generatePlayoffBracket: mutationRef<
     {
       seasonId: string;
@@ -1900,6 +1924,34 @@ export async function removePlayersFromSeasonRoster(input: {
   playerIds: string[];
 }): Promise<{ removedAssignments: number; removedDepthEntries: number }> {
   return mutateConvex(refs.removePlayersFromSeasonRoster, input);
+}
+
+export async function releasePlayerToFreeAgency(input: {
+  playerId: string;
+}): Promise<{ playerId: string }> {
+  return mutateConvex(refs.releasePlayerToFreeAgency, input);
+}
+
+export async function signFreeAgent(input: {
+  playerId: string;
+  teamId: string;
+  seasonId: string;
+  actorUserId: string;
+}): Promise<{ playerId: string; teamId: string; overCap: boolean }> {
+  return mutateConvex(refs.signFreeAgent, input);
+}
+
+export async function listFreeAgents(leagueId: string): Promise<
+  Array<{
+    id: string;
+    name: string;
+    position: string;
+    grade: number | null;
+    overall: number | null;
+    teamId: string;
+  }>
+> {
+  return queryConvex(refs.listFreeAgents, { leagueId });
 }
 
 export async function listSeasonPlayerAttributes(seasonId: string): Promise<
