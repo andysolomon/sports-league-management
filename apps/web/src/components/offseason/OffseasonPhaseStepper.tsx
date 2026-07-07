@@ -1,7 +1,7 @@
 import { Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type OffseasonActivePhase = "free_agency";
+export type DraftPhaseStatus = "none" | "active" | "complete";
 
 interface PhaseDef {
   id: string;
@@ -9,23 +9,33 @@ interface PhaseDef {
   state: "complete" | "active" | "upcoming" | "disabled";
 }
 
-const PHASES: PhaseDef[] = [
-  { id: "rollover", label: "Rollover", state: "complete" },
-  { id: "draft", label: "Draft", state: "disabled" },
-  { id: "free_agency", label: "Free agency", state: "active" },
-  { id: "activate", label: "Activate", state: "upcoming" },
-];
+function buildPhases(draftStatus: DraftPhaseStatus): PhaseDef[] {
+  const draftState: PhaseDef["state"] =
+    draftStatus === "none"
+      ? "disabled"
+      : draftStatus === "active"
+        ? "active"
+        : "complete";
+
+  const freeAgencyState: PhaseDef["state"] =
+    draftStatus === "active" ? "upcoming" : "active";
+
+  return [
+    { id: "rollover", label: "Rollover", state: "complete" },
+    { id: "draft", label: "Draft", state: draftState },
+    { id: "free_agency", label: "Free agency", state: freeAgencyState },
+    { id: "activate", label: "Activate", state: "upcoming" },
+  ];
+}
 
 export interface OffseasonPhaseStepperProps {
-  activePhase?: OffseasonActivePhase;
+  draftStatus?: DraftPhaseStatus;
 }
 
 export function OffseasonPhaseStepper({
-  activePhase = "free_agency",
+  draftStatus = "none",
 }: OffseasonPhaseStepperProps) {
-  const phases = PHASES.map((phase) =>
-    phase.id === activePhase ? { ...phase, state: "active" as const } : phase,
-  );
+  const phases = buildPhases(draftStatus);
 
   return (
     <nav

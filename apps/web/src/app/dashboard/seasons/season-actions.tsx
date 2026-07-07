@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, CheckCircle2, Users, Trophy } from "lucide-react";
+import type { UndersizedTeam } from "@/lib/offseason-activate";
+import { ActivateSeasonWarningDialog } from "@/components/offseason/ActivateSeasonWarningDialog";
 import {
   createSeasonAction,
   updateSeasonAction,
@@ -356,7 +358,13 @@ export function CopyRostersButton({ season }: { season: SeasonDto }) {
   );
 }
 
-export function SeasonRowActions({ season }: { season: SeasonDto }) {
+export function SeasonRowActions({
+  season,
+  undersizedTeams = [],
+}: {
+  season: SeasonDto;
+  undersizedTeams?: UndersizedTeam[];
+}) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(season.name);
@@ -370,19 +378,29 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
     season.divisionWinnersQualify ?? false,
   );
   const [busy, setBusy] = useState(false);
+  const [activateWarningOpen, setActivateWarningOpen] = useState(false);
 
   const isActive = season.status === "active";
 
-  async function activate() {
+  async function runActivate() {
     setBusy(true);
     const res = await activateSeasonAction(season.id);
     setBusy(false);
     if (res.ok) {
       toast.success(`${season.name} is now the active season.`);
+      setActivateWarningOpen(false);
       router.refresh();
     } else {
       toast.error(res.error === "not_admin" ? "Only league admins can do that." : res.error);
     }
+  }
+
+  function activate() {
+    if (undersizedTeams.length > 0) {
+      setActivateWarningOpen(true);
+      return;
+    }
+    void runActivate();
   }
 
   async function complete() {
@@ -512,49 +530,59 @@ export function SeasonRowActions({ season }: { season: SeasonDto }) {
   }
 
   return (
-    <div className="flex items-center gap-1">
-      {!isActive && (
+    <>
+      <div className="flex items-center gap-1">
+        {!isActive && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={activate}
+            aria-label={`Make ${season.name} active`}
+          >
+            <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+            Make active
+          </Button>
+        )}
+        {isActive && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy}
+            onClick={complete}
+            aria-label={`Complete ${season.name}`}
+          >
+            <Trophy className="mr-1 h-3.5 w-3.5" />
+            Complete
+          </Button>
+        )}
+        <CopyRostersButton season={season} />
         <Button
           size="sm"
-          variant="outline"
-          disabled={busy}
-          onClick={activate}
-          aria-label={`Make ${season.name} active`}
+          variant="ghost"
+          onClick={() => setEditing(true)}
+          aria-label={`Edit ${season.name}`}
         >
-          <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-          Make active
+          <Pencil className="h-3.5 w-3.5" />
         </Button>
-      )}
-      {isActive && (
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           disabled={busy}
-          onClick={complete}
-          aria-label={`Complete ${season.name}`}
+          onClick={remove}
+          aria-label={`Delete ${season.name}`}
         >
-          <Trophy className="mr-1 h-3.5 w-3.5" />
-          Complete
+          <Trash2 className="h-4 w-4 text-destructive" />
         </Button>
-      )}
-      <CopyRostersButton season={season} />
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={() => setEditing(true)}
-        aria-label={`Edit ${season.name}`}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </Button>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={busy}
-        onClick={remove}
-        aria-label={`Delete ${season.name}`}
-      >
-        <Trash2 className="h-4 w-4 text-destructive" />
-      </Button>
-    </div>
+      </div>
+      <ActivateSeasonWarningDialog
+        open={activateWarningOpen}
+        seasonName={season.name}
+        undersizedTeams={undersizedTeams}
+        busy={busy}
+        onCancel={() => setActivateWarningOpen(false)}
+        onConfirm={() => void runActivate()}
+      />
+    </>
   );
 }

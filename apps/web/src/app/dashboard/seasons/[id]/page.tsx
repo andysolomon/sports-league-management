@@ -17,6 +17,7 @@ import {
   getTeamsByLeague,
   listFixturesBySeason,
   listFreeAgents,
+  getDraft,
 } from "@/lib/data-api";
 import { canManageTeam } from "@/lib/authorization";
 import { resolveOrgContext, requireOrgAdmin, resolveOrgRole } from "@/lib/org-context";
@@ -141,15 +142,23 @@ export default async function SeasonHubPage({
   let offseasonTeams: Awaited<ReturnType<typeof getTeamsByLeague>> = [];
   let offseasonOrgRole: Awaited<ReturnType<typeof resolveOrgRole>> | null =
     null;
+  let draft: Awaited<ReturnType<typeof getDraft>> = null;
+  let playerNames: Record<string, string> = {};
 
   if (isUpcomingSeason) {
-    [freeAgents, offseasonTeams, offseasonOrgRole] = await Promise.all([
+    [freeAgents, offseasonTeams, offseasonOrgRole, draft] = await Promise.all([
       listFreeAgents(league.id).catch(() => []),
       getTeamsByLeague(league.id, orgContext).catch(() => []),
       league.orgId
         ? resolveOrgRole(league.orgId, userId).catch(() => null)
         : Promise.resolve(null),
+      getDraft(season.id).catch(() => null),
     ]);
+
+    const leaguePlayers = await getPlayers([league.id]).catch(() => []);
+    playerNames = Object.fromEntries(
+      leaguePlayers.map((player) => [player.id, player.name]),
+    );
   }
 
   let manageableTeams: { id: string; name: string }[] = [];
@@ -236,6 +245,7 @@ export default async function SeasonHubPage({
 
       {isUpcomingSeason && (
         <OffseasonHub
+          leagueId={league.id}
           seasonId={season.id}
           seasonName={season.name}
           agents={freeAgents}
@@ -243,6 +253,8 @@ export default async function SeasonHubPage({
           canSign={canSignFreeAgents}
           isAdmin={offseasonIsAdmin}
           coachTeam={coachTeam}
+          draft={draft}
+          playerNames={playerNames}
         />
       )}
 
