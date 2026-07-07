@@ -35,6 +35,7 @@ import { squadForGrade } from "./lib/dynasty";
 import {
   targetRosterSize,
 } from "./lib/offseason";
+import { pickRound, teamOnClock } from "./lib/draft";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -4589,6 +4590,284 @@ export const listFreeAgents = queryGeneric({
       })),
     );
     return sortByName(rows);
+  },
+});
+
+/* ───────────────────── Offseason draft (WSM-000233) ───────────────────── */
+
+const DRAFT_ROUNDS = 3;
+
+const draftPickDtoValidator = v.object({
+  id: v.string(),
+  round: v.number(),
+  pickNumber: v.number(),
+  teamId: v.string(),
+  playerId: v.string(),
+  madeAt: v.number(),
+});
+
+const draftDtoValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  seasonId: v.string(),
+  type: v.string(),
+  rounds: v.number(),
+  order: v.array(v.string()),
+  status: v.string(),
+  currentPick: v.number(),
+  onClockTeamId: v.union(v.string(), v.null()),
+  picks: v.array(draftPickDtoValidator),
+});
+
+async function loadDraftPicks(
+  ctx: QueryCtx | MutationCtx,
+  draftId: Id<"drafts">,
+) {
+  return ctx.db
+    .query("draftPicks")
+    .withIndex("by_draftId", (q) => q.eq("draftId", draftId))
+    .collect();
+}
+
+async function toDraftDto(
+  ctx: QueryCtx | MutationCtx,
+  draft: {
+    _id: Id<"drafts">;
+    leagueId: Id<"leagues">;
+    seasonId: Id<"seasons">;
+    type: string;
+    rounds: number;
+    order: Id<"teams">[];
+    status: string;
+    currentPick: number;
+  },
+) {
+  const picks = await loadDraftPicks(ctx, draft._id);
+  const sortedPicks = picks.sort((a, b) => a.pickNumber - b.pickNumber);
+  const onClockTeamId =
+    draft.status === "active"
+      ? teamOnClock(
+          draft.order.map((id) => id as string),
+          draft.currentPick,
+          draft.rounds,
+        )
+      : null;
+  return {
+    id: draft._id as string,
+    leagueId: draft.leagueId as string,
+    seasonId: draft.seasonId as string,
+    type: draft.type,
+    rounds: draft.rounds,
+    order: draft.order.map((id) => id as string),
+    status: draft.status,
+    currentPick: draft.currentPick,
+    onClockTeamId,
+    picks: sortedPicks.map((p) => ({
+      id: p._id as string,
+      round: p.round,
+      pickNumber: p.pickNumber,
+      teamId: p.teamId as string,
+      playerId: p.playerId as string,
+      madeAt: p.madeAt,
+    })),
+  };
+}
+
+async function resolveStandingsSeasonForDraft(
+  ctx: MutationCtx,
+  leagueId: Id<"leagues">,
+  draftSeasonId: Id<"seasons">,
+): Promise<Id<"seasons">> {
+  const seasons = await ctx.db
+    .query("seasons")
+    .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+    .collect();
+  const active = seasons.find(
+    (s) => s.status === "active" && s._id !== draftSeasonId,
+  );
+  if (active) return active._id;
+  const completed = seasons
+    .filter((s) => s.status === "completed" && s._id !== draftSeasonId)
+    .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? ""));
+  if (completed[0]) return completed[0]._id;
+  throw new Error("no_standings_season");
+}
+
+export const startDraft = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+  },
+  returns: v.object({
+    draftId: v.string(),
+    order: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (season.leagueId !== args.leagueId) {
+      throw new Error("league_season_mismatch");
+    }
+
+    const existing = await ctx.db
+      .query("drafts")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .first();
+    if (existing) throw new Error("draft_exists");
+
+    const freeAgents = await ctx.db
+      .query("players")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    if (!freeAgents.some((p) => p.status === "free_agent")) {
+      throw new Error("empty_pool");
+    }
+
+    const standingsSeasonId = await resolveStandingsSeasonForDraft(
+      ctx,
+      args.leagueId,
+      args.seasonId,
+    );
+    const standingsSeason = await ctx.db.get(standingsSeasonId);
+    if (!standingsSeason) throw new Error("no_standings_season");
+
+    const standingOrder = await seasonStandingTeamIds(ctx, standingsSeason);
+    const order = [...standingOrder].reverse() as Id<"teams">[];
+
+    const draftId = await ctx.db.insert("drafts", {
+      leagueId: args.leagueId,
+      seasonId: args.seasonId,
+      type: "snake",
+      rounds: DRAFT_ROUNDS,
+      order,
+      status: "active",
+      currentPick: 1,
+    });
+
+    return {
+      draftId: draftId as string,
+      order: order.map((id) => id as string),
+    };
+  },
+});
+
+export const makeDraftPick = internalMutation({
+  args: {
+    draftId: v.id("drafts"),
+    playerId: v.id("players"),
+    actorUserId: v.string(),
+  },
+  returns: draftDtoValidator,
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId);
+    if (!draft) throw new Error("draft_not_found");
+    if (draft.status !== "active") throw new Error("draft_not_active");
+
+    const teamCount = draft.order.length;
+    const totalPicks = draft.rounds * teamCount;
+    if (draft.currentPick > totalPicks) throw new Error("draft_complete");
+
+    const existingSlot = await ctx.db
+      .query("draftPicks")
+      .withIndex("by_draftId_pickNumber", (q) =>
+        q.eq("draftId", args.draftId).eq("pickNumber", draft.currentPick),
+      )
+      .first();
+    if (existingSlot) throw new Error("pick_already_made");
+
+    const onClockId = teamOnClock(
+      draft.order.map((id) => id as string),
+      draft.currentPick,
+      draft.rounds,
+    );
+    if (!onClockId) throw new Error("draft_complete");
+
+    const player = await ctx.db.get(args.playerId);
+    if (!player) throw new Error("player_not_found");
+    if (player.status !== "free_agent") {
+      throw new Error("player_not_free_agent");
+    }
+    if (player.leagueId !== draft.leagueId) {
+      throw new Error("player_league_mismatch");
+    }
+
+    const priorPicks = await loadDraftPicks(ctx, args.draftId);
+    if (priorPicks.some((p) => p.playerId === args.playerId)) {
+      throw new Error("player_already_drafted");
+    }
+
+    const teamId = onClockId as Id<"teams">;
+    const seasonId = draft.seasonId;
+    const positionSlot = player.position;
+
+    await ctx.db.patch(args.playerId, {
+      status: "active",
+      teamId,
+    });
+
+    await assignPlayerToRosterCore(ctx, {
+      seasonId,
+      teamId,
+      playerId: args.playerId,
+      positionSlot,
+      actorUserId: args.actorUserId,
+      enforceRosterLimit: false,
+    });
+
+    await appendDefaultDepthChartSlot(ctx, {
+      teamId,
+      seasonId,
+      playerId: args.playerId,
+      positionSlot,
+    });
+
+    const round = pickRound(draft.currentPick, teamCount);
+    await ctx.db.insert("draftPicks", {
+      draftId: args.draftId,
+      round,
+      pickNumber: draft.currentPick,
+      teamId,
+      playerId: args.playerId,
+      madeAt: Date.now(),
+    });
+
+    const nextPick = draft.currentPick + 1;
+    const isComplete = nextPick > totalPicks;
+    await ctx.db.patch(args.draftId, {
+      currentPick: nextPick,
+      status: isComplete ? "complete" : "active",
+    });
+
+    const updated = await ctx.db.get(args.draftId);
+    if (!updated) throw new Error("draft_not_found");
+    return await toDraftDto(ctx, updated);
+  },
+});
+
+export const endDraft = internalMutation({
+  args: { draftId: v.id("drafts") },
+  returns: v.object({
+    draftId: v.string(),
+    status: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const draft = await ctx.db.get(args.draftId);
+    if (!draft) throw new Error("draft_not_found");
+    await ctx.db.patch(args.draftId, { status: "complete" });
+    return { draftId: args.draftId as string, status: "complete" };
+  },
+});
+
+export const getDraft = queryGeneric({
+  args: { seasonId: v.id("seasons") },
+  returns: v.union(draftDtoValidator, v.null()),
+  handler: async (ctx, args) => {
+    const draft = await ctx.db
+      .query("drafts")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .first();
+    if (!draft) return null;
+    return await toDraftDto(ctx, draft);
   },
 });
 

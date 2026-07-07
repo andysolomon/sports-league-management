@@ -38,6 +38,9 @@ void internal.sports.rolloverGraduateAndAdvancePlayers;
 void internal.sports.removePlayersFromSeasonRoster;
 void internal.sports.releasePlayerToFreeAgency;
 void internal.sports.signFreeAgent;
+void internal.sports.startDraft;
+void internal.sports.makeDraftPick;
+void internal.sports.endDraft;
 void internal.sports.updatePlayerAttributes;
 void internal.sports.setOrgMemberRole;
 void internal.sports.updateDivision;
@@ -129,6 +132,7 @@ type AllowedPublicSportsReads =
   | "computeSeasonSprt"
   | "computeStandings"
   | "computeStandingsPublic"
+  | "getDraft"
   | "getDepthChartByTeamSeason"
   | "getDivision"
   | "getFixture"
