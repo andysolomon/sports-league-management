@@ -84,20 +84,25 @@ test.describe("Offseason draft", () => {
     });
 
     await page.goto(`/dashboard/teams/${fixture!.homeTeamId}`);
-    const releaseBtn = page
-      .getByRole("button", { name: /Release / })
-      .first();
-    await expect(releaseBtn).toBeVisible({ timeout: 60_000 });
-    const releasedName = (
-      await releaseBtn.getAttribute("aria-label")
-    )?.replace(/^Release /, "");
-    expect(releasedName).toBeTruthy();
+    // Seed the free-agent pool with several players — the draft makes two
+    // picks, so one released player is not enough (the pool would empty after
+    // the first pick).
+    for (let i = 0; i < 3; i++) {
+      const releaseBtn = page
+        .getByRole("button", { name: /^Release / })
+        .first();
+      await expect(releaseBtn).toBeVisible({ timeout: 60_000 });
+      const name = (
+        await releaseBtn.getAttribute("aria-label")
+      )?.replace(/^Release /, "");
+      expect(name).toBeTruthy();
 
-    await releaseBtn.click();
-    await page.getByRole("button", { name: "Release", exact: true }).click();
-    await expect(
-      page.getByRole("button", { name: `Release ${releasedName}` }),
-    ).toHaveCount(0, { timeout: 60_000 });
+      await releaseBtn.click();
+      await page.getByRole("button", { name: "Release", exact: true }).click();
+      await expect(
+        page.getByRole("button", { name: `Release ${name}` }),
+      ).toHaveCount(0, { timeout: 60_000 });
+    }
 
     await page.goto(upcomingSeasonUrl!);
     const draftToggle = page.getByTestId("draft-start-toggle");
