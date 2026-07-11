@@ -30,6 +30,13 @@
 | [sprints/SPRINT_2025_10_E2E_PLAN.md](sprints/SPRINT_2025_10_E2E_PLAN.md) | E2E test coverage for Sprint 2025.10 stories |
 | [sprints/SPRINT_0_VERIFICATION.md](sprints/SPRINT_0_VERIFICATION.md) | Sprint 0 platform-foundation close-out: release automation, commit enforcement, branching (WSM-000047..WSM-000056) |
 
+## Design handoffs
+
+| Document | Description |
+|---|---|
+| [design_handoff/README.md](design_handoff/README.md) | High-fidelity design references (prototypes, screenshots, implementation specs) |
+| [design_handoff/gamecast/README.md](design_handoff/gamecast/README.md) | Gamecast redesign — Sim & Review modes |
+
 ## Architecture and Decisions
 
 | Document | Description |

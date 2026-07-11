@@ -95,3 +95,7 @@ validation.md
 
 # Local dogfood sweep artifacts (report + screenshots/videos)
 dogfood-output/
+
+# Convex ai-files install at repo root (backend lives in apps/web/convex/)
+/AGENTS.md
+/convex/
