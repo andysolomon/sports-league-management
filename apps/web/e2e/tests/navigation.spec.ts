@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 
 const NAV_ITEMS = [
   { label: "Overview", href: "/dashboard" },
@@ -79,5 +80,46 @@ test.describe("Dashboard Navigation", () => {
     await page.goto("/dashboard");
 
     await expect(page.locator('nav[role="navigation"]')).toBeVisible();
+  });
+});
+
+test.describe("League workspace back navigation (WSM-000236)", () => {
+  test.beforeEach(async ({ page }) => {
+    await setupClerkTestingToken({ page });
+    await setActiveLeague(page, readCanonicalFixture().leagueId);
+  });
+
+  test("schedule page Back to League navigates without query params", async ({
+    page,
+  }) => {
+    const { leagueId } = readCanonicalFixture();
+    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+
+    const workspace = page.locator("main");
+    await expect(workspace.getByRole("searchbox")).toHaveCount(0);
+    await expect(workspace.getByText("⌘K")).toHaveCount(0);
+    await expect(workspace.getByRole("button", { name: /rename/i })).toHaveCount(
+      0,
+    );
+
+    await page.getByRole("link", { name: "Back to League" }).click();
+    await expect(page).toHaveURL(`/dashboard/leagues/${leagueId}`);
+  });
+
+  test("playoffs page Back to League navigates without query params", async ({
+    page,
+  }) => {
+    const { leagueId } = readCanonicalFixture();
+    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+
+    const workspace = page.locator("main");
+    await expect(workspace.getByRole("searchbox")).toHaveCount(0);
+    await expect(workspace.getByText("⌘K")).toHaveCount(0);
+    await expect(workspace.getByRole("button", { name: /rename/i })).toHaveCount(
+      0,
+    );
+
+    await page.getByRole("link", { name: "Back to League" }).click();
+    await expect(page).toHaveURL(`/dashboard/leagues/${leagueId}`);
   });
 });

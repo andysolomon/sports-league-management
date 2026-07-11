@@ -25,9 +25,9 @@ import { TEAMS } from "../helpers/test-data";
  * (WSM-000064): CONVEX_ENABLE_E2E_SEED=1 on target Convex,
  * E2E_CLERK_USER_ID + E2E_CLERK_ORG_ID in the Playwright env.
  *
- * Rebuilt for #436: the dashboard schedule/standings pages now head with
- * <h2>{league.name}</h2> and a non-heading "Schedule/Standings · {season}"
- * subtitle ("Season standings" is a CardTitle div, not a heading role), and
+ * Rebuilt for #436 / WSM-000236: the dashboard schedule/standings pages head
+ * with <h1>{league.name}</h1> and a context sub-line "Schedule/Standings ·
+ * {season}" ("Season standings" is a CardTitle div, not a heading role), and
  * the StatusBadge renders the canonical capitalized label ("Final", not the
  * raw "final" status). The seeded league is named "E2E:{fixtureKey}" by the
  * Convex harness.

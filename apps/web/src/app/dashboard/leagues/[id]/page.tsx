@@ -20,9 +20,10 @@ import {
 import { DynastyPanel } from "@/components/dynasty/DynastyPanel";
 import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy } from "lucide-react";
+import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import InviteForm from "./invite-form";
 import InvitationList from "./invitation-list";
 import InviteLinkSection from "./invite-link-section";
@@ -123,40 +124,51 @@ export default async function LeagueDetailPage({
     ...decidedCtx,
   });
 
+  const contextParts: string[] = [];
+  if (teams.length > 0) {
+    contextParts.push(
+      `${teams.length} team${teams.length === 1 ? "" : "s"}`,
+    );
+  }
+  contextParts.push(
+    `${seasons.length} season${seasons.length === 1 ? "" : "s"}`,
+  );
+
   return (
     <div>
-      <Link
-        href="/dashboard/leagues"
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to Leagues
-      </Link>
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Leagues", href: "/dashboard/leagues" },
+          { label: league.name },
+        ]}
+      />
+      <WorkspaceHeader
+        title={league.name}
+        status={
+          league.orgId ? (
+            <Badge variant="secondary" className="shrink-0">
+              Organization
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="shrink-0">
+              Public
+            </Badge>
+          )
+        }
+        sub={contextParts.join(" · ")}
+        actions={
+          isAdmin && league.orgId ? (
+            <div className="flex items-center gap-1">
+              <RenameLeagueForm leagueId={id} currentName={league.name} />
+              <DeleteLeagueButton leagueId={id} leagueName={league.name} />
+            </div>
+          ) : undefined
+        }
+      />
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-3">
-              <Trophy className="h-5 w-5 shrink-0 text-primary" />
-              <CardTitle className="truncate">{league.name}</CardTitle>
-              {league.orgId ? (
-                <Badge variant="secondary" className="shrink-0">
-                  Organization
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="shrink-0">
-                  Public
-                </Badge>
-              )}
-            </div>
-            {isAdmin && league.orgId && (
-              <div className="flex items-center gap-1">
-                <RenameLeagueForm leagueId={id} currentName={league.name} />
-                <DeleteLeagueButton leagueId={id} leagueName={league.name} />
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isAdmin && league.orgId && (
             <div className="space-y-6">
               <InviteForm orgId={league.orgId} />

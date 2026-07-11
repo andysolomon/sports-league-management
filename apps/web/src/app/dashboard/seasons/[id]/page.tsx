@@ -34,6 +34,10 @@ import { regularSeasonProgress } from "@/lib/playoffs";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
+import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
+import { BackLink } from "@/components/workspace/BackLink";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 
 /**
  * Season hub (WSM-000213): one home per season. Progress, standings snapshot,
@@ -206,42 +210,32 @@ export default async function SeasonHubPage({
 
   return (
     <div className="mx-auto max-w-4xl">
-      <Link
-        href="/dashboard/seasons"
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to Seasons
-      </Link>
-
-      <header className="mb-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-bold text-foreground">{season.name}</h2>
-          <StatusBadge status={season.status} />
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          <Link
-            href={`/dashboard/leagues/${league.id}`}
-            className="text-primary hover:underline"
-          >
-            {league.name}
-          </Link>
-          {" · "}
-          {formatDate(season.startDate)} &ndash; {formatDate(season.endDate)}
-        </p>
-        {links.length > 0 && (
-          <nav className="mt-3 flex flex-wrap gap-3">
-            {links.map((l) => (
-              <Link
-                key={l.label}
-                href={l.href}
-                className="text-sm text-primary hover:underline"
-              >
-                {l.label} &rarr;
-              </Link>
-            ))}
-          </nav>
-        )}
-      </header>
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Seasons", href: "/dashboard/seasons" },
+          { label: season.name },
+        ]}
+      />
+      <BackLink href="/dashboard/seasons" label="Back to Seasons" />
+      <WorkspaceHeader
+        title={season.name}
+        size="sub-hub"
+        status={<StatusBadge status={season.status} />}
+        sub={
+          <>
+            <Link
+              href={`/dashboard/leagues/${league.id}`}
+              className="text-accent hover:underline"
+            >
+              {league.name}
+            </Link>
+            {" · "}
+            {formatDate(season.startDate)} &ndash; {formatDate(season.endDate)}
+          </>
+        }
+      />
+      <WorkspaceNav links={links} />
 
       {isUpcomingSeason && (
         <OffseasonHub

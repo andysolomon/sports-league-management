@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { schedulesStandingsV1, playoffsV1 } from "@/lib/flags";
+import { schedulesStandingsV1, playoffsV1, statKeepingV1 } from "@/lib/flags";
 import {
   computeStandings,
   computeDivisionStandings,
@@ -14,6 +13,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StandingsTable from "@/components/schedule/StandingsTable";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveViewedSeason } from "@/lib/season-view";
+import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
+import { BackLink } from "@/components/workspace/BackLink";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
+import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import { trackStandingsView } from "@/lib/analytics";
 
 export default async function LeagueStandingsPage({
@@ -27,6 +31,7 @@ export default async function LeagueStandingsPage({
   if (!enabled) notFound();
 
   const playoffsEnabled = await playoffsV1();
+  const statsEnabled = await statKeepingV1();
 
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
@@ -43,15 +48,19 @@ export default async function LeagueStandingsPage({
   if (!activeSeason) {
     return (
       <div>
-        <Link
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Leagues", href: "/dashboard/leagues" },
+            { label: league.name, href: `/dashboard/leagues/${leagueId}` },
+            { label: "Standings" },
+          ]}
+        />
+        <BackLink
           href={`/dashboard/leagues/${leagueId}`}
-          className="mb-4 inline-block text-sm text-primary hover:underline"
-        >
-          &larr; Back to League
-        </Link>
-        <h2 className="mb-4 text-2xl font-bold text-foreground">
-          {league.name}
-        </h2>
+          label="Back to League"
+        />
+        <WorkspaceHeader title={league.name} size="sub-hub" sub="Standings" />
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             No seasons in this league yet — standings unavailable.
@@ -76,23 +85,34 @@ export default async function LeagueStandingsPage({
 
   void trackStandingsView({ leagueId, route: "dashboard" });
 
+  const peerNavLinks = buildLeagueSeasonNavLinks({
+    leagueId,
+    seasonId: activeSeason.id,
+    scheduleEnabled: enabled,
+    playoffsEnabled,
+    statsEnabled,
+    exclude: "standings",
+  });
+
   return (
     <div>
-      <Link
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Leagues", href: "/dashboard/leagues" },
+          { label: league.name, href: `/dashboard/leagues/${leagueId}` },
+          { label: "Standings" },
+        ]}
+      />
+      <BackLink
         href={`/dashboard/leagues/${leagueId}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to League
-      </Link>
-
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{league.name}</h2>
-          <p className="text-sm text-muted-foreground">
-            Standings · {activeSeason.name}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+        label="Back to League"
+      />
+      <WorkspaceHeader
+        title={league.name}
+        size="sub-hub"
+        sub={`Standings · ${activeSeason.name}`}
+        actions={
           <SeasonSwitcher
             seasons={allSeasons.map((s) => ({
               id: s.id,
@@ -101,22 +121,9 @@ export default async function LeagueStandingsPage({
             }))}
             currentSeasonId={activeSeason.id}
           />
-          <Link
-            href={`/dashboard/leagues/${leagueId}/schedule`}
-            className="text-sm text-primary hover:underline"
-          >
-            Schedule &rarr;
-          </Link>
-          {playoffsEnabled ? (
-            <Link
-              href={`/dashboard/leagues/${leagueId}/playoffs`}
-              className="text-sm text-primary hover:underline"
-            >
-              Playoffs &rarr;
-            </Link>
-          ) : null}
-        </div>
-      </header>
+        }
+      />
+      <WorkspaceNav links={peerNavLinks} />
 
       <Card>
         <CardHeader>
