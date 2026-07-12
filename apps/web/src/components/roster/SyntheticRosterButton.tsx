@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Sparkles, Trash2, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import {
   generateTeamRosterAction,
   generateLeagueRostersAction,
@@ -37,10 +38,9 @@ export function SyntheticRosterButton({
 }: SyntheticRosterButtonProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function run() {
-    if (!window.confirm(CONFIRM[action][kind])) return;
-
     start(async () => {
       if (action === "attributes" && kind === "team") {
         const res = await generateTeamAttributesAction({ teamId: id });
@@ -110,6 +110,7 @@ export function SyntheticRosterButton({
         );
       }
       router.refresh();
+      setConfirmOpen(false);
     });
   }
 
@@ -132,26 +133,38 @@ export function SyntheticRosterButton({
           : "Generate rosters";
 
   return (
-    <Button
-      type="button"
-      variant={isClear ? "ghost" : "outline"}
-      size="sm"
-      disabled={pending || blockedBySeason}
-      onClick={run}
-      className={isClear ? "text-destructive hover:text-destructive" : undefined}
-      title={
-        blockedBySeason
-          ? SEASON_STARTED_HINT
-          : isClear
-            ? "Delete generated test players (keeps real players)"
-            : isAttributes
-              ? "Generate Madden-style ratings for this roster's players (test data)"
-              : "Generate fake players to populate this roster for testing/demos"
-      }
-    >
-      <Icon className="mr-1 h-4 w-4" />
-      {label}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant={isClear ? "ghost" : "outline"}
+        size="sm"
+        disabled={pending || blockedBySeason}
+        onClick={() => setConfirmOpen(true)}
+        className={isClear ? "text-destructive hover:text-destructive" : undefined}
+        title={
+          blockedBySeason
+            ? SEASON_STARTED_HINT
+            : isClear
+              ? "Delete generated test players (keeps real players)"
+              : isAttributes
+                ? "Generate Madden-style ratings for this roster's players (test data)"
+                : "Generate fake players to populate this roster for testing/demos"
+        }
+      >
+        <Icon className="mr-1 h-4 w-4" />
+        {label}
+      </Button>
+      <ActionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={isClear ? "Clear synthetic players?" : isAttributes ? "Generate ratings?" : "Generate synthetic roster?"}
+        description={CONFIRM[action][kind]}
+        confirmLabel={isClear ? "Clear" : isAttributes ? "Generate" : "Generate"}
+        destructive={isClear}
+        pending={pending}
+        onConfirm={run}
+      />
+    </>
   );
 }
 

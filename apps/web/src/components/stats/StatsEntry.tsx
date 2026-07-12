@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Check, Plus, Trash2 } from "lucide-react";
 import type { PlayerGameStatLine } from "@sports-management/shared-types";
 import { Button } from "@/components/ui/button";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { abbreviateName, groupPlayersByPosition } from "@/lib/position-group";
@@ -53,6 +54,9 @@ export default function StatsEntry({
     () => new Set(Object.keys(initial)),
   );
   const [extraGroups, setExtraGroups] = useState<Record<string, string[]>>({});
+  const [clearTarget, setClearTarget] = useState<{ id: string; name: string } | null>(
+    null,
+  );
 
   const grouped = useMemo(() => groupPlayersByPosition(players), [players]);
 
@@ -108,8 +112,9 @@ export default function StatsEntry({
     });
   }
 
-  function clear(playerId: string, name: string) {
-    if (!window.confirm(`Clear ${name}'s stats for this game?`)) return;
+  function clear() {
+    if (!clearTarget) return;
+    const { id: playerId, name } = clearTarget;
     setSavingId(playerId);
     startSaving(async () => {
       const res = await clearPlayerGameStatsAction({ teamId, fixtureId, playerId });
@@ -127,6 +132,7 @@ export default function StatsEntry({
         });
         toast.success(`Cleared ${name}`);
         router.refresh();
+        setClearTarget(null);
       } else {
         toast.error(errorLabel(res.error));
       }
@@ -280,7 +286,7 @@ export default function StatsEntry({
                               size="sm"
                               variant="ghost"
                               disabled={isBusy}
-                              onClick={() => clear(p.id, p.name)}
+                              onClick={() => setClearTarget({ id: p.id, name: p.name })}
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="mr-1 h-4 w-4" /> Clear
@@ -296,6 +302,18 @@ export default function StatsEntry({
           </div>
         </div>
       ))}
+      <ActionConfirmDialog
+        open={clearTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setClearTarget(null);
+        }}
+        title={clearTarget ? `Clear ${clearTarget.name}'s stats?` : "Clear stats?"}
+        description="This removes all entered stats for this game."
+        confirmLabel="Clear"
+        destructive
+        pending={saving}
+        onConfirm={clear}
+      />
     </div>
   );
 }

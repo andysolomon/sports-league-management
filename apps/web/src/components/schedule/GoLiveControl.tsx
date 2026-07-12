@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import {
   startYoutubeStream,
   stopGameStream,
@@ -50,6 +51,7 @@ export default function GoLiveControl({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
   const [url, setUrl] = useState("");
 
   const isLive = status === "active";
@@ -77,16 +79,12 @@ export default function GoLiveControl({
   }
 
   function stop() {
-    if (
-      !window.confirm(`Stop the live stream for ${homeTeamName} vs ${awayTeamName}?`)
-    ) {
-      return;
-    }
     startTransition(async () => {
       const res = await stopGameStream(leagueId, fixtureId);
       if (res.ok) {
         toast.success("Live stream stopped — the recording stays on the game page.");
         router.refresh();
+        setStopConfirmOpen(false);
       } else {
         toast.error(errorLabel(res.error));
       }
@@ -104,11 +102,21 @@ export default function GoLiveControl({
             size="sm"
             variant="ghost"
             disabled={pending}
-            onClick={stop}
+            onClick={() => setStopConfirmOpen(true)}
             aria-label={`Stop live stream for ${homeTeamName} vs ${awayTeamName}`}
           >
             <Square className="h-4 w-4 text-destructive" />
           </Button>
+          <ActionConfirmDialog
+            open={stopConfirmOpen}
+            onOpenChange={setStopConfirmOpen}
+            title="Stop live stream?"
+            description={`Stop the live stream for ${homeTeamName} vs ${awayTeamName}?`}
+            confirmLabel="Stop stream"
+            destructive
+            pending={pending}
+            onConfirm={stop}
+          />
         </div>
       ) : gameOver ? null : (
         <Button

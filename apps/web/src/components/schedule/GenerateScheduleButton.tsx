@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import { generateScheduleAction } from "@/app/dashboard/leagues/[id]/schedule/actions";
 
 export interface GenerateScheduleButtonProps {
@@ -26,6 +27,7 @@ function friendlyError(code: string): string {
 }
 
 type ScheduleFormat = "single" | "double";
+type ConfirmStep = "replace" | "destructive" | null;
 
 export default function GenerateScheduleButton({
   leagueId,
@@ -37,6 +39,7 @@ export default function GenerateScheduleButton({
   const formatId = useId();
   const [format, setFormat] = useState<ScheduleFormat>("single");
   const [pending, startTransition] = useTransition();
+  const [confirmStep, setConfirmStep] = useState<ConfirmStep>(null);
 
   function run(confirm: boolean) {
     startTransition(async () => {
@@ -54,14 +57,12 @@ export default function GenerateScheduleButton({
           }games across ${res.weeks} weeks for ${res.teamCount} teams.`,
         );
         router.refresh();
+        setConfirmStep(null);
         return;
       }
 
       if ("needsConfirm" in res) {
-        const proceed = window.confirm(
-          `${seasonName} already has games with recorded results or a live game. Regenerating deletes the entire schedule and those results. This can't be undone. Continue?`,
-        );
-        if (proceed) run(true);
+        setConfirmStep("destructive");
         return;
       }
 
@@ -70,18 +71,35 @@ export default function GenerateScheduleButton({
   }
 
   function onClick() {
-    // Plain re-runs (no results yet) still wipe the current slate; confirm
-    // first so a stray click can't blow away manually-entered fixtures.
-    if (
-      hasFixtures &&
-      !window.confirm(
-        `Replace the current schedule for ${seasonName} with a fresh round-robin? Existing fixtures will be removed.`,
-      )
-    ) {
+    if (hasFixtures) {
+      setConfirmStep("replace");
       return;
     }
     run(false);
   }
+
+  function handleConfirm() {
+    if (confirmStep === "replace") {
+      run(false);
+      return;
+    }
+    if (confirmStep === "destructive") {
+      run(true);
+    }
+  }
+
+  const confirmCopy =
+    confirmStep === "replace"
+      ? {
+          title: `Replace schedule for ${seasonName}?`,
+          description: `Replace the current schedule for ${seasonName} with a fresh round-robin? Existing fixtures will be removed.`,
+        }
+      : confirmStep === "destructive"
+        ? {
+            title: "Regenerate schedule with existing results?",
+            description: `${seasonName} already has games with recorded results or a live game. Regenerating deletes the entire schedule and those results. This can't be undone. Continue?`,
+          }
+        : null;
 
   return (
     <div className="flex items-center gap-2">
@@ -106,6 +124,20 @@ export default function GenerateScheduleButton({
             ? "Regenerate schedule"
             : "Generate schedule"}
       </Button>
+      {confirmCopy ? (
+        <ActionConfirmDialog
+          open={confirmStep !== null}
+          onOpenChange={(open) => {
+            if (!open && !pending) setConfirmStep(null);
+          }}
+          title={confirmCopy.title}
+          description={confirmCopy.description}
+          confirmLabel={confirmStep === "destructive" ? "Continue" : "Replace"}
+          destructive={confirmStep === "destructive"}
+          pending={pending}
+          onConfirm={handleConfirm}
+        />
+      ) : null}
     </div>
   );
 }

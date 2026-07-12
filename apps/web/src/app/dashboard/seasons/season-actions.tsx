@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, Pencil, CheckCircle2, Users, Trophy } from "lucide-react";
 import type { UndersizedTeam } from "@/lib/offseason-activate";
 import { ActivateSeasonWarningDialog } from "@/components/offseason/ActivateSeasonWarningDialog";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import {
   createSeasonAction,
   updateSeasonAction,
@@ -310,6 +311,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
 export function CopyRostersButton({ season }: { season: SeasonDto }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function run(confirm: boolean) {
     setBusy(true);
@@ -326,14 +328,12 @@ export function CopyRostersButton({ season }: { season: SeasonDto }) {
         } into ${season.name}.`,
       );
       router.refresh();
+      setConfirmOpen(false);
       return;
     }
 
     if ("needsConfirm" in res) {
-      const proceed = window.confirm(
-        `${season.name} already has rosters. Copying replaces them with last season's rosters. This can't be undone. Continue?`,
-      );
-      if (proceed) run(true);
+      setConfirmOpen(true);
       return;
     }
 
@@ -345,16 +345,28 @@ export function CopyRostersButton({ season }: { season: SeasonDto }) {
   }
 
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      disabled={busy}
-      onClick={() => run(false)}
-      aria-label={`Copy rosters from last season into ${season.name}`}
-    >
-      <Users className="mr-1 h-3.5 w-3.5" />
-      {busy ? "…" : "Copy rosters"}
-    </Button>
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={busy}
+        onClick={() => void run(false)}
+        aria-label={`Copy rosters from last season into ${season.name}`}
+      >
+        <Users className="mr-1 h-3.5 w-3.5" />
+        {busy ? "…" : "Copy rosters"}
+      </Button>
+      <ActionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Replace existing rosters?"
+        description={`${season.name} already has rosters. Copying replaces them with last season's rosters. This can't be undone. Continue?`}
+        confirmLabel="Continue"
+        destructive
+        pending={busy}
+        onConfirm={() => void run(true)}
+      />
+    </>
   );
 }
 
@@ -379,6 +391,8 @@ export function SeasonRowActions({
   );
   const [busy, setBusy] = useState(false);
   const [activateWarningOpen, setActivateWarningOpen] = useState(false);
+  const [completeStep, setCompleteStep] = useState<"complete" | "force" | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isActive = season.status === "active";
 
@@ -403,26 +417,16 @@ export function SeasonRowActions({
     void runActivate();
   }
 
-  async function complete() {
-    if (
-      !window.confirm(
-        `Mark "${season.name}" as completed? Schedule generation, result recording, and simulations will be locked for it.`,
-      )
-    ) {
-      return;
-    }
+  async function runComplete(force = false) {
     setBusy(true);
-    let res = await completeSeasonAction({ seasonId: season.id });
-    if (!res.ok && res.error === "no_champion") {
-      const force = window.confirm(
-        "No playoff champion has been decided for this season. Complete it anyway?",
-      );
-      if (force) {
-        res = await completeSeasonAction({ seasonId: season.id, force: true });
-      } else {
-        setBusy(false);
-        return;
-      }
+    const res = await completeSeasonAction({
+      seasonId: season.id,
+      ...(force ? { force: true } : {}),
+    });
+    if (!res.ok && res.error === "no_champion" && !force) {
+      setBusy(false);
+      setCompleteStep("force");
+      return;
     }
     setBusy(false);
     if (res.ok) {
@@ -435,11 +439,16 @@ export function SeasonRowActions({
         },
       });
       router.refresh();
+      setCompleteStep(null);
     } else {
       toast.error(
         res.error === "not_admin" ? "Only league admins can do that." : res.error,
       );
     }
+  }
+
+  function complete() {
+    setCompleteStep("complete");
   }
 
   async function save() {
@@ -466,19 +475,13 @@ export function SeasonRowActions({
   }
 
   async function remove() {
-    if (
-      !window.confirm(
-        `Delete "${season.name}" and its schedule, results, and attributes? This can't be undone.`,
-      )
-    ) {
-      return;
-    }
     setBusy(true);
     const res = await deleteSeasonAction(season.id);
     setBusy(false);
     if (res.ok) {
       toast.success(`Deleted ${season.name}.`);
       router.refresh();
+      setDeleteConfirmOpen(false);
     } else {
       toast.error(res.error === "not_admin" ? "Only league admins can delete seasons." : res.error);
     }
@@ -569,7 +572,7 @@ export function SeasonRowActions({
           size="sm"
           variant="ghost"
           disabled={busy}
-          onClick={remove}
+          onClick={() => setDeleteConfirmOpen(true)}
           aria-label={`Delete ${season.name}`}
         >
           <Trash2 className="h-4 w-4 text-destructive" />
@@ -582,6 +585,39 @@ export function SeasonRowActions({
         busy={busy}
         onCancel={() => setActivateWarningOpen(false)}
         onConfirm={() => void runActivate()}
+      />
+      <ActionConfirmDialog
+        open={completeStep === "complete"}
+        onOpenChange={(open) => {
+          if (!open && !busy) setCompleteStep(null);
+        }}
+        title={`Complete ${season.name}?`}
+        description="Schedule generation, result recording, and simulations will be locked for it."
+        confirmLabel="Complete"
+        pending={busy}
+        onConfirm={() => void runComplete(false)}
+      />
+      <ActionConfirmDialog
+        open={completeStep === "force"}
+        onOpenChange={(open) => {
+          if (!open && !busy) setCompleteStep(null);
+        }}
+        title="Complete without a champion?"
+        description="No playoff champion has been decided for this season. Complete it anyway?"
+        confirmLabel="Complete anyway"
+        destructive
+        pending={busy}
+        onConfirm={() => void runComplete(true)}
+      />
+      <ActionConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={`Delete ${season.name}?`}
+        description="This deletes its schedule, results, and attributes. This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        pending={busy}
+        onConfirm={() => void remove()}
       />
     </>
   );

@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import GameStreamPlayer from "@/components/games/GameStreamPlayer";
 import { parseTimecode, formatTimecode } from "@/lib/timecode";
 import {
@@ -55,6 +56,7 @@ export default function ClipsControl({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [label, setLabel] = useState("");
+  const [clipToDelete, setClipToDelete] = useState<ClientGameClip | null>(null);
 
   function loadClips() {
     startTransition(async () => {
@@ -101,14 +103,16 @@ export default function ClipsControl({
     });
   }
 
-  function remove(clip: ClientGameClip) {
-    if (!window.confirm(`Delete the clip “${clip.label}”?`)) return;
+  function remove() {
+    if (!clipToDelete) return;
+    const clip = clipToDelete;
     startTransition(async () => {
       const res = await deleteClip(leagueId, fixtureId, clip.id);
       if (res.ok) {
         toast.success("Clip deleted.");
         loadClips();
         router.refresh();
+        setClipToDelete(null);
       } else {
         toast.error(errorLabel(res.error));
       }
@@ -239,7 +243,7 @@ export default function ClipsControl({
                         size="sm"
                         variant="ghost"
                         disabled={pending}
-                        onClick={() => remove(clip)}
+                        onClick={() => setClipToDelete(clip)}
                         aria-label={`Delete clip ${clip.label}`}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -268,6 +272,19 @@ export default function ClipsControl({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ActionConfirmDialog
+        open={clipToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setClipToDelete(null);
+        }}
+        title={clipToDelete ? `Delete clip “${clipToDelete.label}”?` : "Delete clip?"}
+        description="This removes the clip permanently."
+        confirmLabel="Delete"
+        destructive
+        pending={pending}
+        onConfirm={remove}
+      />
     </>
   );
 }

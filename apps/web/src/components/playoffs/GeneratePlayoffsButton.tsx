@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import { generatePlayoffsAction } from "@/app/dashboard/leagues/[id]/playoffs/actions";
 
 export interface GeneratePlayoffsButtonProps {
@@ -23,6 +24,8 @@ export interface GeneratePlayoffsButtonProps {
 // the next power of two and gives top seeds first-round byes).
 const SIZES = [2, 4, 6, 8, 10, 12, 16] as const;
 
+type ConfirmStep = "replace" | "destructive" | null;
+
 export default function GeneratePlayoffsButton({
   leagueId,
   seasonId,
@@ -33,6 +36,7 @@ export default function GeneratePlayoffsButton({
 }: GeneratePlayoffsButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [confirmStep, setConfirmStep] = useState<ConfirmStep>(null);
   // Default to the season's configured team count (fall back to 8). If the
   // configured count is not one of the offered options, it is still added below.
   const initialSize = defaultSize && defaultSize >= 2 ? defaultSize : 8;
@@ -62,14 +66,12 @@ export default function GeneratePlayoffsButton({
           }-elim bracket (${res.rounds} rounds).`,
         );
         router.refresh();
+        setConfirmStep(null);
         return;
       }
 
       if ("needsConfirm" in res) {
-        const proceed = window.confirm(
-          `${seasonName} already has a bracket with recorded results or a live game. Regenerating deletes the bracket and those results. This can't be undone. Continue?`,
-        );
-        if (proceed) run(true);
+        setConfirmStep("destructive");
         return;
       }
 
@@ -78,16 +80,35 @@ export default function GeneratePlayoffsButton({
   }
 
   function onClick() {
-    if (
-      hasBracket &&
-      !window.confirm(
-        `Replace the current bracket for ${seasonName} with a fresh ${size}-team bracket? Existing playoff games will be removed.`,
-      )
-    ) {
+    if (hasBracket) {
+      setConfirmStep("replace");
       return;
     }
     run(false);
   }
+
+  function handleConfirm() {
+    if (confirmStep === "replace") {
+      run(false);
+      return;
+    }
+    if (confirmStep === "destructive") {
+      run(true);
+    }
+  }
+
+  const confirmCopy =
+    confirmStep === "replace"
+      ? {
+          title: `Replace bracket for ${seasonName}?`,
+          description: `Replace the current bracket for ${seasonName} with a fresh ${size}-team bracket? Existing playoff games will be removed.`,
+        }
+      : confirmStep === "destructive"
+        ? {
+            title: "Regenerate bracket with existing results?",
+            description: `${seasonName} already has a bracket with recorded results or a live game. Regenerating deletes the bracket and those results. This can't be undone. Continue?`,
+          }
+        : null;
 
   return (
     <div className="flex items-center gap-2">
@@ -128,6 +149,20 @@ export default function GeneratePlayoffsButton({
             ? "Regenerate bracket"
             : "Generate bracket"}
       </Button>
+      {confirmCopy ? (
+        <ActionConfirmDialog
+          open={confirmStep !== null}
+          onOpenChange={(open) => {
+            if (!open && !pending) setConfirmStep(null);
+          }}
+          title={confirmCopy.title}
+          description={confirmCopy.description}
+          confirmLabel={confirmStep === "destructive" ? "Continue" : "Replace"}
+          destructive={confirmStep === "destructive"}
+          pending={pending}
+          onConfirm={handleConfirm}
+        />
+      ) : null}
     </div>
   );
 }

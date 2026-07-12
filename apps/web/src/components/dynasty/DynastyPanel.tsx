@@ -15,6 +15,7 @@ import {
 import type { ClassDistribution } from "@/lib/class-year";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import {
   Accordion,
   AccordionContent,
@@ -63,16 +64,10 @@ export function DynastyPanel({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [lastSuccess, setLastSuccess] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function runStartNextSeason() {
     if (!gate.canStart) return;
-    if (
-      !window.confirm(
-        "Start the next season? Seniors will graduate, other players advance a grade, and freshmen will be generated.",
-      )
-    ) {
-      return;
-    }
 
     start(async () => {
       const res = await startNextSeasonAction({ leagueId });
@@ -95,6 +90,7 @@ export function DynastyPanel({
       setLastSuccess(summary);
       toast.success("Next season started.");
       router.refresh();
+      setConfirmOpen(false);
     });
   }
 
@@ -106,6 +102,7 @@ export function DynastyPanel({
     classDistribution.unknown;
 
   return (
+    <>
     <div id="dynasty-panel" className="space-y-4 border-t border-border pt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -135,7 +132,7 @@ export function DynastyPanel({
             type="button"
             size="sm"
             disabled={pending || !gate.canStart}
-            onClick={runStartNextSeason}
+            onClick={() => setConfirmOpen(true)}
             title={gate.message ?? "Start the next season (offseason rollover)"}
           >
             {pending ? "Starting…" : "Start next season"}
@@ -225,5 +222,15 @@ export function DynastyPanel({
         </Accordion>
       )}
     </div>
+    <ActionConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      title="Start the next season?"
+      description="Seniors will graduate, other players advance a grade, and freshmen will be generated."
+      confirmLabel="Start season"
+      pending={pending}
+      onConfirm={runStartNextSeason}
+    />
+    </>
   );
 }

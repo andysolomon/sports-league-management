@@ -11,6 +11,7 @@ import {
   bootstrapFourTeamSimLeague,
   openSimulateScopeMenu,
   simPlayoffsScope,
+  simWeek,
   weekCard,
 } from "../helpers/sim-league-setup";
 
@@ -80,7 +81,7 @@ test.describe("Simulation scopes (WSM-000183)", () => {
       .count();
     expect(week1ScheduledBefore).toBeGreaterThan(0);
 
-    await week1.getByRole("button", { name: "Sim week" }).click();
+    await simWeek(page, 1);
     await expect(week1.getByText("Scheduled", { exact: true })).toHaveCount(0, {
       timeout: 60_000,
     });
@@ -103,11 +104,15 @@ test.describe("Simulation scopes (WSM-000183)", () => {
     ).toBeVisible();
     await page.keyboard.press("Escape");
 
-    await simPlayoffsScope(page);
+    // Without a bracket the action fails: the error surfaces as a toast and
+    // the confirm dialog stays open for retry.
+    await simPlayoffsScope(page, { expectClose: false });
     await expect(
       page.getByText(
         "No playoff bracket yet. Generate a bracket on the Playoffs page first.",
       ),
     ).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("action-confirm-cancel").click();
+    await expect(page.getByTestId("action-confirm-dialog")).toBeHidden();
   });
 });

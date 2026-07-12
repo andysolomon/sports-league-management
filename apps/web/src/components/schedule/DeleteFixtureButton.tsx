@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import { deleteFixtureAction } from "@/app/dashboard/leagues/[id]/schedule/actions";
 
 export interface DeleteFixtureButtonProps {
@@ -22,20 +23,15 @@ export default function DeleteFixtureButton({
 }: DeleteFixtureButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function remove() {
-    if (
-      !window.confirm(
-        `Delete ${homeTeamName} vs ${awayTeamName}? Any recorded result is removed too. This can't be undone.`,
-      )
-    ) {
-      return;
-    }
     startTransition(async () => {
       const res = await deleteFixtureAction({ leagueId, fixtureId });
       if (res.ok) {
         toast.success("Fixture deleted.");
         router.refresh();
+        setConfirmOpen(false);
       } else {
         toast.error(res.error);
       }
@@ -43,14 +39,26 @@ export default function DeleteFixtureButton({
   }
 
   return (
-    <Button
-      size="sm"
-      variant="ghost"
-      disabled={pending}
-      onClick={remove}
-      aria-label={`Delete ${homeTeamName} vs ${awayTeamName}`}
-    >
-      <Trash2 className="h-4 w-4 text-destructive" />
-    </Button>
+    <>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={pending}
+        onClick={() => setConfirmOpen(true)}
+        aria-label={`Delete ${homeTeamName} vs ${awayTeamName}`}
+      >
+        <Trash2 className="h-4 w-4 text-destructive" />
+      </Button>
+      <ActionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Delete ${homeTeamName} vs ${awayTeamName}?`}
+        description="Any recorded result is removed too. This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        pending={pending}
+        onConfirm={remove}
+      />
+    </>
   );
 }
