@@ -397,7 +397,7 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     await archivedRow.getByRole("button").first().click();
     const drawer = page.getByTestId("game-context-drawer");
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByText("Final")).toBeVisible();
+    await expect(drawer.getByTestId("game-drawer-mode")).toHaveText(/^Final/);
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
   });

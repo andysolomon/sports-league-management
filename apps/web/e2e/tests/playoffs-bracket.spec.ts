@@ -127,7 +127,7 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     await bracketTrigger.click();
     const drawer = page.getByTestId("game-context-drawer");
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByText("Preview")).toBeVisible();
+    await expect(drawer.getByTestId("game-drawer-mode")).toHaveText(/^Preview/);
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
 
@@ -149,6 +149,8 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
       .first();
     await finalBracketTrigger.click();
     await expect(page.getByTestId("game-context-drawer")).toBeVisible();
-    await expect(page.getByTestId("game-context-drawer").getByText("Final")).toBeVisible();
+    await expect(
+      page.getByTestId("game-context-drawer").getByTestId("game-drawer-mode"),
+    ).toHaveText(/^Final/);
   });
 });

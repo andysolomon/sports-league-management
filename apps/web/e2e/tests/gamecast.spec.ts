@@ -592,7 +592,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
 
     const drawer = page.getByTestId("game-context-drawer");
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByText("Preview")).toBeVisible();
+    await expect(drawer.getByTestId("game-drawer-mode")).toHaveText(/^Preview/);
     await expect(
       drawer.getByRole("heading", { name: `${homeName} vs ${awayName}` }),
     ).toBeVisible();
@@ -629,7 +629,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
 
     const drawer = page.getByTestId("game-context-drawer");
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByText("Final")).toBeVisible();
+    await expect(drawer.getByTestId("game-drawer-mode")).toHaveText(/^Final/);
     await expect(drawer.getByText(String(ctx.expectedHome))).toBeVisible();
     await expect(drawer.getByText(String(ctx.expectedAway))).toBeVisible();
 

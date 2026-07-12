@@ -111,7 +111,10 @@ export function GameContextDrawer({
         {projection ? (
           <>
             <div className="space-y-1 pr-8">
-              <p className="font-mono text-caption-12 uppercase tracking-wide text-muted-foreground">
+              <p
+                data-testid="game-drawer-mode"
+                className="font-mono text-caption-12 uppercase tracking-wide text-muted-foreground"
+              >
                 {isFinal ? "Final" : "Preview"}
                 {projection.roundLabel ? ` · ${projection.roundLabel}` : ""}
               </p>
