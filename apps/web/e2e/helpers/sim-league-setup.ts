@@ -19,16 +19,22 @@ export function acceptBrowserConfirms(page: Page): void {
 
 /**
  * Confirm an in-app ActionConfirmDialog (lifecycle surfaces from PR #535).
- * Pass `expectClose: false` for error paths — failed actions keep the dialog
- * open for retry, surfacing the error via toast.
+ * Pass `expectClose: false` for paths where confirming does NOT close the
+ * dialog (error-retry states, or flows that chain into a second dialog).
+ * Pass `name` (the dialog's accessible name = its title) when more than one
+ * ActionConfirmDialog can be mounted at once — e.g. season completion without
+ * a champion keeps the first dialog in the DOM while the force-completion
+ * dialog opens, so the bare testid locator hits a strict-mode violation.
  */
 export async function confirmLifecycleDialog(
   page: Page,
-  opts: { expectClose?: boolean } = {},
+  opts: { expectClose?: boolean; name?: string | RegExp } = {},
 ): Promise<void> {
-  const dialog = page.getByTestId("action-confirm-dialog");
+  const dialog = opts.name
+    ? page.getByRole("alertdialog", { name: opts.name })
+    : page.getByTestId("action-confirm-dialog");
   await expect(dialog).toBeVisible();
-  await page.getByTestId("action-confirm-submit").click();
+  await dialog.getByTestId("action-confirm-submit").click();
   if (opts.expectClose !== false) {
     await expect(dialog).toBeHidden();
   }
@@ -164,13 +170,30 @@ export async function advanceToPlayoffs(page: Page) {
   await confirmLifecycleDialog(page);
 }
 
-export async function completeSeason(page: Page, seasonId: string) {
+export async function completeSeason(
+  page: Page,
+  seasonId: string,
+  opts: { forceWithoutChampion?: boolean } = {},
+) {
   await page.goto("/dashboard/seasons");
   const seasonRow = page.locator("li").filter({
     has: page.locator(`a[href="/dashboard/seasons/${seasonId}"]`),
   });
   await seasonRow.getByRole("button", { name: /^Complete / }).click();
-  await confirmLifecycleDialog(page);
+  if (opts.forceWithoutChampion) {
+    // No playoff champion: confirming "Complete <season>?" opens a second
+    // "Complete without a champion?" force-completion dialog instead of
+    // closing. Name-scope both confirms (both dialogs share the testid).
+    await confirmLifecycleDialog(page, {
+      name: /^Complete (?!without a champion\?)/,
+      expectClose: false,
+    });
+    await confirmLifecycleDialog(page, {
+      name: "Complete without a champion?",
+    });
+  } else {
+    await confirmLifecycleDialog(page);
+  }
   await expect(page.getByText(/completed\./)).toBeVisible({ timeout: 60_000 });
 }
 
