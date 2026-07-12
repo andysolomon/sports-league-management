@@ -108,6 +108,7 @@ describe("evaluateStartNextSeason", () => {
     expect(
       evaluateStartNextSeason({
         activeSeason: null,
+        completedSeason: null,
         upcomingSeason: null,
         seasonDecided: false,
         unplayedGames: 0,
@@ -118,6 +119,7 @@ describe("evaluateStartNextSeason", () => {
     expect(
       evaluateStartNextSeason({
         activeSeason: active,
+        completedSeason: null,
         upcomingSeason: { id: "s2", name: "2027" },
         seasonDecided: true,
         unplayedGames: 0,
@@ -128,6 +130,7 @@ describe("evaluateStartNextSeason", () => {
     expect(
       evaluateStartNextSeason({
         activeSeason: active,
+        completedSeason: null,
         upcomingSeason: null,
         seasonDecided: false,
         unplayedGames: 2,
@@ -137,14 +140,26 @@ describe("evaluateStartNextSeason", () => {
       canStart: false,
       message: "2 games unplayed.",
     });
-  });
 
-  it("allows start when the active season is decided and no upcoming season", () => {
     expect(
       evaluateStartNextSeason({
         activeSeason: active,
+        completedSeason: null,
         upcomingSeason: null,
         seasonDecided: true,
+        unplayedGames: 0,
+        playoffsUndecided: false,
+      }).errorCode,
+    ).toBe("no_completed_season");
+  });
+
+  it("allows start from a completed source when no upcoming season exists", () => {
+    expect(
+      evaluateStartNextSeason({
+        activeSeason: null,
+        completedSeason: active,
+        upcomingSeason: null,
+        seasonDecided: false,
         unplayedGames: 0,
         playoffsUndecided: false,
       }),

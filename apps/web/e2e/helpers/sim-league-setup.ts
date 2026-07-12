@@ -164,6 +164,13 @@ export async function advanceToPlayoffs(page: Page) {
   await confirmLifecycleDialog(page);
 }
 
+export async function completeSeason(page: Page, seasonId: string) {
+  await page.goto(`/dashboard/seasons/${seasonId}`);
+  await page.getByRole("button", { name: /^Complete / }).click();
+  await confirmLifecycleDialog(page);
+  await expect(page.getByText(/completed\./)).toBeVisible({ timeout: 60_000 });
+}
+
 export async function startNextSeason(page: Page) {
   await page.getByRole("button", { name: "Start next season" }).click();
   await confirmLifecycleDialog(page);

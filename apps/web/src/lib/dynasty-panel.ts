@@ -92,6 +92,8 @@ export function startNextSeasonErrorMessage(
   switch (errorCode) {
     case "no_season":
       return "Create an active season before starting the next year.";
+    case "no_completed_season":
+      return "Complete the decided season before starting the next year.";
     case "not_authorized":
       return "You don't have permission to start the next season.";
     case "unauthorized":
@@ -115,18 +117,12 @@ export function startNextSeasonErrorMessage(
 /** Evaluate whether the Start next season CTA should be enabled. */
 export function evaluateStartNextSeason(input: {
   activeSeason: { id: string; name: string } | null;
+  completedSeason: { id: string; name: string } | null;
   upcomingSeason: { id: string; name: string } | null;
   seasonDecided: boolean;
   unplayedGames: number;
   playoffsUndecided: boolean;
 }): StartNextSeasonGate {
-  if (!input.activeSeason) {
-    return {
-      canStart: false,
-      errorCode: "no_season",
-      message: startNextSeasonErrorMessage("no_season"),
-    };
-  }
   if (input.upcomingSeason) {
     return {
       canStart: false,
@@ -136,7 +132,10 @@ export function evaluateStartNextSeason(input: {
       }),
     };
   }
-  if (!input.seasonDecided) {
+  if (input.completedSeason) {
+    return { canStart: true, errorCode: null, message: null };
+  }
+  if (input.activeSeason && !input.seasonDecided) {
     return {
       canStart: false,
       errorCode: "season_not_decided",
@@ -146,7 +145,13 @@ export function evaluateStartNextSeason(input: {
       }),
     };
   }
-  return { canStart: true, errorCode: null, message: null };
+  return {
+    canStart: false,
+    errorCode: input.activeSeason ? "no_completed_season" : "no_season",
+    message: startNextSeasonErrorMessage(
+      input.activeSeason ? "no_completed_season" : "no_season",
+    ),
+  };
 }
 
 /** Whether gamecast should deep-link to the league dynasty panel. */

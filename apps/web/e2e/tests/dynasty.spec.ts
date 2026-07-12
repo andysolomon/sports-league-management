@@ -9,6 +9,7 @@ import { getTestOrgId } from "../helpers/seed-roster";
 import {
   acceptBrowserConfirms,
   bootstrapFourTeamSimLeague,
+  completeSeason,
   simToChampion,
   startNextSeason,
 } from "../helpers/sim-league-setup";
@@ -102,6 +103,11 @@ test.describe("Dynasty panel (dynasty rollover)", () => {
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await simToChampion(page);
 
+    await page.goto(`/dashboard/leagues/${leagueId}`);
+    await expect(startBtn).toBeDisabled();
+    await expect(page.getByText(/Complete the decided season/)).toBeVisible();
+
+    await completeSeason(page, fixture!.seasonId);
     await page.goto(`/dashboard/leagues/${leagueId}`);
     await expect(startBtn).toBeEnabled();
     await startNextSeason(page);

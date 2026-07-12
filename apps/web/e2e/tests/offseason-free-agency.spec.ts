@@ -9,6 +9,7 @@ import { getTestOrgId } from "../helpers/seed-roster";
 import {
   acceptBrowserConfirms,
   bootstrapFourTeamSimLeague,
+  completeSeason,
   simToChampion,
   startNextSeason,
 } from "../helpers/sim-league-setup";
@@ -49,6 +50,7 @@ test.describe("Offseason free agency", () => {
     await page.goto(`/dashboard/leagues/${fixture.leagueId}/schedule`);
     await simToChampion(page);
 
+    await completeSeason(page, fixture.seasonId);
     await page.goto(`/dashboard/leagues/${fixture.leagueId}`);
     const startBtn = page.getByRole("button", { name: "Start next season" });
     await expect(startBtn).toBeEnabled({ timeout: 60_000 });
