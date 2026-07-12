@@ -17,25 +17,24 @@ function TeamName({
   name,
   won,
   dim,
+  linkable,
 }: {
   teamId: string | null;
   name: string | null;
   won: boolean;
   dim: boolean;
+  linkable: boolean;
 }) {
   const label = name ?? "TBD";
   const className = cn(
-    "truncate hover:underline",
+    "truncate",
+    linkable && "hover:underline",
     won && "font-semibold text-foreground",
     dim && !won && "text-muted-foreground",
   );
-  if (teamId) {
+  if (teamId && linkable) {
     return (
-      <Link
-        href={`/dashboard/teams/${teamId}`}
-        className={className}
-        onClick={(event) => event.stopPropagation()}
-      >
+      <Link href={`/dashboard/teams/${teamId}`} className={className}>
         {label}
       </Link>
     );
@@ -50,6 +49,7 @@ function Side({
   score,
   won,
   dim,
+  linkable,
 }: {
   teamId: string | null;
   seed: number | null;
@@ -57,6 +57,7 @@ function Side({
   score: number | null;
   won: boolean;
   dim: boolean;
+  linkable: boolean;
 }) {
   return (
     <div
@@ -71,7 +72,13 @@ function Side({
             {seed}
           </span>
         ) : null}
-        <TeamName teamId={teamId} name={name} won={won} dim={dim} />
+        <TeamName
+          teamId={teamId}
+          name={name}
+          won={won}
+          dim={dim}
+          linkable={linkable}
+        />
       </span>
       <span className="shrink-0 font-mono tabular-nums text-muted-foreground">
         {score ?? ""}
@@ -102,6 +109,7 @@ function MatchupCard({
         score={null}
         won={true}
         dim={false}
+        linkable={false}
       />
       <div className="border-t border-border" />
       <div className="px-2 py-1 text-xs italic text-muted-foreground">
@@ -117,6 +125,7 @@ function MatchupCard({
         score={m.homeScore}
         won={side === "home"}
         dim={decided}
+        linkable={false}
       />
       <div className="border-t border-border" />
       <Side
@@ -126,6 +135,7 @@ function MatchupCard({
         score={m.awayScore}
         won={side === "away"}
         dim={decided}
+        linkable={false}
       />
     </div>
   );

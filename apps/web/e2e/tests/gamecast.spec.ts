@@ -600,6 +600,10 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
 
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
+
+    await expect
+      .poll(() => scheduledRow.getByRole("button").first().evaluate((el) => el === document.activeElement))
+      .toBe(true);
   });
 
   test("final schedule row opens summary drawer and links to full Gamecast", async ({

@@ -43,7 +43,7 @@ function MatchupCell({
 }: {
   children: React.ReactNode;
   className?: string;
-  onOpen: () => void;
+  onOpen: React.MouseEventHandler<HTMLButtonElement>;
   ariaLabel: string;
 }) {
   return (
@@ -86,22 +86,8 @@ export function ScheduleFixtureRow({
     setOpen(true);
   };
 
-  const scoreDisplay = result ? (
-    statsEnabled ? (
-      <Link
-        href={`/dashboard/games/${fixture.id}/boxscore`}
-        className="hover:underline"
-        title="View box score"
-        onClick={(event) => event.stopPropagation()}
-      >
-        {result.homeScore} – {result.awayScore}
-      </Link>
-    ) : (
-      `${result.homeScore} – ${result.awayScore}`
-    )
-  ) : (
-    "—"
-  );
+  const scoreDisplay =
+    result != null ? `${result.homeScore} – ${result.awayScore}` : "—";
 
   return (
     <>
@@ -125,13 +111,23 @@ export function ScheduleFixtureRow({
           </MatchupCell>
         </td>
         <td className="px-4 py-2 text-right font-mono text-foreground">
-          <MatchupCell
-            onOpen={openDrawer}
-            ariaLabel={drawerLabel}
-            className="text-right"
-          >
-            {scoreDisplay}
-          </MatchupCell>
+          {result && statsEnabled ? (
+            <Link
+              href={`/dashboard/games/${fixture.id}/boxscore`}
+              className="hover:underline"
+              title="View box score"
+            >
+              {scoreDisplay}
+            </Link>
+          ) : (
+            <MatchupCell
+              onOpen={openDrawer}
+              ariaLabel={drawerLabel}
+              className="text-right"
+            >
+              {scoreDisplay}
+            </MatchupCell>
+          )}
         </td>
         <td className="px-4 py-2">
           <MatchupCell onOpen={openDrawer} ariaLabel={drawerLabel} className="inline-flex">
