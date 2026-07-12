@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarDays, ChevronDown, Dices, Trophy, Wand2 } from "lucide-react";
@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import {
   simulateGameAction,
   simulatePlayoffsAction,
@@ -84,15 +85,9 @@ export function SimulateWeekButton({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function run() {
-    if (
-      !window.confirm(
-        `Simulate every unplayed game in Week ${week}? Already-recorded games are left untouched.`,
-      )
-    ) {
-      return;
-    }
     start(async () => {
       const res = await simulateWeekAction({ leagueId, seasonId, week });
       if (res.ok) {
@@ -102,6 +97,7 @@ export function SimulateWeekButton({
             : `Simulated ${res.simulated} game${res.simulated === 1 ? "" : "s"} in Week ${week}.`,
         );
         router.refresh();
+        setConfirmOpen(false);
       } else {
         toast.error(simError(res.error));
       }
@@ -109,17 +105,28 @@ export function SimulateWeekButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={pending}
-      onClick={run}
-      title={`Fill every unplayed game in Week ${week}`}
-    >
-      <CalendarDays className="mr-1 h-4 w-4" />
-      {pending ? "Simulating…" : "Sim week"}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        onClick={() => setConfirmOpen(true)}
+        title={`Fill every unplayed game in Week ${week}`}
+      >
+        <CalendarDays className="mr-1 h-4 w-4" />
+        {pending ? "Simulating…" : "Sim week"}
+      </Button>
+      <ActionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Simulate Week ${week}?`}
+        description={`Simulate every unplayed game in Week ${week}? Already-recorded games are left untouched.`}
+        confirmLabel="Simulate"
+        pending={pending}
+        onConfirm={run}
+      />
+    </>
   );
 }
 
@@ -133,15 +140,17 @@ export function SimulateScopeMenu({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<
+    "regular" | "playoffs" | "champion" | null
+  >(null);
+
+  function openConfirm(action: "regular" | "playoffs" | "champion") {
+    setConfirmAction(action);
+    setConfirmOpen(true);
+  }
 
   function runRegularSeason() {
-    if (
-      !window.confirm(
-        "Simulate every unplayed regular-season game? Scores are generated from team ratings. Already-recorded games are left untouched.",
-      )
-    ) {
-      return;
-    }
     start(async () => {
       const res = await simulateRegularSeasonAction({ leagueId, seasonId });
       if (res.ok) {
@@ -151,6 +160,7 @@ export function SimulateScopeMenu({
             : `Simulated ${res.simulated} regular-season game${res.simulated === 1 ? "" : "s"}.`,
         );
         router.refresh();
+        setConfirmOpen(false);
       } else {
         toast.error(simError(res.error));
       }
@@ -158,13 +168,6 @@ export function SimulateScopeMenu({
   }
 
   function runPlayoffs() {
-    if (
-      !window.confirm(
-        "Simulate every unplayed playoff game round by round? Already-recorded games are left untouched.",
-      )
-    ) {
-      return;
-    }
     start(async () => {
       const res = await simulatePlayoffsAction({ leagueId, seasonId });
       if (res.ok) {
@@ -176,6 +179,7 @@ export function SimulateScopeMenu({
               : "No unplayed playoff games to simulate.",
         );
         router.refresh();
+        setConfirmOpen(false);
       } else {
         toast.error(simError(res.error));
       }
@@ -183,13 +187,6 @@ export function SimulateScopeMenu({
   }
 
   function runToChampion() {
-    if (
-      !window.confirm(
-        "Simulate the rest of the season AND the playoffs to crown a champion? This generates a fresh bracket from the season's playoff settings and fills every remaining game. Already-recorded regular-season games are kept.",
-      )
-    ) {
-      return;
-    }
     start(async () => {
       const res = await simulateSeasonThroughChampionAction({ leagueId, seasonId });
       if (res.ok) {
@@ -209,42 +206,83 @@ export function SimulateScopeMenu({
               : "Nothing left to simulate",
         );
         router.refresh();
+        setConfirmOpen(false);
       } else {
         toast.error(simError(res.error));
       }
     });
   }
 
+  const confirmCopy =
+    confirmAction === "regular"
+      ? {
+          title: "Simulate regular season?",
+          description:
+            "Simulate every unplayed regular-season game? Scores are generated from team ratings. Already-recorded games are left untouched.",
+          onConfirm: runRegularSeason,
+        }
+      : confirmAction === "playoffs"
+        ? {
+            title: "Simulate playoffs?",
+            description:
+              "Simulate every unplayed playoff game round by round? Already-recorded games are left untouched.",
+            onConfirm: runPlayoffs,
+          }
+        : confirmAction === "champion"
+          ? {
+              title: "Simulate to champion?",
+              description:
+                "Simulate the rest of the season AND the playoffs to crown a champion? This generates a fresh bracket from the season's playoff settings and fills every remaining game. Already-recorded regular-season games are kept.",
+              onConfirm: runToChampion,
+            }
+          : null;
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          title="Season simulation scopes"
-        >
-          <Wand2 className="mr-1 h-4 w-4" />
-          {pending ? "Simulating…" : "Simulate"}
-          <ChevronDown className="ml-1 h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Simulation scope</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={pending} onSelect={runRegularSeason}>
-          Sim regular season
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={pending} onSelect={runPlayoffs}>
-          Sim playoffs
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={pending} onSelect={runToChampion}>
-          <Trophy className="h-4 w-4" />
-          Sim to champion
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            title="Season simulation scopes"
+          >
+            <Wand2 className="mr-1 h-4 w-4" />
+            {pending ? "Simulating…" : "Simulate"}
+            <ChevronDown className="ml-1 h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Simulation scope</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem disabled={pending} onSelect={() => openConfirm("regular")}>
+            Sim regular season
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={pending} onSelect={() => openConfirm("playoffs")}>
+            Sim playoffs
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={pending} onSelect={() => openConfirm("champion")}>
+            <Trophy className="h-4 w-4" />
+            Sim to champion
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {confirmCopy ? (
+        <ActionConfirmDialog
+          open={confirmOpen}
+          onOpenChange={(open) => {
+            setConfirmOpen(open);
+            if (!open) setConfirmAction(null);
+          }}
+          title={confirmCopy.title}
+          description={confirmCopy.description}
+          confirmLabel="Simulate"
+          pending={pending}
+          onConfirm={confirmCopy.onConfirm}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -258,15 +296,9 @@ export function SimulateSeasonButton({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function run() {
-    if (
-      !window.confirm(
-        "Simulate every unplayed regular-season game? Scores are generated from team ratings. Already-recorded games are left untouched.",
-      )
-    ) {
-      return;
-    }
     start(async () => {
       const res = await simulateSeasonAction({ leagueId, seasonId });
       if (res.ok) {
@@ -276,6 +308,7 @@ export function SimulateSeasonButton({
             : `Simulated ${res.simulated} game${res.simulated === 1 ? "" : "s"}.`,
         );
         router.refresh();
+        setConfirmOpen(false);
       } else {
         toast.error(simError(res.error));
       }
@@ -283,17 +316,28 @@ export function SimulateSeasonButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={pending}
-      onClick={run}
-      title="Fill every unplayed regular-season game with a ratings-weighted score"
-    >
-      <Wand2 className="mr-1 h-4 w-4" />
-      {pending ? "Simulating…" : "Simulate season"}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        onClick={() => setConfirmOpen(true)}
+        title="Fill every unplayed regular-season game with a ratings-weighted score"
+      >
+        <Wand2 className="mr-1 h-4 w-4" />
+        {pending ? "Simulating…" : "Simulate season"}
+      </Button>
+      <ActionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Simulate regular season?"
+        description="Simulate every unplayed regular-season game? Scores are generated from team ratings. Already-recorded games are left untouched."
+        confirmLabel="Simulate"
+        pending={pending}
+        onConfirm={run}
+      />
+    </>
   );
 }
 
@@ -306,15 +350,9 @@ export function SimulateChampionButton({
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   function run() {
-    if (
-      !window.confirm(
-        "Simulate the rest of the season AND the playoffs to crown a champion? This generates a fresh bracket from the season's playoff settings and fills every remaining game. Already-recorded regular-season games are kept.",
-      )
-    ) {
-      return;
-    }
     start(async () => {
       const res = await simulateSeasonThroughChampionAction({ leagueId, seasonId });
       if (res.ok) {
@@ -334,6 +372,7 @@ export function SimulateChampionButton({
               : "Nothing left to simulate",
         );
         router.refresh();
+        setConfirmOpen(false);
       } else {
         toast.error(simError(res.error));
       }
@@ -341,17 +380,28 @@ export function SimulateChampionButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      disabled={pending}
-      onClick={run}
-      title="Simulate the rest of the season and the playoffs to crown a champion"
-    >
-      <Trophy className="mr-1 h-4 w-4" />
-      {pending ? "Simulating…" : "Sim to champion"}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        onClick={() => setConfirmOpen(true)}
+        title="Simulate the rest of the season and the playoffs to crown a champion"
+      >
+        <Trophy className="mr-1 h-4 w-4" />
+        {pending ? "Simulating…" : "Sim to champion"}
+      </Button>
+      <ActionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Simulate to champion?"
+        description="Simulate the rest of the season AND the playoffs to crown a champion? This generates a fresh bracket from the season's playoff settings and fills every remaining game. Already-recorded regular-season games are kept."
+        confirmLabel="Simulate"
+        pending={pending}
+        onConfirm={run}
+      />
+    </>
   );
 }
 

@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import { advanceToPlayoffsAction } from "@/app/dashboard/leagues/[id]/playoffs/actions";
 
 export interface AdvanceToPlayoffsButtonProps {
@@ -18,16 +19,9 @@ export default function AdvanceToPlayoffsButton({
 }: AdvanceToPlayoffsButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-  function onClick() {
-    if (
-      !window.confirm(
-        "Advance to playoffs? A bracket will be seeded from the current standings and first-round games will be scheduled.",
-      )
-    ) {
-      return;
-    }
-
+  function onConfirm() {
     startTransition(async () => {
       const res = await advanceToPlayoffsAction({ leagueId });
       if (res.ok) {
@@ -35,6 +29,7 @@ export default function AdvanceToPlayoffsButton({
           `Playoffs started — ${res.matchups} matchups across ${res.rounds} rounds.`,
         );
         router.refresh();
+        setConfirmOpen(false);
         return;
       }
 
@@ -53,14 +48,25 @@ export default function AdvanceToPlayoffsButton({
   }
 
   return (
-    <Button
-      size="sm"
-      disabled={disabled || pending}
-      onClick={onClick}
-      className="gap-1.5"
-    >
-      <Trophy className="h-4 w-4" />
-      {pending ? "Advancing…" : "Advance to playoffs"}
-    </Button>
+    <>
+      <Button
+        size="sm"
+        disabled={disabled || pending}
+        onClick={() => setConfirmOpen(true)}
+        className="gap-1.5"
+      >
+        <Trophy className="h-4 w-4" />
+        {pending ? "Advancing…" : "Advance to playoffs"}
+      </Button>
+      <ActionConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Advance to playoffs?"
+        description="A bracket will be seeded from the current standings and first-round games will be scheduled."
+        confirmLabel="Advance"
+        pending={pending}
+        onConfirm={onConfirm}
+      />
+    </>
   );
 }
