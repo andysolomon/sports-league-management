@@ -206,6 +206,20 @@
 }
 
 /*
+ * Radix Dialog/Sheet scroll lock adds padding-right for the scrollbar gutter.
+ * On narrow viewports (and headless Linux CI) that padding can widen the page
+ * even when no scrollbar is visible — WSM-000240 drawer overflow E2E.
+ */
+html {
+  overflow-x: clip;
+}
+
+body[data-scroll-locked] {
+  padding-right: 0 !important;
+  margin-right: 0 !important;
+}
+
+/*
  * Reduced-motion a11y override (WSM-000136 P7). When the user has requested
  * reduced motion at the OS level, collapse all transitions/animations to a
  * near-instant duration and disable smooth scrolling. This neutralises the
