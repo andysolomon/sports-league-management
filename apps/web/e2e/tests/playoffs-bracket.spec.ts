@@ -10,6 +10,7 @@ import {
   acceptBrowserConfirms,
   bootstrapFourTeamSimLeague,
   confirmLifecycleDialog,
+  simChampionship,
   simPlayoffsScope,
   simRegularSeason,
 } from "../helpers/sim-league-setup";
@@ -69,7 +70,7 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     acceptBrowserConfirms(page);
   });
 
-  test("advance gate, bracket generation, and champion after sim playoffs", async ({
+  test("advance gate, bracket generation, semifinal sim, and explicit championship", async ({
     page,
   }) => {
     if (!fixture) test.skip();
@@ -125,11 +126,18 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
 
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await simPlayoffsScope(page);
-    await expect(page.getByText(/wins — simulated|Simulated \d+ playoff game/)).toBeVisible({
+    await expect(
+      page.getByText(/through the semifinals|Simulated \d+ playoff game/),
+    ).toBeVisible({
       timeout: 120_000,
     });
 
     await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+    await expect(page.getByText("Champion", { exact: true })).toHaveCount(0);
+    await simChampionship(page);
+    await expect(page.getByText(/wins the championship!/)).toBeVisible({
+      timeout: 120_000,
+    });
     await expect(page.getByText("Champion", { exact: true })).toBeVisible();
     await expect(
       page.locator(".rounded-lg.border-primary\\/30").getByRole("link").first(),

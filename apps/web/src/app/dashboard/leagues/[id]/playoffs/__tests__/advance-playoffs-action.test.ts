@@ -189,6 +189,37 @@ describe("advanceToPlayoffsAction", () => {
     expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
   });
 
+  it("rejects non-standard playoff team counts (WSM-000241)", async () => {
+    authorize();
+    mockGetSeasons.mockResolvedValue([
+      { ...ACTIVE_SEASON, playoffTeams: 6 },
+    ]);
+    mockListFixturesBySeason.mockResolvedValue([
+      { stage: "regular", status: "final" },
+    ]);
+
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "invalid_playoff_team_count" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
+  it("rejects viewers (not_authorized)", async () => {
+    authorize();
+    mockCanManageRoster.mockReturnValue(false);
+
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "not_authorized" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
   it("generates a bracket for a valid, lifecycle-decided seasonId", async () => {
     authorize();
     mockListFixturesBySeason.mockResolvedValue([

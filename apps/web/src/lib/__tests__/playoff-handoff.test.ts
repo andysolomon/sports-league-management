@@ -57,10 +57,11 @@ describe("resolvePlayoffHandoff", () => {
     ).toBe("hidden");
   });
 
-  it("hides the handoff when playoffs are not configured", () => {
+  it("hides the handoff when playoffs are not configured for a standard field", () => {
     expect(resolvePlayoffHandoff(input({ playoffTeams: null }))).toBe("hidden");
     expect(resolvePlayoffHandoff(input({ playoffTeams: 0 }))).toBe("hidden");
     expect(resolvePlayoffHandoff(input({ playoffTeams: 1 }))).toBe("hidden");
+    expect(resolvePlayoffHandoff(input({ playoffTeams: 6 }))).toBe("hidden");
   });
 
   it("hides the handoff while the regular season is incomplete", () => {

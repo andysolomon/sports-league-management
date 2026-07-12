@@ -1,10 +1,12 @@
 /*
  * WSM-000239 — season-safe playoff handoff gating for the schedule page.
+ * WSM-000241 — start readiness requires a standard 4/8/16 playoff field.
  *
  * Pure so the read-only "waiting" branch has deterministic unit coverage (the
  * e2e environment has no viewer-role Clerk user, so this branch cannot be
  * driven end-to-end — see schedules e2e spec notes).
  */
+import { canStartPlayoffs } from "@/lib/playoffs";
 
 export type PlayoffHandoffState = "start" | "waiting" | "hidden";
 
@@ -43,7 +45,7 @@ export function resolvePlayoffHandoff(
   // Viewing a historical or upcoming season never surfaces the button.
   if (input.viewedSeasonId !== input.decidedSeasonId) return "hidden";
   if (input.viewedSeasonStatus !== "active") return "hidden";
-  if (!input.playoffTeams || input.playoffTeams < 2) return "hidden";
+  if (!canStartPlayoffs(input.playoffTeams)) return "hidden";
   if (input.regularTotal === 0 || !input.regularComplete) return "hidden";
   if (input.bracketExists) return "hidden";
   return input.canManage ? "start" : "waiting";

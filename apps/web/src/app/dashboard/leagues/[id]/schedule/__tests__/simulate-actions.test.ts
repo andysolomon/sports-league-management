@@ -14,6 +14,8 @@ const {
   mockSimulateAndPersistFixture,
   mockListFixturesBySeason,
   mockGetPlayoffBracket,
+  mockGetSeason,
+  mockGeneratePlayoffBracket,
 } = vi.hoisted(() => ({
   mockSchedulesStandingsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -28,6 +30,8 @@ const {
   mockSimulateAndPersistFixture: vi.fn(),
   mockListFixturesBySeason: vi.fn(),
   mockGetPlayoffBracket: vi.fn(),
+  mockGetSeason: vi.fn(),
+  mockGeneratePlayoffBracket: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({
@@ -41,8 +45,8 @@ vi.mock("@/lib/data-api", () => ({
   getLeague: mockGetLeague,
   getLeagueOrgId: mockGetLeagueOrgId,
   listFixturesBySeason: mockListFixturesBySeason,
-  getSeason: vi.fn(),
-  generatePlayoffBracket: vi.fn(),
+  getSeason: mockGetSeason,
+  generatePlayoffBracket: mockGeneratePlayoffBracket,
   getPlayoffBracket: mockGetPlayoffBracket,
   createFixture: vi.fn(),
   deleteFixture: vi.fn(),
@@ -70,6 +74,9 @@ import {
   simulatePlayoffsAction,
   simulateRegularSeasonAction,
   simulateWeekAction,
+  advancePlayoffRoundAction,
+  simulateChampionshipAction,
+  simulateSeasonThroughChampionAction,
 } from "../actions";
 
 const LEAGUE = "league_1";
@@ -111,6 +118,13 @@ function authorize() {
   mockResolveOrgRole.mockResolvedValue("org:admin");
   mockCanManageRoster.mockReturnValue(true);
   mockGetFixture.mockResolvedValue(fixture());
+  mockGetSeason.mockResolvedValue({
+    id: SEASON,
+    leagueId: LEAGUE,
+    playoffTeams: 4,
+    playoffFormat: "single",
+    divisionWinnersQualify: false,
+  });
   mockSimulateAndPersistFixture.mockResolvedValue({
     homeScore: 21,
     awayScore: 14,
@@ -223,28 +237,108 @@ describe("simulatePlayoffsAction", () => {
     expect(mockSimulateAndPersistFixture).not.toHaveBeenCalled();
   });
 
-  it("sims playoff fixtures decisively when a bracket exists", async () => {
-    const playoff = fixture({ id: "po1", stage: "playoff", week: null });
+  it("rejects double-elimination brackets", async () => {
+    mockGetPlayoffBracket.mockResolvedValue({
+      seasonId: SEASON,
+      format: "double",
+      rounds: 2,
+      matchups: [{ round: 1, bracketType: "winners" }],
+    });
+
+    const res = await simulatePlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "unsupported_format" });
+    expect(mockSimulateAndPersistFixture).not.toHaveBeenCalled();
+  });
+
+  it("sims playoff fixtures through semifinal only (champion null)", async () => {
+    const semi = fixture({ id: "semi", stage: "playoff", week: null });
     mockGetPlayoffBracket
       .mockResolvedValueOnce({
         seasonId: SEASON,
-        matchups: [{ round: 1, homeTeamId: "team_home" }],
+        format: "single",
+        rounds: 2,
+        matchups: [
+          {
+            round: 1,
+            fixtureId: "semi",
+            bracketType: "winners",
+            isBye: false,
+            winnerTeamId: null,
+          },
+          {
+            round: 2,
+            fixtureId: "final",
+            bracketType: "winners",
+            isBye: false,
+            winnerTeamId: null,
+          },
+        ],
       })
       .mockResolvedValueOnce({
         seasonId: SEASON,
+        format: "single",
+        rounds: 2,
         matchups: [
           {
+            round: 1,
+            fixtureId: "semi",
+            bracketType: "winners",
+            isBye: false,
+            winnerTeamId: null,
+          },
+          {
             round: 2,
-            homeTeamId: "team_home",
-            homeTeamName: "Home",
-            awayTeamName: "Away",
+            fixtureId: "final",
+            bracketType: "winners",
+            isBye: false,
+            winnerTeamId: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        seasonId: SEASON,
+        format: "single",
+        rounds: 2,
+        matchups: [
+          {
+            round: 1,
+            fixtureId: "semi",
+            bracketType: "winners",
             winnerTeamId: "team_home",
+          },
+          {
+            round: 2,
+            fixtureId: "final",
+            bracketType: "winners",
+            winnerTeamId: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        seasonId: SEASON,
+        format: "single",
+        rounds: 2,
+        matchups: [
+          {
+            round: 1,
+            fixtureId: "semi",
+            bracketType: "winners",
+            winnerTeamId: "team_home",
+            homeTeamName: "Home",
+          },
+          {
+            round: 2,
+            fixtureId: "final",
+            bracketType: "winners",
+            winnerTeamId: null,
           },
         ],
       });
-    mockListFixturesBySeason
-      .mockResolvedValueOnce([playoff])
-      .mockResolvedValueOnce([]);
+    mockListFixturesBySeason.mockResolvedValue([semi]);
 
     const res = await simulatePlayoffsAction({
       leagueId: LEAGUE,
@@ -254,16 +348,219 @@ describe("simulatePlayoffsAction", () => {
     expect(res).toEqual({
       ok: true,
       playoffGames: 1,
-      champion: "Home",
+      champion: null,
     });
+    expect(mockSimulateAndPersistFixture).toHaveBeenCalledTimes(1);
     expect(mockSimulateAndPersistFixture).toHaveBeenCalledWith({
-      fixture: playoff,
+      fixture: semi,
       orgContext: { visibleLeagueIds: [LEAGUE] },
       actorUserId: USER,
       decisive: true,
       profileCache: expect.any(Map),
       bulkStats: true,
     });
+  });
+
+  it("rejects viewers (not_authorized)", async () => {
+    authorize();
+    mockCanManageRoster.mockReturnValue(false);
+
+    const res = await simulatePlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "not_authorized" });
+  });
+});
+
+describe("advancePlayoffRoundAction (WSM-000241)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authorize();
+  });
+
+  it("simulates only the minimum unresolved round", async () => {
+    const semi = fixture({ id: "semi", stage: "playoff", week: null });
+    mockGetPlayoffBracket.mockResolvedValue({
+      seasonId: SEASON,
+      format: "single",
+      rounds: 2,
+      matchups: [
+        {
+          round: 1,
+          fixtureId: "semi",
+          bracketType: "winners",
+          isBye: false,
+          winnerTeamId: null,
+        },
+        {
+          round: 2,
+          fixtureId: "final",
+          bracketType: "winners",
+          isBye: false,
+          winnerTeamId: null,
+        },
+      ],
+    });
+    mockListFixturesBySeason.mockResolvedValue([semi]);
+
+    const res = await advancePlayoffRoundAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: true, simulated: 1, round: 1 });
+    expect(mockSimulateAndPersistFixture).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects advancing the championship round explicitly", async () => {
+    mockGetPlayoffBracket.mockResolvedValue({
+      seasonId: SEASON,
+      format: "single",
+      rounds: 2,
+      matchups: [
+        {
+          round: 1,
+          bracketType: "winners",
+          isBye: false,
+          winnerTeamId: "team_home",
+        },
+        {
+          round: 2,
+          fixtureId: "final",
+          bracketType: "winners",
+          isBye: false,
+          winnerTeamId: null,
+        },
+      ],
+    });
+
+    const res = await advancePlayoffRoundAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({
+      ok: false,
+      error: "championship_requires_explicit_sim",
+    });
+  });
+});
+
+describe("simulateChampionshipAction (WSM-000241)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authorize();
+  });
+
+  it("simulates only the final and returns the champion name", async () => {
+    const finalGame = fixture({ id: "final", stage: "playoff", week: null });
+    mockGetPlayoffBracket
+      .mockResolvedValueOnce({
+        seasonId: SEASON,
+        format: "single",
+        rounds: 2,
+        matchups: [
+          {
+            round: 2,
+            fixtureId: "final",
+            bracketType: "winners",
+            isBye: false,
+            winnerTeamId: null,
+            homeTeamId: "team_home",
+            homeTeamName: "Home",
+            awayTeamName: "Away",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        seasonId: SEASON,
+        format: "single",
+        rounds: 2,
+        matchups: [
+          {
+            round: 2,
+            fixtureId: "final",
+            bracketType: "winners",
+            winnerTeamId: "team_home",
+            homeTeamId: "team_home",
+            homeTeamName: "Home",
+            awayTeamName: "Away",
+          },
+        ],
+      });
+    mockListFixturesBySeason.mockResolvedValue([finalGame]);
+
+    const res = await simulateChampionshipAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: true, simulated: 1, champion: "Home" });
+    expect(mockSimulateAndPersistFixture).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects season/league mismatch", async () => {
+    mockGetSeason.mockResolvedValue({
+      id: SEASON,
+      leagueId: "other_league",
+      playoffTeams: 4,
+      playoffFormat: "single",
+    });
+
+    const res = await simulateChampionshipAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "season_league_mismatch" });
+    expect(mockSimulateAndPersistFixture).not.toHaveBeenCalled();
+  });
+});
+
+describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authorize();
+    mockListFixturesBySeason.mockResolvedValue([]);
+    mockGeneratePlayoffBracket.mockResolvedValue({ ok: true });
+  });
+
+  it("rejects legacy playoff sizes", async () => {
+    mockGetSeason.mockResolvedValue({
+      id: SEASON,
+      leagueId: LEAGUE,
+      playoffTeams: 6,
+      playoffFormat: "single",
+      divisionWinnersQualify: false,
+    });
+
+    const res = await simulateSeasonThroughChampionAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "invalid_playoff_size" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
+  it("rejects double-elimination seasons", async () => {
+    mockGetSeason.mockResolvedValue({
+      id: SEASON,
+      leagueId: LEAGUE,
+      playoffTeams: 4,
+      playoffFormat: "double",
+      divisionWinnersQualify: false,
+    });
+
+    const res = await simulateSeasonThroughChampionAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "unsupported_format" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
   });
 });
 

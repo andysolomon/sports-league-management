@@ -13,6 +13,7 @@ import {
 } from "@/lib/data-api";
 import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
+import { canStartPlayoffs } from "@/lib/playoffs";
 import { resolveLifecycleSeason } from "@/lib/season-view";
 
 /*
@@ -165,8 +166,8 @@ export async function advanceToPlayoffsAction(input: {
   }
 
   const size = activeSeason.playoffTeams ?? 0;
-  if (!size || size < 2) {
-    return { ok: false, error: "no_playoffs_configured" };
+  if (!canStartPlayoffs(size)) {
+    return { ok: false, error: "invalid_playoff_team_count" };
   }
 
   try {

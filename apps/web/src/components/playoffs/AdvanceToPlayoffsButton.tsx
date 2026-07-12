@@ -26,7 +26,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Finish every regular-season game before advancing.",
   already_advanced: "Playoffs have already started for this season.",
   no_season: "No active season found.",
-  no_playoffs_configured: "This season is not configured for playoffs.",
+  invalid_playoff_team_count:
+    "Playoff team count must be 4, 8, or 16 for this season.",
   season_required: "No season selected — reload and try again.",
   season_not_found: "This season no longer exists.",
   season_completed: "This season is already completed.",

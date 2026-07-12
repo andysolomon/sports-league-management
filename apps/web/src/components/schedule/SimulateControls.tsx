@@ -134,9 +134,12 @@ export function SimulateWeekButton({
 export function SimulateScopeMenu({
   leagueId,
   seasonId,
+  playoffFormat = "single",
 }: {
   leagueId: string;
   seasonId: string;
+  /** Season or live-bracket format — bulk playoff sims hidden for double elim. */
+  playoffFormat?: string;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -175,8 +178,8 @@ export function SimulateScopeMenu({
           res.champion
             ? `${res.champion} wins — simulated ${res.playoffGames} playoff game${res.playoffGames === 1 ? "" : "s"}`
             : res.playoffGames > 0
-              ? `Simulated ${res.playoffGames} playoff game${res.playoffGames === 1 ? "" : "s"}`
-              : "No unplayed playoff games to simulate.",
+              ? `Simulated ${res.playoffGames} playoff game${res.playoffGames === 1 ? "" : "s"} through the semifinals.`
+              : "No unplayed playoff games through the semifinals.",
         );
         router.refresh();
         setConfirmOpen(false);
@@ -225,7 +228,7 @@ export function SimulateScopeMenu({
         ? {
             title: "Simulate playoffs?",
             description:
-              "Simulate every unplayed playoff game round by round? Already-recorded games are left untouched.",
+              "Simulate every unplayed playoff game through the semifinals? The championship stays unresolved until you simulate it explicitly.",
             onConfirm: runPlayoffs,
           }
         : confirmAction === "champion"
@@ -236,6 +239,8 @@ export function SimulateScopeMenu({
               onConfirm: runToChampion,
             }
           : null;
+
+  const bulkPlayoffSimsEnabled = playoffFormat !== "double";
 
   return (
     <>
@@ -259,13 +264,23 @@ export function SimulateScopeMenu({
           <DropdownMenuItem disabled={pending} onSelect={() => openConfirm("regular")}>
             Sim regular season
           </DropdownMenuItem>
-          <DropdownMenuItem disabled={pending} onSelect={() => openConfirm("playoffs")}>
-            Sim playoffs
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled={pending} onSelect={() => openConfirm("champion")}>
-            <Trophy className="h-4 w-4" />
-            Sim to champion
-          </DropdownMenuItem>
+          {bulkPlayoffSimsEnabled ? (
+            <>
+              <DropdownMenuItem
+                disabled={pending}
+                onSelect={() => openConfirm("playoffs")}
+              >
+                Sim playoffs
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={pending}
+                onSelect={() => openConfirm("champion")}
+              >
+                <Trophy className="h-4 w-4" />
+                Sim to champion
+              </DropdownMenuItem>
+            </>
+          ) : null}
         </DropdownMenuContent>
       </DropdownMenu>
       {confirmCopy ? (
@@ -421,6 +436,14 @@ function simError(error: string): string {
       return "Game not found.";
     case "no_playoffs":
       return "No playoff bracket yet. Generate a bracket on the Playoffs page first.";
+    case "unsupported_format":
+      return "Bulk playoff simulation is not available for double elimination.";
+    case "invalid_playoff_size":
+      return "Playoff team count must be 4, 8, or 16 (set it in season settings).";
+    case "season_league_mismatch":
+      return "That season does not belong to this league.";
+    case "season_not_found":
+      return "Season not found.";
     default:
       if (error.includes("not_enough_teams")) {
         return "Not enough teams for the configured playoff bracket. Lower the playoff team count in season settings.";

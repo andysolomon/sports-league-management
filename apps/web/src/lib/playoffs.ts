@@ -192,8 +192,89 @@ export function regularSeasonProgress(
   };
 }
 
+/** Standard playoff field sizes for newly started brackets (WSM-000241). */
+export const STANDARD_PLAYOFF_TEAM_COUNTS = [4, 8, 16] as const;
+
+export function isStandardPlayoffTeamCount(
+  count: number | null | undefined,
+): boolean {
+  return (
+    count === 4 ||
+    count === 8 ||
+    count === 16
+  );
+}
+
+/** Single-elim winners-bracket matchups only — bulk round ops ignore losers/GF. */
+export function winnersBracketMatchups(
+  matchups: PlayoffMatchupDto[],
+): PlayoffMatchupDto[] {
+  return matchups.filter((m) => (m.bracketType ?? "winners") === "winners");
+}
+
+/** Lowest round that still has an unresolved non-bye matchup; null when decided. */
+export function minimumUnresolvedRound(
+  matchups: PlayoffMatchupDto[],
+  totalRounds: number,
+): number | null {
+  const winners = winnersBracketMatchups(matchups);
+  for (let round = 1; round <= totalRounds; round++) {
+    const roundMatchups = winners.filter((m) => m.round === round);
+    if (roundMatchups.some((m) => !m.isBye && !m.winnerTeamId)) {
+      return round;
+    }
+  }
+  return null;
+}
+
+export function championshipRound(totalRounds: number): number {
+  return totalRounds;
+}
+
+export function isChampionshipRound(
+  round: number,
+  totalRounds: number,
+): boolean {
+  return round === championshipRound(totalRounds);
+}
+
+/** Playable (non-bye, undecided) matchups in a single-elim round. */
+export function playableMatchupsInRound(
+  matchups: PlayoffMatchupDto[],
+  round: number,
+): PlayoffMatchupDto[] {
+  return winnersBracketMatchups(matchups).filter(
+    (m) =>
+      m.round === round &&
+      !m.isBye &&
+      !m.winnerTeamId &&
+      m.fixtureId != null,
+  );
+}
+
+export function fixtureIdsForRound(
+  matchups: PlayoffMatchupDto[],
+  round: number,
+): string[] {
+  return playableMatchupsInRound(matchups, round)
+    .map((m) => m.fixtureId)
+    .filter((id): id is string => id != null);
+}
+
+/** Bulk single-elim round simulation is unsupported for double elimination. */
+export function supportsBulkPlayoffOps(format: string): boolean {
+  return format !== "double";
+}
+
+export function canStartPlayoffs(
+  playoffTeams: number | null | undefined,
+): boolean {
+  return isStandardPlayoffTeamCount(playoffTeams);
+}
+
 export type PlayoffPagePhase =
   | "no_playoffs_config"
+  | "invalid_playoff_size"
   | "in_progress"
   | "ready"
   | "bracket_live";
@@ -203,8 +284,13 @@ export function playoffPagePhase(input: {
   bracketExists: boolean;
   regularComplete: boolean;
 }): PlayoffPagePhase {
-  if (!input.playoffTeams || input.playoffTeams < 2) return "no_playoffs_config";
+  if (!input.playoffTeams || input.playoffTeams < 2) {
+    return "no_playoffs_config";
+  }
   if (input.bracketExists) return "bracket_live";
+  if (!isStandardPlayoffTeamCount(input.playoffTeams)) {
+    return "invalid_playoff_size";
+  }
   if (input.regularComplete) return "ready";
   return "in_progress";
 }

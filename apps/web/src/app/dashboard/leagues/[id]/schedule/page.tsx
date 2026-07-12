@@ -289,6 +289,9 @@ export default async function LeagueSchedulePage({
               <SimulateScopeMenu
                 leagueId={leagueId}
                 seasonId={activeSeason.id}
+                playoffFormat={
+                  bracket?.format ?? activeSeason.playoffFormat ?? "single"
+                }
               />
             ) : null}
             {canGenerateRosters ? (

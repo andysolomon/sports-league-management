@@ -7,6 +7,11 @@ import {
   deriveChampion,
   regularSeasonProgress,
   playoffPagePhase,
+  isStandardPlayoffTeamCount,
+  minimumUnresolvedRound,
+  fixtureIdsForRound,
+  isChampionshipRound,
+  supportsBulkPlayoffOps,
 } from "../playoffs";
 import type { PlayoffMatchupDto } from "@/lib/data-api";
 
@@ -219,5 +224,72 @@ describe("playoffPagePhase", () => {
         regularComplete: false,
       }),
     ).toBe("in_progress");
+  });
+
+  it("returns invalid_playoff_size for legacy team counts before bracket creation", () => {
+    expect(
+      playoffPagePhase({
+        playoffTeams: 6,
+        bracketExists: false,
+        regularComplete: true,
+      }),
+    ).toBe("invalid_playoff_size");
+  });
+
+  it("still shows bracket_live for legacy sizes when a bracket exists", () => {
+    expect(
+      playoffPagePhase({
+        playoffTeams: 6,
+        bracketExists: true,
+        regularComplete: true,
+      }),
+    ).toBe("bracket_live");
+  });
+});
+
+describe("isStandardPlayoffTeamCount (WSM-000241)", () => {
+  it("accepts 4, 8, and 16 only", () => {
+    expect(isStandardPlayoffTeamCount(4)).toBe(true);
+    expect(isStandardPlayoffTeamCount(8)).toBe(true);
+    expect(isStandardPlayoffTeamCount(16)).toBe(true);
+    expect(isStandardPlayoffTeamCount(6)).toBe(false);
+    expect(isStandardPlayoffTeamCount(2)).toBe(false);
+    expect(isStandardPlayoffTeamCount(null)).toBe(false);
+  });
+});
+
+describe("minimumUnresolvedRound (WSM-000241)", () => {
+  it("returns the lowest round with an undecided non-bye matchup", () => {
+    const matchups = [
+      m({ id: "s0", round: 1, slot: 0, winnerTeamId: "t1" }),
+      m({ id: "s1", round: 1, slot: 1 }),
+      m({ id: "f", round: 2, slot: 0 }),
+    ];
+    expect(minimumUnresolvedRound(matchups, 2)).toBe(1);
+  });
+
+  it("skips bye slots when finding the current round", () => {
+    const matchups = [
+      m({ id: "bye", round: 1, slot: 0, isBye: true, winnerTeamId: "t1" }),
+      m({ id: "f", round: 2, slot: 0, fixtureId: "fix1" }),
+    ];
+    expect(minimumUnresolvedRound(matchups, 2)).toBe(2);
+    expect(isChampionshipRound(2, 2)).toBe(true);
+  });
+
+  it("returns fixture ids only for playable matchups in a round", () => {
+    const matchups = [
+      m({ id: "s0", round: 1, slot: 0, fixtureId: "f1" }),
+      m({ id: "bye", round: 1, slot: 1, isBye: true }),
+      m({ id: "s1", round: 1, slot: 2, fixtureId: "f2", winnerTeamId: "t2" }),
+    ];
+    expect(fixtureIdsForRound(matchups, 1)).toEqual(["f1"]);
+  });
+});
+
+describe("supportsBulkPlayoffOps", () => {
+  it("allows single elimination and rejects double", () => {
+    expect(supportsBulkPlayoffOps("single")).toBe(true);
+    expect(supportsBulkPlayoffOps("double")).toBe(false);
   });
 });
