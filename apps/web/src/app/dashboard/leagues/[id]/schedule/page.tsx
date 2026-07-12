@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ClipboardList, Radio, Tv } from "lucide-react";
 import {
   schedulesStandingsV1,
   liveStreamingV1,
@@ -20,15 +19,19 @@ import {
   getPlayoffBracket,
   getTeamsByLeague,
   listFixturesBySeason,
+  computeStandings,
   type PublicGameStream,
 } from "@/lib/data-api";
+import {
+  formatTeamRecord,
+  projectionFromFixture,
+} from "@/lib/game-drawer-projection";
 import type {
   FixtureDto,
   GameResultDto,
 } from "@sports-management/shared-types";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
-import { formatFixtureWhen } from "@/lib/format";
 import { isSeasonStarted } from "@/lib/season-started";
 import { regularSeasonProgress } from "@/lib/playoffs";
 import { resolvePlayoffHandoff } from "@/lib/playoff-handoff";
@@ -39,21 +42,16 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
 import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton";
-import RecordResultDialog from "@/components/schedule/RecordResultDialog";
-import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
-import GoLiveControl from "@/components/schedule/GoLiveControl";
-import ClipsControl from "@/components/schedule/ClipsControl";
 import {
-  SimulateGameButton,
   SimulateScopeMenu,
   SimulateWeekButton,
 } from "@/components/schedule/SimulateControls";
 import ScheduleWeeks, {
   type ScheduleWeekView,
 } from "@/components/schedule/ScheduleWeeks";
+import { ScheduleFixtureRow } from "@/components/schedule/ScheduleFixtureRow";
 import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
 import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
-import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveLifecycleSeason, resolveViewedSeason } from "@/lib/season-view";
@@ -62,8 +60,6 @@ import { BackLink } from "@/components/workspace/BackLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
-
-type StreamStatus = "idle" | "active" | "ended";
 
 interface FixtureRow {
   fixture: FixtureDto;
@@ -147,6 +143,16 @@ export default async function LeagueSchedulePage({
     }),
   );
 
+  const standings = activeSeason
+    ? await computeStandings(activeSeason.id)
+    : [];
+  const recordByTeamId = new Map(
+    standings.map((s) => [
+      s.teamId,
+      formatTeamRecord(s.wins, s.losses, s.ties),
+    ]),
+  );
+
   // Per-fixture live-stream state — only fetched when the dark flag is on for
   // an admin, so the default (flag off) path adds zero reads. The full public
   // projection is kept (not just status): the clips control (WSM-000201)
@@ -202,6 +208,7 @@ export default async function LeagueSchedulePage({
       statsEnabled={statsEnabled}
       liveEnabled={liveEnabled}
       streams={streams}
+      recordByTeamId={recordByTeamId}
     />
   );
   const weekViews: ScheduleWeekView[] = weekGroups.map((group) => ({
@@ -374,6 +381,7 @@ function FixtureTable({
   statsEnabled,
   liveEnabled,
   streams,
+  recordByTeamId,
 }: {
   rows: FixtureRow[];
   leagueId: string;
@@ -384,6 +392,7 @@ function FixtureTable({
   statsEnabled: boolean;
   liveEnabled: boolean;
   streams: Map<string, PublicGameStream | null>;
+  recordByTeamId: Map<string, string>;
 }) {
   return (
     <div className="overflow-x-auto">
@@ -406,151 +415,26 @@ function FixtureTable({
         </thead>
         <tbody>
           {rows.map(({ fixture, result, hasPlayLog }) => (
-            <tr
+            <ScheduleFixtureRow
               key={fixture.id}
-              data-testid={`schedule-fixture-${fixture.id}`}
-              className="border-b border-border"
-            >
-              <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
-                {formatFixtureWhen(fixture.scheduledAt)}
-              </td>
-              <td className="px-4 py-2 text-foreground">
-                {fixture.homeTeamName}
-              </td>
-              <td className="px-4 py-2 text-foreground">
-                {fixture.awayTeamName}
-              </td>
-              <td className="px-4 py-2 text-right font-mono text-foreground">
-                {result ? (
-                  statsEnabled ? (
-                    <Link
-                      href={`/dashboard/games/${fixture.id}/boxscore`}
-                      className="hover:underline"
-                      title="View box score"
-                    >
-                      {result.homeScore} – {result.awayScore}
-                    </Link>
-                  ) : (
-                    `${result.homeScore} – ${result.awayScore}`
-                  )
-                ) : (
-                  "—"
-                )}
-              </td>
-              <td className="px-4 py-2">
-                <StatusBadge status={fixture.status} />
-              </td>
-              {isAdmin ? (
-                <td className="px-4 py-2">
-                  <div className="flex flex-wrap items-center gap-1">
-                    {canMutate ? (
-                      <RecordResultDialog
-                        leagueId={leagueId}
-                        fixtureId={fixture.id}
-                        homeTeamName={fixture.homeTeamName}
-                        awayTeamName={fixture.awayTeamName}
-                        initialHomeScore={result?.homeScore ?? null}
-                        initialAwayScore={result?.awayScore ?? null}
-                        triggerLabel={result ? "Edit result" : "Record result"}
-                      />
-                    ) : null}
-                    {canMutate && fixture.status === "scheduled" ? (
-                      <SimulateGameButton
-                        leagueId={leagueId}
-                        fixtureId={fixture.id}
-                        homeTeamName={fixture.homeTeamName}
-                        awayTeamName={fixture.awayTeamName}
-                      />
-                    ) : null}
-                    {canMutate ? (
-                      <DeleteFixtureButton
-                        leagueId={leagueId}
-                        fixtureId={fixture.id}
-                        homeTeamName={fixture.homeTeamName}
-                        awayTeamName={fixture.awayTeamName}
-                      />
-                    ) : null}
-                    {canGoLive ? (
-                      <GoLiveControl
-                        leagueId={leagueId}
-                        fixtureId={fixture.id}
-                        homeTeamName={fixture.homeTeamName}
-                        awayTeamName={fixture.awayTeamName}
-                        status={
-                          (streams.get(fixture.id)?.status as
-                            | StreamStatus
-                            | undefined) ?? null
-                        }
-                        gameStatus={fixture.status}
-                      />
-                    ) : null}
-                    {canStream &&
-                    streams.get(fixture.id)?.provider === "mux" &&
-                    streams.get(fixture.id)?.vodAssetId ? (
-                      <ClipsControl
-                        leagueId={leagueId}
-                        fixtureId={fixture.id}
-                        homeTeamName={fixture.homeTeamName}
-                        awayTeamName={fixture.awayTeamName}
-                        vodPlaybackId={
-                          streams.get(fixture.id)?.vodPlaybackId ?? null
-                        }
-                      />
-                    ) : null}
-                    {statsEnabled ? (
-                      <span className="flex items-center gap-1 text-xs">
-                        <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">
-                          Box score
-                        </span>
-                        <Link
-                          href={`/dashboard/teams/${fixture.homeTeamId}/games/${fixture.id}/stats`}
-                          className="text-primary hover:underline"
-                        >
-                          Home
-                        </Link>
-                        <span className="text-muted-foreground">/</span>
-                        <Link
-                          href={`/dashboard/teams/${fixture.awayTeamId}/games/${fixture.id}/stats`}
-                          className="text-primary hover:underline"
-                        >
-                          Away
-                        </Link>
-                      </span>
-                    ) : null}
-                    {liveEnabled ? (
-                      <span className="flex items-center gap-1 text-xs">
-                        <Radio className="h-3.5 w-3.5 text-muted-foreground" />
-                        <Link
-                          href={`/dashboard/teams/${fixture.homeTeamId}/games/${fixture.id}/live`}
-                          className="text-primary hover:underline"
-                        >
-                          Live (Home)
-                        </Link>
-                        <span className="text-muted-foreground">/</span>
-                        <Link
-                          href={`/dashboard/teams/${fixture.awayTeamId}/games/${fixture.id}/live`}
-                          className="text-primary hover:underline"
-                        >
-                          Away
-                        </Link>
-                      </span>
-                    ) : null}
-                    {fixture.status === "final" && hasPlayLog ? (
-                      <span className="flex items-center gap-1 text-xs">
-                        <Tv className="h-3.5 w-3.5 text-muted-foreground" />
-                        <Link
-                          href={`/dashboard/games/${fixture.id}/gamecast`}
-                          className="text-primary hover:underline"
-                        >
-                          Gamecast
-                        </Link>
-                      </span>
-                    ) : null}
-                  </div>
-                </td>
-              ) : null}
-            </tr>
+              fixture={fixture}
+              result={result}
+              hasPlayLog={hasPlayLog}
+              projection={projectionFromFixture({
+                fixture,
+                result,
+                hasPlayLog,
+                recordByTeamId,
+              })}
+              leagueId={leagueId}
+              isAdmin={isAdmin}
+              canMutate={canMutate}
+              canGoLive={canGoLive}
+              canStream={canStream}
+              statsEnabled={statsEnabled}
+              liveEnabled={liveEnabled}
+              stream={streams.get(fixture.id)}
+            />
           ))}
         </tbody>
       </table>

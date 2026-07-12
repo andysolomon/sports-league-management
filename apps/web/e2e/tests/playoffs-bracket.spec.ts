@@ -123,6 +123,14 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
       page.getByText(/Round 1|Semifinal|Quarterfinal/i).first(),
     ).toBeVisible();
 
+    const bracketTrigger = page.getByTestId(/^playoff-drawer-trigger-/).first();
+    await bracketTrigger.click();
+    const drawer = page.getByTestId("game-context-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText("Preview")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await simPlayoffsScope(page);
     await expect(page.getByText(/wins — simulated|Simulated \d+ playoff game/)).toBeVisible({
@@ -134,5 +142,13 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     await expect(
       page.locator(".rounded-lg.border-primary\\/30").getByRole("link").first(),
     ).toBeVisible();
+
+    const finalBracketTrigger = page
+      .getByTestId(/^playoff-drawer-trigger-/)
+      .filter({ has: page.locator(".font-semibold") })
+      .first();
+    await finalBracketTrigger.click();
+    await expect(page.getByTestId("game-context-drawer")).toBeVisible();
+    await expect(page.getByTestId("game-context-drawer").getByText("Final")).toBeVisible();
   });
 });

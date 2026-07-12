@@ -1,7 +1,16 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { PlayoffBracketDto, PlayoffMatchupDto } from "@/lib/data-api";
+import type { PlayoffMatchupDto } from "@/lib/data-api";
 import { bracketSections, winnerSide } from "@/lib/playoffs";
+import type { PlayoffBracketDto } from "@/lib/data-api";
+import {
+  projectionFromMatchup,
+  gameDrawerMatchupLabel,
+} from "@/lib/game-drawer-projection";
+import { GameContextDrawer } from "@/components/games/GameContextDrawer";
 
 function TeamName({
   teamId,
@@ -22,7 +31,11 @@ function TeamName({
   );
   if (teamId) {
     return (
-      <Link href={`/dashboard/teams/${teamId}`} className={className}>
+      <Link
+        href={`/dashboard/teams/${teamId}`}
+        className={className}
+        onClick={(event) => event.stopPropagation()}
+      >
         {label}
       </Link>
     );
@@ -67,13 +80,18 @@ function Side({
   );
 }
 
-function MatchupCard({ m }: { m: PlayoffMatchupDto }) {
+function MatchupCard({
+  m,
+  roundLabel,
+}: {
+  m: PlayoffMatchupDto;
+  roundLabel: string;
+}) {
   const side = winnerSide(m);
   const decided = side !== null;
-  const gamecastHref =
-    m.fixtureId && m.status === "final" && m.hasPlayLog
-      ? `/dashboard/games/${m.fixtureId}/gamecast`
-      : null;
+  const projection = projectionFromMatchup(m, roundLabel);
+  const [open, setOpen] = React.useState(false);
+  const restoreFocusRef = React.useRef<HTMLButtonElement | null>(null);
 
   const card = m.isBye ? (
     <div className="overflow-hidden rounded-md border border-dashed border-border bg-card">
@@ -112,19 +130,33 @@ function MatchupCard({ m }: { m: PlayoffMatchupDto }) {
     </div>
   );
 
-  if (gamecastHref) {
-    return (
-      <Link
-        href={gamecastHref}
-        className="block rounded-md transition-colors hover:ring-2 hover:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        title="View gamecast"
-      >
-        {card}
-      </Link>
-    );
+  if (!projection) {
+    return card;
   }
 
-  return card;
+  const drawerLabel = `View ${projection.status === "final" ? "final" : "preview"} for ${gameDrawerMatchupLabel(projection)}`;
+
+  return (
+    <>
+      <button
+        ref={restoreFocusRef}
+        type="button"
+        aria-label={drawerLabel}
+        aria-haspopup="dialog"
+        data-testid={`playoff-drawer-trigger-${m.id}`}
+        onClick={() => setOpen(true)}
+        className="block w-full rounded-md text-left transition-colors hover:ring-2 hover:ring-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {card}
+      </button>
+      <GameContextDrawer
+        projection={projection}
+        open={open}
+        onOpenChange={setOpen}
+        restoreFocusRef={restoreFocusRef}
+      />
+    </>
+  );
 }
 
 /**
@@ -187,7 +219,7 @@ export default function PlayoffBracket({
                     </h4>
                     <div className="flex flex-1 flex-col justify-around gap-4">
                       {r.matchups.map((m) => (
-                        <MatchupCard key={m.id} m={m} />
+                        <MatchupCard key={m.id} m={m} roundLabel={r.label} />
                       ))}
                     </div>
                   </div>

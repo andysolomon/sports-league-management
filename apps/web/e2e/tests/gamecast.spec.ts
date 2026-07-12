@@ -566,4 +566,92 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
       0,
     );
   });
+
+  test("scheduled schedule row opens preview drawer with team context", async ({
+    page,
+  }) => {
+    if (!fixture) test.skip();
+    const leagueId = fixture!.leagueId;
+
+    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await revealAllScheduleRows(page);
+
+    const scheduledRow = page
+      .locator("tbody tr")
+      .filter({ has: page.getByText("Scheduled", { exact: true }) })
+      .first();
+    const homeName = await scheduledRow.locator("td").nth(1).innerText();
+    const awayName = await scheduledRow.locator("td").nth(2).innerText();
+
+    await scheduledRow
+      .getByRole("button", {
+        name: new RegExp(`View preview for ${homeName} vs ${awayName}`),
+      })
+      .first()
+      .click();
+
+    const drawer = page.getByTestId("game-context-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText("Preview")).toBeVisible();
+    await expect(
+      drawer.getByRole("heading", { name: `${homeName} vs ${awayName}` }),
+    ).toBeVisible();
+    await expect(drawer.getByTestId("game-drawer-open-gamecast")).toHaveCount(0);
+
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
+  });
+
+  test("final schedule row opens summary drawer and links to full Gamecast", async ({
+    page,
+  }) => {
+    if (!fixture) test.skip();
+    const ctx = await openSimmedGamecastFinal(page, fixture!.leagueId);
+
+    await page.goto(`/dashboard/leagues/${fixture!.leagueId}/schedule`);
+    await revealAllScheduleRows(page);
+
+    const finalRow = page.getByTestId(/^schedule-fixture-/).filter({
+      has: page.getByText("Final", { exact: true }),
+    }).first();
+    await finalRow
+      .getByRole("button", {
+        name: new RegExp(
+          `View final for ${ctx.homeName} vs ${ctx.awayName}`,
+        ),
+      })
+      .first()
+      .click();
+
+    const drawer = page.getByTestId("game-context-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText("Final")).toBeVisible();
+    await expect(drawer.getByText(String(ctx.expectedHome))).toBeVisible();
+    await expect(drawer.getByText(String(ctx.expectedAway))).toBeVisible();
+
+    await drawer.getByTestId("game-drawer-open-gamecast").click();
+    await expect(page).toHaveURL(/\/dashboard\/games\/[^/]+\/gamecast$/);
+    await expect(
+      page.getByRole("heading", { name: "Gamecast" }),
+    ).toBeVisible();
+  });
+
+  test("drawer on schedule does not overflow a 375px viewport", async ({
+    page,
+  }) => {
+    if (!fixture) test.skip();
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(`/dashboard/leagues/${fixture!.leagueId}/schedule`);
+    await revealAllScheduleRows(page);
+
+    const row = page.locator("tbody tr").first();
+    await row.getByRole("button").first().click();
+    await expect(page.getByTestId("game-context-drawer")).toBeVisible();
+
+    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
 });

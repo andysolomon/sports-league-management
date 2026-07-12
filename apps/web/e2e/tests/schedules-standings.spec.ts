@@ -386,9 +386,20 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
 
     // Read paths remain: every week is completed (collapsed) — expand and
     // confirm the recorded scores are still there.
+    await page.goto(
+      `/dashboard/leagues/${leagueId}/schedule?season=${fixture!.seasonId}`,
+    );
     await page.getByRole("button", { name: "Expand all" }).click();
     await expect(page.getByText("21 – 7")).toBeVisible();
     await expect(page.getByText("28 – 3")).toBeVisible();
+
+    const archivedRow = page.getByTestId(/^schedule-fixture-/).first();
+    await archivedRow.getByRole("button").first().click();
+    const drawer = page.getByTestId("game-context-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText("Final")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
   });
 });
 
