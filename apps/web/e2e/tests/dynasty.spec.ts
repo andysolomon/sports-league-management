@@ -10,6 +10,7 @@ import {
   acceptBrowserConfirms,
   bootstrapFourTeamSimLeague,
   simToChampion,
+  startNextSeason,
 } from "../helpers/sim-league-setup";
 
 /*
@@ -103,7 +104,7 @@ test.describe("Dynasty panel (dynasty rollover)", () => {
 
     await page.goto(`/dashboard/leagues/${leagueId}`);
     await expect(startBtn).toBeEnabled();
-    await startBtn.click();
+    await startNextSeason(page);
     await expect(page.getByText("Next season started.")).toBeVisible({
       timeout: 60_000,
     });

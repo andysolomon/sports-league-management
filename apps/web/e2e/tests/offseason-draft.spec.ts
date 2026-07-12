@@ -10,6 +10,7 @@ import {
   acceptBrowserConfirms,
   bootstrapFourTeamSimLeague,
   simToChampion,
+  startNextSeason,
 } from "../helpers/sim-league-setup";
 
 /*
@@ -51,7 +52,7 @@ test.describe("Offseason draft", () => {
     await page.goto(`/dashboard/leagues/${fixture.leagueId}`);
     const startBtn = page.getByRole("button", { name: "Start next season" });
     await expect(startBtn).toBeEnabled({ timeout: 60_000 });
-    await startBtn.click();
+    await startNextSeason(page);
     await expect(page.getByText("Next season started.")).toBeVisible({
       timeout: 60_000,
     });

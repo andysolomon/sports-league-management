@@ -17,6 +17,14 @@ export function acceptBrowserConfirms(page: Page): void {
   page.on("dialog", (dialog) => void dialog.accept());
 }
 
+/** Confirm an in-app ActionConfirmDialog (lifecycle surfaces from PR #535). */
+export async function confirmLifecycleDialog(page: Page): Promise<void> {
+  const dialog = page.getByTestId("action-confirm-dialog");
+  await expect(dialog).toBeVisible();
+  await page.getByTestId("action-confirm-submit").click();
+  await expect(dialog).toBeHidden();
+}
+
 export async function addTeamsToLeague(
   page: Page,
   leagueId: string,
@@ -58,9 +66,11 @@ export async function generateLeagueSyntheticData(
   await page.goto(`/dashboard/leagues/${leagueId}`);
   const rostersBtn = page.getByRole("button", { name: "Generate rosters" });
   await rostersBtn.click();
+  await confirmLifecycleDialog(page);
   await expect(rostersBtn).toBeEnabled({ timeout: 120_000 });
   const ratingsBtn = page.getByRole("button", { name: "Generate ratings" });
   await ratingsBtn.click();
+  await confirmLifecycleDialog(page);
   await expect(ratingsBtn).toBeEnabled({ timeout: 120_000 });
 }
 
@@ -71,6 +81,7 @@ export async function generateRoundRobinSchedule(
   await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
   const generate = page.getByRole("button", { name: /Generate schedule/ });
   await expect(generate).toBeVisible();
+  // Fresh leagues have no fixtures — GenerateScheduleButton skips the dialog.
   await generate.click();
   await expect(page.getByText("Week 1", { exact: true })).toBeVisible({
     timeout: 60_000,
@@ -105,9 +116,17 @@ export async function openSimulateScopeMenu(page: Page) {
   await page.getByRole("button", { name: "Simulate", exact: true }).click();
 }
 
+export async function simWeek(page: Page, week: number) {
+  await weekCard(page, week)
+    .getByRole("button", { name: "Sim week" })
+    .click();
+  await confirmLifecycleDialog(page);
+}
+
 export async function simRegularSeason(page: Page) {
   await openSimulateScopeMenu(page);
   await page.getByRole("menuitem", { name: "Sim regular season" }).click();
+  await confirmLifecycleDialog(page);
   await expect(
     page.getByText(/Simulated \d+ regular-season game/),
   ).toBeVisible({ timeout: 120_000 });
@@ -116,12 +135,24 @@ export async function simRegularSeason(page: Page) {
 export async function simPlayoffsScope(page: Page) {
   await openSimulateScopeMenu(page);
   await page.getByRole("menuitem", { name: "Sim playoffs" }).click();
+  await confirmLifecycleDialog(page);
 }
 
 export async function simToChampion(page: Page) {
   await openSimulateScopeMenu(page);
   await page.getByRole("menuitem", { name: "Sim to champion" }).click();
+  await confirmLifecycleDialog(page);
   await expect(page.getByText(/wins — simulated/)).toBeVisible({
     timeout: 180_000,
   });
+}
+
+export async function advanceToPlayoffs(page: Page) {
+  await page.getByRole("button", { name: "Advance to playoffs" }).click();
+  await confirmLifecycleDialog(page);
+}
+
+export async function startNextSeason(page: Page) {
+  await page.getByRole("button", { name: "Start next season" }).click();
+  await confirmLifecycleDialog(page);
 }

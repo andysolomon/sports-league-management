@@ -8,6 +8,7 @@ import {
 import { getTestOrgId } from "../helpers/seed-roster";
 import {
   acceptBrowserConfirms,
+  advanceToPlayoffs,
   bootstrapFourTeamSimLeague,
   simPlayoffsScope,
   simRegularSeason,
@@ -79,7 +80,7 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     await expect(page.getByText(/Regular season complete/)).toBeVisible();
     const advance = page.getByRole("button", { name: "Advance to playoffs" });
     await expect(advance).toBeEnabled();
-    await advance.click();
+    await advanceToPlayoffs(page);
     await expect(
       page.getByText(/Playoffs started — \d+ matchups/),
     ).toBeVisible({ timeout: 60_000 });
