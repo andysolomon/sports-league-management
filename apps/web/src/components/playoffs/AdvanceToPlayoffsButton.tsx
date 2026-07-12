@@ -10,12 +10,35 @@ import { advanceToPlayoffsAction } from "@/app/dashboard/leagues/[id]/playoffs/a
 
 export interface AdvanceToPlayoffsButtonProps {
   leagueId: string;
+  /**
+   * The season being advanced (WSM-000239). Sent explicitly so the server can
+   * verify it is still the lifecycle-decided, non-completed season — a stale
+   * tab viewing an old season can never advance the wrong one.
+   */
+  seasonId: string;
   disabled?: boolean;
+  /** Button label — the schedule page hands off with "Start playoffs". */
+  triggerLabel?: string;
 }
+
+const ERROR_MESSAGES: Record<string, string> = {
+  regular_season_incomplete:
+    "Finish every regular-season game before advancing.",
+  already_advanced: "Playoffs have already started for this season.",
+  no_season: "No active season found.",
+  no_playoffs_configured: "This season is not configured for playoffs.",
+  season_required: "No season selected — reload and try again.",
+  season_not_found: "This season no longer exists.",
+  season_completed: "This season is already completed.",
+  season_mismatch:
+    "This is not the league's current season — switch to the active season to start playoffs.",
+};
 
 export default function AdvanceToPlayoffsButton({
   leagueId,
+  seasonId,
   disabled = false,
+  triggerLabel = "Advance to playoffs",
 }: AdvanceToPlayoffsButtonProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -23,7 +46,7 @@ export default function AdvanceToPlayoffsButton({
 
   function onConfirm() {
     startTransition(async () => {
-      const res = await advanceToPlayoffsAction({ leagueId });
+      const res = await advanceToPlayoffsAction({ leagueId, seasonId });
       if (res.ok) {
         toast.success(
           `Playoffs started — ${res.matchups} matchups across ${res.rounds} rounds.`,
@@ -33,17 +56,7 @@ export default function AdvanceToPlayoffsButton({
         return;
       }
 
-      const message =
-        res.error === "regular_season_incomplete"
-          ? "Finish every regular-season game before advancing."
-          : res.error === "already_advanced"
-            ? "Playoffs have already started for this season."
-            : res.error === "no_season"
-              ? "No active season found."
-              : res.error === "no_playoffs_configured"
-                ? "This season is not configured for playoffs."
-                : res.error;
-      toast.error(message);
+      toast.error(ERROR_MESSAGES[res.error] ?? res.error);
     });
   }
 
@@ -56,7 +69,7 @@ export default function AdvanceToPlayoffsButton({
         className="gap-1.5"
       >
         <Trophy className="h-4 w-4" />
-        {pending ? "Advancing…" : "Advance to playoffs"}
+        {pending ? "Advancing…" : triggerLabel}
       </Button>
       <ActionConfirmDialog
         open={confirmOpen}

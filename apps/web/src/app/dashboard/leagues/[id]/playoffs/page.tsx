@@ -53,6 +53,10 @@ export default async function LeaguePlayoffsPage({
   const allSeasons = await getSeasons([leagueId]);
   const activeSeason = resolveViewedSeason(allSeasons, seasonParam);
 
+  // Completed seasons are read-only history (WSM-000238/239): never render
+  // an advance control — the action would reject it server-side anyway.
+  const seasonCompleted = activeSeason?.status === "completed";
+
   const fixtures = activeSeason
     ? await listFixturesBySeason(activeSeason.id)
     : [];
@@ -140,8 +144,15 @@ export default async function LeaguePlayoffsPage({
               Regular season complete ({progress.final} of {progress.total} games
               final). Ready to seed the bracket from current standings.
             </p>
-            {isAdmin ? (
-              <AdvanceToPlayoffsButton leagueId={leagueId} />
+            {isAdmin && !seasonCompleted ? (
+              <AdvanceToPlayoffsButton
+                leagueId={leagueId}
+                seasonId={activeSeason.id}
+              />
+            ) : seasonCompleted ? (
+              <p className="text-xs text-muted-foreground">
+                This season is completed — playoffs can no longer be started.
+              </p>
             ) : (
               <p className="text-xs text-muted-foreground">
                 Waiting for a league manager to advance to playoffs.
@@ -156,8 +167,12 @@ export default async function LeaguePlayoffsPage({
               Regular season in progress — {progress.final} of {progress.total}{" "}
               games final.
             </p>
-            {isAdmin ? (
-              <AdvanceToPlayoffsButton leagueId={leagueId} disabled />
+            {isAdmin && !seasonCompleted ? (
+              <AdvanceToPlayoffsButton
+                leagueId={leagueId}
+                seasonId={activeSeason.id}
+                disabled
+              />
             ) : null}
           </CardContent>
         </Card>
