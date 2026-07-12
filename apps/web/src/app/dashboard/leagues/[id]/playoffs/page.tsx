@@ -15,6 +15,7 @@ import { playoffPagePhase, regularSeasonProgress } from "@/lib/playoffs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PlayoffBracket from "@/components/playoffs/PlayoffBracket";
+import PlayoffRoundControls from "@/components/playoffs/PlayoffRoundControls";
 import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveViewedSeason } from "@/lib/season-view";
@@ -135,8 +136,26 @@ export default async function LeaguePlayoffsPage({
             count on the season to enable the bracket.
           </CardContent>
         </Card>
+      ) : phase === "invalid_playoff_size" ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            {activeSeason.name} uses a legacy playoff size ({activeSeason.playoffTeams}{" "}
+            teams). New brackets require 4, 8, or 16 teams — update the season
+            settings before starting playoffs.
+          </CardContent>
+        </Card>
       ) : phase === "bracket_live" && bracket ? (
-        <PlayoffBracket bracket={bracket} />
+        <div className="flex flex-col gap-4">
+          {!seasonCompleted ? (
+            <PlayoffRoundControls
+              leagueId={leagueId}
+              seasonId={activeSeason.id}
+              bracket={bracket}
+              canManage={isAdmin}
+            />
+          ) : null}
+          <PlayoffBracket bracket={bracket} />
+        </div>
       ) : phase === "ready" ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-4 p-8 text-center">

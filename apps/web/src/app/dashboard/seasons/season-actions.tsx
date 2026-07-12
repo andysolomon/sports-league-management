@@ -45,9 +45,8 @@ function nullableDate(value: string): string | null {
   return value.trim() === "" ? null : value;
 }
 
-/** Bye-friendly playoff team counts (any value ≥ 2 is supported; the bracket
- *  rounds up to the next power of two and gives top seeds first-round byes). */
-const PLAYOFF_TEAM_OPTIONS = [2, 4, 6, 8, 10, 12, 16] as const;
+/** Standard playoff field sizes for new seasons (WSM-000241). */
+const PLAYOFF_TEAM_OPTIONS = [4, 8, 16] as const;
 
 /** Playoff setup fields shared by the create + edit season forms (WSM-000184,
  *  WSM-flex-brackets: bye-friendly counts + single/double elimination). */

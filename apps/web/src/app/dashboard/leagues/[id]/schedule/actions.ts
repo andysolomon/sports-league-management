@@ -23,6 +23,14 @@ import { canManageRoster } from "@/lib/permissions";
 import { type TeamSimProfileCache } from "@/lib/build-team-sim-profile";
 import { simulateAndPersistFixture } from "@/lib/simulate-fixture";
 import {
+  deriveChampion,
+  fixtureIdsForRound,
+  isChampionshipRound,
+  isStandardPlayoffTeamCount,
+  minimumUnresolvedRound,
+  supportsBulkPlayoffOps,
+} from "@/lib/playoffs";
+import {
   trackFixtureCreated,
   trackResultRecorded,
 } from "@/lib/analytics";
@@ -64,6 +72,20 @@ async function authorizeManagerAction(
   const role = await resolveOrgRole(orgId, userId);
   if (!canManageRoster(role)) return { ok: false, error: "not_authorized" };
 
+  return { ok: true };
+}
+
+/** Ensure the viewed season belongs to the authorized league before mutating. */
+async function assertSeasonBelongsToLeague(
+  seasonId: string,
+  leagueId: string,
+  orgContext: OrgContext,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const season = await getSeason(seasonId, orgContext).catch(() => null);
+  if (!season) return { ok: false, error: "season_not_found" };
+  if (season.leagueId !== leagueId) {
+    return { ok: false, error: "season_league_mismatch" };
+  }
   return { ok: true };
 }
 
@@ -306,47 +328,181 @@ async function simulateUnplayedRegularSeason(
   return simulated;
 }
 
-/** Sim playoff fixtures round by round until the bracket is decided. */
-async function simulateUnplayedPlayoffs(
+/** Sim playoff fixtures by id; skips missing or already-final games. */
+async function simulatePlayoffFixtureIds(
+  seasonId: string,
+  fixtureIds: string[],
+  userId: string,
+  orgContext: OrgContext,
+  profileCache: TeamSimProfileCache,
+): Promise<number> {
+  if (fixtureIds.length === 0) return 0;
+  const fixtures = await listFixturesBySeason(seasonId).catch(() => []);
+  const byId = new Map(fixtures.map((f) => [f.id, f]));
+  let simulated = 0;
+  for (const fixtureId of fixtureIds) {
+    const fixture = byId.get(fixtureId);
+    if (
+      !fixture ||
+      fixture.stage !== "playoff" ||
+      fixture.status !== "scheduled"
+    ) {
+      continue;
+    }
+    await simulateAndPersistFixture({
+      fixture,
+      orgContext,
+      actorUserId: userId,
+      decisive: true,
+      profileCache,
+      bulkStats: true,
+    });
+    simulated += 1;
+  }
+  return simulated;
+}
+
+/**
+ * Advance one single-elim round: sim only unfinished fixtures in the minimum
+ * unresolved round. Championship uses {@link simulateChampionshipAction}.
+ */
+async function simulateCurrentPlayoffRound(
+  seasonId: string,
+  userId: string,
+  orgContext: OrgContext,
+  profileCache: TeamSimProfileCache,
+): Promise<
+  | { ok: true; simulated: number; round: number | null }
+  | { ok: false; error: string }
+> {
+  const bracket = await getPlayoffBracket(seasonId).catch(() => null);
+  if (!bracket || bracket.matchups.length === 0) {
+    return { ok: false, error: "no_playoffs" };
+  }
+  if (!supportsBulkPlayoffOps(bracket.format)) {
+    return { ok: false, error: "unsupported_format" };
+  }
+
+  const round = minimumUnresolvedRound(bracket.matchups, bracket.rounds);
+  if (round === null) {
+    return { ok: true, simulated: 0, round: null };
+  }
+  if (isChampionshipRound(round, bracket.rounds)) {
+    return { ok: false, error: "championship_requires_explicit_sim" };
+  }
+
+  const fixtureIds = fixtureIdsForRound(bracket.matchups, round);
+  const simulated = await simulatePlayoffFixtureIds(
+    seasonId,
+    fixtureIds,
+    userId,
+    orgContext,
+    profileCache,
+  );
+  return { ok: true, simulated, round };
+}
+
+/**
+ * Sim every unplayed winners-bracket round through semifinal; leaves the
+ * championship fixture unresolved (WSM-000241).
+ */
+async function simulatePlayoffsThroughSemifinal(
   seasonId: string,
   userId: string,
   orgContext: OrgContext,
   profileCache: TeamSimProfileCache,
 ): Promise<number> {
   let playoffGames = 0;
-  for (let round = 0; round < MAX_PLAYOFF_ROUNDS; round++) {
-    const fixtures = await listFixturesBySeason(seasonId).catch(() => []);
-    const pending = fixtures.filter(
-      (f) => f.stage === "playoff" && f.status === "scheduled",
+  for (let safety = 0; safety < MAX_PLAYOFF_ROUNDS; safety++) {
+    const bracket = await getPlayoffBracket(seasonId).catch(() => null);
+    if (!bracket || bracket.matchups.length === 0) break;
+    if (!supportsBulkPlayoffOps(bracket.format)) break;
+
+    const round = minimumUnresolvedRound(bracket.matchups, bracket.rounds);
+    if (round === null) break;
+    if (isChampionshipRound(round, bracket.rounds)) break;
+
+    const simulated = await simulatePlayoffFixtureIds(
+      seasonId,
+      fixtureIdsForRound(bracket.matchups, round),
+      userId,
+      orgContext,
+      profileCache,
     );
-    if (pending.length === 0) break;
-    for (const fixture of pending) {
-      await simulateAndPersistFixture({
-        fixture,
-        orgContext,
-        actorUserId: userId,
-        decisive: true,
-        profileCache,
-        bulkStats: true,
-      });
-      playoffGames += 1;
-    }
+    playoffGames += simulated;
+    if (simulated === 0) break;
   }
   return playoffGames;
 }
 
+/** Sim every unplayed playoff round through a champion (whole-season path). */
+async function simulateAllPlayoffRounds(
+  seasonId: string,
+  userId: string,
+  orgContext: OrgContext,
+  profileCache: TeamSimProfileCache,
+): Promise<number> {
+  let playoffGames = 0;
+  for (let safety = 0; safety < MAX_PLAYOFF_ROUNDS; safety++) {
+    const bracket = await getPlayoffBracket(seasonId).catch(() => null);
+    if (!bracket || bracket.matchups.length === 0) break;
+
+    const round = minimumUnresolvedRound(bracket.matchups, bracket.rounds);
+    if (round === null) break;
+
+    const simulated = await simulatePlayoffFixtureIds(
+      seasonId,
+      fixtureIdsForRound(bracket.matchups, round),
+      userId,
+      orgContext,
+      profileCache,
+    );
+    playoffGames += simulated;
+    if (simulated === 0) break;
+  }
+  return playoffGames;
+}
+
+/** Sim only the championship (final) matchup(s). */
+async function simulateChampionshipFixtures(
+  seasonId: string,
+  userId: string,
+  orgContext: OrgContext,
+  profileCache: TeamSimProfileCache,
+): Promise<
+  | { ok: true; simulated: number }
+  | { ok: false; error: string }
+> {
+  const bracket = await getPlayoffBracket(seasonId).catch(() => null);
+  if (!bracket || bracket.matchups.length === 0) {
+    return { ok: false, error: "no_playoffs" };
+  }
+  if (!supportsBulkPlayoffOps(bracket.format)) {
+    return { ok: false, error: "unsupported_format" };
+  }
+
+  const finalRound = bracket.rounds;
+  const fixtureIds = fixtureIdsForRound(bracket.matchups, finalRound);
+  if (fixtureIds.length === 0) {
+    return { ok: false, error: "no_championship_fixture" };
+  }
+
+  const simulated = await simulatePlayoffFixtureIds(
+    seasonId,
+    fixtureIds,
+    userId,
+    orgContext,
+    profileCache,
+  );
+  return { ok: true, simulated };
+}
+
 function championFromBracket(
-  bracket: { matchups: PlayoffMatchupDto[] } | null,
+  bracket: { matchups: PlayoffMatchupDto[]; format: string } | null,
 ): string | null {
   if (!bracket) return null;
-  const final = bracket.matchups.reduce<PlayoffMatchupDto | null>(
-    (best, m) => (m.round > (best?.round ?? -1) ? m : best),
-    null,
-  );
-  if (!final?.winnerTeamId) return null;
-  return final.winnerTeamId === final.homeTeamId
-    ? final.homeTeamName
-    : final.awayTeamName;
+  const champion = deriveChampion(bracket.matchups, bracket.format);
+  return champion?.teamName ?? null;
 }
 
 export async function simulateWeekAction(input: {
@@ -434,15 +590,25 @@ export async function simulatePlayoffsAction(input: {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "unauthorized" };
 
+  const orgContext = await resolveOrgContext(userId);
+  const seasonGuard = await assertSeasonBelongsToLeague(
+    input.seasonId,
+    input.leagueId,
+    orgContext,
+  );
+  if (!seasonGuard.ok) return seasonGuard;
+
   const bracket = await getPlayoffBracket(input.seasonId).catch(() => null);
   if (!bracket || bracket.matchups.length === 0) {
     return { ok: false, error: "no_playoffs" };
   }
+  if (!supportsBulkPlayoffOps(bracket.format)) {
+    return { ok: false, error: "unsupported_format" };
+  }
 
-  const orgContext = await resolveOrgContext(userId);
   const profileCache: TeamSimProfileCache = new Map();
   try {
-    const playoffGames = await simulateUnplayedPlayoffs(
+    const playoffGames = await simulatePlayoffsThroughSemifinal(
       input.seasonId,
       userId,
       orgContext,
@@ -460,12 +626,92 @@ export async function simulatePlayoffsAction(input: {
   }
 }
 
+/** Simulate unfinished games in the current single-elim round only (WSM-000241). */
+export async function advancePlayoffRoundAction(input: {
+  leagueId: string;
+  seasonId: string;
+}): Promise<
+  | { ok: true; simulated: number; round: number | null }
+  | { ok: false; error: string }
+> {
+  const guard = await authorizeManagerAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const orgContext = await resolveOrgContext(userId);
+  const seasonGuard = await assertSeasonBelongsToLeague(
+    input.seasonId,
+    input.leagueId,
+    orgContext,
+  );
+  if (!seasonGuard.ok) return seasonGuard;
+
+  const profileCache: TeamSimProfileCache = new Map();
+  try {
+    const res = await simulateCurrentPlayoffRound(
+      input.seasonId,
+      userId,
+      orgContext,
+      profileCache,
+    );
+    if (!res.ok) return res;
+    revalidateSchedulePaths(input.leagueId, true);
+    return res;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
+/** Simulate only the championship (final) matchup (WSM-000241). */
+export async function simulateChampionshipAction(input: {
+  leagueId: string;
+  seasonId: string;
+}): Promise<
+  | { ok: true; simulated: number; champion: string | null }
+  | { ok: false; error: string }
+> {
+  const guard = await authorizeManagerAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const orgContext = await resolveOrgContext(userId);
+  const seasonGuard = await assertSeasonBelongsToLeague(
+    input.seasonId,
+    input.leagueId,
+    orgContext,
+  );
+  if (!seasonGuard.ok) return seasonGuard;
+
+  const profileCache: TeamSimProfileCache = new Map();
+  try {
+    const res = await simulateChampionshipFixtures(
+      input.seasonId,
+      userId,
+      orgContext,
+      profileCache,
+    );
+    if (!res.ok) return res;
+    const bracket = await getPlayoffBracket(input.seasonId).catch(() => null);
+    const champion = championFromBracket(bracket);
+    revalidateSchedulePaths(input.leagueId, true);
+    return { ok: true, simulated: res.simulated, champion };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
 /*
  * Simulate a whole season through to a champion (WSM-000185): sim every unplayed
  * regular-season game, then — if the season is configured for playoffs —
  * (re)generate the bracket from its config and sim each playoff round until a
- * winner emerges. Playoff games are simulated `decisive` so a bracket never
- * stalls on a tie. Bounded loop (≤ 8 rounds) as a safety net.
+ * winner emerges. Single-elim + standard 4/8/16 only (WSM-000241); double-elim
+ * and legacy sizes are rejected. Bounded loop (≤ 8 rounds) as a safety net.
  */
 export async function simulateSeasonThroughChampionAction(input: {
   leagueId: string;
@@ -486,8 +732,29 @@ export async function simulateSeasonThroughChampionAction(input: {
   if (!userId) return { ok: false, error: "unauthorized" };
 
   const orgContext = await resolveOrgContext(userId);
+  const seasonGuard = await assertSeasonBelongsToLeague(
+    input.seasonId,
+    input.leagueId,
+    orgContext,
+  );
+  if (!seasonGuard.ok) return seasonGuard;
+
   const profileCache: TeamSimProfileCache = new Map();
   try {
+    const season = await getSeason(input.seasonId, orgContext).catch(() => null);
+    const size = season?.playoffTeams ?? 0;
+
+    // Validate playoff config before mutating any fixtures so rejected
+    // requests are side-effect free (WSM-000241).
+    if (season && size) {
+      if (!isStandardPlayoffTeamCount(size)) {
+        return { ok: false, error: "invalid_playoff_size" };
+      }
+      if ((season.playoffFormat ?? "single") === "double") {
+        return { ok: false, error: "unsupported_format" };
+      }
+    }
+
     const regularSimulated = await simulateUnplayedRegularSeason(
       input.seasonId,
       userId,
@@ -495,8 +762,6 @@ export async function simulateSeasonThroughChampionAction(input: {
       profileCache,
     );
 
-    const season = await getSeason(input.seasonId, orgContext).catch(() => null);
-    const size = season?.playoffTeams ?? 0;
     if (!season || !size) {
       // No playoffs configured — regular season is the whole story.
       revalidateSchedulePaths(input.leagueId);
@@ -512,7 +777,7 @@ export async function simulateSeasonThroughChampionAction(input: {
       divisionWinnersQualify: season.divisionWinnersQualify,
     });
 
-    const playoffGames = await simulateUnplayedPlayoffs(
+    const playoffGames = await simulateAllPlayoffRounds(
       input.seasonId,
       userId,
       orgContext,

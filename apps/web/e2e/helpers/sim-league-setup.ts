@@ -165,6 +165,11 @@ export async function simToChampion(page: Page) {
   });
 }
 
+export async function simChampionship(page: Page) {
+  await page.getByRole("button", { name: "Sim championship" }).click();
+  await confirmLifecycleDialog(page);
+}
+
 export async function advanceToPlayoffs(page: Page) {
   await page.getByRole("button", { name: "Advance to playoffs" }).click();
   await confirmLifecycleDialog(page);
