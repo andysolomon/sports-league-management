@@ -43,6 +43,29 @@ function playByPlayRows(page: import("@playwright/test").Page) {
     .locator("ul button");
 }
 
+/*
+ * WSM-000239: the schedule is a lifecycle accordion — completed weeks start
+ * collapsed (rows unmounted) and a mixed week's finished games sit inside a
+ * nested, collapsed "Completed" disclosure. Expand every week, then open any
+ * collapsed disclosures, so rows can be found by content instead of position.
+ */
+async function revealAllScheduleRows(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  const expandAll = page.getByRole("button", { name: "Expand all" });
+  if (await expandAll.isVisible().catch(() => false)) {
+    await expandAll.click();
+  }
+  const toggles = page.getByRole("button", { name: /^Completed games — / });
+  const count = await toggles.count();
+  for (let i = 0; i < count; i++) {
+    const toggle = toggles.nth(i);
+    if ((await toggle.getAttribute("aria-expanded")) === "false") {
+      await toggle.click();
+    }
+  }
+}
+
 async function openSimmedGamecastFinal(
   page: import("@playwright/test").Page,
   leagueId: string,
@@ -52,24 +75,41 @@ async function openSimmedGamecastFinal(
     page.getByRole("heading", { name: LEAGUE_NAME }),
   ).toBeVisible();
 
-  const simRow = page.locator("tbody tr").first();
-  const homeName = await simRow.locator("td").nth(1).innerText();
-  const awayName = await simRow.locator("td").nth(2).innerText();
+  await revealAllScheduleRows(page);
 
-  const isFinal = await simRow
-    .getByText("Final", { exact: true })
-    .isVisible()
-    .catch(() => false);
-  if (!isFinal) {
+  // Reuse a previously simmed final: only simmed finals carry a Gamecast
+  // link (manually recorded finals don't).
+  let simRow = page
+    .locator("tbody tr")
+    .filter({ has: page.getByRole("link", { name: "Gamecast" }) })
+    .first();
+
+  if ((await simRow.count()) === 0) {
+    const scheduledRow = page
+      .locator("tbody tr")
+      .filter({ has: page.getByText("Scheduled", { exact: true }) })
+      .first();
+    const homeName = await scheduledRow.locator("td").nth(1).innerText();
+    const awayName = await scheduledRow.locator("td").nth(2).innerText();
+    const simTestId = await scheduledRow.getAttribute("data-testid");
+    expect(simTestId).toMatch(/^schedule-fixture-/);
+
     await page
       .getByRole("button", {
         name: `Simulate ${homeName} vs ${awayName}`,
       })
       .click();
-    await expect(simRow.getByText("Final", { exact: true })).toBeVisible({
-      timeout: 60_000,
-    });
+    // The refresh moves the freshly-final game into its week's (new,
+    // collapsed) Completed disclosure — reveal again and re-find by testid.
+    simRow = page.getByTestId(simTestId!);
+    await expect(async () => {
+      await revealAllScheduleRows(page);
+      await expect(simRow.getByText("Final", { exact: true })).toBeVisible();
+    }).toPass({ timeout: 60_000 });
   }
+
+  const homeName = await simRow.locator("td").nth(1).innerText();
+  const awayName = await simRow.locator("td").nth(2).innerText();
 
   const scoreText = (await simRow.locator("td").nth(3).innerText()).trim();
   const scoreMatch = scoreText.match(/(\d+)\s*[–-]\s*(\d+)/);
@@ -154,10 +194,14 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
       page.getByRole("heading", { name: LEAGUE_NAME }),
     ).toBeVisible();
 
-    const simRow = page.locator("tbody tr").first();
-    const homeName = await simRow.locator("td").nth(1).innerText();
-    const awayName = await simRow.locator("td").nth(2).innerText();
-    const simFixtureId = await simRow.getAttribute("data-testid");
+    await revealAllScheduleRows(page);
+    const scheduledRow = page
+      .locator("tbody tr")
+      .filter({ has: page.getByText("Scheduled", { exact: true }) })
+      .first();
+    const homeName = await scheduledRow.locator("td").nth(1).innerText();
+    const awayName = await scheduledRow.locator("td").nth(2).innerText();
+    const simFixtureId = await scheduledRow.getAttribute("data-testid");
     expect(simFixtureId).toMatch(/^schedule-fixture-/);
 
     await page
@@ -165,9 +209,13 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
         name: `Simulate ${homeName} vs ${awayName}`,
       })
       .click();
-    await expect(simRow.getByText("Final", { exact: true })).toBeVisible({
-      timeout: 60_000,
-    });
+    // WSM-000239: the freshly-final game lands in its week's collapsed
+    // "Completed" disclosure — reveal, then re-find the row by its testid.
+    const simRow = page.getByTestId(simFixtureId!);
+    await expect(async () => {
+      await revealAllScheduleRows(page);
+      await expect(simRow.getByText("Final", { exact: true })).toBeVisible();
+    }).toPass({ timeout: 60_000 });
 
     const scoreText = (await simRow.locator("td").nth(3).innerText()).trim();
     const scoreMatch = scoreText.match(/(\d+)\s*[–-]\s*(\d+)/);

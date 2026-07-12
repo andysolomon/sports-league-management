@@ -8,14 +8,25 @@ import {
 import { getTestOrgId } from "../helpers/seed-roster";
 import {
   acceptBrowserConfirms,
-  advanceToPlayoffs,
   bootstrapFourTeamSimLeague,
+  confirmLifecycleDialog,
   simPlayoffsScope,
   simRegularSeason,
 } from "../helpers/sim-league-setup";
 
 /*
  * Playoffs bracket (WSM-000164/165) — advance gate, bracket render, champion.
+ *
+ * WSM-000239: playoffs are now STARTED from the schedule page's handoff panel
+ * ("Start playoffs"), which appears only when the decided active season's
+ * regular slate is fully final and no bracket exists. The playoffs page keeps
+ * its own (disabled/enabled) "Advance to playoffs" gate, asserted alongside.
+ *
+ * Read-only waiting state ("Regular season complete — waiting for playoffs to
+ * start"): NOT driven end-to-end. The e2e environment has no viewer-role
+ * Clerk user — user A is org A's admin, user B is org B's admin and 404s on
+ * org A leagues (see coach-roster cross-org spec) — so that branch is covered
+ * by unit tests on resolvePlayoffHandoff (src/lib/playoff-handoff.ts) instead.
  */
 const FIXTURE_KEY = "playoffs-bracket";
 const LEAGUE_NAME = `E2E:${FIXTURE_KEY}`;
@@ -73,18 +84,39 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
       page.getByRole("button", { name: "Advance to playoffs" }),
     ).toBeDisabled();
 
+    // WSM-000239: while games remain, the schedule page offers NO handoff.
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await expect(page.getByTestId("playoff-handoff")).toHaveCount(0);
     await simRegularSeason(page);
 
+    // Playoffs page flips to ready (its advance button enables)…
     await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
     await expect(page.getByText(/Regular season complete/)).toBeVisible();
-    const advance = page.getByRole("button", { name: "Advance to playoffs" });
-    await expect(advance).toBeEnabled();
-    await advanceToPlayoffs(page);
+    await expect(
+      page.getByRole("button", { name: "Advance to playoffs" }),
+    ).toBeEnabled();
+
+    // …and the schedule page now shows the admin handoff panel. Start the
+    // playoffs from HERE (WSM-000239).
+    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    const handoff = page.getByTestId("playoff-handoff");
+    await expect(handoff).toBeVisible();
+    await expect(handoff.getByText(/Regular season complete/)).toBeVisible();
+    const startPlayoffs = handoff.getByRole("button", {
+      name: "Start playoffs",
+    });
+    await expect(startPlayoffs).toBeEnabled();
+    await startPlayoffs.click();
+    await confirmLifecycleDialog(page);
     await expect(
       page.getByText(/Playoffs started — \d+ matchups/),
     ).toBeVisible({ timeout: 60_000 });
 
+    // Once the bracket exists the handoff disappears from the schedule page.
+    await page.reload();
+    await expect(page.getByTestId("playoff-handoff")).toHaveCount(0);
+
+    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
     await expect(page.getByText("Champion", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("link").filter({ hasText: /E2E PO|E2E Team/ }).first()).toBeVisible();
     await expect(

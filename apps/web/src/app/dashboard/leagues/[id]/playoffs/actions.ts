@@ -114,9 +114,14 @@ function revalidatePlayoffPaths(leagueId: string) {
  * Advance an active season to playoffs once every regular-season game is final
  * (WSM-bracket-view). Seeds and first-round fixtures come from the season's
  * configured playoff settings via the existing generatePlayoffBracket path.
+ *
+ * Season-safe (WSM-000239): the caller must name the season explicitly, and it
+ * must be the league's lifecycle-decided season and not completed — a stale
+ * page viewing an old season can never advance the wrong (or a finished) one.
  */
 export async function advanceToPlayoffsAction(input: {
   leagueId: string;
+  seasonId: string;
 }): Promise<
   | { ok: true; bracketId: string; size: number; rounds: number; matchups: number }
   | { ok: false; error: string }
@@ -127,9 +132,25 @@ export async function advanceToPlayoffsAction(input: {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "unauthorized" };
 
+  if (!input.seasonId) return { ok: false, error: "season_required" };
+
   const allSeasons = await getSeasons([input.leagueId]);
-  const activeSeason = resolveLifecycleSeason(allSeasons);
-  if (!activeSeason) return { ok: false, error: "no_season" };
+  if (allSeasons.length === 0) return { ok: false, error: "no_season" };
+
+  // The named season must belong to this league…
+  const activeSeason = allSeasons.find((s) => s.id === input.seasonId);
+  if (!activeSeason) return { ok: false, error: "season_not_found" };
+
+  // …must not already be finished…
+  if (activeSeason.status === "completed") {
+    return { ok: false, error: "season_completed" };
+  }
+
+  // …and must be the season the lifecycle would decide on right now.
+  const decidedSeason = resolveLifecycleSeason(allSeasons);
+  if (!decidedSeason || decidedSeason.id !== activeSeason.id) {
+    return { ok: false, error: "season_mismatch" };
+  }
 
   const existing = await getPlayoffBracket(activeSeason.id).catch(() => null);
   if (existing) return { ok: false, error: "already_advanced" };

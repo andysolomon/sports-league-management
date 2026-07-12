@@ -80,7 +80,10 @@ describe("advanceToPlayoffsAction", () => {
       { stage: "regular", status: "scheduled" },
     ]);
 
-    const res = await advanceToPlayoffsAction({ leagueId: LEAGUE });
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
 
     expect(res).toEqual({ ok: false, error: "regular_season_incomplete" });
     expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
@@ -100,7 +103,10 @@ describe("advanceToPlayoffsAction", () => {
       champion: null,
     });
 
-    const res = await advanceToPlayoffsAction({ leagueId: LEAGUE });
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
 
     expect(res).toEqual({ ok: false, error: "already_advanced" });
     expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
@@ -110,13 +116,80 @@ describe("advanceToPlayoffsAction", () => {
     authorize();
     mockGetSeasons.mockResolvedValue([]);
 
-    const res = await advanceToPlayoffsAction({ leagueId: LEAGUE });
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
 
     expect(res).toEqual({ ok: false, error: "no_season" });
     expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
   });
 
-  it("generates a bracket when preconditions pass", async () => {
+  it("rejects a missing seasonId (WSM-000239)", async () => {
+    authorize();
+
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: "",
+    });
+
+    expect(res).toEqual({ ok: false, error: "season_required" });
+    expect(mockGetSeasons).not.toHaveBeenCalled();
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
+  it("rejects a seasonId that does not belong to the league (WSM-000239)", async () => {
+    authorize();
+
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: "season_other_league",
+    });
+
+    expect(res).toEqual({ ok: false, error: "season_not_found" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
+  it("rejects a completed season (WSM-000239)", async () => {
+    authorize();
+    // Only season in the league — lifecycle resolution would still pick it,
+    // so the status check must reject it explicitly.
+    mockGetSeasons.mockResolvedValue([
+      { ...ACTIVE_SEASON, status: "completed" },
+    ]);
+
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
+
+    expect(res).toEqual({ ok: false, error: "season_completed" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
+  it("rejects a season that is not the lifecycle-decided one (WSM-000239)", async () => {
+    authorize();
+    const staleUpcoming = {
+      ...ACTIVE_SEASON,
+      id: "season_upcoming",
+      status: "upcoming",
+      startDate: "2025-09-01",
+    };
+    mockGetSeasons.mockResolvedValue([
+      { ...ACTIVE_SEASON, startDate: "2026-09-01" },
+      staleUpcoming,
+    ]);
+
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: "season_upcoming",
+    });
+
+    expect(res).toEqual({ ok: false, error: "season_mismatch" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
+  it("generates a bracket for a valid, lifecycle-decided seasonId", async () => {
     authorize();
     mockListFixturesBySeason.mockResolvedValue([
       { stage: "regular", status: "final" },
@@ -130,7 +203,10 @@ describe("advanceToPlayoffsAction", () => {
       matchups: 7,
     });
 
-    const res = await advanceToPlayoffsAction({ leagueId: LEAGUE });
+    const res = await advanceToPlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    });
 
     expect(res).toEqual({
       ok: true,
