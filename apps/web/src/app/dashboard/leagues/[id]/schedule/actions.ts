@@ -741,6 +741,20 @@ export async function simulateSeasonThroughChampionAction(input: {
 
   const profileCache: TeamSimProfileCache = new Map();
   try {
+    const season = await getSeason(input.seasonId, orgContext).catch(() => null);
+    const size = season?.playoffTeams ?? 0;
+
+    // Validate playoff config before mutating any fixtures so rejected
+    // requests are side-effect free (WSM-000241).
+    if (season && size) {
+      if (!isStandardPlayoffTeamCount(size)) {
+        return { ok: false, error: "invalid_playoff_size" };
+      }
+      if ((season.playoffFormat ?? "single") === "double") {
+        return { ok: false, error: "unsupported_format" };
+      }
+    }
+
     const regularSimulated = await simulateUnplayedRegularSeason(
       input.seasonId,
       userId,
@@ -748,19 +762,10 @@ export async function simulateSeasonThroughChampionAction(input: {
       profileCache,
     );
 
-    const season = await getSeason(input.seasonId, orgContext).catch(() => null);
-    const size = season?.playoffTeams ?? 0;
     if (!season || !size) {
       // No playoffs configured — regular season is the whole story.
       revalidateSchedulePaths(input.leagueId);
       return { ok: true, regularSimulated, playoffGames: 0, champion: null };
-    }
-
-    if (!isStandardPlayoffTeamCount(size)) {
-      return { ok: false, error: "invalid_playoff_size" };
-    }
-    if ((season.playoffFormat ?? "single") === "double") {
-      return { ok: false, error: "unsupported_format" };
     }
 
     // Fresh bracket from the configured size + qualification rule.

@@ -9,6 +9,7 @@ const {
   mockResolveOrgRole,
   mockCanManageRoster,
   mockGeneratePlayoffBracket,
+  mockGetSeason,
 } = vi.hoisted(() => ({
   mockPlayoffsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -18,6 +19,7 @@ const {
   mockResolveOrgRole: vi.fn(),
   mockCanManageRoster: vi.fn(),
   mockGeneratePlayoffBracket: vi.fn(),
+  mockGetSeason: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({ playoffsV1: mockPlayoffsV1 }));
@@ -26,6 +28,7 @@ vi.mock("@/lib/data-api", () => ({
   generatePlayoffBracket: mockGeneratePlayoffBracket,
   getLeague: mockGetLeague,
   getLeagueOrgId: mockGetLeagueOrgId,
+  getSeason: mockGetSeason,
 }));
 vi.mock("@/lib/org-context", () => ({
   resolveOrgContext: mockResolveOrgContext,
@@ -47,6 +50,12 @@ function authorize() {
   mockGetLeagueOrgId.mockResolvedValue("org_1");
   mockResolveOrgRole.mockResolvedValue("org:admin");
   mockCanManageRoster.mockReturnValue(true);
+  mockGetSeason.mockResolvedValue({
+    id: SEASON,
+    leagueId: LEAGUE,
+    status: "active",
+    playoffTeams: 8,
+  });
 }
 
 describe("generatePlayoffsAction (WSM-000164)", () => {
@@ -98,14 +107,18 @@ describe("generatePlayoffsAction (WSM-000164)", () => {
 
   it("propagates a completed-season rejection as the stable typed result", async () => {
     authorize();
-    mockGeneratePlayoffBracket.mockRejectedValue(
-      new Error("Uncaught Error: season_completed"),
-    );
+    mockGetSeason.mockResolvedValue({
+      id: SEASON,
+      leagueId: LEAGUE,
+      status: "completed",
+      playoffTeams: 4,
+    });
     await expect(generatePlayoffsAction({
       leagueId: LEAGUE,
       seasonId: SEASON,
       size: 4,
     })).resolves.toEqual({ ok: false, error: "season_completed" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
   });
 
   it("passes confirm through", async () => {
@@ -162,5 +175,33 @@ describe("generatePlayoffsAction (WSM-000164)", () => {
       size: 4,
     });
     expect(res).toEqual({ ok: false, error: "flag_disabled" });
+  });
+
+  it("rejects legacy bracket sizes", async () => {
+    authorize();
+    const res = await generatePlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+      size: 6,
+    });
+    expect(res).toEqual({ ok: false, error: "invalid_playoff_size" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+  });
+
+  it("rejects season/league mismatch", async () => {
+    authorize();
+    mockGetSeason.mockResolvedValue({
+      id: SEASON,
+      leagueId: "other_league",
+      status: "active",
+      playoffTeams: 8,
+    });
+    const res = await generatePlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+      size: 8,
+    });
+    expect(res).toEqual({ ok: false, error: "season_league_mismatch" });
+    expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
   });
 });

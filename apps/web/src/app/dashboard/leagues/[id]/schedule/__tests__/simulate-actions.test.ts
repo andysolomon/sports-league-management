@@ -527,7 +527,7 @@ describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
     mockGeneratePlayoffBracket.mockResolvedValue({ ok: true });
   });
 
-  it("rejects legacy playoff sizes", async () => {
+  it("rejects legacy playoff sizes before mutating fixtures", async () => {
     mockGetSeason.mockResolvedValue({
       id: SEASON,
       leagueId: LEAGUE,
@@ -535,6 +535,9 @@ describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
       playoffFormat: "single",
       divisionWinnersQualify: false,
     });
+    mockListFixturesBySeason.mockResolvedValue([
+      fixture({ id: "reg", stage: "regular" }),
+    ]);
 
     const res = await simulateSeasonThroughChampionAction({
       leagueId: LEAGUE,
@@ -543,9 +546,10 @@ describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
 
     expect(res).toEqual({ ok: false, error: "invalid_playoff_size" });
     expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+    expect(mockSimulateAndPersistFixture).not.toHaveBeenCalled();
   });
 
-  it("rejects double-elimination seasons", async () => {
+  it("rejects double-elimination seasons before mutating fixtures", async () => {
     mockGetSeason.mockResolvedValue({
       id: SEASON,
       leagueId: LEAGUE,
@@ -553,6 +557,9 @@ describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
       playoffFormat: "double",
       divisionWinnersQualify: false,
     });
+    mockListFixturesBySeason.mockResolvedValue([
+      fixture({ id: "reg", stage: "regular" }),
+    ]);
 
     const res = await simulateSeasonThroughChampionAction({
       leagueId: LEAGUE,
@@ -561,6 +568,7 @@ describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
 
     expect(res).toEqual({ ok: false, error: "unsupported_format" });
     expect(mockGeneratePlayoffBracket).not.toHaveBeenCalled();
+    expect(mockSimulateAndPersistFixture).not.toHaveBeenCalled();
   });
 });
 

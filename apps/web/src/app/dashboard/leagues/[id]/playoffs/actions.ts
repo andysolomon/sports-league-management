@@ -8,6 +8,7 @@ import {
   getLeague,
   getLeagueOrgId,
   getPlayoffBracket,
+  getSeason,
   getSeasons,
   listFixturesBySeason,
 } from "@/lib/data-api";
@@ -49,8 +50,8 @@ function friendlyError(code: string): string {
   if (code.includes("not_enough_teams")) {
     return "Not enough teams in the standings for a bracket of this size.";
   }
-  if (code.includes("invalid_bracket_size")) {
-    return "Pick a playoff team count between 2 and 64.";
+  if (code.includes("invalid_bracket_size") || code.includes("invalid_playoff_size")) {
+    return "Playoff team count must be 4, 8, or 16.";
   }
   if (code.includes("season_not_found")) {
     return "This season no longer exists.";
@@ -58,16 +59,18 @@ function friendlyError(code: string): string {
   if (code.includes("season_completed")) {
     return "season_completed";
   }
+  if (code.includes("season_league_mismatch")) {
+    return "That season does not belong to this league.";
+  }
   return "Could not generate the bracket.";
 }
 
 /*
  * Seed a playoff bracket from the season's standings (WSM-000164,
- * WSM-flex-brackets). `size` is the qualifying team count (any value ≥ 2, with
- * byes for non-powers-of-two); `format` selects single/double elimination
- * (defaults to the season config). The mutation refuses to overwrite a bracket
- * that already has a played game; that surfaces here as `needsConfirm` so the
- * UI can re-call with confirm.
+ * WSM-flex-brackets). New brackets require standard 4/8/16 sizes (WSM-000241);
+ * format still selects single/double elimination. The mutation refuses to
+ * overwrite a bracket that already has a played game; that surfaces here as
+ * `needsConfirm` so the UI can re-call with confirm.
  */
 export async function generatePlayoffsAction(input: {
   leagueId: string;
@@ -85,6 +88,20 @@ export async function generatePlayoffsAction(input: {
 
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "unauthorized" };
+
+  if (!canStartPlayoffs(input.size)) {
+    return { ok: false, error: "invalid_playoff_size" };
+  }
+
+  const orgContext = await resolveOrgContext(userId);
+  const season = await getSeason(input.seasonId, orgContext).catch(() => null);
+  if (!season) return { ok: false, error: "season_not_found" };
+  if (season.leagueId !== input.leagueId) {
+    return { ok: false, error: "season_league_mismatch" };
+  }
+  if (season.status === "completed") {
+    return { ok: false, error: "season_completed" };
+  }
 
   try {
     const res = await generatePlayoffBracket({
