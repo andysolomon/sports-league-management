@@ -165,8 +165,11 @@ export async function advanceToPlayoffs(page: Page) {
 }
 
 export async function completeSeason(page: Page, seasonId: string) {
-  await page.goto(`/dashboard/seasons/${seasonId}`);
-  await page.getByRole("button", { name: /^Complete / }).click();
+  await page.goto("/dashboard/seasons");
+  const seasonRow = page.locator("li").filter({
+    has: page.locator(`a[href="/dashboard/seasons/${seasonId}"]`),
+  });
+  await seasonRow.getByRole("button", { name: /^Complete / }).click();
   await confirmLifecycleDialog(page);
   await expect(page.getByText(/completed\./)).toBeVisible({ timeout: 60_000 });
 }
