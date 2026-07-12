@@ -104,9 +104,8 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     // The new row appears in Week 1. Home/Away cells use exact team names;
     // action links use concise labels (Box score Home/Away, Live) instead.
     await expect(page.getByText("Week 1")).toBeVisible();
-    await expect(
-      page.getByRole("cell", { name: "E2E Home Hawks", exact: true }),
-    ).toBeVisible();
+    // Team names live in drawer trigger buttons (WSM-000240), not bare cells.
+    await expect(page.getByText("E2E Home Hawks").first()).toBeVisible();
 
     // 3. Record the result.
     await page.getByRole("button", { name: "Record result" }).click();
@@ -155,9 +154,8 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     await expect(
       page.getByRole("heading", { name: "Standings" }),
     ).toBeVisible();
-    await expect(
-      page.getByRole("cell", { name: "E2E Home Hawks", exact: true }),
-    ).toBeVisible();
+    // Team names live in drawer trigger buttons (WSM-000240), not bare cells.
+    await expect(page.getByText("E2E Home Hawks").first()).toBeVisible();
 
     // 7b. Landing hub (WSM-000083) renders and links to the standings viewer.
     const publicLanding = await page.goto(`/leagues/${leagueId}`);
@@ -386,9 +384,20 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
 
     // Read paths remain: every week is completed (collapsed) — expand and
     // confirm the recorded scores are still there.
+    await page.goto(
+      `/dashboard/leagues/${leagueId}/schedule?season=${fixture!.seasonId}`,
+    );
     await page.getByRole("button", { name: "Expand all" }).click();
     await expect(page.getByText("21 – 7")).toBeVisible();
     await expect(page.getByText("28 – 3")).toBeVisible();
+
+    const archivedRow = page.getByTestId(/^schedule-fixture-/).first();
+    await archivedRow.getByRole("button").first().click();
+    const drawer = page.getByTestId("game-context-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByTestId("game-drawer-mode")).toHaveText(/^Final/);
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
   });
 });
 

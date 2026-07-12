@@ -119,10 +119,19 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
 
     await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
     await expect(page.getByText("Champion", { exact: true })).toHaveCount(0);
-    await expect(page.getByRole("link").filter({ hasText: /E2E PO|E2E Team/ }).first()).toBeVisible();
+    await expect(page.getByTestId(/^playoff-drawer-trigger-/).first()).toBeVisible();
+    await expect(page.getByText(/E2E PO|E2E Team/).first()).toBeVisible();
     await expect(
       page.getByText(/Round 1|Semifinal|Quarterfinal/i).first(),
     ).toBeVisible();
+
+    const bracketTrigger = page.getByTestId(/^playoff-drawer-trigger-/).first();
+    await bracketTrigger.click();
+    const drawer = page.getByTestId("game-context-drawer");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByTestId("game-drawer-mode")).toHaveText(/^Preview/);
+    await page.keyboard.press("Escape");
+    await expect(drawer).toBeHidden();
 
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await simPlayoffsScope(page);
@@ -142,5 +151,15 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     await expect(
       page.locator(".rounded-lg.border-primary\\/30").getByRole("link").first(),
     ).toBeVisible();
+
+    const finalBracketTrigger = page
+      .getByTestId(/^playoff-drawer-trigger-/)
+      .filter({ has: page.locator(".font-semibold") })
+      .first();
+    await finalBracketTrigger.click();
+    await expect(page.getByTestId("game-context-drawer")).toBeVisible();
+    await expect(
+      page.getByTestId("game-context-drawer").getByTestId("game-drawer-mode"),
+    ).toHaveText(/^Final/);
   });
 });
