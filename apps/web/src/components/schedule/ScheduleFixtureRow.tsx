@@ -54,7 +54,7 @@ function MatchupCell({
       data-testid="schedule-fixture-drawer-cell"
       onClick={onOpen}
       className={cn(
-        "block w-full rounded-sm text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "block w-full rounded-sm text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         className,
       )}
     >
@@ -90,11 +90,10 @@ export function ScheduleFixtureRow({
     result != null ? `${result.homeScore} – ${result.awayScore}` : "—";
 
   return (
-    <>
-      <tr
-        data-testid={`schedule-fixture-${fixture.id}`}
-        className="border-b border-border"
-      >
+    <tr
+      data-testid={`schedule-fixture-${fixture.id}`}
+      className="border-b border-border"
+    >
         <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
           <MatchupCell onOpen={openDrawer} ariaLabel={drawerLabel}>
             {formatFixtureWhen(fixture.scheduledAt)}
@@ -133,6 +132,12 @@ export function ScheduleFixtureRow({
           <MatchupCell onOpen={openDrawer} ariaLabel={drawerLabel} className="inline-flex">
             <StatusBadge status={fixture.status} />
           </MatchupCell>
+          <GameContextDrawer
+            projection={projection}
+            open={open}
+            onOpenChange={setOpen}
+            restoreFocusRef={restoreFocusRef}
+          />
         </td>
         {isAdmin ? (
           <td className="px-4 py-2">
@@ -236,13 +241,6 @@ export function ScheduleFixtureRow({
             </div>
           </td>
         ) : null}
-      </tr>
-      <GameContextDrawer
-        projection={projection}
-        open={open}
-        onOpenChange={setOpen}
-        restoreFocusRef={restoreFocusRef}
-      />
-    </>
+    </tr>
   );
 }

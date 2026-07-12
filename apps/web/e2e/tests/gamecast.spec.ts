@@ -648,14 +648,30 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     await page.goto(`/dashboard/leagues/${fixture!.leagueId}/schedule`);
     await revealAllScheduleRows(page);
 
+    const pageOverflow = () =>
+      page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+
+    const before = await pageOverflow();
+
     const row = page.locator("tbody tr").first();
     await row.getByRole("button").first().click();
-    await expect(page.getByTestId("game-context-drawer")).toBeVisible();
+    const drawer = page.getByTestId("game-context-drawer");
+    await expect(drawer).toBeVisible();
 
-    const { scrollWidth, clientWidth } = await page.evaluate(() => ({
-      scrollWidth: document.documentElement.scrollWidth,
-      clientWidth: document.documentElement.clientWidth,
-    }));
-    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+    const after = await pageOverflow();
+    const beforeDelta = before.scrollWidth - before.clientWidth;
+    const afterDelta = after.scrollWidth - after.clientWidth;
+    // Opening the drawer must not widen the page beyond subpixel slack.
+    expect(afterDelta).toBeLessThanOrEqual(beforeDelta + 1);
+
+    const drawerBox = await drawer.boundingBox();
+    expect(drawerBox).not.toBeNull();
+    expect(drawerBox!.x).toBeGreaterThanOrEqual(0);
+    expect(drawerBox!.x + drawerBox!.width).toBeLessThanOrEqual(
+      after.clientWidth + 1,
+    );
   });
 });

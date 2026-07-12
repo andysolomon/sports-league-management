@@ -118,7 +118,8 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
 
     await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
     await expect(page.getByText("Champion", { exact: true })).toHaveCount(0);
-    await expect(page.getByRole("link").filter({ hasText: /E2E PO|E2E Team/ }).first()).toBeVisible();
+    await expect(page.getByTestId(/^playoff-drawer-trigger-/).first()).toBeVisible();
+    await expect(page.getByText(/E2E PO|E2E Team/).first()).toBeVisible();
     await expect(
       page.getByText(/Round 1|Semifinal|Quarterfinal/i).first(),
     ).toBeVisible();

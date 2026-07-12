@@ -106,7 +106,7 @@ export function GameContextDrawer({
         side="right"
         aria-labelledby={titleId}
         data-testid="game-context-drawer"
-        className="flex w-full max-w-md flex-col overflow-y-auto overscroll-contain"
+        className="flex w-[min(100vw,24rem)] max-w-[100vw] flex-col overflow-x-hidden overflow-y-auto overscroll-contain"
       >
         {projection ? (
           <>
