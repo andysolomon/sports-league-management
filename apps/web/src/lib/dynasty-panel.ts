@@ -52,18 +52,18 @@ export function dynastySeasonState(input: {
   upcomingSeason: { name: string } | null;
   seasonDecided: boolean;
 }): DynastySeasonState {
+  if (input.upcomingSeason) {
+    return {
+      seasonName: input.activeSeason?.name ?? input.upcomingSeason.name,
+      status: "offseason_upcoming",
+      statusLabel: `Offseason · upcoming ${input.upcomingSeason.name}`,
+    };
+  }
   if (!input.activeSeason) {
     return {
       seasonName: null,
       status: "no_season",
       statusLabel: "No active season",
-    };
-  }
-  if (input.upcomingSeason) {
-    return {
-      seasonName: input.activeSeason.name,
-      status: "offseason_upcoming",
-      statusLabel: `Offseason · upcoming ${input.upcomingSeason.name}`,
     };
   }
   if (input.seasonDecided) {

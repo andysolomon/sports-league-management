@@ -53,6 +53,18 @@ describe("dynastySeasonState", () => {
       status: "offseason_upcoming",
       statusLabel: "Offseason · upcoming 2027",
     });
+
+    expect(
+      dynastySeasonState({
+        activeSeason: null,
+        upcomingSeason: { name: "2027" },
+        seasonDecided: false,
+      }),
+    ).toMatchObject({
+      seasonName: "2027",
+      status: "offseason_upcoming",
+      statusLabel: "Offseason · upcoming 2027",
+    });
   });
 });
 
