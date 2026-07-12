@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { playoffsV1 } from "@/lib/flags";
+import { playoffsV1, schedulesStandingsV1, statKeepingV1 } from "@/lib/flags";
 import {
   getLeague,
   getLeagueOrgId,
@@ -18,6 +18,11 @@ import PlayoffBracket from "@/components/playoffs/PlayoffBracket";
 import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveViewedSeason } from "@/lib/season-view";
+import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
+import { BackLink } from "@/components/workspace/BackLink";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
+import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 
 export default async function LeaguePlayoffsPage({
   params,
@@ -28,6 +33,9 @@ export default async function LeaguePlayoffsPage({
 }) {
   const enabled = await playoffsV1();
   if (!enabled) notFound();
+
+  const scheduleEnabled = await schedulesStandingsV1();
+  const statsEnabled = await statKeepingV1();
 
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
@@ -62,24 +70,35 @@ export default async function LeaguePlayoffsPage({
       })
     : null;
 
+  const peerNavLinks = buildLeagueSeasonNavLinks({
+    leagueId,
+    seasonId: activeSeason?.id ?? null,
+    scheduleEnabled,
+    playoffsEnabled: enabled,
+    statsEnabled,
+    exclude: "playoffs",
+  });
+
   return (
     <div>
-      <Link
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Leagues", href: "/dashboard/leagues" },
+          { label: league.name, href: `/dashboard/leagues/${leagueId}` },
+          { label: "Playoffs" },
+        ]}
+      />
+      <BackLink
         href={`/dashboard/leagues/${leagueId}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to League
-      </Link>
-
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{league.name}</h2>
-          <p className="text-sm text-muted-foreground">
-            Playoffs {activeSeason ? `· ${activeSeason.name}` : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {activeSeason ? (
+        label="Back to League"
+      />
+      <WorkspaceHeader
+        title={league.name}
+        size="sub-hub"
+        sub={`Playoffs${activeSeason ? ` · ${activeSeason.name}` : ""}`}
+        actions={
+          activeSeason ? (
             <SeasonSwitcher
               seasons={allSeasons.map((s) => ({
                 id: s.id,
@@ -88,21 +107,10 @@ export default async function LeaguePlayoffsPage({
               }))}
               currentSeasonId={activeSeason.id}
             />
-          ) : null}
-          <Link
-            href={`/dashboard/leagues/${leagueId}/schedule`}
-            className="text-sm text-primary hover:underline"
-          >
-            &larr; Schedule
-          </Link>
-          <Link
-            href={`/dashboard/leagues/${leagueId}/standings`}
-            className="text-sm text-primary hover:underline"
-          >
-            Standings &rarr;
-          </Link>
-        </div>
-      </header>
+          ) : null
+        }
+      />
+      <WorkspaceNav links={peerNavLinks} />
 
       {!activeSeason ? (
         <Card>

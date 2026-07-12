@@ -1,13 +1,17 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { statKeepingV1 } from "@/lib/flags";
+import { statKeepingV1, schedulesStandingsV1, playoffsV1 } from "@/lib/flags";
 import { getLeague, getSeasons, getSeasonStatLeaders } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatLeadersBoard } from "@/components/stats/StatLeadersBoard";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveViewedSeason } from "@/lib/season-view";
+import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
+import { BackLink } from "@/components/workspace/BackLink";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
+import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 
 export default async function LeagueStatLeadersPage({
   params,
@@ -32,24 +36,38 @@ export default async function LeagueStatLeadersPage({
   const allSeasons = await getSeasons([leagueId]);
   const activeSeason = resolveViewedSeason(allSeasons, seasonParam);
 
+  const scheduleEnabled = await schedulesStandingsV1();
+  const playoffsEnabled = await playoffsV1();
+
+  const peerNavLinks = buildLeagueSeasonNavLinks({
+    leagueId,
+    seasonId: activeSeason?.id ?? null,
+    scheduleEnabled,
+    playoffsEnabled,
+    statsEnabled: enabled,
+    exclude: "stats",
+  });
+
   return (
     <div>
-      <Link
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Leagues", href: "/dashboard/leagues" },
+          { label: league.name, href: `/dashboard/leagues/${leagueId}` },
+          { label: "Stat leaders" },
+        ]}
+      />
+      <BackLink
         href={`/dashboard/leagues/${leagueId}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to League
-      </Link>
-
-      <header className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{league.name}</h2>
-          <p className="text-sm text-muted-foreground">
-            Stat leaders{activeSeason ? ` · ${activeSeason.name}` : ""}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {activeSeason ? (
+        label="Back to League"
+      />
+      <WorkspaceHeader
+        title={league.name}
+        size="sub-hub"
+        sub={`Stat leaders${activeSeason ? ` · ${activeSeason.name}` : ""}`}
+        actions={
+          activeSeason ? (
             <SeasonSwitcher
               seasons={allSeasons.map((s) => ({
                 id: s.id,
@@ -58,15 +76,10 @@ export default async function LeagueStatLeadersPage({
               }))}
               currentSeasonId={activeSeason.id}
             />
-          ) : null}
-          <Link
-            href={`/dashboard/leagues/${leagueId}/standings`}
-            className="text-sm text-primary hover:underline"
-          >
-            Standings &rarr;
-          </Link>
-        </div>
-      </header>
+          ) : null
+        }
+      />
+      <WorkspaceNav links={peerNavLinks} />
 
       {!activeSeason ? (
         <Card>

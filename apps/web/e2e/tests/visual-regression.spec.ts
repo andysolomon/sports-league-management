@@ -53,4 +53,14 @@ test.describe("Visual regression (WSM-000082)", () => {
       "standings-table.png",
     );
   });
+
+  test("Workspace shell — league and season variants", async ({ page }) => {
+    await waitForReady(page, "/dev/visual/workspace");
+    await expect(page.getByTestId("workspace-league")).toHaveScreenshot(
+      "workspace-league.png",
+    );
+    await expect(page.getByTestId("workspace-season")).toHaveScreenshot(
+      "workspace-season.png",
+    );
+  });
 });

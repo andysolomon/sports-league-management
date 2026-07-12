@@ -42,6 +42,11 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveViewedSeason } from "@/lib/season-view";
+import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
+import { BackLink } from "@/components/workspace/BackLink";
+import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
+import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 
 type StreamStatus = "idle" | "active" | "ended";
 
@@ -82,6 +87,7 @@ export default async function LeagueSchedulePage({
   const liveEnabled = await liveScoringV1();
   // Playoffs (WSM-000164/165): bracket lives on its own page; link when enabled.
   const playoffsEnabled = await playoffsV1();
+  const statsNavEnabled = await statKeepingV1();
   // Synthetic rosters (WSM-000173): discoverability shortcut — admins setting up
   // a schedule often need rosters first. Same admin + flag gate as the league
   // detail page; the server actions re-check flag + role.
@@ -140,85 +146,85 @@ export default async function LeagueSchedulePage({
     return a - b;
   });
 
+  const peerNavLinks = buildLeagueSeasonNavLinks({
+    leagueId,
+    seasonId: activeSeason?.id ?? null,
+    scheduleEnabled: enabled,
+    playoffsEnabled,
+    statsEnabled: statsNavEnabled,
+    exclude: "schedule",
+  });
+
   return (
     <div>
-      <Link
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Leagues", href: "/dashboard/leagues" },
+          { label: league.name, href: `/dashboard/leagues/${leagueId}` },
+          { label: "Schedule" },
+        ]}
+      />
+      <BackLink
         href={`/dashboard/leagues/${leagueId}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to League
-      </Link>
-
-      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">{league.name}</h2>
-          <p className="text-sm text-muted-foreground">
-            Schedule {activeSeason ? `· ${activeSeason.name}` : ""}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {activeSeason ? (
-            <SeasonSwitcher
-              seasons={allSeasons.map((s) => ({
-                id: s.id,
-                name: s.name,
-                status: s.status,
-              }))}
-              currentSeasonId={activeSeason.id}
-            />
-          ) : null}
-          <Link
-            href={`/dashboard/leagues/${leagueId}/standings`}
-            className="text-sm text-primary hover:underline"
-          >
-            Standings &rarr;
-          </Link>
-          {playoffsEnabled ? (
-            <Link
-              href={`/dashboard/leagues/${leagueId}/playoffs`}
-              className="text-sm text-primary hover:underline"
-            >
-              Playoffs &rarr;
-            </Link>
-          ) : null}
-          {isAdmin && activeSeason && teams.length >= 2 ? (
-            <GenerateScheduleButton
-              leagueId={leagueId}
-              seasonId={activeSeason.id}
-              seasonName={activeSeason.name}
-              hasFixtures={fixtures.length > 0}
-            />
-          ) : null}
-          {isAdmin && activeSeason ? (
-            <FixtureFormDialog
-              leagueId={leagueId}
-              seasonId={activeSeason.id}
-              teams={teams.map((t) => ({ id: t.id, name: t.name }))}
-            />
-          ) : null}
-          {isAdmin && activeSeason && fixtures.length > 0 ? (
-            <SimulateScopeMenu
-              leagueId={leagueId}
-              seasonId={activeSeason.id}
-            />
-          ) : null}
-          {canGenerateRosters ? (
-            <>
-              <SyntheticRosterButton
-                kind="league"
-                id={leagueId}
-                seasonStarted={seasonStarted}
+        label="Back to League"
+      />
+      <WorkspaceHeader
+        title={league.name}
+        size="sub-hub"
+        sub={`Schedule${activeSeason ? ` · ${activeSeason.name}` : ""}`}
+        actions={
+          <>
+            {activeSeason ? (
+              <SeasonSwitcher
+                seasons={allSeasons.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  status: s.status,
+                }))}
+                currentSeasonId={activeSeason.id}
               />
-              <SyntheticRosterButton
-                kind="league"
-                id={leagueId}
-                action="attributes"
-                seasonStarted={seasonStarted}
+            ) : null}
+            {isAdmin && activeSeason && teams.length >= 2 ? (
+              <GenerateScheduleButton
+                leagueId={leagueId}
+                seasonId={activeSeason.id}
+                seasonName={activeSeason.name}
+                hasFixtures={fixtures.length > 0}
               />
-            </>
-          ) : null}
-        </div>
-      </header>
+            ) : null}
+            {isAdmin && activeSeason ? (
+              <FixtureFormDialog
+                leagueId={leagueId}
+                seasonId={activeSeason.id}
+                teams={teams.map((t) => ({ id: t.id, name: t.name }))}
+              />
+            ) : null}
+            {isAdmin && activeSeason && fixtures.length > 0 ? (
+              <SimulateScopeMenu
+                leagueId={leagueId}
+                seasonId={activeSeason.id}
+              />
+            ) : null}
+            {canGenerateRosters ? (
+              <>
+                <SyntheticRosterButton
+                  kind="league"
+                  id={leagueId}
+                  seasonStarted={seasonStarted}
+                />
+                <SyntheticRosterButton
+                  kind="league"
+                  id={leagueId}
+                  action="attributes"
+                  seasonStarted={seasonStarted}
+                />
+              </>
+            ) : null}
+          </>
+        }
+      />
+      <WorkspaceNav links={peerNavLinks} />
 
       {!activeSeason ? (
         <Card>
