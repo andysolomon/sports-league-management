@@ -2219,10 +2219,15 @@ export const advanceSeasonRollover = internalMutationGeneric({
 });
 
 function nextRolloverSeasonName(name: string): string {
-  const match = name.match(/(\d{4})(?!.*\d)/);
-  if (!match || match.index === undefined) return `${name} Next`;
-  const next = String(Number(match[1]) + 1);
-  return `${name.slice(0, match.index)}${next}${name.slice(match.index + 4)}`;
+  const trailing = name.match(/^(.*?)(\d{4})(\D*)$/);
+  if (trailing) {
+    return `${trailing[1]}${Number(trailing[2]) + 1}${trailing[3]}`;
+  }
+  const embedded = name.match(/\d{4}/);
+  if (embedded) {
+    return name.replace(embedded[0], String(Number(embedded[0]) + 1));
+  }
+  return `${name} ${new Date().getFullYear() + 1}`;
 }
 
 /**
