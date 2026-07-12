@@ -96,6 +96,18 @@ describe("generatePlayoffsAction (WSM-000164)", () => {
     expect(res).toEqual({ ok: false, needsConfirm: true });
   });
 
+  it("propagates a completed-season rejection as the stable typed result", async () => {
+    authorize();
+    mockGeneratePlayoffBracket.mockRejectedValue(
+      new Error("Uncaught Error: season_completed"),
+    );
+    await expect(generatePlayoffsAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+      size: 4,
+    })).resolves.toEqual({ ok: false, error: "season_completed" });
+  });
+
   it("passes confirm through", async () => {
     authorize();
     mockGeneratePlayoffBracket.mockResolvedValue({

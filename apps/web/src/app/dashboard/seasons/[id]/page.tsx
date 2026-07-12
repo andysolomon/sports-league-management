@@ -31,6 +31,7 @@ import {
 } from "@/lib/dynasty-panel";
 import { DynastyPanel } from "@/components/dynasty/DynastyPanel";
 import { regularSeasonProgress } from "@/lib/playoffs";
+import { resolveLifecycleSeason } from "@/lib/season-view";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
@@ -75,6 +76,9 @@ export default async function SeasonHubPage({
   const seasons = await getSeasons([league.id]).catch(() => []);
   const activeSeason = seasons.find((s) => s.status === "active") ?? null;
   const upcomingSeason = seasons.find((s) => s.status === "upcoming") ?? null;
+  const completedSeason = resolveLifecycleSeason(
+    seasons.filter((s) => s.status === "completed"),
+  );
 
   const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled, dynastyFixtures, dynastyBracket, leaguePlayers, teams] =
     await Promise.all([
@@ -126,6 +130,9 @@ export default async function SeasonHubPage({
   const startNextSeasonGate = evaluateStartNextSeason({
     activeSeason: activeSeason
       ? { id: activeSeason.id, name: activeSeason.name }
+      : null,
+    completedSeason: completedSeason
+      ? { id: completedSeason.id, name: completedSeason.name }
       : null,
     upcomingSeason: upcomingSeason
       ? { id: upcomingSeason.id, name: upcomingSeason.name }

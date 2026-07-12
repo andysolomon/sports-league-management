@@ -111,9 +111,17 @@ export async function activateSeasonAction(seasonId: string): Promise<Result> {
   const leagueId = await getSeasonLeagueId(seasonId);
   const gate = await requireLeagueAdmin(leagueId);
   if (!gate.ok) return gate;
-  await setActiveSeasonMutation(seasonId);
-  revalidatePath("/dashboard/seasons");
-  return { ok: true };
+  try {
+    await setActiveSeasonMutation(seasonId);
+    revalidatePath("/dashboard/seasons");
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("completed_season_cannot_reactivate")) {
+      return { ok: false, error: "completed_season_cannot_reactivate" };
+    }
+    return { ok: false, error: message };
+  }
 }
 
 /*

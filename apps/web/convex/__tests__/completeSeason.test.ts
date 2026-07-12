@@ -2,7 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema";
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 
 const modules = import.meta.glob("../**/*.*s");
@@ -206,12 +206,127 @@ describe("completed seasons are read-only for game data", () => {
     ).rejects.toThrow("season_completed");
   });
 
-  it("setActiveSeason reactivates a completed season (escape hatch)", async () => {
+  it("rejects fixture update and deletion", async () => {
+    const t = convexTest(schema, modules);
+    const { fixtureId } = await completedSeason(t);
+    await expect(t.mutation(internal.sports.updateFixture, { fixtureId, week: 2 }))
+      .rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.deleteFixture, { fixtureId }))
+      .rejects.toThrow("season_completed");
+  });
+
+  it("rejects game logs and all box-score writes", async () => {
+    const t = convexTest(schema, modules);
+    const { leagueId, seasonId, fixtureId, teamIds } = await completedSeason(t);
+    const playerId = await t.run((ctx) => ctx.db.insert("players", {
+      name: "Player", leagueId, teamId: teamIds[0], position: "QB",
+      positionGroup: null, jerseyNumber: 1, dateOfBirth: null,
+      status: "active", headshotUrl: null,
+    }));
+    await expect(t.mutation(internal.sports.upsertPlayerGameStats, {
+      fixtureId, seasonId, playerId, teamId: teamIds[0],
+      statsJson: "{}", actorUserId: "actor",
+    })).rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.bulkUpsertPlayerGameStats, {
+      fixtureId, seasonId, actorUserId: "actor", lines: [],
+    })).rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.upsertGamePlayLog, {
+      fixtureId, seasonId, logJson: "{}", engineVersion: "test", actorUserId: "actor",
+    })).rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.deletePlayerGameStats, {
+      fixtureId, playerId,
+    })).rejects.toThrow("season_completed");
+  });
+
+  it("rejects every live-score mutation and manual bracket advancement", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId, fixtureId } = await completedSeason(t);
+    await expect(t.mutation(internal.sports.startLiveGame, { fixtureId, actorUserId: "actor" }))
+      .rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.addLiveScore, { fixtureId, team: "home", points: 7 }))
+      .rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.setLiveScore, { fixtureId, homeScore: 7, awayScore: 0 }))
+      .rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.updateLiveState, { fixtureId, period: 2 }))
+      .rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.endLiveGame, { fixtureId, actorUserId: "actor" }))
+      .rejects.toThrow("season_completed");
+    await expect(t.mutation(internal.sports.advancePlayoffBracket, { seasonId }))
+      .rejects.toThrow("season_completed");
+  });
+
+  it("blocks go-live creation but preserves historical media annotations", async () => {
+    const t = convexTest(schema, modules);
+    const { fixtureId } = await completedSeason(t);
+    await expect(t.mutation(internal.sports.createGameStream, {
+      fixtureId, provider: "youtube", youtubeVideoId: "video", startedBy: "actor", maxDurationMinutes: 60,
+    })).rejects.toThrow("season_completed");
+
+    const { clipId } = await t.run(async (ctx) => {
+      await ctx.db.insert("gameStreams", {
+        fixtureId, provider: "mux", muxLiveStreamId: "live_1", muxPlaybackId: "pb",
+        youtubeVideoId: null, status: "ended", vodAssetId: null, vodPlaybackId: null,
+        startedBy: "actor", startedAt: "now", endedAt: "now", maxDurationMinutes: 60,
+      });
+      const clipId = await ctx.db.insert("gameClips", {
+        fixtureId, muxAssetId: "clip_1", playbackId: null, label: "Clip",
+        startTime: 0, endTime: 10, status: "preparing", createdBy: "actor", createdAt: "now",
+      });
+      return { clipId };
+    });
+    await expect(t.mutation(internal.sports.updateGameStreamStatus, {
+      muxLiveStreamId: "live_1", status: "ended", vodAssetId: "vod_1",
+    })).resolves.toBe(true);
+    await expect(t.mutation(internal.sports.createGameClip, {
+      fixtureId, muxAssetId: "clip_2", playbackId: null, label: "Archive", startTime: 0,
+      endTime: 10, createdBy: "actor",
+    })).resolves.toMatchObject({ id: expect.any(String) });
+    await expect(t.mutation(internal.sports.deleteGameClip, { clipId, fixtureId }))
+      .resolves.toBe(true);
+  });
+
+  it("preserves archive, Gamecast, and statistics reads after completion", async () => {
+    const t = convexTest(schema, modules);
+    const { leagueId, seasonId, fixtureId, teamIds } = await seedSeason(t);
+    const playerId = await t.run((ctx) => ctx.db.insert("players", {
+      name: "Archive QB", leagueId, teamId: teamIds[0], position: "QB",
+      positionGroup: null, jerseyNumber: 12, dateOfBirth: null,
+      status: "active", headshotUrl: null,
+    }));
+    await t.run(async (ctx) => {
+      await ctx.db.insert("playerGameStats", {
+        fixtureId, seasonId, playerId, teamId: teamIds[0], statsJson: "{\"passingYards\":250}",
+        enteredBy: "actor", updatedAt: "now",
+      });
+      await ctx.db.insert("gamePlayLogs", {
+        fixtureId, seasonId, logJson: "[]", engineVersion: "test",
+        createdAt: "now", createdBy: "actor",
+      });
+      await ctx.db.insert("gameStreams", {
+        fixtureId, provider: "youtube", muxLiveStreamId: "archive-stream",
+        youtubeVideoId: "archive-video", status: "ended", vodAssetId: null,
+        vodPlaybackId: null, startedBy: "actor", startedAt: "now", endedAt: "now",
+        maxDurationMinutes: 60,
+      });
+    });
+    await t.mutation(internal.sports.completeSeason, { seasonId, force: true });
+
+    await expect(t.query(api.sports.listFixturesBySeason, { seasonId }))
+      .resolves.toEqual(expect.arrayContaining([expect.objectContaining({ id: fixtureId })]));
+    await expect(t.query(api.sports.getStreamByFixture, { fixtureId }))
+      .resolves.toMatchObject({ youtubeVideoId: "archive-video", status: "ended" });
+    await expect(t.query(api.sports.getGamePlayLog, { fixtureId }))
+      .resolves.toMatchObject({ seasonId, engineVersion: "test" });
+    await expect(t.query(api.sports.getPlayerGameStatsByFixture, { fixtureId }))
+      .resolves.toEqual(expect.arrayContaining([expect.objectContaining({ playerId, seasonId })]));
+  });
+
+  it("rejects completed-season reactivation", async () => {
     const t = convexTest(schema, modules);
     const { seasonId } = await completedSeason(t);
 
-    await t.mutation(internal.sports.setActiveSeason, { seasonId });
-
-    expect(await seasonStatus(t, seasonId)).toBe("active");
+    await expect(t.mutation(internal.sports.setActiveSeason, { seasonId }))
+      .rejects.toThrow("completed_season_cannot_reactivate");
+    expect(await seasonStatus(t, seasonId)).toBe("completed");
   });
 });

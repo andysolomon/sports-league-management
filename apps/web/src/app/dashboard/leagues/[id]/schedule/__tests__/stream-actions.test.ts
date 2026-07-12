@@ -78,7 +78,11 @@ function happyFixture() {
     awayTeamName: "Away",
     status: "scheduled",
   });
-  mockGetPublicSeason.mockResolvedValue({ id: "season_1", leagueId: LEAGUE });
+  mockGetPublicSeason.mockResolvedValue({
+    id: "season_1",
+    leagueId: LEAGUE,
+    status: "active",
+  });
 }
 
 describe("startGameStream", () => {
@@ -114,6 +118,19 @@ describe("startGameStream", () => {
       ok: false,
       error: "unauthorized",
     });
+  });
+
+  it("blocks operator go-live creation for a completed season", async () => {
+    mockGetPublicSeason.mockResolvedValue({
+      id: "season_1",
+      leagueId: LEAGUE,
+      status: "completed",
+    });
+    expect(await startGameStream(LEAGUE, FIXTURE)).toEqual({
+      ok: false,
+      error: "season_completed",
+    });
+    expect(mockCreateMuxLiveStream).not.toHaveBeenCalled();
   });
 
   it("404s a fixture from another league (cross-league guard)", async () => {

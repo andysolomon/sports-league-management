@@ -13,6 +13,7 @@ import {
 } from "@/lib/data-api";
 import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
+import { resolveLifecycleSeason } from "@/lib/season-view";
 
 /*
  * Auth chain for playoff actions (mirrors the schedule manager gate):
@@ -52,6 +53,9 @@ function friendlyError(code: string): string {
   }
   if (code.includes("season_not_found")) {
     return "This season no longer exists.";
+  }
+  if (code.includes("season_completed")) {
+    return "season_completed";
   }
   return "Could not generate the bracket.";
 }
@@ -124,8 +128,7 @@ export async function advanceToPlayoffsAction(input: {
   if (!userId) return { ok: false, error: "unauthorized" };
 
   const allSeasons = await getSeasons([input.leagueId]);
-  const activeSeason =
-    allSeasons.find((s) => s.status === "active") ?? allSeasons[0] ?? null;
+  const activeSeason = resolveLifecycleSeason(allSeasons);
   if (!activeSeason) return { ok: false, error: "no_season" };
 
   const existing = await getPlayoffBracket(activeSeason.id).catch(() => null);

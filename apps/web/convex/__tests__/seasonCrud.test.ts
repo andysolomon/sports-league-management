@@ -103,6 +103,107 @@ describe("season CRUD (WSM-000126)", () => {
     expect(dto?.status).toBe("active");
   });
 
+  it("claims exactly one upcoming rollover target for a completed source", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "completed");
+
+    const first = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+    const retry = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+
+    expect(first.resumed).toBe(false);
+    expect(retry).toMatchObject({
+      resumed: true,
+      targetSeasonId: first.targetSeasonId,
+    });
+    const target = await t.run((ctx) => ctx.db.get(first.targetSeasonId as Id<"seasons">));
+    expect(target?.status).toBe("upcoming");
+  });
+
+  it("rejects rollover before the source is completed", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "active");
+    await expect(t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    })).rejects.toThrow("rollover_source_not_completed");
+  });
+
+  it("enforces the newest completed source in the mutation", async () => {
+    const t = convexTest(schema, modules);
+    const { leagueId, seasonId: olderId } = await seedLeagueWithSeason(t, "completed");
+    await t.mutation(internal.sports.upsertSeason, {
+      name: "2027",
+      leagueId,
+      startDate: "2027-09-01",
+      endDate: null,
+      status: "completed",
+    });
+
+    await expect(t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: olderId,
+    })).rejects.toThrow("rollover_source_not_newest_completed");
+  });
+
+  it("finalizes an existing claim when its target was completed", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "completed");
+    const claim = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+    await t.run((ctx) => ctx.db.patch(claim.targetSeasonId as Id<"seasons">, {
+      status: "completed",
+    }));
+
+    await expect(t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    })).resolves.toMatchObject({ status: "completed", stage: "completed" });
+  });
+
+  it("does not resume an in-progress claim whose target was activated", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "completed");
+    const claim = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+    await t.run((ctx) => ctx.db.patch(claim.targetSeasonId as Id<"seasons">, {
+      status: "active",
+    }));
+
+    await expect(t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    })).rejects.toThrow("rollover_target_not_upcoming");
+  });
+
+  it("returns a completed claim after its target was activated", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "completed");
+    const claim = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.patch(claim.rolloverId as Id<"seasonRollovers">, {
+        status: "completed",
+        stage: "completed",
+        completedAt: new Date().toISOString(),
+      });
+      await ctx.db.patch(claim.targetSeasonId as Id<"seasons">, {
+        status: "active",
+      });
+    });
+
+    await expect(t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    })).resolves.toMatchObject({
+      resumed: true,
+      targetSeasonId: claim.targetSeasonId,
+      status: "completed",
+      stage: "completed",
+    });
+  });
+
   it("deleteSeason removes the season and cascades fixtures, results, attributes, and assignments", async () => {
     const t = convexTest(schema, modules);
     const { leagueId, teamIds, seasonId } = await seedLeagueWithSeason(t);
