@@ -17,12 +17,21 @@ export function acceptBrowserConfirms(page: Page): void {
   page.on("dialog", (dialog) => void dialog.accept());
 }
 
-/** Confirm an in-app ActionConfirmDialog (lifecycle surfaces from PR #535). */
-export async function confirmLifecycleDialog(page: Page): Promise<void> {
+/**
+ * Confirm an in-app ActionConfirmDialog (lifecycle surfaces from PR #535).
+ * Pass `expectClose: false` for error paths — failed actions keep the dialog
+ * open for retry, surfacing the error via toast.
+ */
+export async function confirmLifecycleDialog(
+  page: Page,
+  opts: { expectClose?: boolean } = {},
+): Promise<void> {
   const dialog = page.getByTestId("action-confirm-dialog");
   await expect(dialog).toBeVisible();
   await page.getByTestId("action-confirm-submit").click();
-  await expect(dialog).toBeHidden();
+  if (opts.expectClose !== false) {
+    await expect(dialog).toBeHidden();
+  }
 }
 
 export async function addTeamsToLeague(
@@ -132,10 +141,13 @@ export async function simRegularSeason(page: Page) {
   ).toBeVisible({ timeout: 120_000 });
 }
 
-export async function simPlayoffsScope(page: Page) {
+export async function simPlayoffsScope(
+  page: Page,
+  opts: { expectClose?: boolean } = {},
+) {
   await openSimulateScopeMenu(page);
   await page.getByRole("menuitem", { name: "Sim playoffs" }).click();
-  await confirmLifecycleDialog(page);
+  await confirmLifecycleDialog(page, opts);
 }
 
 export async function simToChampion(page: Page) {

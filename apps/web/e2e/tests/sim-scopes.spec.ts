@@ -104,11 +104,15 @@ test.describe("Simulation scopes (WSM-000183)", () => {
     ).toBeVisible();
     await page.keyboard.press("Escape");
 
-    await simPlayoffsScope(page);
+    // Without a bracket the action fails: the error surfaces as a toast and
+    // the confirm dialog stays open for retry.
+    await simPlayoffsScope(page, { expectClose: false });
     await expect(
       page.getByText(
         "No playoff bracket yet. Generate a bracket on the Playoffs page first.",
       ),
     ).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("action-confirm-cancel").click();
+    await expect(page.getByTestId("action-confirm-dialog")).toBeHidden();
   });
 });
