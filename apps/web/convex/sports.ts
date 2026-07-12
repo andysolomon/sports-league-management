@@ -36,6 +36,12 @@ import {
   targetRosterSize,
 } from "./lib/offseason";
 import { pickRound, teamOnClock } from "./lib/draft";
+import {
+  assertFixtureSeasonWritable,
+  assertSeasonWritable,
+  selectLifecycleSeason,
+  selectNewestSeason,
+} from "./lib/seasonLifecycle";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -1944,6 +1950,9 @@ export const setActiveSeason = internalMutationGeneric({
   handler: async (ctx, args) => {
     const target = await ctx.db.get(args.seasonId);
     if (!target) return null;
+    if (target.status === "completed") {
+      throw new Error("completed_season_cannot_reactivate");
+    }
     const siblings = await ctx.db
       .query("seasons")
       .withIndex("by_leagueId", (q) => q.eq("leagueId", target.leagueId))
@@ -1966,7 +1975,6 @@ export const setActiveSeason = internalMutationGeneric({
  * data: createFixture / generateSeasonSchedule / recordGameResult /
  * generatePlayoffBracket all reject with "season_completed" (which also blocks
  * every simulation path, since sims persist through recordGameResult).
- * Reactivating via setActiveSeason is the escape hatch.
  */
 export const completeSeason = internalMutationGeneric({
   args: { seasonId: v.id("seasons"), force: v.optional(v.boolean()) },
@@ -1997,6 +2005,225 @@ export const completeSeason = internalMutationGeneric({
     return null;
   },
 });
+
+/**
+ * Transactionally claim one completed source season for rollover. The remaining
+ * roster/progression stages intentionally remain separate from completion; a
+ * retry gets this same target and can resume rather than create another season.
+ */
+export const beginSeasonRollover = internalMutationGeneric({
+  args: { sourceSeasonId: v.id("seasons") },
+  returns: v.object({
+    rolloverId: v.string(),
+    targetSeasonId: v.string(),
+    resumed: v.boolean(),
+    stage: v.string(),
+    status: v.string(),
+    graduatedPlayerIds: v.array(v.string()),
+    advancedPlayerIds: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const source = await ctx.db.get(args.sourceSeasonId);
+    if (!source) throw new Error("season_not_found");
+    if (source.status !== "completed") {
+      throw new Error("rollover_source_not_completed");
+    }
+
+    const seasons = await ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", source.leagueId))
+      .collect();
+    const existing = await ctx.db
+      .query("seasonRollovers")
+      .withIndex("by_sourceSeasonId", (q) =>
+        q.eq("sourceSeasonId", args.sourceSeasonId),
+      )
+      .unique();
+    if (existing) {
+      const target = await ctx.db.get(existing.targetSeasonId);
+      if (!target) throw new Error("rollover_target_not_found");
+      if (target.status === "completed" && existing.status !== "completed") {
+        const completedAt = new Date().toISOString();
+        await ctx.db.patch(existing._id, {
+          status: "completed",
+          stage: "completed",
+          completedAt,
+        });
+        return {
+          rolloverId: existing._id,
+          targetSeasonId: existing.targetSeasonId,
+          resumed: true,
+          stage: "completed",
+          status: "completed",
+          graduatedPlayerIds: (existing.graduatedPlayerIds ?? []).map(String),
+          advancedPlayerIds: (existing.advancedPlayerIds ?? []).map(String),
+        };
+      }
+      // A completed rollover remains a successful idempotent result after its
+      // target is activated. An in-progress rollover may only mutate upcoming
+      // targets and must not resume against an active season.
+      if (existing.status === "completed") {
+        return {
+          rolloverId: existing._id,
+          targetSeasonId: existing.targetSeasonId,
+          resumed: true,
+          stage: existing.stage,
+          status: existing.status,
+          graduatedPlayerIds: (existing.graduatedPlayerIds ?? []).map(String),
+          advancedPlayerIds: (existing.advancedPlayerIds ?? []).map(String),
+        };
+      }
+      if (target.status !== "upcoming") {
+        throw new Error("rollover_target_not_upcoming");
+      }
+      return {
+        rolloverId: existing._id,
+        targetSeasonId: existing.targetSeasonId,
+        resumed: true,
+        stage: existing.stage,
+        status: existing.status,
+        graduatedPlayerIds: (existing.graduatedPlayerIds ?? []).map(String),
+        advancedPlayerIds: (existing.advancedPlayerIds ?? []).map(String),
+      };
+    }
+
+    const newestCompleted = selectNewestSeason(
+      seasons.filter((season) => season.status === "completed"),
+    );
+    if (newestCompleted?._id !== source._id) {
+      throw new Error("rollover_source_not_newest_completed");
+    }
+
+    if (seasons.some((season) => season.status === "upcoming")) {
+      throw new Error("next_season_exists");
+    }
+
+    const targetSeasonId = await ctx.db.insert("seasons", {
+      name: nextRolloverSeasonName(source.name),
+      leagueId: source.leagueId,
+      startDate: source.startDate,
+      endDate: source.endDate,
+      status: "upcoming",
+      rosterLocked: false,
+      playoffTeams: source.playoffTeams,
+      playoffFormat: source.playoffFormat,
+      divisionWinnersQualify: source.divisionWinnersQualify,
+    });
+    const startedAt = new Date().toISOString();
+    const rolloverId = await ctx.db.insert("seasonRollovers", {
+      leagueId: source.leagueId,
+      sourceSeasonId: args.sourceSeasonId,
+      targetSeasonId,
+      status: "in_progress",
+      stage: "target_created",
+      startedAt,
+    });
+    return {
+      rolloverId,
+      targetSeasonId,
+      resumed: false,
+      stage: "target_created",
+      status: "in_progress",
+      graduatedPlayerIds: [],
+      advancedPlayerIds: [],
+    };
+  },
+});
+
+const rolloverStageOrder = [
+  "target_created",
+  "players_progressed",
+  "attributes_copied",
+  "rosters_copied",
+  "freshmen_created",
+  "completed",
+] as const;
+
+function rolloverStageIndex(stage: string): number {
+  return rolloverStageOrder.indexOf(stage as (typeof rolloverStageOrder)[number]);
+}
+
+function rolloverResult(rollover: {
+  _id: string;
+  targetSeasonId: string;
+  status: string;
+  stage: string;
+  graduatedPlayerIds?: Id<"players">[];
+  advancedPlayerIds?: Id<"players">[];
+}) {
+  return {
+    rolloverId: rollover._id,
+    targetSeasonId: rollover.targetSeasonId,
+    stage: rollover.stage,
+    status: rollover.status,
+    graduatedPlayerIds: (rollover.graduatedPlayerIds ?? []).map(String),
+    advancedPlayerIds: (rollover.advancedPlayerIds ?? []).map(String),
+  };
+}
+
+/**
+ * Atomically checkpoint a completed rollover stage. A later stage is a no-op,
+ * which makes retries safe after a successful checkpoint response is lost.
+ */
+export const advanceSeasonRollover = internalMutationGeneric({
+  args: {
+    rolloverId: v.id("seasonRollovers"),
+    stage: v.string(),
+  },
+  returns: v.object({
+    rolloverId: v.string(),
+    targetSeasonId: v.string(),
+    stage: v.string(),
+    status: v.string(),
+    graduatedPlayerIds: v.array(v.string()),
+    advancedPlayerIds: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const rollover = await ctx.db.get(args.rolloverId);
+    if (!rollover) throw new Error("rollover_not_found");
+    const target = await ctx.db.get(rollover.targetSeasonId);
+    if (!target) throw new Error("rollover_target_not_found");
+
+    if (target.status === "completed" && rollover.status !== "completed") {
+      const completed = { ...rollover, status: "completed", stage: "completed" };
+      await ctx.db.patch(rollover._id, {
+        status: "completed",
+        stage: "completed",
+        completedAt: new Date().toISOString(),
+      });
+      return rolloverResult(completed);
+    }
+    if (target.status !== "upcoming") {
+      throw new Error("rollover_target_not_upcoming");
+    }
+
+    const current = rolloverStageIndex(rollover.stage);
+    const requested = rolloverStageIndex(args.stage);
+    if (current < 0) throw new Error("invalid_rollover_stage");
+    if (requested < 0) throw new Error("invalid_rollover_stage");
+    if (requested <= current) return rolloverResult(rollover);
+    if (requested !== current + 1) throw new Error("rollover_stage_out_of_order");
+
+    const patch: {
+      stage: string;
+      status?: string;
+      completedAt?: string;
+    } = { stage: args.stage };
+    if (args.stage === "completed") {
+      patch.status = "completed";
+      patch.completedAt = new Date().toISOString();
+    }
+    await ctx.db.patch(rollover._id, patch);
+    return rolloverResult({ ...rollover, ...patch });
+  },
+});
+
+function nextRolloverSeasonName(name: string): string {
+  const match = name.match(/(\d{4})(?!.*\d)/);
+  if (!match || match.index === undefined) return `${name} Next`;
+  const next = String(Number(match[1]) + 1);
+  return `${name.slice(0, match.index)}${next}${name.slice(match.index + 4)}`;
+}
 
 /**
  * Delete a season and cascade its season-scoped rows (WSM-000126, WSM-000209):
@@ -3439,7 +3666,7 @@ export const getSeasonAttributesByPosition = queryGeneric({
  */
 /*
  * The season whose attributes represent a league's "current" SPRT ratings —
- * the active season, else the most recently created. Matches the convention the
+ * the active season, then upcoming, else the most recently created. Matches the convention the
  * dashboard pages used to apply caller-side; centralized here so workspace
  * forks (whose own league has no seasons) resolve against their SOURCE league.
  */
@@ -3451,11 +3678,7 @@ async function currentSeasonId(
     .query("seasons")
     .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
     .collect();
-  const active = seasons.find((s) => s.status === "active");
-  if (active) return active._id;
-  if (seasons.length === 0) return null;
-  const sorted = [...seasons].sort((a, b) => b._creationTime - a._creationTime);
-  return sorted[0]!._id;
+  return selectLifecycleSeason(seasons)?._id ?? null;
 }
 
 /*
@@ -3903,9 +4126,7 @@ export const createFixture = internalMutationGeneric({
       throw new Error("home_and_away_must_differ");
     }
 
-    const season = await ctx.db.get(args.seasonId);
-    if (!season) throw new Error("season_not_found");
-    if (season.status === "completed") throw new Error("season_completed");
+    const season = await assertSeasonWritable(ctx, args.seasonId);
 
     const home = await ctx.db.get(args.homeTeamId);
     const away = await ctx.db.get(args.awayTeamId);
@@ -3960,6 +4181,7 @@ export const updateFixture = internalMutationGeneric({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.fixtureId);
     if (!existing) return null;
+    await assertSeasonWritable(ctx, existing.seasonId);
 
     const patch: Record<string, unknown> = {};
     if (args.scheduledAt !== undefined) patch.scheduledAt = args.scheduledAt;
@@ -3997,6 +4219,7 @@ export const deleteFixture = internalMutationGeneric({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.fixtureId);
     if (!existing) return null;
+    await assertSeasonWritable(ctx, existing.seasonId);
 
     // Cascade: drop any gameResults row attached to this fixture so
     // standings computation doesn't keep counting an orphaned result.
@@ -4074,9 +4297,7 @@ export const generateSeasonSchedule = internalMutationGeneric({
     teamCount: v.number(),
   }),
   handler: async (ctx, args) => {
-    const season = await ctx.db.get(args.seasonId);
-    if (!season) throw new Error("season_not_found");
-    if (season.status === "completed") throw new Error("season_completed");
+    const season = await assertSeasonWritable(ctx, args.seasonId);
 
     const teams = await ctx.db
       .query("teams")
@@ -4350,12 +4571,46 @@ export const rolloverGraduateAndAdvancePlayers = internalMutation({
   args: {
     leagueId: v.id("leagues"),
     seasonId: v.id("seasons"),
+    rolloverId: v.optional(v.id("seasonRollovers")),
   },
   returns: v.object({
     graduatedPlayerIds: v.array(v.string()),
     advancedPlayerIds: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
+    let rollover: {
+      _id: Id<"seasonRollovers">;
+      leagueId: Id<"leagues">;
+      sourceSeasonId: Id<"seasons">;
+      targetSeasonId: Id<"seasons">;
+      stage: string;
+      status: string;
+      graduatedPlayerIds?: Id<"players">[];
+      advancedPlayerIds?: Id<"players">[];
+    } | null = null;
+    if (args.rolloverId) {
+      rollover = await ctx.db.get(args.rolloverId);
+      if (!rollover) throw new Error("rollover_not_found");
+      if (rollover.sourceSeasonId !== args.seasonId || rollover.leagueId !== args.leagueId) {
+        throw new Error("rollover_source_mismatch");
+      }
+      const target = await ctx.db.get(rollover.targetSeasonId);
+      if (!target) throw new Error("rollover_target_not_found");
+      if (target.status !== "upcoming") {
+        throw new Error("rollover_target_not_upcoming");
+      }
+      const stage = rolloverStageIndex(rollover.stage);
+      if (stage >= rolloverStageIndex("players_progressed")) {
+        return {
+          graduatedPlayerIds: (rollover.graduatedPlayerIds ?? []).map(String),
+          advancedPlayerIds: (rollover.advancedPlayerIds ?? []).map(String),
+        };
+      }
+      if (stage !== rolloverStageIndex("target_created")) {
+        throw new Error("rollover_stage_out_of_order");
+      }
+    }
+
     const playerIds = await resolveSeasonRosterPlayerIds(
       ctx,
       args.leagueId,
@@ -4392,6 +4647,15 @@ export const rolloverGraduateAndAdvancePlayers = internalMutation({
       advancedPlayerIds.push(playerId as string);
     }
 
+    if (rollover) {
+      // Player progression and its checkpoint commit in this same Convex
+      // transaction, so a retry cannot advance grades or experience twice.
+      await ctx.db.patch(rollover._id, {
+        stage: "players_progressed",
+        graduatedPlayerIds: graduatedPlayerIds as Id<"players">[],
+        advancedPlayerIds: advancedPlayerIds as Id<"players">[],
+      });
+    }
     return { graduatedPlayerIds, advancedPlayerIds };
   },
 });
@@ -4924,13 +5188,9 @@ export const recordGameResult = internalMutationGeneric({
   },
   returns: gameResultDtoValidator,
   handler: async (ctx, args) => {
-    const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("fixture_not_found");
-
-    // Completed seasons are read-only (WSM-000217). This single gate also
-    // blocks all simulation paths, which persist via recordGameResult.
-    const season = await ctx.db.get(fixture.seasonId);
-    if (season?.status === "completed") throw new Error("season_completed");
+    // This blocks manual results and every simulation path, which persists
+    // through this mutation.
+    const fixture = await assertFixtureSeasonWritable(ctx, args.fixtureId);
 
     const recordedAt = new Date().toISOString();
     const payload = {
@@ -5205,8 +5465,8 @@ export const computeStandingsPublic = query({
       .collect();
     if (seasonRows.length === 0) return null;
 
-    const activeSeason =
-      seasonRows.find((s) => s.status === "active") ?? seasonRows[0];
+    const activeSeason = selectLifecycleSeason(seasonRows);
+    if (!activeSeason) return null;
 
     const teamRows = await ctx.db
       .query("teams")
@@ -5303,8 +5563,9 @@ export const createGameStream = internalMutationGeneric({
     status: v.string(),
   }),
   handler: async (ctx, args) => {
-    const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("fixture_not_found");
+    // Starting a stream changes the live competition surface. Provider/VOD
+    // updates and clip annotations below intentionally remain archival writes.
+    await assertFixtureSeasonWritable(ctx, args.fixtureId);
 
     const provider = args.provider ?? "mux";
     const payload = {
@@ -5497,6 +5758,8 @@ export const createGameClip = internalMutationGeneric({
   },
   returns: v.object({ id: v.string() }),
   handler: async (ctx, args) => {
+    // Archived clips annotate historical media; unlike go-live creation they
+    // deliberately remain writable after the season has completed.
     const fixture = await ctx.db.get(args.fixtureId);
     if (!fixture) throw new Error("fixture_not_found");
     const id = await ctx.db.insert("gameClips", {
@@ -5645,8 +5908,10 @@ export const upsertPlayerGameStats = internalMutation({
   },
   returns: v.object({ id: v.string() }),
   handler: async (ctx, args) => {
-    const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("fixture_not_found");
+    const fixture = await assertFixtureSeasonWritable(ctx, args.fixtureId);
+    if (fixture.seasonId !== args.seasonId) {
+      throw new Error("fixture_season_mismatch");
+    }
 
     const payload = {
       fixtureId: args.fixtureId,
@@ -5692,8 +5957,10 @@ export const bulkUpsertPlayerGameStats = internalMutation({
   },
   returns: v.object({ upserted: v.number() }),
   handler: async (ctx, args) => {
-    const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("fixture_not_found");
+    const fixture = await assertFixtureSeasonWritable(ctx, args.fixtureId);
+    if (fixture.seasonId !== args.seasonId) {
+      throw new Error("fixture_season_mismatch");
+    }
 
     const updatedAt = new Date().toISOString();
     let upserted = 0;
@@ -5747,8 +6014,10 @@ export const upsertGamePlayLog = internalMutation({
   },
   returns: v.object({ id: v.string() }),
   handler: async (ctx, args) => {
-    const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("fixture_not_found");
+    const fixture = await assertFixtureSeasonWritable(ctx, args.fixtureId);
+    if (fixture.seasonId !== args.seasonId) {
+      throw new Error("fixture_season_mismatch");
+    }
 
     const createdAt = new Date().toISOString();
     const payload = {
@@ -5800,6 +6069,7 @@ export const deletePlayerGameStats = internalMutation({
   args: { fixtureId: v.id("fixtures"), playerId: v.id("players") },
   returns: v.boolean(),
   handler: async (ctx, args) => {
+    await assertFixtureSeasonWritable(ctx, args.fixtureId);
     const row = await ctx.db
       .query("playerGameStats")
       .withIndex("by_fixtureId_playerId", (q) =>
@@ -5998,9 +6268,8 @@ export const getSeasonStatLeadersPublic = query({
       .query("seasons")
       .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
       .collect();
-    if (seasonRows.length === 0) return null;
-    const activeSeason =
-      seasonRows.find((s) => s.status === "active") ?? seasonRows[0];
+    const activeSeason = selectLifecycleSeason(seasonRows);
+    if (!activeSeason) return null;
 
     return {
       seasonName: activeSeason.name,
@@ -6077,8 +6346,7 @@ export const startLiveGame = internalMutation({
   args: { fixtureId: v.id("fixtures"), actorUserId: v.string() },
   returns: liveStateDtoValidator,
   handler: async (ctx, args) => {
-    const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("fixture_not_found");
+    await assertFixtureSeasonWritable(ctx, args.fixtureId);
 
     const now = new Date().toISOString();
     const payload = {
@@ -6115,6 +6383,7 @@ export const addLiveScore = internalMutation({
   },
   returns: liveStateDtoValidator,
   handler: async (ctx, args) => {
+    await assertFixtureSeasonWritable(ctx, args.fixtureId);
     const row = await ctx.db
       .query("liveGameState")
       .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
@@ -6142,6 +6411,7 @@ export const setLiveScore = internalMutation({
     if (!isNonNegInt(args.homeScore) || !isNonNegInt(args.awayScore)) {
       throw new Error("invalid_score");
     }
+    await assertFixtureSeasonWritable(ctx, args.fixtureId);
     const row = await ctx.db
       .query("liveGameState")
       .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
@@ -6172,6 +6442,7 @@ export const updateLiveState = internalMutation({
     if (args.status !== undefined && !isLiveStatus(args.status)) {
       throw new Error("invalid_status");
     }
+    await assertFixtureSeasonWritable(ctx, args.fixtureId);
     const row = await ctx.db
       .query("liveGameState")
       .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
@@ -6195,14 +6466,12 @@ export const endLiveGame = internalMutation({
   args: { fixtureId: v.id("fixtures"), actorUserId: v.string() },
   returns: liveStateDtoValidator,
   handler: async (ctx, args) => {
+    const fixture = await assertFixtureSeasonWritable(ctx, args.fixtureId);
     const row = await ctx.db
       .query("liveGameState")
       .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
       .first();
     if (!row) throw new Error("live_not_started");
-    const fixture = await ctx.db.get(args.fixtureId);
-    if (!fixture) throw new Error("fixture_not_found");
-
     const now = new Date().toISOString();
     // 1) live state → final
     await ctx.db.patch(row._id, { status: "final", updatedAt: now });
@@ -6579,9 +6848,7 @@ export const generatePlayoffBracket = internalMutationGeneric({
     if (!Number.isInteger(teamCount) || teamCount < 2 || teamCount > 64) {
       throw new Error("invalid_bracket_size");
     }
-    const season = await ctx.db.get(args.seasonId);
-    if (!season) throw new Error("season_not_found");
-    if (season.status === "completed") throw new Error("season_completed");
+    const season = await assertSeasonWritable(ctx, args.seasonId);
     const format =
       (args.format ?? season.playoffFormat) === "double" ? "double" : "single";
     // Honor the season's configured qualification rule (overridable per call).
@@ -6765,6 +7032,7 @@ export const advancePlayoffBracket = internalMutationGeneric({
   args: { seasonId: v.id("seasons") },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await assertSeasonWritable(ctx, args.seasonId);
     await advanceBracketForSeason(ctx as MutationCtx, args.seasonId);
     return null;
   },

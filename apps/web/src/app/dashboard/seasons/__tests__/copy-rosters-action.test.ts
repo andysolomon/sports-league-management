@@ -6,12 +6,14 @@ const {
   mockGetLeagueOrgId,
   mockGetUserRoleInOrg,
   mockCopySeasonRosters,
+  mockSetActiveSeason,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockGetSeasonLeagueId: vi.fn(),
   mockGetLeagueOrgId: vi.fn(),
   mockGetUserRoleInOrg: vi.fn(),
   mockCopySeasonRosters: vi.fn(),
+  mockSetActiveSeason: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
@@ -22,7 +24,7 @@ vi.mock("@/lib/data-api", () => ({
   // Imported by the module under test but unused by this action.
   upsertSeason: vi.fn(),
   updateSeason: vi.fn(),
-  setActiveSeason: vi.fn(),
+  setActiveSeason: mockSetActiveSeason,
   deleteSeason: vi.fn(),
   getSeasons: vi.fn(),
 }));
@@ -31,7 +33,7 @@ vi.mock("@/lib/org-context", () => ({
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { copyRostersAction } from "../actions";
+import { activateSeasonAction, copyRostersAction } from "../actions";
 
 const LEAGUE = "league_1";
 const SEASON = "season_1";
@@ -130,5 +132,23 @@ describe("copyRostersAction (WSM-000163)", () => {
 
     expect(res).toEqual({ ok: false, error: "unauthorized" });
     expect(mockCopySeasonRosters).not.toHaveBeenCalled();
+  });
+});
+
+describe("activateSeasonAction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps completed-season reactivation to a stable typed result", async () => {
+    authorize();
+    mockSetActiveSeason.mockRejectedValue(
+      new Error("Uncaught Error: completed_season_cannot_reactivate"),
+    );
+
+    await expect(activateSeasonAction(SEASON)).resolves.toEqual({
+      ok: false,
+      error: "completed_season_cannot_reactivate",
+    });
   });
 });

@@ -103,6 +103,18 @@ describe("generateScheduleAction (WSM-000153)", () => {
     expect(res).toEqual({ ok: false, needsConfirm: true });
   });
 
+  it("propagates a completed-season rejection as the stable typed result", async () => {
+    authorize();
+    mockGenerateSeasonSchedule.mockRejectedValue(
+      new Error("Uncaught Error: season_completed"),
+    );
+
+    await expect(generateScheduleAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+    })).resolves.toEqual({ ok: false, error: "season_completed" });
+  });
+
   it("passes confirm through to the mutation", async () => {
     authorize();
     mockGenerateSeasonSchedule.mockResolvedValue({

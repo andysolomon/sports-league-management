@@ -135,6 +135,24 @@ export default defineSchema({
     .index("by_leagueId", ["leagueId"])
     .index("by_leagueId_name", ["leagueId", "name"]),
 
+  // A durable, one-to-one source → target claim lets a rollover retry resume
+  // its original upcoming season instead of creating a duplicate.
+  seasonRollovers: defineTable({
+    leagueId: v.id("leagues"),
+    sourceSeasonId: v.id("seasons"),
+    targetSeasonId: v.id("seasons"),
+    status: v.string(), // "in_progress" | "completed" | "failed"
+    stage: v.string(),
+    graduatedPlayerIds: v.optional(v.array(v.id("players"))),
+    advancedPlayerIds: v.optional(v.array(v.id("players"))),
+    startedAt: v.string(),
+    completedAt: v.optional(v.string()),
+    lastError: v.optional(v.string()),
+  })
+    .index("by_sourceSeasonId", ["sourceSeasonId"])
+    .index("by_targetSeasonId", ["targetSeasonId"])
+    .index("by_leagueId", ["leagueId"]),
+
   depthChartEntries: defineTable({
     teamId: v.id("teams"),
     seasonId: v.id("seasons"),

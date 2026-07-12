@@ -99,6 +99,9 @@ export async function createFixtureAction(
     return { ok: true, id: fixture.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("season_completed")) {
+      return { ok: false, error: "season_completed" };
+    }
     return { ok: false, error: message };
   }
 }
@@ -140,6 +143,9 @@ export async function generateScheduleAction(input: {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("schedule_has_results")) {
       return { ok: false, needsConfirm: true };
+    }
+    if (message.includes("season_completed")) {
+      return { ok: false, error: "season_completed" };
     }
     return { ok: false, error: message };
   }
@@ -189,6 +195,9 @@ export async function recordGameResultAction(
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("season_completed")) {
+      return { ok: false, error: "season_completed" };
+    }
     return { ok: false, error: message };
   }
 }

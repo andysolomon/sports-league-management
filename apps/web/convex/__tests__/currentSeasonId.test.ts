@@ -169,4 +169,37 @@ describe("currentSeasonId fallback (dynasty D1)", () => {
     });
     expect(attrs?.weightedOverall).toBe(77);
   });
+
+  it("prefers an upcoming season over completed history when no season is active", async () => {
+    const t = convexTest(schema, modules);
+    const { leagueId, upcomingId } = await t.run(async (ctx) => {
+      const leagueId = await ctx.db.insert("leagues", {
+        name: "Dynasty", orgId: "org_1", isPublic: false, inviteToken: null,
+      });
+      await ctx.db.insert("seasons", {
+        name: "2025", leagueId, startDate: "2025-09-01", endDate: null,
+        status: "completed", rosterLocked: false,
+      });
+      const upcomingId = await ctx.db.insert("seasons", {
+        name: "2026", leagueId, startDate: "2026-09-01", endDate: null,
+        status: "upcoming", rosterLocked: false,
+      });
+      return { leagueId, upcomingId };
+    });
+    const teamId = await t.run((ctx) => ctx.db.insert("teams", {
+      name: "T", leagueId, divisionId: null, city: "C", stadium: "S",
+      foundedYear: null, location: "L", logoUrl: null, rosterLimit: 53,
+    }));
+    const playerId = await t.run((ctx) => ctx.db.insert("players", {
+      name: "QB", leagueId, teamId, position: "QB", positionGroup: null,
+      jerseyNumber: 1, dateOfBirth: null, status: "Active", headshotUrl: null,
+    }));
+    await t.run((ctx) => ctx.db.insert("playerAttributes", {
+      playerId, seasonId: upcomingId, positionGroup: "QB",
+      attributesJson: JSON.stringify({ SPD: 88 }), pffSourceJson: null,
+      maddenSourceJson: null, pffWeight: 0, maddenWeight: 1,
+      weightedOverall: 88, ingestedAt: new Date().toISOString(),
+    }));
+    expect((await t.query(api.sports.getPlayerSeasonAttributes, { playerId }))?.weightedOverall).toBe(88);
+  });
 });

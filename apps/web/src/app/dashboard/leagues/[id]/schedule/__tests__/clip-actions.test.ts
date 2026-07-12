@@ -64,7 +64,11 @@ function happyFixture() {
     awayTeamName: "Away",
     status: "final",
   });
-  mockGetPublicSeason.mockResolvedValue({ id: "season_1", leagueId: LEAGUE });
+  mockGetPublicSeason.mockResolvedValue({
+    id: "season_1",
+    leagueId: LEAGUE,
+    status: "completed",
+  });
   mockCanAdministerTeam.mockResolvedValue(true);
   mockGetStreamByFixture.mockResolvedValue({
     status: "ended",

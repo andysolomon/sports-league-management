@@ -23,6 +23,7 @@ import type {
   UpdatePlayerInput,
   UpdateTeamInput,
 } from "@sports-management/shared-types";
+import { resolveLifecycleSeason } from "@/lib/season-view";
 import type { LeagueImportPayload } from "@sports-management/api-contracts";
 import { getConvexClient } from "./convex-client";
 import type { OrgContext } from "./org-context";
@@ -342,6 +343,29 @@ const refs = {
   completeSeason: mutationRef<{ seasonId: string; force?: boolean }, null>(
     "sports:completeSeason",
   ),
+  beginSeasonRollover: mutationRef<
+    { sourceSeasonId: string },
+    {
+      rolloverId: string;
+      targetSeasonId: string;
+      resumed: boolean;
+      stage: string;
+      status: string;
+      graduatedPlayerIds: string[];
+      advancedPlayerIds: string[];
+    }
+  >("sports:beginSeasonRollover"),
+  advanceSeasonRollover: mutationRef<
+    { rolloverId: string; stage: string },
+    {
+      rolloverId: string;
+      targetSeasonId: string;
+      stage: string;
+      status: string;
+      graduatedPlayerIds: string[];
+      advancedPlayerIds: string[];
+    }
+  >("sports:advanceSeasonRollover"),
   deleteSeason: mutationRef<{ seasonId: string }, null>("sports:deleteSeason"),
   setLeagueInviteToken: mutationRef<
     { leagueId: string; token: string | null },
@@ -588,7 +612,7 @@ const refs = {
     }
   >("sports:copySeasonRosters"),
   rolloverGraduateAndAdvancePlayers: mutationRef<
-    { leagueId: string; seasonId: string },
+    { leagueId: string; seasonId: string; rolloverId?: string },
     { graduatedPlayerIds: string[]; advancedPlayerIds: string[] }
   >("sports:rolloverGraduateAndAdvancePlayers"),
   removePlayersFromSeasonRoster: mutationRef<
@@ -1464,6 +1488,34 @@ export async function completeSeason(input: {
   return mutateConvex(refs.completeSeason, input);
 }
 
+export async function beginSeasonRollover(input: {
+  sourceSeasonId: string;
+}): Promise<{
+  rolloverId: string;
+  targetSeasonId: string;
+  resumed: boolean;
+  stage: string;
+  status: string;
+  graduatedPlayerIds: string[];
+  advancedPlayerIds: string[];
+}> {
+  return mutateConvex(refs.beginSeasonRollover, input);
+}
+
+export async function advanceSeasonRollover(input: {
+  rolloverId: string;
+  stage: string;
+}): Promise<{
+  rolloverId: string;
+  targetSeasonId: string;
+  stage: string;
+  status: string;
+  graduatedPlayerIds: string[];
+  advancedPlayerIds: string[];
+}> {
+  return mutateConvex(refs.advanceSeasonRollover, input);
+}
+
 export async function setActiveSeason(seasonId: string): Promise<null> {
   return mutateConvex(refs.setActiveSeason, { seasonId });
 }
@@ -1966,6 +2018,7 @@ export async function copySeasonRosters(input: {
 export async function rolloverGraduateAndAdvancePlayers(input: {
   leagueId: string;
   seasonId: string;
+  rolloverId?: string;
 }): Promise<{ graduatedPlayerIds: string[]; advancedPlayerIds: string[] }> {
   return mutateConvex(refs.rolloverGraduateAndAdvancePlayers, input);
 }
@@ -2539,8 +2592,8 @@ export interface PublicScheduleRow {
 /**
  * The active season's fixtures for a public league, enriched with final scores.
  *
- * Mirrors `computeStandingsPublic`'s season selection (status "active", else the
- * first season) so the public Schedule and Standings always agree on which
+ * Mirrors `computeStandingsPublic`'s lifecycle selection so the public Schedule
+ * and Standings always agree on which
  * season they're showing. Composed entirely from ungated reads; call only after
  * `publicLeagueGuard` has confirmed the league is public. Returns null when the
  * league has no seasons.
@@ -2554,7 +2607,8 @@ export async function getPublicLeagueSchedule(leagueId: string): Promise<{
   });
   if (seasons.length === 0) return null;
 
-  const season = seasons.find((s) => s.status === "active") ?? seasons[0];
+  const season = resolveLifecycleSeason(seasons);
+  if (!season) return null;
   const fixtures = await listFixturesBySeason(season.id);
 
   // Pull final scores only for completed games (others have no result row).

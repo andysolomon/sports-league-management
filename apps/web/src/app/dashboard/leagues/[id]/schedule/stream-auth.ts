@@ -17,7 +17,12 @@ export async function authorizeStreamAction(
   leagueId: string,
   fixtureId: string,
 ): Promise<
-  | { ok: true; userId: string; fixtureStatus: string }
+  | {
+      ok: true;
+      userId: string;
+      fixtureStatus: string;
+      seasonStatus: string;
+    }
   | { ok: false; error: string }
 > {
   const enabled = await liveStreamingV1();
@@ -41,5 +46,10 @@ export async function authorizeStreamAction(
   ]);
   if (!canHome && !canAway) return { ok: false, error: "not_authorized" };
 
-  return { ok: true, userId, fixtureStatus: fixture.status };
+  return {
+    ok: true,
+    userId,
+    fixtureStatus: fixture.status,
+    seasonStatus: season.status,
+  };
 }

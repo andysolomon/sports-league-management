@@ -44,6 +44,9 @@ export async function startGameStream(
 ): Promise<StartResult> {
   const guard = await authorizeStreamAction(leagueId, fixtureId);
   if (!guard.ok) return guard;
+  if (guard.seasonStatus === "completed") {
+    return { ok: false, error: "season_completed" };
+  }
   // A finished/cancelled game can't go live.
   if (guard.fixtureStatus === "final" || guard.fixtureStatus === "cancelled") {
     return { ok: false, error: "game_over" };
@@ -100,6 +103,9 @@ export async function startYoutubeStream(
 ): Promise<StopResult> {
   const guard = await authorizeStreamAction(leagueId, fixtureId);
   if (!guard.ok) return guard;
+  if (guard.seasonStatus === "completed") {
+    return { ok: false, error: "season_completed" };
+  }
   // A finished/cancelled game can't go live.
   if (guard.fixtureStatus === "final" || guard.fixtureStatus === "cancelled") {
     return { ok: false, error: "game_over" };

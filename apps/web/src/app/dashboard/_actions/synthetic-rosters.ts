@@ -24,6 +24,7 @@ import {
 } from "@/lib/synthetic-roster";
 import { generateSyntheticAttributes } from "@/lib/synthetic-attributes";
 import { isSeasonStarted } from "@/lib/season-started";
+import { resolveLifecycleSeason } from "@/lib/season-view";
 
 /*
  * Synthetic-roster generation (WSM-000173) — fills demo/test rosters with fake
@@ -56,8 +57,7 @@ function existingJerseys(players: { jerseyNumber: number | null }[]): number[] {
 async function resolveActiveSeasonId(leagueId: string): Promise<string | null> {
   const seasons = await getSeasons([leagueId]).catch(() => []);
   if (seasons.length === 0) return null;
-  const active = seasons.find((s) => s.status === "active") ?? seasons[0];
-  return active.id;
+  return resolveLifecycleSeason(seasons)?.id ?? null;
 }
 
 /** Block roster/ratings generation once the active season has started. */
@@ -66,7 +66,8 @@ async function assertSeasonNotStarted(
 ): Promise<{ ok: true } | { ok: false; error: "season_started" }> {
   const seasons = await getSeasons([leagueId]).catch(() => []);
   if (seasons.length === 0) return { ok: true };
-  const active = seasons.find((s) => s.status === "active") ?? seasons[0];
+  const active = resolveLifecycleSeason(seasons);
+  if (!active) return { ok: true };
   const fixtures = await listFixturesBySeason(active.id).catch(() => []);
   if (isSeasonStarted(active, fixtures)) {
     return { ok: false, error: "season_started" };
