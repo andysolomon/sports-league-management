@@ -263,7 +263,7 @@ export default async function LeagueInfoPage({
         />
       </div>
 
-      {isAdmin && league.orgId && activeSeason ? (
+      {isAdmin && league.orgId ? (
         <Card className="mt-6" data-testid="league-dynasty-panel">
           <CardContent className="pt-6">
             <DynastyPanel
