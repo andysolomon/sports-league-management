@@ -38,7 +38,7 @@ On completion, move this file and the plan to docs/archive/.
     [x] 7.2 - Add bounded roster-deficit projection
     [x] 7.3 - Implement authorized all-short-team and own-team fill actions
     [x] 7.4 - Verify deficits, unchanged full teams, role boundaries, and summaries
-[x] 8.0 - WSM-000243 - Explicit completion and dynasty rollover (PR #542 squash-merged 2026-07-13 as 7007c9d, #531 closed; ARC PR loop used 3 rounds because CI exposed and fixed the use-server type-export runtime defect; final required CI including Playwright passed)
+[x] 8.0 - WSM-000243 - Explicit completion and dynasty rollover (PR #542 squash-merged 2026-07-13 as 7007c9d, #531 closed; ARC PR loop used 3 rounds because CI exposed and fixed the use-server type-export runtime defect; final required CI passed with Playwright 138 of 138 accepted and known issue 534 passing on retry)
     [x] 8.1 - Refine decided-season completion and next-step UI
     [x] 8.2 - Resolve and transactionally claim newest eligible completed rollover source
     [x] 8.3 - Resume persisted rollover stages and return truthful operation summaries
