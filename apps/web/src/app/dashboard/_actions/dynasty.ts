@@ -32,8 +32,6 @@ import { generateSyntheticAttributes } from "@/lib/synthetic-attributes";
 import type { RolloverOperationSummary } from "@/lib/rollover-summary";
 import type { PlayerDto } from "@sports-management/shared-types";
 
-export type { RolloverOperationSummary };
-
 const DEFAULT_ROSTER_SIZE = 48;
 const MAX_ROSTER_SIZE = 60;
 const ROLLOVER_STAGE_LEASE_MS = 60_000;
