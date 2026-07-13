@@ -7,6 +7,7 @@ them in the app using `packages/design-system` and the relevant app modules.
 | Handoff | Description |
 |---|---|
 | [gamecast/](gamecast/README.md) | Gamecast redesign — Sim & Review modes, three layout directions |
+| [leagues-seasons/](leagues-seasons/README.md) | Leagues & Seasons operator experience — Overview, Leagues/Manage split, Seasons, Teams, Players, Divisions, GameView drawer, dynasty lifecycle flows |
 
 When adding a new handoff, create a subfolder here (e.g. `docs/design_handoff/<feature>/`)
 with at minimum:
