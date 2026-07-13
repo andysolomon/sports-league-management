@@ -29,8 +29,9 @@ test.describe("League info destination (WSM-000254)", () => {
     await expect(
       page.getByRole("link", { name: "Manage" }),
     ).toBeVisible();
+    // Scope to main content — the sidebar nav also has a "Seasons" link.
     await expect(
-      page.getByRole("link", { name: "Seasons" }),
+      page.locator("#main-content").getByRole("link", { name: "Seasons" }),
     ).toBeVisible();
 
     await expect(page.getByTestId("league-current-season")).toBeVisible();
@@ -71,6 +72,11 @@ test.describe("League info destination (WSM-000254)", () => {
 });
 
 test.describe("League manage access (WSM-000254)", () => {
+  // This block signs in as the org-B user itself, so it must not inherit the
+  // shared signed-in storageState — `clerk.signIn` throws "already signed in"
+  // otherwise (WSM-000172). Start each test from a clean, signed-out context.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test("non-member cannot reach manage settings", async ({ page }) => {
     await setupClerkTestingToken({ page });
     await signInTestUser(page, { userVariant: "B" });
