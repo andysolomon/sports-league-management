@@ -3,6 +3,14 @@ import { test, expect } from "@playwright/test";
 const DENSITY_KEY = "sports-mgmt-density";
 const THEME_KEY = "theme";
 
+async function resolvedTheme(page: {
+  evaluate: (fn: () => string) => Promise<string>;
+}): Promise<"dark" | "light"> {
+  return page.evaluate(() =>
+    document.documentElement.classList.contains("dark") ? "dark" : "light",
+  );
+}
+
 test.describe("display settings persistence (WSM-000244)", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -24,12 +32,15 @@ test.describe("display settings persistence (WSM-000244)", () => {
     await expect(densityToggle).toBeVisible();
     await densityToggle.click();
 
+    // next-themes with attribute="class" only adds/removes `dark` (no `light`
+    // class). Toggle once from the system default, then assert that exact
+    // resolved theme persists across reload.
     const themeToggle = page.getByRole("button", { name: /toggle theme/i });
+    const beforeTheme = await resolvedTheme(page);
     await themeToggle.click();
+    const expectedTheme = beforeTheme === "dark" ? "light" : "dark";
 
-    await expect
-      .poll(async () => page.evaluate(() => document.documentElement.className))
-      .toMatch(/light/);
+    await expect.poll(async () => resolvedTheme(page)).toBe(expectedTheme);
     await expect
       .poll(async () =>
         page.evaluate(() => document.documentElement.getAttribute("data-density")),
@@ -38,9 +49,7 @@ test.describe("display settings persistence (WSM-000244)", () => {
 
     await page.reload();
 
-    await expect
-      .poll(async () => page.evaluate(() => document.documentElement.className))
-      .toMatch(/light/);
+    await expect.poll(async () => resolvedTheme(page)).toBe(expectedTheme);
     await expect
       .poll(async () =>
         page.evaluate(() => document.documentElement.getAttribute("data-density")),
@@ -55,6 +64,6 @@ test.describe("display settings persistence (WSM-000244)", () => {
       [DENSITY_KEY, THEME_KEY],
     );
     expect(stored.density).toBe("compact");
-    expect(stored.theme).toBe("light");
+    expect(stored.theme).toBe(expectedTheme);
   });
 });
