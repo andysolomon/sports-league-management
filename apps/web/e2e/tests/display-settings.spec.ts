@@ -4,9 +4,9 @@ const DENSITY_KEY = "sports-mgmt-density";
 const THEME_KEY = "theme";
 
 async function resolvedTheme(page: {
-  evaluate: (fn: () => string) => Promise<string>;
+  evaluate: <T>(fn: () => T) => Promise<T>;
 }): Promise<"dark" | "light"> {
-  return page.evaluate(() =>
+  return page.evaluate((): "dark" | "light" =>
     document.documentElement.classList.contains("dark") ? "dark" : "light",
   );
 }
