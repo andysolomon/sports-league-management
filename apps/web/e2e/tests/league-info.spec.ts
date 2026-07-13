@@ -46,9 +46,8 @@ test.describe("League info destination (WSM-000254)", () => {
 
     const teamsGrid = page.getByTestId("league-teams-grid");
     await expect(teamsGrid).toBeVisible();
-    await expect(
-      teamsGrid.getByRole("heading", { name: /Teams \(\d+\)/ }),
-    ).toBeVisible();
+    // CardTitle renders a div, not a heading role — assert the title text.
+    await expect(teamsGrid.getByText(/Teams \(\d+\)/)).toBeVisible();
     await expect(teamsGrid.getByText(TEAMS.COWBOYS.name)).toBeVisible();
     await expect(teamsGrid.getByText(TEAMS.PATRIOTS.name)).toBeVisible();
   });
