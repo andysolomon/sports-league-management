@@ -61,6 +61,13 @@
 | [cost-analysis/user-billing-model.md](cost-analysis/user-billing-model.md) | User types, auth boundaries, permission sets, billing flows, and tier enforcement gap |
 | [cost-analysis/backend-cost-comparison.png](cost-analysis/backend-cost-comparison.png) | Visual comparison diagram (Excalidraw) |
 
+## Archive
+
+| Document | Description |
+|---|---|
+| [archive/WSM-000235-IMPLEMENTATION_PLAN.md](archive/WSM-000235-IMPLEMENTATION_PLAN.md) | WSM-000235 (#523) — Leagues & Seasons dynasty lifecycle overhaul implementation plan |
+| [archive/WSM-000235-progress.txt](archive/WSM-000235-progress.txt) | WSM-000235 (#523) — Phase 1–10 progress tracker (closed 2026-07-13) |
+
 ## Other
 
 | Document | Description |
