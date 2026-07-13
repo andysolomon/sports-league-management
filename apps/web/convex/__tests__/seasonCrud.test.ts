@@ -123,6 +123,125 @@ describe("season CRUD (WSM-000126)", () => {
     expect(target?.status).toBe("upcoming");
   });
 
+  it("leases a rollover stage so concurrent workers cannot both run side effects", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "completed");
+    const rollover = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+
+    const first = await t.mutation(internal.sports.claimSeasonRolloverStage, {
+      rolloverId: rollover.rolloverId as Id<"seasonRollovers">,
+      stage: "players_progressed",
+      ownerId: "worker-1",
+      leaseMs: 60_000,
+    });
+    const second = await t.mutation(internal.sports.claimSeasonRolloverStage, {
+      rolloverId: rollover.rolloverId as Id<"seasonRollovers">,
+      stage: "players_progressed",
+      ownerId: "worker-2",
+      leaseMs: 60_000,
+    });
+
+    expect(first).toMatchObject({ acquired: true, reason: "acquired" });
+    expect(second).toMatchObject({ acquired: false, reason: "busy" });
+  });
+
+  it("lets a new worker take over an expired lease and locks out the prior owner", async () => {
+    const t = convexTest(schema, modules);
+    const { leagueId, seasonId } = await seedLeagueWithSeason(t, "completed");
+    const rollover = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+    const rolloverId = rollover.rolloverId as Id<"seasonRollovers">;
+
+    // worker-1 claims, then the lease expires (past expiry).
+    await t.mutation(internal.sports.claimSeasonRolloverStage, {
+      rolloverId,
+      stage: "players_progressed",
+      ownerId: "worker-1",
+      leaseMs: 1_000,
+    });
+    await t.run((ctx) =>
+      ctx.db.patch(rolloverId, {
+        stageLeaseExpiresAt: new Date(Date.now() - 1_000).toISOString(),
+      }),
+    );
+
+    // worker-2 takes over the expired lease.
+    const takeover = await t.mutation(internal.sports.claimSeasonRolloverStage, {
+      rolloverId,
+      stage: "players_progressed",
+      ownerId: "worker-2",
+      leaseMs: 60_000,
+    });
+    expect(takeover).toMatchObject({ acquired: true });
+
+    // The prior owner can neither advance nor run the staged side effect.
+    await expect(
+      t.mutation(internal.sports.advanceSeasonRollover, {
+        rolloverId,
+        stage: "players_progressed",
+        ownerId: "worker-1",
+      }),
+    ).rejects.toThrow("rollover_stage_not_claimed");
+    await expect(
+      t.mutation(internal.sports.rolloverGraduateAndAdvancePlayers, {
+        leagueId,
+        seasonId,
+        rolloverId,
+        ownerId: "worker-1",
+      }),
+    ).rejects.toThrow("rollover_stage_not_claimed");
+
+    // The lease holder advances exactly once; a stale retry is an idempotent
+    // no-op rather than a second advancement.
+    const advanced = await t.mutation(internal.sports.advanceSeasonRollover, {
+      rolloverId,
+      stage: "players_progressed",
+      ownerId: "worker-2",
+    });
+    expect(advanced.stage).toBe("players_progressed");
+    const retry = await t.mutation(internal.sports.advanceSeasonRollover, {
+      rolloverId,
+      stage: "players_progressed",
+      ownerId: "worker-1",
+    });
+    expect(retry.stage).toBe("players_progressed");
+    const state = await t.run((ctx) => ctx.db.get(rolloverId));
+    expect(state?.stage).toBe("players_progressed");
+    expect(state?.stageLeaseOwnerId).toBeUndefined();
+  });
+
+  it("persists and returns a stage summary for truthful downstream counts", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "completed");
+    const rollover = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+    const rolloverId = rollover.rolloverId as Id<"seasonRollovers">;
+    const summaryJson = JSON.stringify({ progression: { snapshots: 7 } });
+
+    const advanced = await t.mutation(internal.sports.advanceSeasonRollover, {
+      rolloverId,
+      stage: "players_progressed",
+      summaryJson,
+    });
+    expect(advanced).toMatchObject({
+      stage: "players_progressed",
+      summaryJson,
+      sourceSeasonName: "2026",
+    });
+
+    // A subsequent stage claim reads back the persisted summary verbatim.
+    const claim = await t.mutation(internal.sports.claimSeasonRolloverStage, {
+      rolloverId,
+      stage: "attributes_copied",
+      ownerId: "worker-1",
+    });
+    expect(claim.summaryJson).toBe(summaryJson);
+  });
+
   it("rejects rollover before the source is completed", async () => {
     const t = convexTest(schema, modules);
     const { seasonId } = await seedLeagueWithSeason(t, "active");
@@ -147,7 +266,7 @@ describe("season CRUD (WSM-000126)", () => {
     })).rejects.toThrow("rollover_source_not_newest_completed");
   });
 
-  it("finalizes an existing claim when its target was completed", async () => {
+  it("does not complete an unfinished claim when its target was externally completed", async () => {
     const t = convexTest(schema, modules);
     const { seasonId } = await seedLeagueWithSeason(t, "completed");
     const claim = await t.mutation(internal.sports.beginSeasonRollover, {
@@ -159,7 +278,7 @@ describe("season CRUD (WSM-000126)", () => {
 
     await expect(t.mutation(internal.sports.beginSeasonRollover, {
       sourceSeasonId: seasonId,
-    })).resolves.toMatchObject({ status: "completed", stage: "completed" });
+    })).rejects.toThrow("rollover_target_not_upcoming");
   });
 
   it("does not resume an in-progress claim whose target was activated", async () => {

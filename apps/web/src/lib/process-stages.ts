@@ -3,6 +3,7 @@
  * Stages reflect real action boundaries — no simulated progress.
  */
 import type { ProcessStage } from "@/components/lifecycle/ProcessDialog";
+import type { RolloverOperationSummary } from "@/lib/rollover-summary";
 
 export type ProcessOutcome = "pending" | "success" | "error";
 
@@ -139,72 +140,75 @@ export function rosterAutoFillProcessStages(
   return [stage("autofill", "Auto-fill undersized rosters", outcome, detail)];
 }
 
+function players(count: number): string {
+  return `${count} player${count === 1 ? "" : "s"}`;
+}
+
+/**
+ * Dynasty rollover process stages threaded from the persisted
+ * RolloverOperationSummary (WSM-000243). The stage list is stable across
+ * pending/success/error so the process dialog never reorders; on success each
+ * detail reflects a real persisted count — source claim/target creation,
+ * graduation, advancement, progression, roster carryover, and recruiting. No
+ * simulated progress or timed percentages.
+ */
 export function dynastyRolloverProcessStages(
   outcome: ProcessOutcome,
-  result?: {
-    graduated: number;
-    advanced: number;
-    freshmen: number;
-    progressed?: number;
-  },
+  summary?: RolloverOperationSummary,
 ): ProcessStage[] {
-  const graduateDetail =
-    outcome === "success" && result
-      ? `${result.graduated} player${result.graduated === 1 ? "" : "s"}`
-      : undefined;
-  const advanceDetail =
-    outcome === "success" && result
-      ? `${result.advanced} player${result.advanced === 1 ? "" : "s"}`
-      : undefined;
-  const freshmanDetail =
-    outcome === "success" && result
-      ? `${result.freshmen} player${result.freshmen === 1 ? "" : "s"}`
-      : undefined;
-  const progressDetail =
-    outcome === "success" && result && (result.progressed ?? 0) > 0
-      ? `${result.progressed} snapshot${result.progressed === 1 ? "" : "s"}`
-      : undefined;
+  const terminalOutcome = outcome === "pending" ? "pending" : outcome;
+  const withSummary = outcome === "success" && summary ? summary : undefined;
 
-  const graduate = terminalStage(
-    "graduate",
-    "Graduate seniors",
-    outcome === "pending" ? "pending" : outcome,
-    graduateDetail,
-  );
-  const advance = terminalStage(
-    "advance",
-    "Advance class years",
-    outcome === "pending" ? "pending" : outcome,
-    advanceDetail,
-  );
-  const freshmen = terminalStage(
-    "freshmen",
-    "Generate freshmen",
-    outcome === "pending" ? "pending" : outcome,
-    freshmanDetail,
-  );
+  const rolloverDetail = withSummary
+    ? `${withSummary.sourceSeason.name} → ${withSummary.targetSeason.name}`
+    : undefined;
+  const graduateDetail = withSummary
+    ? players(withSummary.graduation.players)
+    : undefined;
+  const advanceDetail = withSummary
+    ? players(withSummary.advancement.players)
+    : undefined;
+  const progressDetail = withSummary
+    ? `${withSummary.progression.snapshots} snapshot${
+        withSummary.progression.snapshots === 1 ? "" : "s"
+      }`
+    : undefined;
+  const carryoverDetail = withSummary
+    ? `${withSummary.carryover.copiedAssignments} assignment${
+        withSummary.carryover.copiedAssignments === 1 ? "" : "s"
+      } · ${withSummary.carryover.copiedDepthEntries} depth carried, ${
+        withSummary.carryover.removedAssignments
+      } assignment${
+        withSummary.carryover.removedAssignments === 1 ? "" : "s"
+      } · ${withSummary.carryover.removedDepthEntries} depth removed`
+    : undefined;
+  const freshmanDetail = withSummary
+    ? `${players(withSummary.recruiting.freshmen)}${
+        withSummary.recruiting.toPool ? " → free-agent pool" : ""
+      }`
+    : undefined;
 
-  if (outcome === "pending") {
-    return [
-      stage("rollover", "Start next season", "pending"),
-      graduate,
-      advance,
-      freshmen,
-    ];
-  }
-
-  const stages: ProcessStage[] = [
-    stage("rollover", "Start next season", outcome),
-    graduate,
-    advance,
-    freshmen,
+  return [
+    stage("rollover", "Start next season", outcome, rolloverDetail),
+    terminalStage("graduate", "Graduate seniors", terminalOutcome, graduateDetail),
+    terminalStage(
+      "advance",
+      "Advance class years",
+      terminalOutcome,
+      advanceDetail,
+    ),
+    terminalStage(
+      "progress",
+      "Write attribute progression",
+      terminalOutcome,
+      progressDetail,
+    ),
+    terminalStage(
+      "carryover",
+      "Carry over rosters",
+      terminalOutcome,
+      carryoverDetail,
+    ),
+    terminalStage("freshmen", "Generate freshmen", terminalOutcome, freshmanDetail),
   ];
-
-  if (progressDetail) {
-    stages.push(
-      terminalStage("progress", "Write attribute progression", outcome, progressDetail),
-    );
-  }
-
-  return stages;
 }

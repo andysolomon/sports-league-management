@@ -29,6 +29,8 @@ export interface ProcessDialogProps {
   pending: boolean;
   error?: string | null;
   onRetry?: () => void;
+  /** Optional success content (e.g. an onward link) rendered below the stages. */
+  footer?: React.ReactNode;
 }
 
 function stageAnnouncement(stage: ProcessStage): string {
@@ -52,6 +54,7 @@ export function ProcessDialog({
   pending,
   error = null,
   onRetry,
+  footer = null,
 }: ProcessDialogProps) {
   const liveMessage = React.useMemo(() => {
     const active =
@@ -125,6 +128,12 @@ export function ProcessDialog({
             </li>
           ))}
         </ol>
+
+        {footer && !error ? (
+          <div className="text-sm" data-testid="process-dialog-footer">
+            {footer}
+          </div>
+        ) : null}
 
         {error ? (
           <div

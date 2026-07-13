@@ -50,30 +50,61 @@ describe("process stage builders", () => {
     });
   });
 
-  it("builds dynasty rollover stages from server counts", () => {
+  it("builds stable dynasty rollover stages from the persisted summary", () => {
     const pending = dynastyRolloverProcessStages("pending");
     expect(pending.map((stage) => stage.id)).toEqual([
       "rollover",
       "graduate",
       "advance",
+      "progress",
+      "carryover",
       "freshmen",
     ]);
     expect(pending[0]?.status).toBe("in_progress");
+    // Stage list stays stable (identical ids/order) across outcomes.
+    expect(dynastyRolloverProcessStages("error").map((s) => s.id)).toEqual(
+      pending.map((s) => s.id),
+    );
 
     const success = dynastyRolloverProcessStages("success", {
-      graduated: 12,
-      advanced: 120,
-      freshmen: 48,
-      progressed: 120,
+      sourceSeason: { id: "s1", name: "2026" },
+      targetSeason: { id: "s2", name: "2027" },
+      graduation: { players: 12 },
+      advancement: { players: 120 },
+      progression: { snapshots: 120 },
+      carryover: {
+        copiedAssignments: 96,
+        copiedDepthEntries: 40,
+        removedAssignments: 12,
+        removedDepthEntries: 6,
+      },
+      recruiting: { freshmen: 48, toPool: true },
     });
+    expect(success.map((stage) => stage.id)).toEqual([
+      "rollover",
+      "graduate",
+      "advance",
+      "progress",
+      "carryover",
+      "freshmen",
+    ]);
+    expect(success.find((stage) => stage.id === "rollover")?.detail).toBe(
+      "2026 → 2027",
+    );
     expect(success.find((stage) => stage.id === "graduate")?.detail).toBe(
       "12 players",
     );
-    expect(success.find((stage) => stage.id === "freshmen")?.detail).toBe(
-      "48 players",
+    expect(success.find((stage) => stage.id === "advance")?.detail).toBe(
+      "120 players",
     );
     expect(success.find((stage) => stage.id === "progress")?.detail).toBe(
       "120 snapshots",
+    );
+    expect(success.find((stage) => stage.id === "carryover")?.detail).toBe(
+      "96 assignments · 40 depth carried, 12 assignments · 6 depth removed",
+    );
+    expect(success.find((stage) => stage.id === "freshmen")?.detail).toBe(
+      "48 players → free-agent pool",
     );
   });
 });

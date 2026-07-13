@@ -67,6 +67,10 @@ export function DynastyPanel({
   const [processOpen, setProcessOpen] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
   const [stages, setStages] = useState(dynastyRolloverProcessStages("pending"));
+  const [newSeason, setNewSeason] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   function runStartNextSeason() {
     if (!gate.canStart) return;
@@ -74,6 +78,7 @@ export function DynastyPanel({
     setConfirmOpen(false);
     setProcessOpen(true);
     setProcessError(null);
+    setNewSeason(null);
     setStages(dynastyRolloverProcessStages("pending"));
 
     start(async () => {
@@ -89,14 +94,8 @@ export function DynastyPanel({
         );
         return;
       }
-      setStages(
-        dynastyRolloverProcessStages("success", {
-          graduated: res.graduated,
-          advanced: res.advanced,
-          freshmen: res.freshmen,
-          progressed: res.progressed,
-        }),
-      );
+      setStages(dynastyRolloverProcessStages("success", res.summary));
+      setNewSeason({ id: res.seasonId, name: res.seasonName });
       router.refresh();
     });
   }
@@ -241,6 +240,17 @@ export function DynastyPanel({
       pending={pending}
       error={processError}
       onRetry={runStartNextSeason}
+      footer={
+        newSeason ? (
+          <Link
+            href={`/dashboard/seasons/${newSeason.id}`}
+            className="text-primary hover:underline"
+            data-testid="dynasty-offseason-link"
+          >
+            Go to the {newSeason.name} offseason hub →
+          </Link>
+        ) : null
+      }
     />
     </>
   );

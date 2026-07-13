@@ -1603,6 +1603,120 @@ export const bulkCreatePlayers = internalMutationGeneric({
   },
 });
 
+function parseFreshmenProgress(
+  json: string | undefined,
+): Record<string, number> {
+  if (!json) return {};
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    const out: Record<string, number> = {};
+    for (const [teamId, count] of Object.entries(parsed)) {
+      if (typeof count === "number" && Number.isFinite(count) && count >= 0) {
+        out[teamId] = count;
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export const createRolloverFreshmenForTeam = internalMutationGeneric({
+  args: {
+    rolloverId: v.id("seasonRollovers"),
+    ownerId: v.optional(v.string()),
+    teamId: v.id("teams"),
+    players: v.array(
+      v.object({
+        name: v.string(),
+        position: v.string(),
+        jerseyNumber: v.union(v.number(), v.null()),
+        status: v.string(),
+        grade: v.optional(v.union(v.number(), v.null())),
+        squad: v.optional(v.union(v.string(), v.null())),
+        dateOfBirth: v.optional(v.union(v.string(), v.null())),
+        hometown: v.optional(v.union(v.string(), v.null())),
+      }),
+    ),
+  },
+  returns: v.object({
+    created: v.number(),
+    totalCreated: v.number(),
+    alreadyCompleted: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const rollover = await ctx.db.get(args.rolloverId);
+    if (!rollover) throw new Error("rollover_not_found");
+    const target = await ctx.db.get(rollover.targetSeasonId);
+    if (!target) throw new Error("rollover_target_not_found");
+    if (target.status !== "upcoming") throw new Error("rollover_target_not_upcoming");
+
+    const stage = rolloverStageIndex(rollover.stage);
+    if (stage >= rolloverStageIndex("freshmen_created")) {
+      const progress = parseFreshmenProgress(rollover.freshmenProgressJson);
+      return {
+        created: progress[args.teamId as string] ?? 0,
+        totalCreated: Object.values(progress).reduce((sum, n) => sum + n, 0),
+        alreadyCompleted: true,
+      };
+    }
+    if (stage !== rolloverStageIndex("rosters_copied")) {
+      throw new Error("rollover_stage_out_of_order");
+    }
+    if (
+      rollover.stageLeaseStage === "freshmen_created" &&
+      rollover.stageLeaseOwnerId &&
+      rollover.stageLeaseOwnerId !== args.ownerId
+    ) {
+      throw new Error("rollover_stage_not_claimed");
+    }
+
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("Team not found");
+    if (team.leagueId !== rollover.leagueId) throw new Error("rollover_team_mismatch");
+
+    const progress = parseFreshmenProgress(rollover.freshmenProgressJson);
+    const teamKey = args.teamId as string;
+    if (progress[teamKey] !== undefined) {
+      return {
+        created: progress[teamKey],
+        totalCreated: Object.values(progress).reduce((sum, n) => sum + n, 0),
+        alreadyCompleted: true,
+      };
+    }
+
+    let created = 0;
+    for (const p of args.players) {
+      await ctx.db.insert("players", {
+        name: p.name,
+        leagueId: team.leagueId,
+        teamId: args.teamId,
+        position: p.position,
+        positionGroup: null,
+        jerseyNumber: p.jerseyNumber,
+        dateOfBirth: p.dateOfBirth ?? null,
+        status: p.status,
+        headshotUrl: null,
+        experienceYears: null,
+        grade: p.grade ?? null,
+        squad: p.squad ?? null,
+        hometown: p.hometown ?? null,
+        synthetic: true,
+      });
+      created += 1;
+    }
+    progress[teamKey] = created;
+    await ctx.db.patch(rollover._id, {
+      freshmenProgressJson: JSON.stringify(progress),
+    });
+    return {
+      created,
+      totalCreated: Object.values(progress).reduce((sum, n) => sum + n, 0),
+      alreadyCompleted: false,
+    };
+  },
+});
+
 // Delete the synthetic (generator-created) players on a team (WSM-000173).
 // Only rows flagged `synthetic` are removed — real players are never touched.
 export const clearSyntheticPlayers = internalMutationGeneric({
@@ -2015,12 +2129,16 @@ export const beginSeasonRollover = internalMutationGeneric({
   args: { sourceSeasonId: v.id("seasons") },
   returns: v.object({
     rolloverId: v.string(),
+    sourceSeasonId: v.string(),
+    sourceSeasonName: v.string(),
     targetSeasonId: v.string(),
+    targetSeasonName: v.string(),
     resumed: v.boolean(),
     stage: v.string(),
     status: v.string(),
     graduatedPlayerIds: v.array(v.string()),
     advancedPlayerIds: v.array(v.string()),
+    summaryJson: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
     const source = await ctx.db.get(args.sourceSeasonId);
@@ -2042,35 +2160,22 @@ export const beginSeasonRollover = internalMutationGeneric({
     if (existing) {
       const target = await ctx.db.get(existing.targetSeasonId);
       if (!target) throw new Error("rollover_target_not_found");
-      if (target.status === "completed" && existing.status !== "completed") {
-        const completedAt = new Date().toISOString();
-        await ctx.db.patch(existing._id, {
-          status: "completed",
-          stage: "completed",
-          completedAt,
-        });
-        return {
-          rolloverId: existing._id,
-          targetSeasonId: existing.targetSeasonId,
-          resumed: true,
-          stage: "completed",
-          status: "completed",
-          graduatedPlayerIds: (existing.graduatedPlayerIds ?? []).map(String),
-          advancedPlayerIds: (existing.advancedPlayerIds ?? []).map(String),
-        };
-      }
       // A completed rollover remains a successful idempotent result after its
       // target is activated. An in-progress rollover may only mutate upcoming
       // targets and must not resume against an active season.
       if (existing.status === "completed") {
         return {
           rolloverId: existing._id,
+          sourceSeasonId: existing.sourceSeasonId,
+          sourceSeasonName: source.name,
           targetSeasonId: existing.targetSeasonId,
+          targetSeasonName: target.name,
           resumed: true,
           stage: existing.stage,
           status: existing.status,
           graduatedPlayerIds: (existing.graduatedPlayerIds ?? []).map(String),
           advancedPlayerIds: (existing.advancedPlayerIds ?? []).map(String),
+          summaryJson: existing.summaryJson ?? null,
         };
       }
       if (target.status !== "upcoming") {
@@ -2078,12 +2183,16 @@ export const beginSeasonRollover = internalMutationGeneric({
       }
       return {
         rolloverId: existing._id,
+        sourceSeasonId: existing.sourceSeasonId,
+        sourceSeasonName: source.name,
         targetSeasonId: existing.targetSeasonId,
+        targetSeasonName: target.name,
         resumed: true,
         stage: existing.stage,
         status: existing.status,
         graduatedPlayerIds: (existing.graduatedPlayerIds ?? []).map(String),
         advancedPlayerIds: (existing.advancedPlayerIds ?? []).map(String),
+        summaryJson: existing.summaryJson ?? null,
       };
     }
 
@@ -2120,12 +2229,16 @@ export const beginSeasonRollover = internalMutationGeneric({
     });
     return {
       rolloverId,
+      sourceSeasonId: args.sourceSeasonId,
+      sourceSeasonName: source.name,
       targetSeasonId,
+      targetSeasonName: nextRolloverSeasonName(source.name),
       resumed: false,
       stage: "target_created",
       status: "in_progress",
       graduatedPlayerIds: [],
       advancedPlayerIds: [],
+      summaryJson: null,
     };
   },
 });
@@ -2145,19 +2258,27 @@ function rolloverStageIndex(stage: string): number {
 
 function rolloverResult(rollover: {
   _id: string;
+  sourceSeasonId: string;
+  sourceSeasonName: string;
   targetSeasonId: string;
+  targetSeasonName: string;
   status: string;
   stage: string;
   graduatedPlayerIds?: Id<"players">[];
   advancedPlayerIds?: Id<"players">[];
+  summaryJson?: string;
 }) {
   return {
     rolloverId: rollover._id,
+    sourceSeasonId: rollover.sourceSeasonId,
+    sourceSeasonName: rollover.sourceSeasonName,
     targetSeasonId: rollover.targetSeasonId,
+    targetSeasonName: rollover.targetSeasonName,
     stage: rollover.stage,
     status: rollover.status,
     graduatedPlayerIds: (rollover.graduatedPlayerIds ?? []).map(String),
     advancedPlayerIds: (rollover.advancedPlayerIds ?? []).map(String),
+    summaryJson: rollover.summaryJson ?? null,
   };
 }
 
@@ -2169,30 +2290,29 @@ export const advanceSeasonRollover = internalMutationGeneric({
   args: {
     rolloverId: v.id("seasonRollovers"),
     stage: v.string(),
+    summaryJson: v.optional(v.string()),
+    ownerId: v.optional(v.string()),
   },
   returns: v.object({
     rolloverId: v.string(),
+    sourceSeasonId: v.string(),
+    sourceSeasonName: v.string(),
     targetSeasonId: v.string(),
+    targetSeasonName: v.string(),
     stage: v.string(),
     status: v.string(),
     graduatedPlayerIds: v.array(v.string()),
     advancedPlayerIds: v.array(v.string()),
+    summaryJson: v.union(v.string(), v.null()),
   }),
   handler: async (ctx, args) => {
     const rollover = await ctx.db.get(args.rolloverId);
     if (!rollover) throw new Error("rollover_not_found");
+    const source = await ctx.db.get(rollover.sourceSeasonId);
+    if (!source) throw new Error("rollover_source_not_found");
     const target = await ctx.db.get(rollover.targetSeasonId);
     if (!target) throw new Error("rollover_target_not_found");
 
-    if (target.status === "completed" && rollover.status !== "completed") {
-      const completed = { ...rollover, status: "completed", stage: "completed" };
-      await ctx.db.patch(rollover._id, {
-        status: "completed",
-        stage: "completed",
-        completedAt: new Date().toISOString(),
-      });
-      return rolloverResult(completed);
-    }
     if (target.status !== "upcoming") {
       throw new Error("rollover_target_not_upcoming");
     }
@@ -2201,20 +2321,151 @@ export const advanceSeasonRollover = internalMutationGeneric({
     const requested = rolloverStageIndex(args.stage);
     if (current < 0) throw new Error("invalid_rollover_stage");
     if (requested < 0) throw new Error("invalid_rollover_stage");
-    if (requested <= current) return rolloverResult(rollover);
+    if (requested <= current) {
+      if (requested === current && args.summaryJson && !rollover.summaryJson) {
+        await ctx.db.patch(rollover._id, { summaryJson: args.summaryJson });
+        return rolloverResult({
+          ...rollover,
+          sourceSeasonName: source.name,
+          targetSeasonName: target.name,
+          summaryJson: args.summaryJson,
+        });
+      }
+      return rolloverResult({
+        ...rollover,
+        sourceSeasonName: source.name,
+        targetSeasonName: target.name,
+      });
+    }
     if (requested !== current + 1) throw new Error("rollover_stage_out_of_order");
+    if (
+      rollover.stageLeaseStage === args.stage &&
+      rollover.stageLeaseOwnerId &&
+      rollover.stageLeaseOwnerId !== args.ownerId
+    ) {
+      throw new Error("rollover_stage_not_claimed");
+    }
 
     const patch: {
       stage: string;
       status?: string;
       completedAt?: string;
+      summaryJson?: string;
+      stageLeaseStage?: undefined;
+      stageLeaseOwnerId?: undefined;
+      stageLeaseExpiresAt?: undefined;
     } = { stage: args.stage };
+    if (args.summaryJson) patch.summaryJson = args.summaryJson;
     if (args.stage === "completed") {
       patch.status = "completed";
       patch.completedAt = new Date().toISOString();
     }
+    patch.stageLeaseStage = undefined;
+    patch.stageLeaseOwnerId = undefined;
+    patch.stageLeaseExpiresAt = undefined;
     await ctx.db.patch(rollover._id, patch);
-    return rolloverResult({ ...rollover, ...patch });
+    return rolloverResult({
+      ...rollover,
+      sourceSeasonName: source.name,
+      targetSeasonName: target.name,
+      ...patch,
+    });
+  },
+});
+
+export const claimSeasonRolloverStage = internalMutationGeneric({
+  args: {
+    rolloverId: v.id("seasonRollovers"),
+    stage: v.string(),
+    ownerId: v.string(),
+    leaseMs: v.optional(v.number()),
+  },
+  returns: v.object({
+    acquired: v.boolean(),
+    reason: v.string(),
+    rolloverId: v.string(),
+    stage: v.string(),
+    status: v.string(),
+    graduatedPlayerIds: v.array(v.string()),
+    advancedPlayerIds: v.array(v.string()),
+    summaryJson: v.union(v.string(), v.null()),
+    freshmenProgressJson: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const rollover = await ctx.db.get(args.rolloverId);
+    if (!rollover) throw new Error("rollover_not_found");
+    const target = await ctx.db.get(rollover.targetSeasonId);
+    if (!target) throw new Error("rollover_target_not_found");
+    if (rollover.status !== "completed" && target.status !== "upcoming") {
+      throw new Error("rollover_target_not_upcoming");
+    }
+
+    const current = rolloverStageIndex(rollover.stage);
+    const requested = rolloverStageIndex(args.stage);
+    if (current < 0) throw new Error("invalid_rollover_stage");
+    if (requested < 0) throw new Error("invalid_rollover_stage");
+
+    const result = (acquired: boolean, reason: string) => ({
+      acquired,
+      reason,
+      rolloverId: rollover._id as string,
+      stage: rollover.stage,
+      status: rollover.status,
+      graduatedPlayerIds: (rollover.graduatedPlayerIds ?? []).map(String),
+      advancedPlayerIds: (rollover.advancedPlayerIds ?? []).map(String),
+      summaryJson: rollover.summaryJson ?? null,
+      freshmenProgressJson: rollover.freshmenProgressJson ?? null,
+    });
+
+    if (requested <= current) return result(false, "already_completed");
+    if (requested !== current + 1) throw new Error("rollover_stage_out_of_order");
+
+    const now = Date.now();
+    const expiresAt = rollover.stageLeaseExpiresAt
+      ? Date.parse(rollover.stageLeaseExpiresAt)
+      : 0;
+    const leaseActive =
+      rollover.stageLeaseStage === args.stage &&
+      rollover.stageLeaseOwnerId &&
+      rollover.stageLeaseOwnerId !== args.ownerId &&
+      Number.isFinite(expiresAt) &&
+      expiresAt > now;
+    if (leaseActive) return result(false, "busy");
+
+    const leaseMs = Math.max(1_000, Math.min(args.leaseMs ?? 60_000, 300_000));
+    await ctx.db.patch(rollover._id, {
+      stageLeaseStage: args.stage,
+      stageLeaseOwnerId: args.ownerId,
+      stageLeaseExpiresAt: new Date(now + leaseMs).toISOString(),
+    });
+    return result(true, "acquired");
+  },
+});
+
+export const releaseSeasonRolloverStage = internalMutationGeneric({
+  args: {
+    rolloverId: v.id("seasonRollovers"),
+    stage: v.string(),
+    ownerId: v.string(),
+    lastError: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const rollover = await ctx.db.get(args.rolloverId);
+    if (!rollover) return null;
+    if (
+      rollover.stageLeaseStage !== args.stage ||
+      rollover.stageLeaseOwnerId !== args.ownerId
+    ) {
+      return null;
+    }
+    await ctx.db.patch(rollover._id, {
+      stageLeaseStage: undefined,
+      stageLeaseOwnerId: undefined,
+      stageLeaseExpiresAt: undefined,
+      ...(args.lastError ? { lastError: args.lastError } : {}),
+    });
+    return null;
   },
 });
 
@@ -4577,6 +4828,7 @@ export const rolloverGraduateAndAdvancePlayers = internalMutation({
     leagueId: v.id("leagues"),
     seasonId: v.id("seasons"),
     rolloverId: v.optional(v.id("seasonRollovers")),
+    ownerId: v.optional(v.string()),
   },
   returns: v.object({
     graduatedPlayerIds: v.array(v.string()),
@@ -4592,6 +4844,8 @@ export const rolloverGraduateAndAdvancePlayers = internalMutation({
       status: string;
       graduatedPlayerIds?: Id<"players">[];
       advancedPlayerIds?: Id<"players">[];
+      stageLeaseStage?: string;
+      stageLeaseOwnerId?: string;
     } | null = null;
     if (args.rolloverId) {
       rollover = await ctx.db.get(args.rolloverId);
@@ -4613,6 +4867,13 @@ export const rolloverGraduateAndAdvancePlayers = internalMutation({
       }
       if (stage !== rolloverStageIndex("target_created")) {
         throw new Error("rollover_stage_out_of_order");
+      }
+      if (
+        rollover.stageLeaseStage === "players_progressed" &&
+        rollover.stageLeaseOwnerId &&
+        rollover.stageLeaseOwnerId !== args.ownerId
+      ) {
+        throw new Error("rollover_stage_not_claimed");
       }
     }
 
@@ -4659,6 +4920,9 @@ export const rolloverGraduateAndAdvancePlayers = internalMutation({
         stage: "players_progressed",
         graduatedPlayerIds: graduatedPlayerIds as Id<"players">[],
         advancedPlayerIds: advancedPlayerIds as Id<"players">[],
+        stageLeaseStage: undefined,
+        stageLeaseOwnerId: undefined,
+        stageLeaseExpiresAt: undefined,
       });
     }
     return { graduatedPlayerIds, advancedPlayerIds };
