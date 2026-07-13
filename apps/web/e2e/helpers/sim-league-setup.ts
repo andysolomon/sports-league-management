@@ -206,15 +206,8 @@ export async function completeSeason(
   });
   await seasonRow.getByRole("button", { name: /^Complete / }).click();
   if (opts.forceWithoutChampion) {
-    // No playoff champion: confirming "Complete <season>?" opens a second
-    // "Complete without a champion?" force-completion dialog instead of
-    // closing. Name-scope both confirms (both dialogs share the testid).
     await confirmLifecycleDialog(page, {
-      name: /^Complete (?!without a champion\?)/,
-      expectClose: false,
-    });
-    await confirmLifecycleDialog(page, {
-      name: "Complete without a champion?",
+      name: "Complete season anyway?",
     });
   } else {
     await confirmLifecycleDialog(page);

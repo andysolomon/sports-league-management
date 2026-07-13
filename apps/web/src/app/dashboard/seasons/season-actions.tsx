@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, CheckCircle2, Users, Trophy } from "lucide-react";
 import type { UndersizedTeam } from "@/lib/offseason-activate";
+import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
 import { ActivateSeasonWarningDialog } from "@/components/offseason/ActivateSeasonWarningDialog";
 import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
 import {
@@ -56,6 +57,9 @@ const SIMULATION_FLAVOR_OPTIONS: {
   { value: "chalk", label: "Chalk (favorites)" },
   { value: "upsets", label: "Upsets" },
 ];
+
+/** Defaults for create — hidden from the two-step dialog (WSM-000255). */
+const DEFAULT_CREATE_SIMULATION_FLAVOR: SimulationFlavor = "balanced";
 
 function playoffTeamOptions(current: number): number[] {
   const base = [0, ...PLAYOFF_TEAM_OPTIONS];
@@ -155,12 +159,10 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
   const [endDate, setEndDate] = useState("");
   const [playoffTeams, setPlayoffTeams] = useState(8);
   const [playoffFormat, setPlayoffFormat] = useState("single");
-  const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(false);
-  const [simulationFlavor, setSimulationFlavor] =
-    useState<SimulationFlavor>("balanced");
   const [busy, setBusy] = useState(false);
   /** Name of the season just created; non-null switches the dialog to its success state. */
   const [createdName, setCreatedName] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   function resetForm() {
     setName("");
@@ -168,9 +170,8 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
     setEndDate("");
     setPlayoffTeams(8);
     setPlayoffFormat("single");
-    setDivisionWinnersQualify(false);
-    setSimulationFlavor("balanced");
     setCreatedName(null);
+    setCreatedId(null);
   }
 
   function handleOpenChange(next: boolean) {
@@ -189,12 +190,13 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
       endDate: nullableDate(endDate),
       playoffTeams,
       playoffFormat,
-      divisionWinnersQualify,
-      simulationFlavor,
+      divisionWinnersQualify: false,
+      simulationFlavor: DEFAULT_CREATE_SIMULATION_FLAVOR,
     });
     setBusy(false);
     if (res.ok) {
       setCreatedName(trimmed);
+      setCreatedId(res.id);
       router.refresh();
     } else {
       toast.error(res.error === "not_admin" ? "Only league admins can add seasons." : res.error);
@@ -215,8 +217,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
             <DialogHeader>
               <DialogTitle>New season</DialogTitle>
               <DialogDescription>
-                Add a season to this league to unlock rosters, schedules, and
-                player attributes.
+                Add a season to unlock rosters, schedules, and player attributes.
               </DialogDescription>
             </DialogHeader>
             <form
@@ -232,7 +233,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
                   id="season-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. 2026"
+                  placeholder="e.g. Cobb Football 2028"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -292,34 +293,6 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
                   </Select>
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="season-simulation-flavor">Simulation flavor</Label>
-                <Select
-                  value={simulationFlavor}
-                  onValueChange={(v) =>
-                    setSimulationFlavor(v as SimulationFlavor)
-                  }
-                >
-                  <SelectTrigger id="season-simulation-flavor">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SIMULATION_FLAVOR_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  checked={divisionWinnersQualify}
-                  onChange={(e) => setDivisionWinnersQualify(e.target.checked)}
-                />
-                Division winners automatically qualify for playoffs
-              </label>
               <DialogFooter className="pt-2">
                 <Button
                   type="button"
@@ -329,7 +302,11 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={busy || name.trim() === ""}>
+                <Button
+                  type="submit"
+                  disabled={busy || name.trim() === ""}
+                  data-testid="create-season-submit"
+                >
                   {busy ? "Creating…" : "Create season"}
                 </Button>
               </DialogFooter>
@@ -346,14 +323,19 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
             </DialogHeader>
             <div className="flex items-center gap-2 text-sm text-foreground">
               <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
-              <span>Created {createdName}.</span>
+              <span>
+                Created {createdName}. Rosters start empty (0/
+                {DEFAULT_TARGET_ROSTER_SIZE}).
+              </span>
             </div>
             <DialogFooter className="pt-2">
               <Button variant="ghost" onClick={() => handleOpenChange(false)}>
                 Done
               </Button>
-              <Button asChild>
-                <Link href={`/dashboard/leagues/${leagueId}/schedule`}>
+              <Button asChild data-testid="create-season-generate-schedule">
+                <Link
+                  href={`/dashboard/leagues/${leagueId}/schedule${createdId ? `?seasonId=${createdId}` : ""}`}
+                >
                   Generate schedule
                 </Link>
               </Button>
@@ -421,9 +403,9 @@ export function CopyRostersButton({ season }: { season: SeasonDto }) {
       <ActionConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title="Replace existing rosters?"
-        description={`${season.name} already has rosters. Copying replaces them with last season's rosters. This can't be undone. Continue?`}
-        confirmLabel="Continue"
+        title="Replace rosters?"
+        description={`${season.name} already has rosters. Copying replaces them with the most recent prior season's rosters. This can't be undone.`}
+        confirmLabel="Copy & replace"
         destructive
         pending={busy}
         onConfirm={() => void run(true)}
@@ -434,9 +416,11 @@ export function CopyRostersButton({ season }: { season: SeasonDto }) {
 
 export function SeasonRowActions({
   season,
+  seasonDecided = false,
   undersizedTeams = [],
 }: {
   season: SeasonDto;
+  seasonDecided?: boolean;
   undersizedTeams?: UndersizedTeam[];
 }) {
   const router = useRouter();
@@ -496,7 +480,7 @@ export function SeasonRowActions({
     setBusy(false);
     if (res.ok) {
       toast.success(`${season.name} completed.`, {
-        description: "Run the dynasty rollover from the league page next.",
+        description: "Start the next season from the league page.",
         action: {
           label: "League page",
           onClick: () =>
@@ -513,7 +497,7 @@ export function SeasonRowActions({
   }
 
   function complete() {
-    setCompleteStep("complete");
+    setCompleteStep(seasonDecided ? "complete" : "force");
   }
 
   async function save() {
@@ -654,6 +638,7 @@ export function SeasonRowActions({
       <ActivateSeasonWarningDialog
         open={activateWarningOpen}
         seasonName={season.name}
+        leagueId={season.leagueId}
         undersizedTeams={undersizedTeams}
         busy={busy}
         onCancel={() => setActivateWarningOpen(false)}
@@ -665,8 +650,8 @@ export function SeasonRowActions({
           if (!open && !busy) setCompleteStep(null);
         }}
         title={`Complete ${season.name}?`}
-        description="Schedule generation, result recording, and simulations will be locked for it."
-        confirmLabel="Complete"
+        description="Schedule generation, result recording, and simulation will be locked for it."
+        confirmLabel="Complete season"
         pending={busy}
         onConfirm={() => void runComplete(false)}
       />
@@ -675,8 +660,8 @@ export function SeasonRowActions({
         onOpenChange={(open) => {
           if (!open && !busy) setCompleteStep(null);
         }}
-        title="Complete without a champion?"
-        description="No playoff champion has been decided for this season. Complete it anyway?"
+        title="Complete season anyway?"
+        description={`No champion has been decided for ${season.name}. Completing locks schedule generation, result recording, and simulation. Complete anyway?`}
         confirmLabel="Complete anyway"
         destructive
         pending={busy}
@@ -686,8 +671,8 @@ export function SeasonRowActions({
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
         title={`Delete ${season.name}?`}
-        description="This deletes its schedule, results, and attributes. This can't be undone."
-        confirmLabel="Delete"
+        description="Delete this season and its schedule, results, and attributes? This can't be undone."
+        confirmLabel="Delete season"
         destructive
         pending={busy}
         onConfirm={() => void remove()}
