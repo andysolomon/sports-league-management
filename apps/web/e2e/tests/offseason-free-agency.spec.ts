@@ -105,13 +105,18 @@ test.describe("Offseason free agency", () => {
       page.getByRole("button", { name: `Release ${releasedName}` }),
     ).toHaveCount(0, { timeout: 60_000 });
 
-    await page.goto(upcomingSeasonUrl!);
-    const faPanel = page.getByTestId("free-agency-panel");
-    await expect(faPanel).toBeVisible({ timeout: 60_000 });
-    // The released player reached the pool (scoped to the panel).
-    await expect(faPanel.getByText(releasedName!).first()).toBeVisible({
-      timeout: 60_000,
-    });
+    // Soft-reload until the released player is visible in the pool.
+    // Inner timeouts stay short so toPass can retry within the budget
+    // (a single hard goto can race Convex pool propagation — Sig A).
+    // .first() avoids strict-mode on a transient double panel mount (Sig B).
+    await expect(async () => {
+      await page.goto(upcomingSeasonUrl!);
+      const faPanel = page.getByTestId("free-agency-panel").first();
+      await expect(faPanel).toBeVisible();
+      await expect(faPanel.getByText(releasedName!).first()).toBeVisible();
+    }).toPass({ timeout: 60_000 });
+
+    const faPanel = page.getByTestId("free-agency-panel").first();
 
     // Sign the first free agent; read its exact name from the row so every
     // post-sign assertion targets the SAME player (not the arbitrary released
