@@ -142,8 +142,8 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     const privateLanding = await page.goto(`/leagues/${leagueId}`);
     expect(privateLanding?.status()).toBe(404);
 
-    // 6. Flip public via the admin toggle on the league detail page.
-    await page.goto(`/dashboard/leagues/${leagueId}`);
+    // 6. Flip public via the admin toggle on the league manage page.
+    await page.goto(`/dashboard/leagues/${leagueId}/manage`);
     await page.getByRole("button", { name: /Make public/ }).click();
     await expect(
       page.getByRole("button", { name: /Make private/ }),

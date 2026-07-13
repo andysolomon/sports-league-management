@@ -106,8 +106,8 @@ test.describe.serial(
       );
       expect(privateResp?.status()).toBe(404);
 
-      // Flip the league to public via the admin toggle on the detail page.
-      await page.goto(`/dashboard/leagues/${leagueId}`);
+      // Flip the league to public via the admin toggle on the manage page.
+      await page.goto(`/dashboard/leagues/${leagueId}/manage`);
       await page
         .getByRole("button", { name: /Make public/ })
         .click();
