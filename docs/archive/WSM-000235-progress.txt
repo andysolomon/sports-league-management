@@ -1,5 +1,5 @@
 WSM-000235 - Leagues & Seasons Dynasty Lifecycle Overhaul - Progress
-Generated: 2026-07-11 14:35:30 EDT
+Generated: 2026-07-13 10:43:13 EDT
 On completion, move this file and the plan to docs/archive/.
 
 [x] 1.0 - WSM-000236 - Unified League and Season workspace (PR #533 merged 2026-07-11, #524 closed)
@@ -44,16 +44,16 @@ On completion, move this file and the plan to docs/archive/.
     [x] 8.3 - Resume persisted rollover stages and return truthful operation summaries
     [x] 8.4 - Verify concurrent starts and retries at every stage converge on one target
     [x] 8.5 - Verify complete → rollover → activate, offseason destination, and historical continuity
-[x] 9.0 - WSM-000244 - Display and simulation settings
+[x] 9.0 - WSM-000244 - Display and simulation settings (PR #544 squash-merged 2026-07-13 as 4194a5f, #532 closed)
     [x] 9.1 - Add persistent device-scoped density preference
     [x] 9.2 - Add season-scoped simulation flavor schema and APIs
     [x] 9.3 - Integrate deterministic flavor weighting
     [x] 9.4 - Lock new 4/8/16 configuration while preserving persisted legacy bracket sizes
     [x] 9.5 - Verify theme hydration, keyboard use, settings scope, and no accent control
-[ ] 10.0 - Integration, review, and shipping
-    [ ] 10.1 - Run type-check, lint, unit, focused E2E, and visual suites
-    [ ] 10.2 - Run deterministic full dynasty lifecycle E2E
-    [ ] 10.3 - Independently review authorization, invariants, idempotency, a11y, and responsive behavior
-    [ ] 10.4 - Open and ship one PR per child issue with Closes references
-    [ ] 10.5 - Close epic #523 after all child issues merge
-    [ ] 10.6 - On merge: move docs/WSM-000235-IMPLEMENTATION_PLAN.md + docs/WSM-000235-progress.txt to docs/archive/
+[x] 10.0 - Integration, review, and shipping
+    [x] 10.1 - Run type-check, lint, unit, focused E2E, and visual suites (local type-check/lint clean; unit 1194/1194; CI on PR #544: Playwright 139 passed run 29254098256; Visual regression pass; local e2e/visual blocked CONVEX_URL=127.0.0.1:3212 not running — relied on CI)
+    [x] 10.2 - Run deterministic full dynasty lifecycle E2E (dynasty lifecycle covered by dynasty.spec.ts + playoffs/schedules/seasons in CI Playwright green on #544)
+    [x] 10.3 - Independently review authorization, invariants, idempotency, a11y, and responsive behavior (Independent Claude review APPROVE; #534 pre-existing flake non-blocking)
+    [x] 10.4 - Open and ship one PR per child issue with Closes references (children #524–#532 closed via PRs #533–#544)
+    [x] 10.5 - Close epic #523 after all child issues merge (epic #523 closed by this PR; Closes #523)
+    [x] 10.6 - On merge: move docs/WSM-000235-IMPLEMENTATION_PLAN.md + docs/WSM-000235-progress.txt to docs/archive/ (files moved to docs/archive/ in this PR)
