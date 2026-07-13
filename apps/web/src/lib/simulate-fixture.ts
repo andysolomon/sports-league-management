@@ -16,6 +16,10 @@ import {
   simulateGameLog,
 } from "@/lib/pbp";
 import { seedFromString, simulateScore } from "@/lib/simulate-game";
+import {
+  DEFAULT_SIMULATION_FLAVOR,
+  type SimulationFlavor,
+} from "@/lib/simulation-flavor";
 
 export interface SimulateFixtureInput {
   fixture: FixtureDto;
@@ -25,6 +29,8 @@ export interface SimulateFixtureInput {
   profileCache: TeamSimProfileCache;
   /** When true, stat lines are written in one bulk mutation (season sims). */
   bulkStats?: boolean;
+  /** Season simulation flavor (defaults to balanced). */
+  simulationFlavor?: SimulationFlavor;
 }
 
 export interface SimulateFixtureResult {
@@ -53,6 +59,7 @@ export async function simulateAndPersistFixture(
 ): Promise<SimulateFixtureResult> {
   const { fixture, orgContext, actorUserId, profileCache } = input;
   const decisive = input.decisive ?? fixture.stage === "playoff";
+  const flavor = input.simulationFlavor ?? DEFAULT_SIMULATION_FLAVOR;
   const seed = seedFromString(fixture.id);
 
   const [home, away] = await Promise.all([
@@ -68,6 +75,7 @@ export async function simulateAndPersistFixture(
       awayStrength: away.strength,
       seed,
       decisive,
+      flavor,
     });
     await recordGameResult({
       fixtureId: fixture.id,
@@ -78,7 +86,7 @@ export async function simulateAndPersistFixture(
     return { homeScore, awayScore, usedScoreFallback: true };
   }
 
-  const log = simulateGameLog({ home, away, seed, decisive });
+  const log = simulateGameLog({ home, away, seed, decisive, flavor });
   const homeScore = log.homeScore;
   const awayScore = log.awayScore;
 

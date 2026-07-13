@@ -44,12 +44,12 @@ On completion, move this file and the plan to docs/archive/.
     [x] 8.3 - Resume persisted rollover stages and return truthful operation summaries
     [x] 8.4 - Verify concurrent starts and retries at every stage converge on one target
     [x] 8.5 - Verify complete → rollover → activate, offseason destination, and historical continuity
-[ ] 9.0 - WSM-000244 - Display and simulation settings
-    [ ] 9.1 - Add persistent device-scoped density preference
-    [ ] 9.2 - Add season-scoped simulation flavor schema and APIs
-    [ ] 9.3 - Integrate deterministic flavor weighting
-    [ ] 9.4 - Lock new 4/8/16 configuration while preserving persisted legacy bracket sizes
-    [ ] 9.5 - Verify theme hydration, keyboard use, settings scope, and no accent control
+[x] 9.0 - WSM-000244 - Display and simulation settings
+    [x] 9.1 - Add persistent device-scoped density preference
+    [x] 9.2 - Add season-scoped simulation flavor schema and APIs
+    [x] 9.3 - Integrate deterministic flavor weighting
+    [x] 9.4 - Lock new 4/8/16 configuration while preserving persisted legacy bracket sizes
+    [x] 9.5 - Verify theme hydration, keyboard use, settings scope, and no accent control
 [ ] 10.0 - Integration, review, and shipping
     [ ] 10.1 - Run type-check, lint, unit, focused E2E, and visual suites
     [ ] 10.2 - Run deterministic full dynasty lifecycle E2E

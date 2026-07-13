@@ -11,15 +11,17 @@
  * that a clearly stronger team usually (not always) wins.
  */
 import { seedFromString } from "@/lib/synthetic-roster";
+import {
+  DEFAULT_SIMULATION_FLAVOR,
+  normalizeSimulationFlavor,
+  weightsForFlavor,
+  type SimulationFlavor,
+} from "@/lib/simulation-flavor";
 
 /** Average points an average matchup yields per team. */
 const BASELINE_POINTS = 21;
-/** Points swing per point of strength differential (full 99-gap ≈ ±25). */
-const STRENGTH_WEIGHT = 0.26;
 /** Home-field edge, in points. */
 const HOME_FIELD = 2.5;
-/** Peak ± seeded swing applied to each team's expected points. */
-const VARIANCE = 13;
 
 /** mulberry32 — small deterministic PRNG (same family as synthetic-roster). */
 export function mulberry32(seed: number): () => number {
@@ -46,6 +48,8 @@ export interface SimulateScoreInput {
   seed: number;
   /** When true, never returns a tie — re-rolls to a clean winner (playoffs). */
   decisive?: boolean;
+  /** Season simulation flavor; `balanced` preserves legacy weighting. */
+  flavor?: SimulationFlavor;
 }
 
 export interface SimulatedScore {
@@ -58,10 +62,12 @@ function pointsFor(
   oppStrength: number,
   homeEdge: number,
   rand: () => number,
+  strengthWeight: number,
+  variance: number,
 ): number {
   const base =
-    BASELINE_POINTS + (strength - oppStrength) * STRENGTH_WEIGHT + homeEdge;
-  const swing = (rand() - 0.5) * 2 * VARIANCE;
+    BASELINE_POINTS + (strength - oppStrength) * strengthWeight + homeEdge;
+  const swing = (rand() - 0.5) * 2 * variance;
   return Math.max(0, Math.round(base + swing));
 }
 
@@ -75,10 +81,26 @@ export function simulateScore({
   awayStrength,
   seed,
   decisive = false,
+  flavor = DEFAULT_SIMULATION_FLAVOR,
 }: SimulateScoreInput): SimulatedScore {
+  const weights = weightsForFlavor(normalizeSimulationFlavor(flavor));
   const rand = rng(seed);
-  let homeScore = pointsFor(homeStrength, awayStrength, HOME_FIELD, rand);
-  let awayScore = pointsFor(awayStrength, homeStrength, 0, rand);
+  let homeScore = pointsFor(
+    homeStrength,
+    awayStrength,
+    HOME_FIELD,
+    rand,
+    weights.strengthWeight,
+    weights.variance,
+  );
+  let awayScore = pointsFor(
+    awayStrength,
+    homeStrength,
+    0,
+    rand,
+    weights.strengthWeight,
+    weights.variance,
+  );
 
   if (decisive && homeScore === awayScore) {
     // Overtime field goal for the favorite (home wins an exact-strength tie).

@@ -22,6 +22,7 @@ import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
 import { type TeamSimProfileCache } from "@/lib/build-team-sim-profile";
 import { simulateAndPersistFixture } from "@/lib/simulate-fixture";
+import { normalizeSimulationFlavor } from "@/lib/simulation-flavor";
 import {
   deriveChampion,
   fixtureIdsForRound,
@@ -253,6 +254,14 @@ export async function deleteFixtureAction(
  * + playoff advancement flow exactly as hand-entered results do.
  */
 
+async function resolveSeasonSimulationFlavor(
+  seasonId: string,
+  orgContext: OrgContext,
+) {
+  const season = await getSeason(seasonId, orgContext);
+  return normalizeSimulationFlavor(season.simulationFlavor);
+}
+
 export async function simulateGameAction(input: {
   leagueId: string;
   fixtureId: string;
@@ -273,12 +282,17 @@ export async function simulateGameAction(input: {
   const orgContext = await resolveOrgContext(userId);
 
   try {
+    const simulationFlavor = await resolveSeasonSimulationFlavor(
+      fixture.seasonId,
+      orgContext,
+    );
     const { homeScore, awayScore } = await simulateAndPersistFixture({
       fixture,
       orgContext,
       actorUserId: userId,
       decisive: fixture.stage === "playoff",
       profileCache: new Map(),
+      simulationFlavor,
     });
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
@@ -308,6 +322,7 @@ async function simulateUnplayedRegularSeason(
   orgContext: OrgContext,
   profileCache: TeamSimProfileCache,
 ): Promise<number> {
+  const simulationFlavor = await resolveSeasonSimulationFlavor(seasonId, orgContext);
   const fixtures = await listFixturesBySeason(seasonId).catch(() => []);
   // Regular-season, unplayed games only — never overwrite real results, and
   // leave playoff games to the bracket flow.
@@ -322,6 +337,7 @@ async function simulateUnplayedRegularSeason(
       actorUserId: userId,
       profileCache,
       bulkStats: true,
+      simulationFlavor,
     });
     simulated += 1;
   }
@@ -337,6 +353,7 @@ async function simulatePlayoffFixtureIds(
   profileCache: TeamSimProfileCache,
 ): Promise<number> {
   if (fixtureIds.length === 0) return 0;
+  const simulationFlavor = await resolveSeasonSimulationFlavor(seasonId, orgContext);
   const fixtures = await listFixturesBySeason(seasonId).catch(() => []);
   const byId = new Map(fixtures.map((f) => [f.id, f]));
   let simulated = 0;
@@ -356,6 +373,7 @@ async function simulatePlayoffFixtureIds(
       decisive: true,
       profileCache,
       bulkStats: true,
+      simulationFlavor,
     });
     simulated += 1;
   }
@@ -519,6 +537,10 @@ export async function simulateWeekAction(input: {
   const orgContext = await resolveOrgContext(userId);
   const profileCache: TeamSimProfileCache = new Map();
   try {
+    const simulationFlavor = await resolveSeasonSimulationFlavor(
+      input.seasonId,
+      orgContext,
+    );
     const fixtures = await listFixturesBySeason(input.seasonId).catch(() => []);
     const unplayed = fixtures.filter(
       (f) => f.status === "scheduled" && f.week === input.week,
@@ -532,6 +554,7 @@ export async function simulateWeekAction(input: {
         decisive: fixture.stage === "playoff",
         profileCache,
         bulkStats: true,
+        simulationFlavor,
       });
       simulated += 1;
     }

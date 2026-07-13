@@ -131,6 +131,7 @@ export default defineSchema({
     playoffTeams: v.optional(v.number()), // 0 = no playoffs; else 4 | 8 | 16
     playoffFormat: v.optional(v.string()), // "single" (double = future)
     divisionWinnersQualify: v.optional(v.boolean()),
+    simulationFlavor: v.optional(v.string()), // "chalk" | "balanced" | "upsets"
   })
     .index("by_leagueId", ["leagueId"])
     .index("by_leagueId_name", ["leagueId", "name"]),

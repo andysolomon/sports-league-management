@@ -5,6 +5,8 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AppToaster } from "@/components/app-toaster";
 import { ThemeProvider } from "@/components/theme-provider";
+import { DensityProvider } from "@/components/density-provider";
+import { DENSITY_STORAGE_KEY } from "@/components/density-provider";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +76,13 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${hanken.variable} ${jetbrainsMono.variable}`}
       >
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){try{var d=localStorage.getItem('${DENSITY_STORAGE_KEY}');document.documentElement.setAttribute('data-density',d==='compact'?'compact':'comfortable');}catch(e){document.documentElement.setAttribute('data-density','comfortable');}})();`,
+            }}
+          />
+        </head>
         <body className="bg-background text-foreground font-sans antialiased">
           <script
             type="application/ld+json"
@@ -85,8 +94,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
-            <AppToaster />
+            <DensityProvider>
+              {children}
+              <AppToaster />
+            </DensityProvider>
           </ThemeProvider>
           <Analytics />
           <SpeedInsights />

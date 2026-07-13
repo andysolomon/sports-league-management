@@ -14,6 +14,7 @@ function season(id: string, status: string): SeasonDto {
     playoffTeams: null,
     playoffFormat: null,
     divisionWinnersQualify: false,
+    simulationFlavor: "balanced",
   };
 }
 

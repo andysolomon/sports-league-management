@@ -108,6 +108,8 @@ export const RosterAuditLogDtoSchema = z.object({
   createdAt: z.string(),
 }) satisfies z.ZodType<RosterAuditLogDto>;
 
+export const SimulationFlavorSchema = z.enum(["chalk", "balanced", "upsets"]);
+
 export const SeasonDtoSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -119,6 +121,7 @@ export const SeasonDtoSchema = z.object({
   playoffTeams: z.number().nullable(),
   playoffFormat: z.string().nullable(),
   divisionWinnersQualify: z.boolean(),
+  simulationFlavor: SimulationFlavorSchema,
 }) satisfies z.ZodType<SeasonDto>;
 
 // --- Mutation input schemas ---

@@ -278,6 +278,7 @@ export class LocalWorkspaceProvider implements WorkspaceDataProvider {
       playoffTeams: null,
       playoffFormat: null,
       divisionWinnersQualify: false,
+      simulationFlavor: "balanced",
     };
     await this.db.seasons.add(season);
     return season;

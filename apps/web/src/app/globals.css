@@ -237,3 +237,52 @@ body[data-scroll-locked] {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Device-scoped compact density (WSM-000244). Applied via `data-density` on
+ * <html> (pre-hydration script + DensityProvider). Token-level tightening so
+ * pages inherit spacing without per-route overrides.
+ */
+html[data-density="compact"] {
+  --text-body-15: 14px;
+  --text-body-15--line-height: 21px;
+  --text-label-14: 13px;
+  --text-label-14--line-height: 18px;
+  --text-caption-12: 11px;
+  --text-caption-12--line-height: 15px;
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-md: 8px;
+  --radius-xl: 12px;
+}
+
+html[data-density="compact"] body {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+html[data-density="compact"] .gap-4 {
+  gap: 0.75rem;
+}
+
+html[data-density="compact"] .gap-2 {
+  gap: 0.375rem;
+}
+
+html[data-density="compact"] .p-4 {
+  padding: 0.75rem;
+}
+
+html[data-density="compact"] .p-6 {
+  padding: 1rem;
+}
+
+html[data-density="compact"] .py-4 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+html[data-density="compact"] .px-8 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}

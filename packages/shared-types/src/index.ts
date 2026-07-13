@@ -73,6 +73,8 @@ export interface PlayerDto {
   hometown: string | null;
 }
 
+export type SimulationFlavor = "chalk" | "balanced" | "upsets";
+
 export interface SeasonDto {
   id: string;
   name: string;
@@ -85,6 +87,8 @@ export interface SeasonDto {
   playoffTeams: number | null; // 0/null = no playoffs; else 4 | 8 | 16
   playoffFormat: string | null; // "single"
   divisionWinnersQualify: boolean;
+  /** Simulation tuning (WSM-000244); missing rows default to balanced. */
+  simulationFlavor: SimulationFlavor;
 }
 
 export interface DepthChartEntryDto {
