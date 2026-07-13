@@ -12,16 +12,18 @@ async function resolvedTheme(page: {
 }
 
 test.describe("display settings persistence (WSM-000244)", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.removeItem("sports-mgmt-density");
-      localStorage.removeItem("theme");
-    });
-  });
-
   test("theme and density survive reload without flash attributes", async ({
     page,
   }) => {
+    // Clear prefs once per tab. Do not use a bare addInitScript wipe — that
+    // also runs on reload and would erase the values this test asserts.
+    await page.addInitScript(() => {
+      if (sessionStorage.getItem("__wsm244_prefs_cleared") === "1") return;
+      localStorage.removeItem("sports-mgmt-density");
+      localStorage.removeItem("theme");
+      sessionStorage.setItem("__wsm244_prefs_cleared", "1");
+    });
+
     // /local renders both DensityToggle and ThemeToggle without auth
     // (marketing `/` only exposes ThemeToggle).
     await page.goto("/local");
@@ -46,6 +48,16 @@ test.describe("display settings persistence (WSM-000244)", () => {
         page.evaluate(() => document.documentElement.getAttribute("data-density")),
       )
       .toBe("compact");
+
+    const storedBeforeReload = await page.evaluate(
+      ([densityKey, themeKey]) => ({
+        density: localStorage.getItem(densityKey),
+        theme: localStorage.getItem(themeKey),
+      }),
+      [DENSITY_KEY, THEME_KEY],
+    );
+    expect(storedBeforeReload.density).toBe("compact");
+    expect(storedBeforeReload.theme).toBe(expectedTheme);
 
     await page.reload();
 
