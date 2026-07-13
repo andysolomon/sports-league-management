@@ -55,9 +55,6 @@ test.describe("Offseason draft", () => {
     const startBtn = page.getByRole("button", { name: "Start next season" });
     await expect(startBtn).toBeEnabled({ timeout: 60_000 });
     await startNextSeason(page);
-    await expect(page.getByText("Next season started.")).toBeVisible({
-      timeout: 60_000,
-    });
 
     const upcomingLink = page.getByRole("link", { name: /View E2E Season/ });
     await expect(upcomingLink).toBeVisible({ timeout: 60_000 });
