@@ -1,0 +1,59 @@
+WSM-000235 - Leagues & Seasons Dynasty Lifecycle Overhaul - Progress
+Generated: 2026-07-11 14:35:30 EDT
+On completion, move this file and the plan to docs/archive/.
+
+[x] 1.0 - WSM-000236 - Unified League and Season workspace (PR #533 merged 2026-07-11, #524 closed)
+    [x] 1.1 - Build shared workspace context/header/navigation
+    [x] 1.2 - Refactor league, season, schedule, standings, playoffs, and stats routes
+    [x] 1.3 - Verify navigation, feature preservation, mobile, and visual baselines (unit 1058/1058, visual 3/3 + darwin/linux baselines, chromium 27/28; the 1 failure is pre-existing flake filed as #534, reproduced on origin/main code and in CI on 2026-07-07)
+[x] 2.0 - WSM-000237 - Accessible confirmation and processing flows (PR #535 squash-merged 2026-07-12 as 547f864, #525 closed; 2 review rounds — round 2 fixed e2e specs to confirm in-app dialogs; Playwright 134/134 green)
+    [x] 2.1 - Build and test shared confirmation/process components (ActionConfirmDialog + ProcessDialog; ProcessDialog call-site wiring lands in 7.x/8.x per plan)
+    [x] 2.2 - Replace all inventoried schedule, playoff, dynasty, roster, game-stat, and season-action native dialogs (22 confirms/11 files; LiveScoreboard/leagues-actions/member-list/division-controls intentionally out of scope)
+    [x] 2.3 - Verify focus, pending lock, truthful results, errors, and retry (unit+integration tests 1074/1074, type-check/lint clean; independent Codex review rejected round 1, all 4 findings fixed and re-verified)
+[x] 3.0 - WSM-000238 - Season lifecycle invariants (PR #536 squash-merged 2026-07-12 as b32c182, #526 closed; CI unit/build + visual + Playwright 134/134 green)
+    [x] 3.1 - Add central completed-season and transition guards
+    [x] 3.2 - Inventory fixture-derived writes; block competition changes and explicitly test historical media exceptions
+    [x] 3.3 - Add persisted source→target rollover lineage and resumable stage state
+    [x] 3.4 - Define and implement active → completed source → upcoming rollover transitions
+    [x] 3.5 - Align current-season and rollover-source fallback across Convex and web helpers
+    [x] 3.6 - Verify mutation rejection, completed-source rollover, media policy, and historical read access (local unit 1097/1097, lint/type-check clean; review loop fixed rollover retry/source/fallback/typed-action issues and lifecycle E2E regressions)
+[x] 4.0 - WSM-000239 - Schedule lifecycle accordions and playoff handoff (PR #537 merged 2026-07-12, #527 closed)
+    [x] 4.1 - Add and unit-test week lifecycle derivation
+    [x] 4.2 - Build accessible schedule accordions and mixed-week nesting
+    [x] 4.3 - Surface readiness-gated Start playoffs action targeting explicit viewed seasonId
+    [x] 4.4 - Verify completed-season read-only schedule behavior
+[x] 5.0 - WSM-000240 - Contextual game preview and Gamecast drawer (PR #538 squash-merged 2026-07-12 as 9a78cbd, #528 closed; overflow fix landed before merge)
+    [x] 5.1 - Define bounded fixture/matchup drawer projection
+    [x] 5.2 - Build accessible preview/final drawer
+    [x] 5.3 - Integrate schedule and playoff triggers
+    [x] 5.4 - Verify archived seasons, full Gamecast links, focus, and mobile overflow
+[x] 6.0 - WSM-000241 - Round-aware playoff operations (PR #539 squash-merged 2026-07-12 as 78a8e3f, #529 closed; CI green including Playwright; review round 1 guards in de75f72)
+    [x] 6.1 - Add current-round and championship selectors
+    [x] 6.2 - Implement current-round advancement and semifinal-stop simulation
+    [x] 6.3 - Add explicit championship and role-gated controls
+    [x] 6.4 - Keep legacy double elimination per-match playable while hiding/rejecting bulk round controls
+    [x] 6.5 - Verify byes, partial rounds, authorization, and legacy format/size readability
+[x] 7.0 - WSM-000242 - Blocking generation flows and roster auto-fill (PR #540 squash-merged 2026-07-12 as f0c9550, #530 closed; 2 review rounds — graduated active-count fill fix + ProcessDialog e2e helpers; Playwright green on final push)
+    [x] 7.1 - Integrate process dialog with generation actions
+    [x] 7.2 - Add bounded roster-deficit projection
+    [x] 7.3 - Implement authorized all-short-team and own-team fill actions
+    [x] 7.4 - Verify deficits, unchanged full teams, role boundaries, and summaries
+[ ] 8.0 - WSM-000243 - Explicit completion and dynasty rollover
+    [ ] 8.1 - Refine decided-season completion and next-step UI
+    [ ] 8.2 - Resolve and transactionally claim newest eligible completed rollover source
+    [ ] 8.3 - Resume persisted rollover stages and return truthful operation summaries
+    [ ] 8.4 - Verify concurrent starts and retries at every stage converge on one target
+    [ ] 8.5 - Verify complete → rollover → activate, offseason destination, and historical continuity
+[ ] 9.0 - WSM-000244 - Display and simulation settings
+    [ ] 9.1 - Add persistent device-scoped density preference
+    [ ] 9.2 - Add season-scoped simulation flavor schema and APIs
+    [ ] 9.3 - Integrate deterministic flavor weighting
+    [ ] 9.4 - Lock new 4/8/16 configuration while preserving persisted legacy bracket sizes
+    [ ] 9.5 - Verify theme hydration, keyboard use, settings scope, and no accent control
+[ ] 10.0 - Integration, review, and shipping
+    [ ] 10.1 - Run type-check, lint, unit, focused E2E, and visual suites
+    [ ] 10.2 - Run deterministic full dynasty lifecycle E2E
+    [ ] 10.3 - Independently review authorization, invariants, idempotency, a11y, and responsive behavior
+    [ ] 10.4 - Open and ship one PR per child issue with Closes references
+    [ ] 10.5 - Close epic #523 after all child issues merge
+    [ ] 10.6 - On merge: move docs/WSM-000235-IMPLEMENTATION_PLAN.md + docs/WSM-000235-progress.txt to docs/archive/
