@@ -71,4 +71,11 @@ describe("simulateScore", () => {
     expect(seedFromString("fixture_1")).toBe(seedFromString("fixture_1"));
     expect(seedFromString("fixture_1")).not.toBe(seedFromString("fixture_2"));
   });
+
+  it("matches legacy output when flavor is omitted or balanced", () => {
+    const input = { homeStrength: 70, awayStrength: 60, seed: 42 };
+    const legacy = simulateScore(input);
+    const explicit = simulateScore({ ...input, flavor: "balanced" });
+    expect(explicit).toEqual(legacy);
+  });
 });

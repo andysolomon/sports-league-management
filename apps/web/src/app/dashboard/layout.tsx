@@ -8,6 +8,7 @@ import { CommandPalette } from "./_components/command-palette";
 import { CommandTrigger } from "./_components/command-trigger";
 import { Breadcrumbs } from "./_components/breadcrumbs";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DensityToggle } from "@/components/density-toggle";
 import { resolveActiveLeague } from "@/lib/active-league";
 
 export default async function DashboardLayout({
@@ -45,6 +46,7 @@ export default async function DashboardLayout({
             <CommandTrigger />
           </div>
           <div className="flex items-center gap-2">
+            <DensityToggle />
             <ThemeToggle />
             <UserButton />
           </div>

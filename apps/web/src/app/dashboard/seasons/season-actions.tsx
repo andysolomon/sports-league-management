@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { SeasonDto } from "@sports-management/shared-types";
+import type { SeasonDto, SimulationFlavor } from "@sports-management/shared-types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,6 +48,23 @@ function nullableDate(value: string): string | null {
 /** Standard playoff field sizes for new seasons (WSM-000241). */
 const PLAYOFF_TEAM_OPTIONS = [4, 8, 16] as const;
 
+const SIMULATION_FLAVOR_OPTIONS: {
+  value: SimulationFlavor;
+  label: string;
+}[] = [
+  { value: "balanced", label: "Balanced" },
+  { value: "chalk", label: "Chalk (favorites)" },
+  { value: "upsets", label: "Upsets" },
+];
+
+function playoffTeamOptions(current: number): number[] {
+  const base = [0, ...PLAYOFF_TEAM_OPTIONS];
+  if (current > 0 && !PLAYOFF_TEAM_OPTIONS.includes(current as 4 | 8 | 16)) {
+    return [...base, current];
+  }
+  return base;
+}
+
 /** Playoff setup fields shared by the create + edit season forms (WSM-000184,
  *  WSM-flex-brackets: bye-friendly counts + single/double elimination). */
 function PlayoffConfigFields({
@@ -57,6 +74,9 @@ function PlayoffConfigFields({
   setPlayoffFormat,
   divisionWinnersQualify,
   setDivisionWinnersQualify,
+  simulationFlavor,
+  setSimulationFlavor,
+  playoffTeamChoices,
 }: {
   playoffTeams: number;
   setPlayoffTeams: (n: number) => void;
@@ -64,7 +84,12 @@ function PlayoffConfigFields({
   setPlayoffFormat: (f: string) => void;
   divisionWinnersQualify: boolean;
   setDivisionWinnersQualify: (b: boolean) => void;
+  simulationFlavor: SimulationFlavor;
+  setSimulationFlavor: (f: SimulationFlavor) => void;
+  playoffTeamChoices?: number[];
 }) {
+  const teamOptions = playoffTeamChoices ?? playoffTeamOptions(playoffTeams);
+
   return (
     <>
       <label className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -75,10 +100,9 @@ function PlayoffConfigFields({
           onChange={(e) => setPlayoffTeams(Number(e.target.value))}
           aria-label="Number of playoff teams"
         >
-          <option value={0}>None</option>
-          {PLAYOFF_TEAM_OPTIONS.map((n) => (
+          {teamOptions.map((n) => (
             <option key={n} value={n}>
-              {n} teams
+              {n === 0 ? "None" : `${n} teams`}
             </option>
           ))}
         </select>
@@ -94,6 +118,21 @@ function PlayoffConfigFields({
         >
           <option value="single">Single elimination</option>
           <option value="double">Double elimination</option>
+        </select>
+      </label>
+      <label className="flex items-center gap-1 text-xs text-muted-foreground">
+        Simulation
+        <select
+          className={inputClass}
+          value={simulationFlavor}
+          onChange={(e) => setSimulationFlavor(e.target.value as SimulationFlavor)}
+          aria-label="Simulation flavor"
+        >
+          {SIMULATION_FLAVOR_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
         </select>
       </label>
       <label className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -117,6 +156,8 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
   const [playoffTeams, setPlayoffTeams] = useState(8);
   const [playoffFormat, setPlayoffFormat] = useState("single");
   const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(false);
+  const [simulationFlavor, setSimulationFlavor] =
+    useState<SimulationFlavor>("balanced");
   const [busy, setBusy] = useState(false);
   /** Name of the season just created; non-null switches the dialog to its success state. */
   const [createdName, setCreatedName] = useState<string | null>(null);
@@ -128,6 +169,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
     setPlayoffTeams(8);
     setPlayoffFormat("single");
     setDivisionWinnersQualify(false);
+    setSimulationFlavor("balanced");
     setCreatedName(null);
   }
 
@@ -148,6 +190,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
       playoffTeams,
       playoffFormat,
       divisionWinnersQualify,
+      simulationFlavor,
     });
     setBusy(false);
     if (res.ok) {
@@ -248,6 +291,26 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="season-simulation-flavor">Simulation flavor</Label>
+                <Select
+                  value={simulationFlavor}
+                  onValueChange={(v) =>
+                    setSimulationFlavor(v as SimulationFlavor)
+                  }
+                >
+                  <SelectTrigger id="season-simulation-flavor">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SIMULATION_FLAVOR_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <label className="flex items-center gap-2 text-sm text-foreground">
                 <input
@@ -388,6 +451,9 @@ export function SeasonRowActions({
   const [divisionWinnersQualify, setDivisionWinnersQualify] = useState(
     season.divisionWinnersQualify ?? false,
   );
+  const [simulationFlavor, setSimulationFlavor] = useState<SimulationFlavor>(
+    season.simulationFlavor ?? "balanced",
+  );
   const [busy, setBusy] = useState(false);
   const [activateWarningOpen, setActivateWarningOpen] = useState(false);
   const [completeStep, setCompleteStep] = useState<"complete" | "force" | null>(null);
@@ -462,12 +528,17 @@ export function SeasonRowActions({
       playoffTeams,
       playoffFormat,
       divisionWinnersQualify,
+      simulationFlavor,
     });
     setBusy(false);
     if (res.ok) {
       toast.success("Season updated.");
       setEditing(false);
       router.refresh();
+    } else if (res.error === "playoff_teams_locked") {
+      toast.error("Playoff team count can't change after a bracket exists.");
+    } else if (res.error === "invalid_playoff_teams") {
+      toast.error("Playoff team count must be none, 4, 8, or 16.");
     } else {
       toast.error(res.error === "not_admin" ? "Only league admins can edit seasons." : res.error);
     }
@@ -520,6 +591,9 @@ export function SeasonRowActions({
           setPlayoffFormat={setPlayoffFormat}
           divisionWinnersQualify={divisionWinnersQualify}
           setDivisionWinnersQualify={setDivisionWinnersQualify}
+          simulationFlavor={simulationFlavor}
+          setSimulationFlavor={setSimulationFlavor}
+          playoffTeamChoices={playoffTeamOptions(season.playoffTeams ?? 8)}
         />
         <Button size="sm" disabled={busy} onClick={save}>
           {busy ? "…" : "Save"}

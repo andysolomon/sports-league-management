@@ -9,6 +9,7 @@ import Sidebar from "./sidebar";
 import { LeagueSwitcher } from "./league-switcher";
 import { CommandTrigger } from "./command-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DensityToggle } from "@/components/density-toggle";
 
 interface LeagueOption {
   id: string;
@@ -43,6 +44,7 @@ export default function MobileHeader({
       )}
       <div className="flex items-center gap-1">
         <CommandTrigger variant="icon" />
+        <DensityToggle />
         <ThemeToggle />
         <UserButton />
       </div>

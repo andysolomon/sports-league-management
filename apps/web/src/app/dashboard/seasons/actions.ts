@@ -39,6 +39,7 @@ export async function createSeasonAction(input: {
   playoffTeams?: number;
   playoffFormat?: string;
   divisionWinnersQualify?: boolean;
+  simulationFlavor?: string;
 }): Promise<Result<{ id: string }>> {
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Season name is required." };
@@ -61,6 +62,7 @@ export async function createSeasonAction(input: {
       playoffTeams: input.playoffTeams,
       playoffFormat: input.playoffFormat ?? "single",
       divisionWinnersQualify: input.divisionWinnersQualify,
+      simulationFlavor: input.simulationFlavor,
     });
     revalidatePath("/dashboard/seasons");
     return { ok: true, id: dto.id };
@@ -80,6 +82,7 @@ export async function updateSeasonAction(input: {
   playoffTeams?: number;
   playoffFormat?: string;
   divisionWinnersQualify?: boolean;
+  simulationFlavor?: string;
 }): Promise<Result> {
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Season name is required." };
@@ -96,13 +99,21 @@ export async function updateSeasonAction(input: {
       playoffTeams: input.playoffTeams,
       playoffFormat: input.playoffFormat,
       divisionWinnersQualify: input.divisionWinnersQualify,
+      simulationFlavor: input.simulationFlavor,
     });
     revalidatePath("/dashboard/seasons");
     return { ok: true };
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("playoff_teams_locked")) {
+      return { ok: false, error: "playoff_teams_locked" };
+    }
+    if (message.includes("invalid_playoff_teams")) {
+      return { ok: false, error: "invalid_playoff_teams" };
+    }
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "Could not update season.",
+      error: message || "Could not update season.",
     };
   }
 }

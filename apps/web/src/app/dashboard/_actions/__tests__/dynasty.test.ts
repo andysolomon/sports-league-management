@@ -79,6 +79,7 @@ const ACTIVE = {
   playoffTeams: 8,
   playoffFormat: "single",
   divisionWinnersQualify: false,
+  simulationFlavor: "balanced" as const,
 };
 const completedSummary = {
   sourceSeason: { id: ACTIVE.id, name: ACTIVE.name },

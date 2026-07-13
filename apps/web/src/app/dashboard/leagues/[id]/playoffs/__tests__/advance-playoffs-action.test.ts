@@ -56,6 +56,7 @@ const ACTIVE_SEASON = {
   playoffTeams: 8,
   playoffFormat: "single",
   divisionWinnersQualify: false,
+  simulationFlavor: "balanced" as const,
 };
 
 function authorize() {

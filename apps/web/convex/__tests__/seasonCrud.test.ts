@@ -101,6 +101,70 @@ describe("season CRUD (WSM-000126)", () => {
     expect(dto?.name).toBe("Fall 2026");
     expect(dto?.startDate).toBe("2026-09-01");
     expect(dto?.status).toBe("active");
+    expect(dto?.simulationFlavor).toBe("balanced");
+  });
+
+  it("rejects invalid playoff team counts on update", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "active");
+
+    await expect(
+      t.mutation(internal.sports.updateSeason, {
+        seasonId,
+        name: "2026",
+        startDate: null,
+        endDate: null,
+        playoffTeams: 6,
+      }),
+    ).rejects.toThrow("invalid_playoff_teams");
+  });
+
+  it("rejects playoff team count changes after a bracket exists", async () => {
+    const t = convexTest(schema, modules);
+    const { leagueId, seasonId } = await seedLeagueWithSeason(t, "active");
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("playoffBrackets", {
+        seasonId,
+        leagueId,
+        size: 8,
+        rounds: 3,
+        createdAt: "2026-01-01",
+        createdBy: "actor",
+        format: "single",
+        teamCount: 8,
+      });
+      await ctx.db.patch(seasonId, { playoffTeams: 8 });
+    });
+
+    await expect(
+      t.mutation(internal.sports.updateSeason, {
+        seasonId,
+        name: "2026",
+        startDate: null,
+        endDate: null,
+        playoffTeams: 16,
+      }),
+    ).rejects.toThrow("playoff_teams_locked");
+  });
+
+  it("allows keeping a legacy playoff size when unchanged", async () => {
+    const t = convexTest(schema, modules);
+    const { seasonId } = await seedLeagueWithSeason(t, "active");
+
+    await t.run((ctx) => ctx.db.patch(seasonId, { playoffTeams: 6 }));
+
+    const dto = await t.mutation(internal.sports.updateSeason, {
+      seasonId,
+      name: "Legacy size season",
+      startDate: null,
+      endDate: null,
+      playoffTeams: 6,
+      simulationFlavor: "upsets",
+    });
+
+    expect(dto?.playoffTeams).toBe(6);
+    expect(dto?.simulationFlavor).toBe("upsets");
   });
 
   it("claims exactly one upcoming rollover target for a completed source", async () => {

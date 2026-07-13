@@ -199,6 +199,7 @@ function toSeasonDto(doc: {
   playoffTeams?: number;
   playoffFormat?: string;
   divisionWinnersQualify?: boolean;
+  simulationFlavor?: string;
 }) {
   return {
     id: doc._id,
@@ -211,7 +212,36 @@ function toSeasonDto(doc: {
     playoffTeams: doc.playoffTeams ?? null,
     playoffFormat: doc.playoffFormat ?? null,
     divisionWinnersQualify: doc.divisionWinnersQualify ?? false,
+    simulationFlavor: normalizeSimulationFlavor(doc.simulationFlavor),
   };
+}
+
+function normalizeSimulationFlavor(
+  value: string | undefined,
+): "chalk" | "balanced" | "upsets" {
+  if (value === "chalk" || value === "upsets") return value;
+  return "balanced";
+}
+
+function isAllowedNewPlayoffTeamCount(count: number): boolean {
+  return count === 0 || count === 4 || count === 8 || count === 16;
+}
+
+async function assertPlayoffTeamsChangeAllowed(
+  ctx: MutationCtx,
+  seasonId: Id<"seasons">,
+  existing: number | undefined,
+  next: number | undefined,
+): Promise<void> {
+  if (next === undefined || next === existing) return;
+  const bracket = await ctx.db
+    .query("playoffBrackets")
+    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+    .first();
+  if (bracket) throw new Error("playoff_teams_locked");
+  if (!isAllowedNewPlayoffTeamCount(next)) {
+    throw new Error("invalid_playoff_teams");
+  }
 }
 
 function toRosterAssignmentDto(doc: {
@@ -736,6 +766,7 @@ export const listSeasons = queryGeneric({
       playoffTeams: v.optional(v.union(v.number(), v.null())),
       playoffFormat: v.optional(v.union(v.string(), v.null())),
       divisionWinnersQualify: v.optional(v.boolean()),
+      simulationFlavor: v.string(),
     }),
   ),
   handler: async (ctx, args) => {
@@ -765,6 +796,7 @@ export const getSeason = queryGeneric({
       playoffTeams: v.optional(v.union(v.number(), v.null())),
       playoffFormat: v.optional(v.union(v.string(), v.null())),
       divisionWinnersQualify: v.optional(v.boolean()),
+      simulationFlavor: v.string(),
     }),
     v.null(),
   ),
@@ -1920,6 +1952,7 @@ export const upsertSeason = internalMutationGeneric({
     playoffTeams: v.optional(v.number()),
     playoffFormat: v.optional(v.string()),
     divisionWinnersQualify: v.optional(v.boolean()),
+    simulationFlavor: v.optional(v.string()),
   },
   returns: v.object({
     dto: v.object({
@@ -1933,6 +1966,7 @@ export const upsertSeason = internalMutationGeneric({
       playoffTeams: v.optional(v.union(v.number(), v.null())),
       playoffFormat: v.optional(v.union(v.string(), v.null())),
       divisionWinnersQualify: v.optional(v.boolean()),
+      simulationFlavor: v.string(),
     }),
     created: v.boolean(),
   }),
@@ -1953,10 +1987,21 @@ export const upsertSeason = internalMutationGeneric({
         endDate: args.endDate,
         status: args.status,
       };
-      if (args.playoffTeams !== undefined) patch.playoffTeams = args.playoffTeams;
+      if (args.playoffTeams !== undefined) {
+        await assertPlayoffTeamsChangeAllowed(
+          ctx as MutationCtx,
+          existing._id,
+          existing.playoffTeams,
+          args.playoffTeams,
+        );
+        patch.playoffTeams = args.playoffTeams;
+      }
       if (args.playoffFormat !== undefined) patch.playoffFormat = args.playoffFormat;
       if (args.divisionWinnersQualify !== undefined) {
         patch.divisionWinnersQualify = args.divisionWinnersQualify;
+      }
+      if (args.simulationFlavor !== undefined) {
+        patch.simulationFlavor = normalizeSimulationFlavor(args.simulationFlavor);
       }
       await ctx.db.patch(existing._id, patch);
       return {
@@ -1969,13 +2014,23 @@ export const upsertSeason = internalMutationGeneric({
           playoffFormat: args.playoffFormat ?? existing.playoffFormat,
           divisionWinnersQualify:
             args.divisionWinnersQualify ?? existing.divisionWinnersQualify,
+          simulationFlavor:
+            args.simulationFlavor ?? existing.simulationFlavor,
         }),
         created: false,
       };
     }
 
+    if (
+      args.playoffTeams !== undefined &&
+      !isAllowedNewPlayoffTeamCount(args.playoffTeams)
+    ) {
+      throw new Error("invalid_playoff_teams");
+    }
+
     const seasonId = await ctx.db.insert("seasons", {
       ...args,
+      simulationFlavor: normalizeSimulationFlavor(args.simulationFlavor),
       rosterLocked: false,
     });
     return {
@@ -1990,6 +2045,7 @@ export const upsertSeason = internalMutationGeneric({
         playoffTeams: args.playoffTeams,
         playoffFormat: args.playoffFormat,
         divisionWinnersQualify: args.divisionWinnersQualify,
+        simulationFlavor: args.simulationFlavor,
       }),
       created: true,
     };
@@ -2009,6 +2065,7 @@ export const updateSeason = internalMutationGeneric({
     playoffTeams: v.optional(v.number()),
     playoffFormat: v.optional(v.string()),
     divisionWinnersQualify: v.optional(v.boolean()),
+    simulationFlavor: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
@@ -2022,12 +2079,21 @@ export const updateSeason = internalMutationGeneric({
       playoffTeams: v.optional(v.union(v.number(), v.null())),
       playoffFormat: v.optional(v.union(v.string(), v.null())),
       divisionWinnersQualify: v.optional(v.boolean()),
+      simulationFlavor: v.string(),
     }),
     v.null(),
   ),
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.seasonId);
     if (!existing) return null;
+    if (args.playoffTeams !== undefined) {
+      await assertPlayoffTeamsChangeAllowed(
+        ctx as MutationCtx,
+        args.seasonId,
+        existing.playoffTeams,
+        args.playoffTeams,
+      );
+    }
     const patch: Record<string, unknown> = {
       name: args.name,
       startDate: args.startDate,
@@ -2037,6 +2103,9 @@ export const updateSeason = internalMutationGeneric({
     if (args.playoffFormat !== undefined) patch.playoffFormat = args.playoffFormat;
     if (args.divisionWinnersQualify !== undefined) {
       patch.divisionWinnersQualify = args.divisionWinnersQualify;
+    }
+    if (args.simulationFlavor !== undefined) {
+      patch.simulationFlavor = normalizeSimulationFlavor(args.simulationFlavor);
     }
     await ctx.db.patch(args.seasonId, patch);
     return toSeasonDto({
@@ -2048,6 +2117,7 @@ export const updateSeason = internalMutationGeneric({
       playoffFormat: args.playoffFormat ?? existing.playoffFormat,
       divisionWinnersQualify:
         args.divisionWinnersQualify ?? existing.divisionWinnersQualify,
+      simulationFlavor: args.simulationFlavor ?? existing.simulationFlavor,
     });
   },
 });
@@ -2217,6 +2287,7 @@ export const beginSeasonRollover = internalMutationGeneric({
       playoffTeams: source.playoffTeams,
       playoffFormat: source.playoffFormat,
       divisionWinnersQualify: source.divisionWinnersQualify,
+      simulationFlavor: source.simulationFlavor,
     });
     const startedAt = new Date().toISOString();
     const rolloverId = await ctx.db.insert("seasonRollovers", {

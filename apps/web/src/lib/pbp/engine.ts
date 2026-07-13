@@ -1,4 +1,9 @@
 import { mulberry32 } from "@/lib/simulate-game";
+import {
+  DEFAULT_SIMULATION_FLAVOR,
+  normalizeSimulationFlavor,
+  weightsForFlavor,
+} from "@/lib/simulation-flavor";
 import type {
   PbpDrive,
   PbpDriveEndReason,
@@ -16,7 +21,6 @@ import type {
 const QUARTER_SECONDS = 720;
 const OT_SECONDS = 300;
 const HOME_FIELD_EDGE = 2.5;
-const STRENGTH_WEIGHT = 0.26;
 const BASELINE_STRENGTH = 50;
 
 const POSITION_TO_GROUP: Record<string, SimPositionGroup> = {
@@ -49,6 +53,8 @@ interface GameState {
   rand: () => number;
   home: TeamSimProfile;
   away: TeamSimProfile;
+  strengthWeight: number;
+  edgeScale: number;
   decisive: boolean;
   quarter: number;
   clockSeconds: number;
@@ -97,8 +103,9 @@ function effectiveStrength(
   team: TeamSimProfile,
   isHome: boolean,
   oppStrength: number,
+  strengthWeight: number,
 ): number {
-  const homeEdge = isHome ? HOME_FIELD_EDGE / STRENGTH_WEIGHT : 0;
+  const homeEdge = isHome ? HOME_FIELD_EDGE / strengthWeight : 0;
   return team.strength + (team.strength - oppStrength) * 0.15 + homeEdge;
 }
 
@@ -110,13 +117,15 @@ function matchupEdge(state: GameState): number {
     off,
     offIsHome,
     def.strength,
+    state.strengthWeight,
   );
   const defEff = effectiveStrength(
     def,
     !offIsHome,
     off.strength,
+    state.strengthWeight,
   );
-  return (offEff - defEff) / 99;
+  return ((offEff - defEff) / 99) * state.edgeScale;
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -777,11 +786,16 @@ function runScrimmagePlay(state: GameState): void {
 }
 
 function simulateGameLog(input: PbpGameInput): PbpGameLog {
+  const weights = weightsForFlavor(
+    normalizeSimulationFlavor(input.flavor ?? DEFAULT_SIMULATION_FLAVOR),
+  );
   const rand = mulberry32(input.seed >>> 0);
   const state: GameState = {
     rand,
     home: input.home,
     away: input.away,
+    strengthWeight: weights.strengthWeight,
+    edgeScale: weights.edgeScale,
     decisive: input.decisive ?? false,
     quarter: 1,
     clockSeconds: QUARTER_SECONDS,

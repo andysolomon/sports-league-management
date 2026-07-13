@@ -124,6 +124,7 @@ function authorize() {
     playoffTeams: 4,
     playoffFormat: "single",
     divisionWinnersQualify: false,
+    simulationFlavor: "balanced" as const,
   });
   mockSimulateAndPersistFixture.mockResolvedValue({
     homeScore: 21,
@@ -154,6 +155,7 @@ describe("simulateGameAction (PBP Slice B)", () => {
       actorUserId: USER,
       decisive: false,
       profileCache: expect.any(Map),
+      simulationFlavor: "balanced",
     });
   });
 });
@@ -358,6 +360,7 @@ describe("simulatePlayoffsAction", () => {
       decisive: true,
       profileCache: expect.any(Map),
       bulkStats: true,
+      simulationFlavor: "balanced",
     });
   });
 
@@ -534,6 +537,7 @@ describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
       playoffTeams: 6,
       playoffFormat: "single",
       divisionWinnersQualify: false,
+    simulationFlavor: "balanced" as const,
     });
     mockListFixturesBySeason.mockResolvedValue([
       fixture({ id: "reg", stage: "regular" }),
@@ -556,6 +560,7 @@ describe("simulateSeasonThroughChampionAction (WSM-000241)", () => {
       playoffTeams: 4,
       playoffFormat: "double",
       divisionWinnersQualify: false,
+    simulationFlavor: "balanced" as const,
     });
     mockListFixturesBySeason.mockResolvedValue([
       fixture({ id: "reg", stage: "regular" }),

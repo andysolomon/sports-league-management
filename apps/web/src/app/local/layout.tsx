@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { DensityToggle } from "@/components/density-toggle";
 import { LocalModeBanner } from "./_components/local-mode-banner";
 
 /**
@@ -21,6 +22,7 @@ export default function LocalLayout({
           sprtsmng <span className="text-muted-foreground">· local</span>
         </Link>
         <div className="flex items-center gap-2">
+          <DensityToggle />
           <ThemeToggle />
           <Button asChild size="sm">
             <Link href="/sign-up">Create a free account</Link>

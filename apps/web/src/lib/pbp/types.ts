@@ -27,6 +27,8 @@ export interface TeamSimProfile {
   players: PlayerSimProfile[];
 }
 
+import type { SimulationFlavor } from "@/lib/simulation-flavor";
+
 export interface PbpGameInput {
   home: TeamSimProfile;
   away: TeamSimProfile;
@@ -34,6 +36,8 @@ export interface PbpGameInput {
   seed: number;
   /** Playoff: overtime until no tie. */
   decisive?: boolean;
+  /** Season simulation flavor; `balanced` preserves legacy weighting. */
+  flavor?: SimulationFlavor;
 }
 
 export type PbpPlayType =
