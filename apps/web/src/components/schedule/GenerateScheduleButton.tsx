@@ -41,11 +41,13 @@ export default function GenerateScheduleButton({
   const [format, setFormat] = useState<ScheduleFormat>("single");
   const [pending, startTransition] = useTransition();
   const [confirmStep, setConfirmStep] = useState<ConfirmStep>(null);
+  const [lastConfirm, setLastConfirm] = useState(false);
   const [processOpen, setProcessOpen] = useState(false);
   const [processError, setProcessError] = useState<string | null>(null);
   const [stages, setStages] = useState(scheduleProcessStages("pending"));
 
-  function beginProcess() {
+  function beginProcess(confirm: boolean) {
+    setLastConfirm(confirm);
     setConfirmStep(null);
     setProcessOpen(true);
     setProcessError(null);
@@ -53,7 +55,7 @@ export default function GenerateScheduleButton({
   }
 
   function run(confirm: boolean) {
-    beginProcess();
+    beginProcess(confirm);
     startTransition(async () => {
       const res = await generateScheduleAction({
         leagueId,
@@ -104,7 +106,7 @@ export default function GenerateScheduleButton({
   }
 
   function retryProcess() {
-    run(confirmStep === "destructive");
+    run(lastConfirm);
   }
 
   const confirmCopy =

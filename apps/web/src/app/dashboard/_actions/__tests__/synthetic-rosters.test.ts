@@ -344,4 +344,35 @@ describe("fillDeficientRostersAction", () => {
       false,
     );
   });
+
+  it("fills to active non-graduated target when graduated players remain on the roster", async () => {
+    mockGetTeamsByLeague.mockResolvedValue([{ id: "t1", name: "Alpha" }]);
+    mockGetPlayers.mockResolvedValue([
+      ...Array.from({ length: 47 }, (_, index) => ({
+        id: `active-${index}`,
+        teamId: "t1",
+        status: "active",
+      })),
+      { id: "grad-1", teamId: "t1", status: "graduated" },
+    ]);
+    mockGetPlayersByTeam.mockResolvedValue([
+      ...Array.from({ length: 47 }, (_, index) => ({
+        id: `active-${index}`,
+        jerseyNumber: index,
+        status: "active",
+      })),
+      { id: "grad-1", jerseyNumber: 99, status: "graduated" },
+    ]);
+    mockBulkCreatePlayers.mockResolvedValue({ created: 1 });
+
+    const res = await fillDeficientRostersAction({ leagueId: LEAGUE });
+    expect(res).toEqual({
+      ok: true,
+      teamsFilled: 1,
+      created: 1,
+      fullTeamsUnchanged: 0,
+    });
+    expect(mockBulkCreatePlayers).toHaveBeenCalledTimes(1);
+    expect(mockBulkCreatePlayers.mock.calls[0]?.[1]).toHaveLength(1);
+  });
 });

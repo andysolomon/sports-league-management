@@ -159,7 +159,10 @@ async function fillTeamsToTarget(
 
   for (const teamId of teamIds) {
     const existing = await getPlayersByTeam(teamId, orgContext).catch(() => []);
-    const toCreate = Math.max(0, target - existing.length);
+    // Match deficit projection: count active (non-graduated) only for fill target.
+    // Still exclude jerseys/names from the full roster so graduated rows stay unique.
+    const activeCount = existing.filter((player) => player.status !== "graduated").length;
+    const toCreate = Math.max(0, target - activeCount);
     if (toCreate === 0) continue;
     const players = generateSyntheticRoster({
       count: toCreate,
@@ -275,7 +278,8 @@ export async function generateTeamRosterAction(input: {
   const target = Math.max(1, Math.min(input.count ?? DEFAULT_ROSTER_SIZE, MAX_ROSTER_SIZE));
   const orgContext = await resolveOrgContext(userId);
   const existing = await getPlayersByTeam(input.teamId, orgContext).catch(() => []);
-  const toCreate = Math.max(0, target - existing.length);
+  const activeCount = existing.filter((player) => player.status !== "graduated").length;
+  const toCreate = Math.max(0, target - activeCount);
   if (toCreate === 0) return { ok: true, created: 0 };
 
   const excludeNames = await leaguePlayerNames(leagueId, orgContext);
@@ -320,7 +324,8 @@ export async function generateLeagueRostersAction(input: {
   try {
     for (const team of teams) {
       const existing = await getPlayersByTeam(team.id, orgContext).catch(() => []);
-      const toCreate = Math.max(0, target - existing.length);
+      const activeCount = existing.filter((player) => player.status !== "graduated").length;
+      const toCreate = Math.max(0, target - activeCount);
       if (toCreate === 0) continue;
       const players = generateSyntheticRoster({
         count: toCreate,
