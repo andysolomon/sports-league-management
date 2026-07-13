@@ -416,11 +416,11 @@ export function CopyRostersButton({ season }: { season: SeasonDto }) {
 
 export function SeasonRowActions({
   season,
-  seasonDecided = false,
+  championDecided = false,
   undersizedTeams = [],
 }: {
   season: SeasonDto;
-  seasonDecided?: boolean;
+  championDecided?: boolean;
   undersizedTeams?: UndersizedTeam[];
 }) {
   const router = useRouter();
@@ -497,7 +497,7 @@ export function SeasonRowActions({
   }
 
   function complete() {
-    setCompleteStep(seasonDecided ? "complete" : "force");
+    setCompleteStep(championDecided ? "complete" : "force");
   }
 
   async function save() {

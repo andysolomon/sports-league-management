@@ -27,7 +27,7 @@ export function sortSeasons<T extends Pick<SeasonDto, "status" | "name" | "start
 export interface SeasonArchiveMeta {
   gamesFinal: number;
   gamesTotal: number;
-  seasonDecided: boolean;
+  championDecided: boolean;
   leader: {
     teamName: string;
     wins: number;

@@ -21,7 +21,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Calendar, Trophy } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { isSeasonDecided } from "@/lib/dynasty";
+import { isChampionDecided } from "@/lib/dynasty";
 import {
   formatSeasonRecord,
   sortSeasons,
@@ -47,7 +47,7 @@ async function fetchSeasonArchive(seasonId: string): Promise<SeasonArchiveMeta> 
   return {
     gamesFinal,
     gamesTotal,
-    seasonDecided: isSeasonDecided(fixtures, bracket),
+    championDecided: isChampionDecided(bracket),
     leader: leaderRow
       ? {
           teamName: leaderRow.teamName,
@@ -229,8 +229,9 @@ export default async function SeasonsPage() {
                           </div>
                           <SeasonRowActions
                             season={season}
-                            seasonDecided={
-                              seasonArchives.get(season.id)?.seasonDecided ?? false
+                            championDecided={
+                              seasonArchives.get(season.id)?.championDecided ??
+                              false
                             }
                             undersizedTeams={undersizedBySeason.get(season.id) ?? []}
                           />

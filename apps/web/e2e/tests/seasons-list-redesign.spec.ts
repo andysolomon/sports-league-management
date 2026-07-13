@@ -34,12 +34,17 @@ test.describe("Seasons list redesign — canonical rows (WSM-000255)", () => {
       has: page.getByText(LEAGUES.NFL),
     });
     const rows = nflCard.locator('[data-testid="season-row"]');
-    const names = await rows
-      .locator('a[href^="/dashboard/seasons/"]')
-      .allTextContents();
+    const nameLinks = rows.locator('a[href^="/dashboard/seasons/"]');
+    // allTextContents() does not auto-wait — anchor on the seeded rows first.
+    await expect(nameLinks.filter({ hasText: SEASONS.NFL_2024.name })).toBeVisible();
+    const names = await nameLinks.allTextContents();
 
-    expect(names[0]).toContain(SEASONS.NFL_2025.name);
-    expect(names[1]).toContain(SEASONS.NFL_2024.name);
+    // Other specs may leave extra upcoming seasons in the canonical league;
+    // assert the active season leads and precedes the completed one.
+    const active = names.findIndex((n) => n.includes(SEASONS.NFL_2025.name));
+    const completed = names.findIndex((n) => n.includes(SEASONS.NFL_2024.name));
+    expect(active).toBe(0);
+    expect(completed).toBeGreaterThan(active);
 
     const activeRow = rows.filter({ hasText: SEASONS.NFL_2025.name });
     await expect(activeRow.getByText(SEASONS.NFL_2025.status, { exact: true })).toBeVisible();
@@ -116,7 +121,12 @@ test.describe("Seasons list redesign — lifecycle actions (WSM-000255)", () => 
     await startNextSeason(page);
     const upcomingLink = page.getByRole("link", { name: /View E2E Season/ });
     await expect(upcomingLink).toBeVisible({ timeout: 60_000 });
-    upcomingSeasonName = (await upcomingLink.textContent())?.replace(/^View /, "") ?? null;
+    // Link text is "View {name} →" — strip both the prefix and the arrow.
+    upcomingSeasonName =
+      (await upcomingLink.textContent())
+        ?.replace(/^View /, "")
+        .replace(/\s*→\s*$/, "")
+        .trim() ?? null;
     await context.close();
   });
 
