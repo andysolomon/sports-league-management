@@ -58,6 +58,8 @@ import {
   generateLeagueRostersAction,
   clearTeamSyntheticAction,
   clearLeagueSyntheticAction,
+  getLeagueRosterDeficitAction,
+  fillDeficientRostersAction,
 } from "../synthetic-rosters";
 
 const TEAM = "team_1";
@@ -201,5 +203,145 @@ describe("clearLeagueSyntheticAction", () => {
     const res = await clearLeagueSyntheticAction({ leagueId: LEAGUE });
     expect(res).toEqual({ ok: true, teams: 2, deleted: 20 });
     expect(mockClearSyntheticPlayers).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("getLeagueRosterDeficitAction", () => {
+  beforeEach(() => {
+    mockGetTeamsByLeague.mockResolvedValue([
+      { id: "t1", name: "Alpha" },
+      { id: "t2", name: "Beta" },
+    ]);
+    mockGetPlayers.mockResolvedValue([
+      { id: "p1", teamId: "t1", status: "active" },
+      { id: "p2", teamId: "t2", status: "active" },
+    ]);
+  });
+
+  it("returns only deficient teams with target size", async () => {
+    const res = await getLeagueRosterDeficitAction({ leagueId: LEAGUE });
+    expect(res).toEqual({
+      ok: true,
+      target: 48,
+      teams: [
+        {
+          id: "t1",
+          name: "Alpha",
+          activeCount: 1,
+          target: 48,
+          deficit: 47,
+        },
+        {
+          id: "t2",
+          name: "Beta",
+          activeCount: 1,
+          target: 48,
+          deficit: 47,
+        },
+      ],
+    });
+  });
+
+  it("rejects viewers without visible league access", async () => {
+    mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [], orgIds: [] });
+    expect(await getLeagueRosterDeficitAction({ leagueId: LEAGUE })).toEqual({
+      ok: false,
+      error: "not_authorized",
+    });
+  });
+});
+
+describe("fillDeficientRostersAction", () => {
+  beforeEach(() => {
+    mockGetLeagueOrgId.mockResolvedValue(ORG);
+    mockResolveOrgRole.mockResolvedValue("admin");
+    mockGetTeamsByLeague.mockResolvedValue([
+      { id: "t1", name: "Alpha" },
+      { id: "t2", name: "Beta" },
+      { id: "t3", name: "Gamma" },
+    ]);
+    mockGetPlayers.mockResolvedValue([
+      { id: "p1", teamId: "t1", status: "active" },
+      { id: "p2", teamId: "t2", status: "active" },
+      { id: "p3", teamId: "t3", status: "active" },
+      ...Array.from({ length: 48 }, (_, index) => ({
+        id: `full-${index}`,
+        teamId: "t3",
+        status: "active",
+      })),
+    ]);
+    mockGetPlayersByTeam.mockImplementation(async (teamId: string) => {
+      if (teamId === "t3") {
+        return Array.from({ length: 48 }, (_, index) => ({
+          id: `full-${index}`,
+          jerseyNumber: index,
+        }));
+      }
+      return [{ id: `player-${teamId}`, jerseyNumber: 1 }];
+    });
+    mockBulkCreatePlayers.mockResolvedValue({ created: 47 });
+  });
+
+  it("fills all deficient teams for admins", async () => {
+    const res = await fillDeficientRostersAction({ leagueId: LEAGUE });
+    expect(res).toEqual({
+      ok: true,
+      teamsFilled: 2,
+      created: 94,
+      fullTeamsUnchanged: 1,
+    });
+    expect(mockBulkCreatePlayers).toHaveBeenCalledTimes(2);
+    expect(mockBulkCreatePlayers.mock.calls.map(([teamId]) => teamId)).toEqual([
+      "t1",
+      "t2",
+    ]);
+  });
+
+  it("fills only managed deficient teams for coaches", async () => {
+    mockResolveOrgRole.mockResolvedValue("coach");
+    mockCanManageTeam.mockImplementation(async (teamId: string) => teamId === "t1");
+
+    const res = await fillDeficientRostersAction({ leagueId: LEAGUE });
+    expect(res).toEqual({
+      ok: true,
+      teamsFilled: 1,
+      created: 47,
+      fullTeamsUnchanged: 1,
+    });
+    expect(mockBulkCreatePlayers).toHaveBeenCalledTimes(1);
+    expect(mockBulkCreatePlayers.mock.calls[0]?.[0]).toBe("t1");
+  });
+
+  it("rejects coaches who cannot manage any deficient team", async () => {
+    mockResolveOrgRole.mockResolvedValue("coach");
+    mockCanManageTeam.mockResolvedValue(false);
+
+    expect(await fillDeficientRostersAction({ leagueId: LEAGUE })).toEqual({
+      ok: false,
+      error: "not_authorized",
+    });
+    expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
+  });
+
+  it("rejects viewers", async () => {
+    mockResolveOrgRole.mockResolvedValue("viewer");
+    mockCanManageTeam.mockResolvedValue(false);
+
+    expect(await fillDeficientRostersAction({ leagueId: LEAGUE })).toEqual({
+      ok: false,
+      error: "not_authorized",
+    });
+    expect(mockBulkCreatePlayers).not.toHaveBeenCalled();
+  });
+
+  it("leaves full team player IDs unchanged", async () => {
+    await fillDeficientRostersAction({ leagueId: LEAGUE });
+    const fullTeamCalls = mockGetPlayersByTeam.mock.calls.filter(
+      ([teamId]) => teamId === "t3",
+    );
+    expect(fullTeamCalls.length).toBeGreaterThan(0);
+    expect(mockBulkCreatePlayers.mock.calls.some(([teamId]) => teamId === "t3")).toBe(
+      false,
+    );
   });
 });

@@ -25,6 +25,12 @@ import {
 import { generateSyntheticAttributes } from "@/lib/synthetic-attributes";
 import { isSeasonStarted } from "@/lib/season-started";
 import { resolveLifecycleSeason } from "@/lib/season-view";
+import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
+import {
+  activeRosterCountByTeam,
+  buildLeagueRosterDeficitProjection,
+  type UndersizedTeamWithDeficit,
+} from "@/lib/roster-deficit";
 
 /*
  * Synthetic-roster generation (WSM-000173) — fills demo/test rosters with fake
@@ -34,8 +40,21 @@ import { resolveLifecycleSeason } from "@/lib/season-view";
  * (the generator never uses real data).
  */
 
-const DEFAULT_ROSTER_SIZE = 48;
+const DEFAULT_ROSTER_SIZE = DEFAULT_TARGET_ROSTER_SIZE;
 const MAX_ROSTER_SIZE = 60;
+
+type DeficitProjectionResult =
+  | { ok: true; target: number; teams: UndersizedTeamWithDeficit[] }
+  | { ok: false; error: string };
+
+type FillDeficientResult =
+  | {
+      ok: true;
+      teamsFilled: number;
+      created: number;
+      fullTeamsUnchanged: number;
+    }
+  | { ok: false; error: string };
 
 type TeamResult = { ok: true; created: number } | { ok: false; error: string };
 type LeagueResult =
@@ -106,6 +125,136 @@ function buildAttributeRows(
       weightedOverall: snapshot.weightedOverall,
     };
   });
+}
+
+/** Bounded league roster-deficit projection — deficient teams only (WSM-000242). */
+export async function getLeagueRosterDeficitAction(input: {
+  leagueId: string;
+}): Promise<DeficitProjectionResult> {
+  if (!(await syntheticRostersV1())) return { ok: false, error: "flag_disabled" };
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const orgContext = await resolveOrgContext(userId);
+  if (!orgContext.visibleLeagueIds.includes(input.leagueId)) {
+    return { ok: false, error: "not_authorized" };
+  }
+
+  const teams = await getTeamsByLeague(input.leagueId, orgContext).catch(() => []);
+  const players = await getPlayers([input.leagueId]).catch(() => []);
+  const countByTeam = activeRosterCountByTeam(players);
+  return { ok: true, ...buildLeagueRosterDeficitProjection(teams, countByTeam) };
+}
+
+async function fillTeamsToTarget(
+  teamIds: string[],
+  leagueId: string,
+  orgContext: Awaited<ReturnType<typeof resolveOrgContext>>,
+  target: number,
+): Promise<{ teamsFilled: number; created: number }> {
+  const excludeNames = await leaguePlayerNames(leagueId, orgContext);
+  const usedNames = new Set(excludeNames);
+  let created = 0;
+  let teamsFilled = 0;
+
+  for (const teamId of teamIds) {
+    const existing = await getPlayersByTeam(teamId, orgContext).catch(() => []);
+    const toCreate = Math.max(0, target - existing.length);
+    if (toCreate === 0) continue;
+    const players = generateSyntheticRoster({
+      count: toCreate,
+      excludeJerseys: existingJerseys(existing),
+      excludeNames: Array.from(usedNames),
+      seed: seedFromString(teamId) + existing.length,
+    });
+    for (const player of players) usedNames.add(player.name);
+    const res = await bulkCreatePlayers(teamId, players);
+    created += res.created;
+    teamsFilled += 1;
+  }
+
+  return { teamsFilled, created };
+}
+
+/** Auto-fill only deficient teams — admin fills all; coach fills managed teams (WSM-000242). */
+export async function fillDeficientRostersAction(input: {
+  leagueId: string;
+}): Promise<FillDeficientResult> {
+  if (!(await syntheticRostersV1())) return { ok: false, error: "flag_disabled" };
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const seasonGuard = await assertSeasonNotStarted(input.leagueId);
+  if (!seasonGuard.ok) return seasonGuard;
+
+  const orgId = await getLeagueOrgId(input.leagueId);
+  const role = orgId ? await resolveOrgRole(orgId, userId) : null;
+  const isAdmin = canManageOrgSettings(role);
+
+  const orgContext = await resolveOrgContext(userId);
+  if (!orgContext.visibleLeagueIds.includes(input.leagueId)) {
+    return { ok: false, error: "not_authorized" };
+  }
+
+  const teams = await getTeamsByLeague(input.leagueId, orgContext).catch(() => []);
+  const players = await getPlayers([input.leagueId]).catch(() => []);
+  const countByTeam = activeRosterCountByTeam(players);
+  const projection = buildLeagueRosterDeficitProjection(teams, countByTeam);
+  const fullTeamIds = teams
+    .filter((team) => (countByTeam.get(team.id) ?? 0) >= projection.target)
+    .map((team) => team.id);
+  const fullTeamPlayerIdsBefore = new Map<string, string[]>();
+  for (const teamId of fullTeamIds) {
+    const roster = await getPlayersByTeam(teamId, orgContext).catch(() => []);
+    fullTeamPlayerIdsBefore.set(
+      teamId,
+      roster.map((player) => player.id).sort(),
+    );
+  }
+
+  let teamIdsToFill: string[];
+  if (isAdmin) {
+    teamIdsToFill = projection.teams.map((team) => team.id);
+  } else {
+    const manageable: string[] = [];
+    for (const team of projection.teams) {
+      if (await canManageTeam(team.id, userId)) {
+        manageable.push(team.id);
+      }
+    }
+    if (manageable.length === 0) {
+      return { ok: false, error: "not_authorized" };
+    }
+    teamIdsToFill = manageable;
+  }
+
+  try {
+    const { teamsFilled, created } = await fillTeamsToTarget(
+      teamIdsToFill,
+      input.leagueId,
+      orgContext,
+      projection.target,
+    );
+
+    for (const teamId of fullTeamIds) {
+      const roster = await getPlayersByTeam(teamId, orgContext).catch(() => []);
+      const afterIds = roster.map((player) => player.id).sort();
+      const beforeIds = fullTeamPlayerIdsBefore.get(teamId) ?? [];
+      if (afterIds.join(",") !== beforeIds.join(",")) {
+        throw new Error("full_roster_mutated");
+      }
+    }
+
+    revalidatePath(`/dashboard/leagues/${input.leagueId}`);
+    return {
+      ok: true,
+      teamsFilled,
+      created,
+      fullTeamsUnchanged: fullTeamIds.length,
+    };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export async function generateTeamRosterAction(input: {

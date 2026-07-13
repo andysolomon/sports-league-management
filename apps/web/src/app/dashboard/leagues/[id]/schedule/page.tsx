@@ -18,6 +18,7 @@ import {
   getGamePlayLog,
   getPlayoffBracket,
   getTeamsByLeague,
+  getPlayers,
   listFixturesBySeason,
   computeStandings,
   type PublicGameStream,
@@ -52,6 +53,12 @@ import ScheduleWeeks, {
 import { ScheduleFixtureRow } from "@/components/schedule/ScheduleFixtureRow";
 import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
 import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
+import { UndersizedRosterPanel } from "@/components/roster/UndersizedRosterPanel";
+import {
+  activeRosterCountByTeam,
+  buildLeagueRosterDeficitProjection,
+} from "@/lib/roster-deficit";
+import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
 import { Button } from "@/components/ui/button";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveLifecycleSeason, resolveViewedSeason } from "@/lib/season-view";
@@ -123,6 +130,15 @@ export default async function LeagueSchedulePage({
   const canGenerateRosters = rosterGenEnabled && !seasonCompleted;
 
   const teams = await getTeamsByLeague(leagueId, orgContext);
+  const leaguePlayers = canGenerateRosters
+    ? await getPlayers([leagueId]).catch(() => [])
+    : [];
+  const rosterDeficit = canGenerateRosters
+    ? buildLeagueRosterDeficitProjection(
+        teams,
+        activeRosterCountByTeam(leaguePlayers),
+      )
+    : { target: DEFAULT_TARGET_ROSTER_SIZE, teams: [] };
 
   const fixtures = activeSeason
     ? await listFixturesBySeason(activeSeason.id)
@@ -320,6 +336,17 @@ export default async function LeagueSchedulePage({
         }
       />
       <WorkspaceNav links={peerNavLinks} />
+
+      {canGenerateRosters && rosterDeficit.teams.length > 0 ? (
+        <div className="mb-6">
+          <UndersizedRosterPanel
+            leagueId={leagueId}
+            target={rosterDeficit.target}
+            undersizedTeams={rosterDeficit.teams}
+            canAutoFill={!seasonStarted}
+          />
+        </div>
+      ) : null}
 
       {handoff !== "hidden" && activeSeason ? (
         <Card className="mb-6" data-testid="playoff-handoff">

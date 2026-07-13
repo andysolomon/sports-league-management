@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { Sparkles, Trash2, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
+import { ProcessDialog } from "@/components/lifecycle/ProcessDialog";
 import {
   generateTeamRosterAction,
   generateLeagueRostersAction,
@@ -14,6 +14,12 @@ import {
   generateTeamAttributesAction,
   generateLeagueAttributesAction,
 } from "@/app/dashboard/_actions/synthetic-rosters";
+import {
+  rosterAttributesProcessStages,
+  rosterClearProcessStages,
+  rosterGenerateProcessStages,
+} from "@/lib/process-stages";
+import type { ProcessStage } from "@/components/lifecycle/ProcessDialog";
 
 /*
  * Generate or clear synthetic (fake) players for testing/demos (WSM-000173).
@@ -39,78 +45,93 @@ export function SyntheticRosterButton({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [processOpen, setProcessOpen] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
+  const [stages, setStages] = useState<ProcessStage[]>(
+    initialStages(action, kind),
+  );
+
+  function beginProcess() {
+    setConfirmOpen(false);
+    setProcessOpen(true);
+    setProcessError(null);
+    setStages(initialStages(action, kind));
+  }
 
   function run() {
+    beginProcess();
     start(async () => {
       if (action === "attributes" && kind === "team") {
         const res = await generateTeamAttributesAction({ teamId: id });
         if (!res.ok) {
-          toast.error(errorLabel(res.error));
+          setStages(rosterAttributesProcessStages("error", kind));
+          setProcessError(errorLabel(res.error));
           return;
         }
-        toast.success(
-          res.rated === 0
-            ? "No players to rate yet — generate a roster first."
-            : `Generated ratings for ${res.rated} player${res.rated === 1 ? "" : "s"}.`,
+        setStages(
+          rosterAttributesProcessStages("success", kind, { rated: res.rated }),
         );
       } else if (action === "attributes") {
         const res = await generateLeagueAttributesAction({ leagueId: id });
         if (!res.ok) {
-          toast.error(errorLabel(res.error));
+          setStages(rosterAttributesProcessStages("error", kind));
+          setProcessError(errorLabel(res.error));
           return;
         }
-        toast.success(
-          res.rated === 0
-            ? "No players to rate yet — generate rosters first."
-            : `Generated ratings for ${res.rated} player${res.rated === 1 ? "" : "s"} across ${res.teams} team${res.teams === 1 ? "" : "s"}.`,
+        setStages(
+          rosterAttributesProcessStages("success", kind, {
+            rated: res.rated,
+            teams: res.teams,
+          }),
         );
       } else if (action === "generate" && kind === "team") {
         const res = await generateTeamRosterAction({ teamId: id });
         if (!res.ok) {
-          toast.error(errorLabel(res.error));
+          setStages(rosterGenerateProcessStages("error", kind));
+          setProcessError(errorLabel(res.error));
           return;
         }
-        toast.success(
-          res.created === 0
-            ? "Roster already full — nothing to add."
-            : `Added ${res.created} synthetic player${res.created === 1 ? "" : "s"}.`,
+        setStages(
+          rosterGenerateProcessStages("success", kind, { created: res.created }),
         );
       } else if (action === "generate") {
         const res = await generateLeagueRostersAction({ leagueId: id });
         if (!res.ok) {
-          toast.error(errorLabel(res.error));
+          setStages(rosterGenerateProcessStages("error", kind));
+          setProcessError(errorLabel(res.error));
           return;
         }
-        toast.success(
-          res.created === 0
-            ? "All rosters already full — nothing to add."
-            : `Added ${res.created} players across ${res.teams} team${res.teams === 1 ? "" : "s"}.`,
+        setStages(
+          rosterGenerateProcessStages("success", kind, {
+            created: res.created,
+            teams: res.teams,
+          }),
         );
       } else if (kind === "team") {
         const res = await clearTeamSyntheticAction({ teamId: id });
         if (!res.ok) {
-          toast.error(errorLabel(res.error));
+          setStages(rosterClearProcessStages("error", kind));
+          setProcessError(errorLabel(res.error));
           return;
         }
-        toast.success(
-          res.deleted === 0
-            ? "No synthetic players to remove."
-            : `Removed ${res.deleted} synthetic player${res.deleted === 1 ? "" : "s"}.`,
+        setStages(
+          rosterClearProcessStages("success", kind, { deleted: res.deleted }),
         );
       } else {
         const res = await clearLeagueSyntheticAction({ leagueId: id });
         if (!res.ok) {
-          toast.error(errorLabel(res.error));
+          setStages(rosterClearProcessStages("error", kind));
+          setProcessError(errorLabel(res.error));
           return;
         }
-        toast.success(
-          res.deleted === 0
-            ? "No synthetic players to remove."
-            : `Removed ${res.deleted} players across ${res.teams} team${res.teams === 1 ? "" : "s"}.`,
+        setStages(
+          rosterClearProcessStages("success", kind, {
+            deleted: res.deleted,
+            teams: res.teams,
+          }),
         );
       }
       router.refresh();
-      setConfirmOpen(false);
     });
   }
 
@@ -131,6 +152,13 @@ export function SyntheticRosterButton({
         : kind === "team"
           ? "Generate roster"
           : "Generate rosters";
+
+  const processTitle = isClear
+    ? "Clear synthetic players"
+    : isAttributes
+      ? "Generate ratings"
+      : "Generate synthetic roster";
+  const processDescription = CONFIRM[action][kind];
 
   return (
     <>
@@ -164,8 +192,27 @@ export function SyntheticRosterButton({
         pending={pending}
         onConfirm={run}
       />
+      <ProcessDialog
+        open={processOpen}
+        onOpenChange={setProcessOpen}
+        title={processTitle}
+        description={processDescription}
+        stages={stages}
+        pending={pending}
+        error={processError}
+        onRetry={run}
+      />
     </>
   );
+}
+
+function initialStages(
+  action: "generate" | "clear" | "attributes",
+  kind: "team" | "league",
+): ProcessStage[] {
+  if (action === "clear") return rosterClearProcessStages("pending", kind);
+  if (action === "attributes") return rosterAttributesProcessStages("pending", kind);
+  return rosterGenerateProcessStages("pending", kind);
 }
 
 const CONFIRM: Record<

@@ -3,12 +3,10 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { CalendarClock, GraduationCap, Users } from "lucide-react";
 import { startNextSeasonAction } from "@/app/dashboard/_actions/dynasty";
 import {
   evaluateStartNextSeason,
-  formatRolloverSuccessSummary,
   startNextSeasonErrorMessage,
   type DynastySeasonState,
 } from "@/lib/dynasty-panel";
@@ -16,6 +14,8 @@ import type { ClassDistribution } from "@/lib/class-year";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
+import { ProcessDialog } from "@/components/lifecycle/ProcessDialog";
+import { dynastyRolloverProcessStages } from "@/lib/process-stages";
 import {
   Accordion,
   AccordionContent,
@@ -63,16 +63,24 @@ export function DynastyPanel({
 }: DynastyPanelProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [lastSuccess, setLastSuccess] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [processOpen, setProcessOpen] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
+  const [stages, setStages] = useState(dynastyRolloverProcessStages("pending"));
 
   function runStartNextSeason() {
     if (!gate.canStart) return;
 
+    setConfirmOpen(false);
+    setProcessOpen(true);
+    setProcessError(null);
+    setStages(dynastyRolloverProcessStages("pending"));
+
     start(async () => {
       const res = await startNextSeasonAction({ leagueId });
       if (!res.ok) {
-        toast.error(
+        setStages(dynastyRolloverProcessStages("error"));
+        setProcessError(
           startNextSeasonErrorMessage(res.error, {
             unplayedGames,
             playoffsUndecided,
@@ -81,16 +89,15 @@ export function DynastyPanel({
         );
         return;
       }
-      const summary = formatRolloverSuccessSummary({
-        graduated: res.graduated,
-        advanced: res.advanced,
-        freshmen: res.freshmen,
-        progressed: res.progressed,
-      });
-      setLastSuccess(summary);
-      toast.success("Next season started.");
+      setStages(
+        dynastyRolloverProcessStages("success", {
+          graduated: res.graduated,
+          advanced: res.advanced,
+          freshmen: res.freshmen,
+          progressed: res.progressed,
+        }),
+      );
       router.refresh();
-      setConfirmOpen(false);
     });
   }
 
@@ -150,12 +157,6 @@ export function DynastyPanel({
             >
               View {upcomingSeason.name} →
             </Link>
-          </p>
-        )}
-
-        {lastSuccess && (
-          <p className="mt-3 rounded-sm border border-border bg-muted/50 px-3 py-2 text-caption-12 text-foreground">
-            {lastSuccess}
           </p>
         )}
       </div>
@@ -230,6 +231,16 @@ export function DynastyPanel({
       confirmLabel="Start season"
       pending={pending}
       onConfirm={runStartNextSeason}
+    />
+    <ProcessDialog
+      open={processOpen}
+      onOpenChange={setProcessOpen}
+      title="Start next season"
+      description="Rolling over the dynasty — graduating seniors, advancing classes, and generating freshmen."
+      stages={stages}
+      pending={pending}
+      error={processError}
+      onRetry={runStartNextSeason}
     />
     </>
   );

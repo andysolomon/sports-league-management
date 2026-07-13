@@ -37,6 +37,12 @@ import {
 } from "../leagues-actions";
 import { syntheticRostersV1 } from "@/lib/flags";
 import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
+import { UndersizedRosterPanel } from "@/components/roster/UndersizedRosterPanel";
+import {
+  activeRosterCountByTeam,
+  buildLeagueRosterDeficitProjection,
+} from "@/lib/roster-deficit";
+import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
 
 export default async function LeagueDetailPage({
   params,
@@ -97,6 +103,13 @@ export default async function LeagueDetailPage({
     ? isSeasonStarted(activeSeason, fixtures)
     : false;
   const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
+  const rosterDeficit =
+    isAdmin && league.orgId
+      ? buildLeagueRosterDeficitProjection(
+          teams,
+          activeRosterCountByTeam(leaguePlayers),
+        )
+      : { target: DEFAULT_TARGET_ROSTER_SIZE, teams: [] };
   const graduatedPlayers =
     isAdmin && league.orgId
       ? leaguePlayers
@@ -216,28 +229,36 @@ export default async function LeagueDetailPage({
                 />
               )}
               {canGenerateRosters && (
-                <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                  <div className="min-w-0">
-                    <p className="text-label-14 text-foreground">Synthetic rosters</p>
-                    <p className="text-caption-12 text-text-muted">
-                      {seasonStarted
-                        ? "Season has started — roster and ratings generation is locked."
-                        : "Fill every team in this league with fake test players (~48 each) for demos. Not real people."}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <SyntheticRosterButton
-                      kind="league"
-                      id={id}
-                      seasonStarted={seasonStarted}
-                    />
-                    <SyntheticRosterButton
-                      kind="league"
-                      id={id}
-                      action="attributes"
-                      seasonStarted={seasonStarted}
-                    />
-                    <SyntheticRosterButton kind="league" id={id} action="clear" />
+                <div className="space-y-3 border-t border-border pt-4">
+                  <UndersizedRosterPanel
+                    leagueId={id}
+                    target={rosterDeficit.target}
+                    undersizedTeams={rosterDeficit.teams}
+                    canAutoFill={!seasonStarted}
+                  />
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="min-w-0">
+                      <p className="text-label-14 text-foreground">Synthetic rosters</p>
+                      <p className="text-caption-12 text-text-muted">
+                        {seasonStarted
+                          ? "Season has started — roster and ratings generation is locked."
+                          : "Fill every team in this league with fake test players (~48 each) for demos. Not real people."}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <SyntheticRosterButton
+                        kind="league"
+                        id={id}
+                        seasonStarted={seasonStarted}
+                      />
+                      <SyntheticRosterButton
+                        kind="league"
+                        id={id}
+                        action="attributes"
+                        seasonStarted={seasonStarted}
+                      />
+                      <SyntheticRosterButton kind="league" id={id} action="clear" />
+                    </div>
                   </div>
                 </div>
               )}
