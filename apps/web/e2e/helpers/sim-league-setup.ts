@@ -40,6 +40,23 @@ export async function confirmLifecycleDialog(
   }
 }
 
+/**
+ * Wait for a ProcessDialog to finish (pending unlocks Close) and dismiss it.
+ * Generation buttons relabel to "Generating…" while pending, so callers must
+ * await this instead of the original button name returning.
+ */
+export async function awaitProcessDialog(
+  page: Page,
+  opts: { timeout?: number } = {},
+): Promise<void> {
+  const dialog = page.getByTestId("process-dialog");
+  await expect(dialog).toBeVisible({ timeout: opts.timeout ?? 30_000 });
+  const close = dialog.getByTestId("process-dialog-close");
+  await expect(close).toBeEnabled({ timeout: opts.timeout ?? 180_000 });
+  await close.click();
+  await expect(dialog).toBeHidden();
+}
+
 export async function addTeamsToLeague(
   page: Page,
   leagueId: string,
@@ -82,11 +99,13 @@ export async function generateLeagueSyntheticData(
   const rostersBtn = page.getByRole("button", { name: "Generate rosters" });
   await rostersBtn.click();
   await confirmLifecycleDialog(page);
-  await expect(rostersBtn).toBeEnabled({ timeout: 120_000 });
+  await awaitProcessDialog(page, { timeout: 180_000 });
+  await expect(rostersBtn).toBeEnabled({ timeout: 30_000 });
   const ratingsBtn = page.getByRole("button", { name: "Generate ratings" });
   await ratingsBtn.click();
   await confirmLifecycleDialog(page);
-  await expect(ratingsBtn).toBeEnabled({ timeout: 120_000 });
+  await awaitProcessDialog(page, { timeout: 180_000 });
+  await expect(ratingsBtn).toBeEnabled({ timeout: 30_000 });
 }
 
 export async function generateRoundRobinSchedule(
@@ -96,8 +115,9 @@ export async function generateRoundRobinSchedule(
   await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
   const generate = page.getByRole("button", { name: /Generate schedule/ });
   await expect(generate).toBeVisible();
-  // Fresh leagues have no fixtures — GenerateScheduleButton skips the dialog.
+  // Fresh leagues have no fixtures — skips ActionConfirmDialog, opens ProcessDialog.
   await generate.click();
+  await awaitProcessDialog(page, { timeout: 120_000 });
   await expect(page.getByText("Week 1", { exact: true })).toBeVisible({
     timeout: 60_000,
   });
@@ -205,4 +225,5 @@ export async function completeSeason(
 export async function startNextSeason(page: Page) {
   await page.getByRole("button", { name: "Start next season" }).click();
   await confirmLifecycleDialog(page);
+  await awaitProcessDialog(page, { timeout: 120_000 });
 }

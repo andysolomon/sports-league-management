@@ -630,8 +630,13 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     const drawer = page.getByTestId("game-context-drawer");
     await expect(drawer).toBeVisible();
     await expect(drawer.getByTestId("game-drawer-mode")).toHaveText(/^Final/);
-    await expect(drawer.getByText(String(ctx.expectedHome))).toBeVisible();
-    await expect(drawer.getByText(String(ctx.expectedAway))).toBeVisible();
+    // Use side-specific score testids — tied finals (e.g. 17–17) make getByText(score) ambiguous.
+    await expect(drawer.getByTestId("game-drawer-home-score")).toHaveText(
+      String(ctx.expectedHome),
+    );
+    await expect(drawer.getByTestId("game-drawer-away-score")).toHaveText(
+      String(ctx.expectedAway),
+    );
 
     await drawer.getByTestId("game-drawer-open-gamecast").click();
     await expect(page).toHaveURL(/\/dashboard\/games\/[^/]+\/gamecast$/);

@@ -2,11 +2,12 @@
 
 import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActionConfirmDialog } from "@/components/lifecycle/ActionConfirmDialog";
+import { ProcessDialog } from "@/components/lifecycle/ProcessDialog";
 import { generateScheduleAction } from "@/app/dashboard/leagues/[id]/schedule/actions";
+import { scheduleProcessStages } from "@/lib/process-stages";
 
 export interface GenerateScheduleButtonProps {
   leagueId: string;
@@ -40,8 +41,21 @@ export default function GenerateScheduleButton({
   const [format, setFormat] = useState<ScheduleFormat>("single");
   const [pending, startTransition] = useTransition();
   const [confirmStep, setConfirmStep] = useState<ConfirmStep>(null);
+  const [lastConfirm, setLastConfirm] = useState(false);
+  const [processOpen, setProcessOpen] = useState(false);
+  const [processError, setProcessError] = useState<string | null>(null);
+  const [stages, setStages] = useState(scheduleProcessStages("pending"));
+
+  function beginProcess(confirm: boolean) {
+    setLastConfirm(confirm);
+    setConfirmStep(null);
+    setProcessOpen(true);
+    setProcessError(null);
+    setStages(scheduleProcessStages("pending"));
+  }
 
   function run(confirm: boolean) {
+    beginProcess(confirm);
     startTransition(async () => {
       const res = await generateScheduleAction({
         leagueId,
@@ -51,22 +65,25 @@ export default function GenerateScheduleButton({
       });
 
       if (res.ok) {
-        toast.success(
-          `Generated ${res.created} ${
-            format === "double" ? "home-and-away " : ""
-          }games across ${res.weeks} weeks for ${res.teamCount} teams.`,
+        setStages(
+          scheduleProcessStages("success", {
+            created: res.created,
+            weeks: res.weeks,
+            teamCount: res.teamCount,
+          }),
         );
         router.refresh();
-        setConfirmStep(null);
         return;
       }
 
       if ("needsConfirm" in res) {
+        setProcessOpen(false);
         setConfirmStep("destructive");
         return;
       }
 
-      toast.error(friendlyError(res.error));
+      setStages(scheduleProcessStages("error"));
+      setProcessError(friendlyError(res.error));
     });
   }
 
@@ -86,6 +103,10 @@ export default function GenerateScheduleButton({
     if (confirmStep === "destructive") {
       run(true);
     }
+  }
+
+  function retryProcess() {
+    run(lastConfirm);
   }
 
   const confirmCopy =
@@ -138,6 +159,16 @@ export default function GenerateScheduleButton({
           onConfirm={handleConfirm}
         />
       ) : null}
+      <ProcessDialog
+        open={processOpen}
+        onOpenChange={setProcessOpen}
+        title="Generate schedule"
+        description={`Building the ${format === "double" ? "home-and-away" : "round-robin"} schedule for ${seasonName}.`}
+        stages={stages}
+        pending={pending}
+        error={processError}
+        onRetry={retryProcess}
+      />
     </div>
   );
 }

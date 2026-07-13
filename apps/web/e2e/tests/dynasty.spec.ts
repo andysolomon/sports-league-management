@@ -111,10 +111,9 @@ test.describe("Dynasty panel (dynasty rollover)", () => {
     await page.goto(`/dashboard/leagues/${leagueId}`);
     await expect(startBtn).toBeEnabled();
     await startNextSeason(page);
-    await expect(page.getByText("Next season started.")).toBeVisible({
+    await expect(page.getByText(/Offseason · upcoming/)).toBeVisible({
       timeout: 60_000,
     });
-    await expect(page.getByText(/Offseason · upcoming/)).toBeVisible();
     await expect(page.getByText(/View E2E Season/)).toBeVisible();
 
     await page.goto("/dashboard/seasons");
