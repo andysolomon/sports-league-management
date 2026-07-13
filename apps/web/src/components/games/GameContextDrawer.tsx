@@ -30,12 +30,14 @@ export interface GameContextDrawerProps {
 function TeamBlock({
   team,
   score,
+  scoreTestId,
   won,
   dim,
   align,
 }: {
   team: GameDrawerProjection["home"];
   score: number | null;
+  scoreTestId?: string;
   won: boolean;
   dim: boolean;
   align: "left" | "right";
@@ -71,7 +73,10 @@ function TeamBlock({
         <span className="text-xs text-muted-foreground">{meta}</span>
       ) : null}
       {score != null ? (
-        <span className="font-mono text-2xl tabular-nums text-foreground">
+        <span
+          className="font-mono text-2xl tabular-nums text-foreground"
+          data-testid={scoreTestId}
+        >
           {score}
         </span>
       ) : null}
@@ -130,6 +135,7 @@ export function GameContextDrawer({
               <TeamBlock
                 team={projection.home}
                 score={isFinal ? projection.homeScore : null}
+                scoreTestId="game-drawer-home-score"
                 won={
                   isFinal &&
                   projection.homeScore != null &&
@@ -145,6 +151,7 @@ export function GameContextDrawer({
               <TeamBlock
                 team={projection.away}
                 score={isFinal ? projection.awayScore : null}
+                scoreTestId="game-drawer-away-score"
                 won={
                   isFinal &&
                   projection.homeScore != null &&
