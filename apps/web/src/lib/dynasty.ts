@@ -21,6 +21,13 @@ export function incrementSeasonName(name: string): string {
   return `${name} ${new Date().getFullYear() + 1}`;
 }
 
+/** True when a playoff champion exists or is derivable from the bracket. */
+export function isChampionDecided(bracket: PlayoffBracketDto | null): boolean {
+  if (!bracket || bracket.matchups.length === 0) return false;
+  if (bracket.champion) return true;
+  return deriveChampion(bracket.matchups, bracket.format ?? "single") !== null;
+}
+
 /**
  * A season is decided when a playoff champion exists (bracket present), else
  * when every regular-season fixture is final/cancelled.
@@ -30,9 +37,7 @@ export function isSeasonDecided(
   bracket: PlayoffBracketDto | null,
 ): boolean {
   if (bracket && bracket.matchups.length > 0) {
-    if (bracket.champion) return true;
-    const format = bracket.format ?? "single";
-    return deriveChampion(bracket.matchups, format) !== null;
+    return isChampionDecided(bracket);
   }
   return regularSeasonProgress(fixtures).complete;
 }

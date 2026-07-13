@@ -21,22 +21,16 @@ import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { Calendar, Trophy } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { isChampionDecided } from "@/lib/dynasty";
+import {
+  formatSeasonRecord,
+  sortSeasons,
+  type SeasonArchiveMeta,
+} from "@/lib/season-list";
 import { CreateSeasonButton, SeasonRowActions } from "./season-actions";
 import { PageHeader } from "../_components/page-header";
 
-interface SeasonArchive {
-  gamesFinal: number;
-  gamesTotal: number;
-  leader: {
-    teamName: string;
-    wins: number;
-    losses: number;
-    ties: number;
-  } | null;
-  champion: { teamName: string | null } | null;
-}
-
-async function fetchSeasonArchive(seasonId: string): Promise<SeasonArchive> {
+async function fetchSeasonArchive(seasonId: string): Promise<SeasonArchiveMeta> {
   const [fixtures, standings, bracket] = await Promise.all([
     listFixturesBySeason(seasonId).catch(() => []),
     computeStandings(seasonId).catch(() => []),
@@ -53,6 +47,7 @@ async function fetchSeasonArchive(seasonId: string): Promise<SeasonArchive> {
   return {
     gamesFinal,
     gamesTotal,
+    championDecided: isChampionDecided(bracket),
     leader: leaderRow
       ? {
           teamName: leaderRow.teamName,
@@ -65,11 +60,7 @@ async function fetchSeasonArchive(seasonId: string): Promise<SeasonArchive> {
   };
 }
 
-function formatRecord(wins: number, losses: number, ties: number) {
-  return `${wins}-${losses}${ties ? `-${ties}` : ""}`;
-}
-
-function SeasonArchiveSummary({ archive }: { archive: SeasonArchive | undefined }) {
+function SeasonArchiveSummary({ archive }: { archive: SeasonArchiveMeta | undefined }) {
   if (!archive || archive.gamesTotal === 0) {
     return <p className="text-xs text-muted-foreground">No games yet</p>;
   }
@@ -86,7 +77,7 @@ function SeasonArchiveSummary({ archive }: { archive: SeasonArchive | undefined 
             {archive.leader.teamName}{" "}
             <span className="font-mono">
               (
-              {formatRecord(
+              {formatSeasonRecord(
                 archive.leader.wins,
                 archive.leader.losses,
                 archive.leader.ties,
@@ -188,7 +179,7 @@ export default async function SeasonsPage() {
       ) : (
         <div className="space-y-6">
           {leagues.map((league) => {
-            const leagueSeasons = seasonsByLeague.get(league.id) ?? [];
+            const leagueSeasons = sortSeasons(seasonsByLeague.get(league.id) ?? []);
             return (
               <Card key={league.id}>
                 <CardHeader>
@@ -215,7 +206,8 @@ export default async function SeasonsPage() {
                       {leagueSeasons.map((season) => (
                         <li
                           key={season.id}
-                          className="flex flex-wrap items-center justify-between gap-3 px-3 py-2"
+                          className="flex flex-wrap items-center justify-between gap-3 px-1 py-4"
+                          data-testid="season-row"
                         >
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex min-w-0 flex-wrap items-center gap-3">
@@ -237,6 +229,10 @@ export default async function SeasonsPage() {
                           </div>
                           <SeasonRowActions
                             season={season}
+                            championDecided={
+                              seasonArchives.get(season.id)?.championDecided ??
+                              false
+                            }
                             undersizedTeams={undersizedBySeason.get(season.id) ?? []}
                           />
                         </li>
