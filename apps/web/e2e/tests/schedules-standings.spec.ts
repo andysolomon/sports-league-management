@@ -349,8 +349,8 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
 
     // Complete the season (WSM-000238 lifecycle), then re-open the schedule:
     // read-only history — every mutation control is gone. This league never
-    // ran playoffs, so completion chains into the "Complete without a
-    // champion?" force-confirmation.
+    // ran playoffs, so no champion is decided and completing opens the
+    // "Complete season anyway?" force-confirmation directly (WSM-000255).
     await completeSeason(page, fixture!.seasonId, {
       forceWithoutChampion: true,
     });
