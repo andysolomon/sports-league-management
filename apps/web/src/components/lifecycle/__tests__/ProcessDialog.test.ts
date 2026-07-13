@@ -95,6 +95,7 @@ function renderProcessDialog(
         pending: props.pending ?? false,
         error: props.error,
         onRetry: props.onRetry,
+        footer: props.footer,
       }),
     );
   });
@@ -160,6 +161,27 @@ describe("ProcessDialog", () => {
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(
       document.querySelector('[data-testid="process-dialog-close"]'),
+    ).toBeNull();
+  });
+
+  it("renders success footer content but hides it while an error is shown", () => {
+    const footer = createElement(
+      "a",
+      { href: "/dashboard/seasons/s2", "data-testid": "onward-link" },
+      "Go to the 2027 offseason hub",
+    );
+
+    const view = renderProcessDialog({ footer });
+    const link = document.querySelector(
+      '[data-testid="process-dialog-footer"] [data-testid="onward-link"]',
+    ) as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    expect(link?.getAttribute("href")).toBe("/dashboard/seasons/s2");
+    view.unmount();
+
+    renderProcessDialog({ footer, error: "Mutation failed" });
+    expect(
+      document.querySelector('[data-testid="process-dialog-footer"]'),
     ).toBeNull();
   });
 

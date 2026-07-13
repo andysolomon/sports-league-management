@@ -347,25 +347,51 @@ const refs = {
     { sourceSeasonId: string },
     {
       rolloverId: string;
+      sourceSeasonId: string;
+      sourceSeasonName: string;
       targetSeasonId: string;
+      targetSeasonName: string;
       resumed: boolean;
       stage: string;
       status: string;
       graduatedPlayerIds: string[];
       advancedPlayerIds: string[];
+      summaryJson: string | null;
     }
   >("sports:beginSeasonRollover"),
   advanceSeasonRollover: mutationRef<
-    { rolloverId: string; stage: string },
+    { rolloverId: string; stage: string; summaryJson?: string; ownerId?: string },
     {
       rolloverId: string;
+      sourceSeasonId: string;
+      sourceSeasonName: string;
       targetSeasonId: string;
+      targetSeasonName: string;
       stage: string;
       status: string;
       graduatedPlayerIds: string[];
       advancedPlayerIds: string[];
+      summaryJson: string | null;
     }
   >("sports:advanceSeasonRollover"),
+  claimSeasonRolloverStage: mutationRef<
+    { rolloverId: string; stage: string; ownerId: string; leaseMs?: number },
+    {
+      acquired: boolean;
+      reason: string;
+      rolloverId: string;
+      stage: string;
+      status: string;
+      graduatedPlayerIds: string[];
+      advancedPlayerIds: string[];
+      summaryJson: string | null;
+      freshmenProgressJson: string | null;
+    }
+  >("sports:claimSeasonRolloverStage"),
+  releaseSeasonRolloverStage: mutationRef<
+    { rolloverId: string; stage: string; ownerId: string; lastError?: string },
+    null
+  >("sports:releaseSeasonRolloverStage"),
   deleteSeason: mutationRef<{ seasonId: string }, null>("sports:deleteSeason"),
   setLeagueInviteToken: mutationRef<
     { leagueId: string; token: string | null },
@@ -381,6 +407,15 @@ const refs = {
     { teamId: string; players: BulkPlayerInput[] },
     { created: number }
   >("sports:bulkCreatePlayers"),
+  createRolloverFreshmenForTeam: mutationRef<
+    {
+      rolloverId: string;
+      ownerId?: string;
+      teamId: string;
+      players: BulkPlayerInput[];
+    },
+    { created: number; totalCreated: number; alreadyCompleted: boolean }
+  >("sports:createRolloverFreshmenForTeam"),
   clearSyntheticPlayers: mutationRef<
     { teamId: string },
     { deleted: number }
@@ -612,7 +647,7 @@ const refs = {
     }
   >("sports:copySeasonRosters"),
   rolloverGraduateAndAdvancePlayers: mutationRef<
-    { leagueId: string; seasonId: string; rolloverId?: string },
+    { leagueId: string; seasonId: string; rolloverId?: string; ownerId?: string },
     { graduatedPlayerIds: string[]; advancedPlayerIds: string[] }
   >("sports:rolloverGraduateAndAdvancePlayers"),
   removePlayersFromSeasonRoster: mutationRef<
@@ -1396,6 +1431,19 @@ export async function bulkCreatePlayers(
   return mutateConvex(refs.bulkCreatePlayers, { teamId, players });
 }
 
+export async function createRolloverFreshmenForTeam(input: {
+  rolloverId: string;
+  ownerId?: string;
+  teamId: string;
+  players: BulkPlayerInput[];
+}): Promise<{
+  created: number;
+  totalCreated: number;
+  alreadyCompleted: boolean;
+}> {
+  return mutateConvex(refs.createRolloverFreshmenForTeam, input);
+}
+
 export async function clearSyntheticPlayers(
   teamId: string,
 ): Promise<{ deleted: number }> {
@@ -1492,12 +1540,16 @@ export async function beginSeasonRollover(input: {
   sourceSeasonId: string;
 }): Promise<{
   rolloverId: string;
+  sourceSeasonId: string;
+  sourceSeasonName: string;
   targetSeasonId: string;
+  targetSeasonName: string;
   resumed: boolean;
   stage: string;
   status: string;
   graduatedPlayerIds: string[];
   advancedPlayerIds: string[];
+  summaryJson: string | null;
 }> {
   return mutateConvex(refs.beginSeasonRollover, input);
 }
@@ -1505,15 +1557,49 @@ export async function beginSeasonRollover(input: {
 export async function advanceSeasonRollover(input: {
   rolloverId: string;
   stage: string;
+  summaryJson?: string;
+  ownerId?: string;
 }): Promise<{
   rolloverId: string;
+  sourceSeasonId: string;
+  sourceSeasonName: string;
   targetSeasonId: string;
+  targetSeasonName: string;
   stage: string;
   status: string;
   graduatedPlayerIds: string[];
   advancedPlayerIds: string[];
+  summaryJson: string | null;
 }> {
   return mutateConvex(refs.advanceSeasonRollover, input);
+}
+
+export async function claimSeasonRolloverStage(input: {
+  rolloverId: string;
+  stage: string;
+  ownerId: string;
+  leaseMs?: number;
+}): Promise<{
+  acquired: boolean;
+  reason: string;
+  rolloverId: string;
+  stage: string;
+  status: string;
+  graduatedPlayerIds: string[];
+  advancedPlayerIds: string[];
+  summaryJson: string | null;
+  freshmenProgressJson: string | null;
+}> {
+  return mutateConvex(refs.claimSeasonRolloverStage, input);
+}
+
+export async function releaseSeasonRolloverStage(input: {
+  rolloverId: string;
+  stage: string;
+  ownerId: string;
+  lastError?: string;
+}): Promise<null> {
+  return mutateConvex(refs.releaseSeasonRolloverStage, input);
 }
 
 export async function setActiveSeason(seasonId: string): Promise<null> {
@@ -2019,6 +2105,7 @@ export async function rolloverGraduateAndAdvancePlayers(input: {
   leagueId: string;
   seasonId: string;
   rolloverId?: string;
+  ownerId?: string;
 }): Promise<{ graduatedPlayerIds: string[]; advancedPlayerIds: string[] }> {
   return mutateConvex(refs.rolloverGraduateAndAdvancePlayers, input);
 }

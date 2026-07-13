@@ -250,6 +250,61 @@ describe("rolloverGraduateAndAdvancePlayers", () => {
 });
 
 describe("synthetic dynasty rollover flow (WSM-000218)", () => {
+  it("records freshman progress per team so retries do not duplicate players", async () => {
+    const t = convexTest(schema, modules);
+    const { teamId, seasonId } = await seedSyntheticRolloverFixture(t);
+    await t.run((ctx) => ctx.db.patch(seasonId, { status: "completed" }));
+    const rollover = await t.mutation(internal.sports.beginSeasonRollover, {
+      sourceSeasonId: seasonId,
+    });
+    await t.run((ctx) =>
+      ctx.db.patch(rollover.rolloverId as Id<"seasonRollovers">, {
+        stage: "rosters_copied",
+        stageLeaseStage: "freshmen_created",
+        stageLeaseOwnerId: "worker-1",
+        stageLeaseExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+      }),
+    );
+
+    const players = [
+      {
+        name: "Freshman Retry",
+        position: "RB",
+        jerseyNumber: 20,
+        status: "Active",
+        grade: 9,
+        squad: "Freshman",
+      },
+    ];
+    const first = await t.mutation(internal.sports.createRolloverFreshmenForTeam, {
+      rolloverId: rollover.rolloverId as Id<"seasonRollovers">,
+      ownerId: "worker-1",
+      teamId,
+      players,
+    });
+    const retry = await t.mutation(internal.sports.createRolloverFreshmenForTeam, {
+      rolloverId: rollover.rolloverId as Id<"seasonRollovers">,
+      ownerId: "worker-1",
+      teamId,
+      players,
+    });
+
+    expect(first).toMatchObject({ created: 1, totalCreated: 1 });
+    expect(retry).toMatchObject({
+      created: 1,
+      totalCreated: 1,
+      alreadyCompleted: true,
+    });
+    const matchingPlayers = await t.run(async (ctx) => {
+      const rows = await ctx.db
+        .query("players")
+        .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+        .collect();
+      return rows.filter((player) => player.name === "Freshman Retry");
+    });
+    expect(matchingPlayers).toHaveLength(1);
+  });
+
   it("copySeasonRosters no-ops, tops roster via team players, blocks re-rollover", async () => {
     const t = convexTest(schema, modules);
     const { leagueId, teamId, seasonId, seniorId } =
