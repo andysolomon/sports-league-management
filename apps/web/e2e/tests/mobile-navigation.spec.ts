@@ -22,9 +22,27 @@ test.describe("Mobile Responsive Navigation", () => {
 
     await page.getByLabel("Open navigation menu").click();
 
+    // WSM-000252 / WSM-000246 — mobile sheet mirrors desktop rail chrome
+    const sheet = page.getByRole("dialog");
+    await expect(
+      sheet.getByRole("heading", { name: "Sports League" }),
+    ).toBeVisible();
+
     for (const label of NAV_LABELS) {
-      await expect(page.getByRole("link", { name: label })).toBeVisible();
+      await expect(sheet.getByRole("link", { name: label })).toBeVisible();
     }
+  });
+
+  test("desktop sidebar shows brand mark and Sports League title", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/dashboard");
+
+    const sidebar = page.locator("aside");
+    await expect(
+      sidebar.getByRole("heading", { name: "Sports League" }),
+    ).toBeVisible();
   });
 
   test("sheet closes on navigation", async ({ page }) => {

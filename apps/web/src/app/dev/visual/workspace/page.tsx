@@ -28,7 +28,11 @@ const SEASON = {
 };
 
 export default function WorkspaceVisualHarness() {
-  if (process.env.VERCEL_ENV === "production") notFound();
+  // Only hide on the real Vercel production deploy — local `vercel env pull`
+  // can set VERCEL_ENV=production and would otherwise 404 the harnesses.
+  if (process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production") {
+    notFound();
+  }
 
   return (
     <div className="bg-background p-6">

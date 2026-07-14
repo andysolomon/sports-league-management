@@ -23,7 +23,9 @@ const CAREER_POINTS = [
 ];
 
 export default function PixelLineChartVisualHarness() {
-  if (process.env.VERCEL_ENV === "production") notFound();
+  if (process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production") {
+    notFound();
+  }
   return (
     <div className="bg-background p-6">
       <div data-testid="chart-multi" className="w-[600px]">

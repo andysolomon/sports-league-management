@@ -2,9 +2,10 @@ import { test, expect, type Page } from "@playwright/test";
 
 /**
  * Visual-regression baselines for the two visual-heavy components
- * (WSM-000082): PixelLineChart and StandingsTable. They render in dedicated
- * `/dev/visual/*` harness routes with fixed, deterministic data — no Convex,
- * no Clerk, no seed — so the screenshots are stable.
+ * (WSM-000082): PixelLineChart and StandingsTable, plus workspace hub chrome
+ * (WSM-000236 / WSM-000252). They render in dedicated `/dev/visual/*` harness
+ * routes with fixed, deterministic data — no Convex, no Clerk, no seed — so
+ * the screenshots are stable.
  *
  * ## Why a separate project
  * Runs under the Playwright `visual` project (see playwright.config.ts) at a
