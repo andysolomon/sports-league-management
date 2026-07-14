@@ -32,29 +32,27 @@ export default function LeaguePublicToggle({
   }
 
   return (
-    <div className="flex flex-col gap-2 border-2 border-border bg-card p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground">
-            Public viewer
-          </p>
-          <p className="text-xs text-muted-foreground">
-            When on, anyone can view player development charts at{" "}
-            <code className="break-all font-mono">/leagues/{leagueId}/...</code>
-          </p>
-        </div>
-        <Button
-          className="shrink-0"
-          variant={isPublic ? "destructive" : "default"}
-          onClick={handleToggle}
-          disabled={pending}
-        >
-          {pending ? "Saving…" : isPublic ? "Make private" : "Make public"}
-        </Button>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-label-14 text-foreground">Visibility</p>
+        <p className="text-caption-12 text-text-muted">
+          Public leagues appear in Discover. When public, anyone can view
+          player development charts at{" "}
+          <code className="break-all font-mono">/leagues/{leagueId}/...</code>
+        </p>
+        <p className="mt-1 font-mono text-caption-12 text-text-subtle">
+          Currently: {isPublic ? "PUBLIC" : "PRIVATE"}
+        </p>
       </div>
-      <p className="font-mono text-xs text-muted-foreground">
-        Currently: {isPublic ? "PUBLIC" : "PRIVATE"}
-      </p>
+      <Button
+        size="sm"
+        className="shrink-0"
+        variant={isPublic ? "destructive" : "default"}
+        onClick={handleToggle}
+        disabled={pending}
+      >
+        {pending ? "Saving…" : isPublic ? "Make private" : "Make public"}
+      </Button>
     </div>
   );
 }

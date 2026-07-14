@@ -89,9 +89,15 @@ export function CreateLeagueButton() {
 export function DeleteLeagueButton({
   leagueId,
   leagueName,
+  appearance = "icon",
 }: {
   leagueId: string;
   leagueName: string;
+  /**
+   * "icon" is the compact trash button used in the leagues list;
+   * "labeled" is the danger-zone button on the league manage page.
+   */
+  appearance?: "icon" | "labeled";
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -115,6 +121,20 @@ export function DeleteLeagueButton({
     }
   }
 
+  if (appearance === "labeled") {
+    return (
+      <Button
+        size="sm"
+        variant="destructive"
+        disabled={busy}
+        onClick={remove}
+        aria-label={`Delete ${leagueName}`}
+      >
+        <Trash2 className="mr-1 h-4 w-4" />
+        Delete league
+      </Button>
+    );
+  }
   return (
     <Button
       size="sm"
