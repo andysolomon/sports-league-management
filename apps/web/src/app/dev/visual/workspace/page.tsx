@@ -84,22 +84,24 @@ export default function WorkspaceVisualHarness() {
               {SEASON.dateRange}
             </>
           }
-        />
-        <WorkspaceNav
-          links={[
-            {
-              href: `/dashboard/leagues/${LEAGUE.id}/schedule?season=${SEASON.id}`,
-              label: "Schedule",
-            },
-            {
-              href: `/dashboard/leagues/${LEAGUE.id}/standings?season=${SEASON.id}`,
-              label: "Standings",
-            },
-            {
-              href: `/dashboard/leagues/${LEAGUE.id}/playoffs?season=${SEASON.id}`,
-              label: "Playoffs",
-            },
-          ]}
+          nav={
+            <WorkspaceNav
+              links={[
+                {
+                  href: `/dashboard/leagues/${LEAGUE.id}/schedule?season=${SEASON.id}`,
+                  label: "Schedule",
+                },
+                {
+                  href: `/dashboard/leagues/${LEAGUE.id}/standings?season=${SEASON.id}`,
+                  label: "Standings",
+                },
+                {
+                  href: `/dashboard/leagues/${LEAGUE.id}/playoffs?season=${SEASON.id}`,
+                  label: "Playoffs",
+                },
+              ]}
+            />
+          }
         />
       </div>
     </div>

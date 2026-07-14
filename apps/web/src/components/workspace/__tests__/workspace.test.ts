@@ -23,7 +23,8 @@ describe("Breadcrumbs", () => {
     expect(html).toContain('href="/dashboard/leagues"');
     expect(html).toContain("NFL");
     expect(html).not.toContain('href="/dashboard/leagues/NFL"');
-    expect(html).toContain("›");
+    // Prototype separator: chevron-right icon, not a text glyph (WSM-000247).
+    expect(html).toContain("lucide-chevron-right");
   });
 
   it("renders nothing when items are empty", () => {
@@ -44,6 +45,8 @@ describe("BackLink", () => {
     );
     expect(html).toContain('href="/dashboard/leagues/league-1"');
     expect(html).toContain("Back to League");
+    // Prototype back affordance: arrow-left icon (WSM-000247).
+    expect(html).toContain("lucide-arrow-left");
   });
 });
 
@@ -72,6 +75,25 @@ describe("WorkspaceHeader", () => {
     expect(html).toContain("National Football League");
     expect(html).toContain("text-[30px]");
     expect(html).not.toContain("text-[28px]");
+  });
+
+  it("renders the nav slot inside the header block (WSM-000247)", () => {
+    const html = renderToStaticMarkup(
+      createElement(WorkspaceHeader, {
+        title: "2025 Season",
+        size: "sub-hub",
+        sub: createElement("span", null, "League context"),
+        nav: createElement(WorkspaceNav, {
+          links: [{ href: "/dashboard/leagues/l1/schedule", label: "Schedule" }],
+        }),
+      }),
+    );
+    const headerClose = html.indexOf("</header>");
+    const navIndex = html.indexOf('aria-label="Workspace"');
+    expect(navIndex).toBeGreaterThan(-1);
+    expect(navIndex).toBeLessThan(headerClose);
+    // Nav sits after the context line, per the prototype hub header.
+    expect(navIndex).toBeGreaterThan(html.indexOf("League context"));
   });
 });
 

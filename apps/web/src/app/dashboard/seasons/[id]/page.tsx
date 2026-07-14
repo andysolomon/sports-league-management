@@ -39,6 +39,7 @@ import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
 import { BackLink } from "@/components/workspace/BackLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
+import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 
 /**
  * Season hub (WSM-000213): one home per season. Progress, standings snapshot,
@@ -196,27 +197,16 @@ export default async function SeasonHubPage({
     : manageableTeams;
 
   const seasonQuery = `?season=${season.id}`;
-  const links = [
-    scheduleEnabled && {
-      href: `/dashboard/leagues/${league.id}/schedule${seasonQuery}`,
-      label: "Schedule",
-    },
-    scheduleEnabled && {
-      href: `/dashboard/leagues/${league.id}/standings${seasonQuery}`,
-      label: "Standings",
-    },
-    playoffsEnabled && {
-      href: `/dashboard/leagues/${league.id}/playoffs${seasonQuery}`,
-      label: "Playoffs",
-    },
-    statsEnabled && {
-      href: `/dashboard/leagues/${league.id}/stats${seasonQuery}`,
-      label: "Stat leaders",
-    },
-  ].filter((l): l is { href: string; label: string } => Boolean(l));
+  const links = buildLeagueSeasonNavLinks({
+    leagueId: league.id,
+    seasonId: season.id,
+    scheduleEnabled,
+    playoffsEnabled,
+    statsEnabled,
+  });
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-[960px]">
       <Breadcrumbs
         items={[
           { label: "Dashboard", href: "/dashboard" },
@@ -241,8 +231,8 @@ export default async function SeasonHubPage({
             {formatDate(season.startDate)} &ndash; {formatDate(season.endDate)}
           </>
         }
+        nav={<WorkspaceNav links={links} />}
       />
-      <WorkspaceNav links={links} />
 
       {isUpcomingSeason && (
         <OffseasonHub
