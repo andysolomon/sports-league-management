@@ -7,6 +7,7 @@ import {
   getDivisions,
   getLeague,
   getSeasons,
+  getTeamsByLeague,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +73,15 @@ export default async function LeagueStandingsPage({
 
   const standings = await computeStandings(activeSeason.id);
   const divisions = await getDivisions([leagueId]);
+
+  // Visual polish (WSM-000250): TeamMark brand colors + the playoff-cut
+  // treatment. The cut divider only renders on the flat league-ranked table;
+  // division tables (division-rank ordered) show Clinched badges alone.
+  const teams = await getTeamsByLeague(leagueId, orgContext).catch(() => []);
+  const teamColors = Object.fromEntries(
+    teams.map((team) => [team.id, team.primaryColor ?? null]),
+  );
+  const playoffCut = activeSeason.playoffTeams ?? 0;
 
   const divisionStandings =
     divisions.length > 0
@@ -142,12 +152,21 @@ export default async function LeagueStandingsPage({
                     key={division.id}
                     divisionName={division.name}
                     rows={rows}
+                    playoffCut={playoffCut}
+                    withTeamMarks
+                    teamColors={teamColors}
                   />
                 ) : null,
               )}
             </div>
           ) : (
-            <StandingsTable rows={standings} />
+            <StandingsTable
+              rows={standings}
+              playoffCut={playoffCut}
+              showPlayoffCutDivider
+              withTeamMarks
+              teamColors={teamColors}
+            />
           )}
         </CardContent>
       </Card>

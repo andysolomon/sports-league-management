@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import {
   schedulesStandingsV1,
   liveStreamingV1,
@@ -231,8 +232,10 @@ export default async function LeagueSchedulePage({
     key: group.key,
     label: group.label,
     status: group.status,
+    summary: `${group.rows.length} ${group.rows.length === 1 ? "game" : "games"}`,
+    totalCount: group.rows.length,
     // "completed", not "final" — completedRows also counts cancelled games.
-    summary: `${group.completedRows.length} of ${group.rows.length} completed`,
+    completedCount: group.completedRows.length,
     actions:
       canMutate &&
       activeSeason &&
@@ -250,7 +253,6 @@ export default async function LeagueSchedulePage({
         : fixtureTable(group.rows),
     completedContent:
       group.status === "mixed" ? fixtureTable(group.completedRows) : undefined,
-    completedCount: group.completedRows.length,
   }));
   const initialOpenKeys = initialOpenWeekKeys(weekGroups);
 
@@ -349,12 +351,26 @@ export default async function LeagueSchedulePage({
       ) : null}
 
       {handoff !== "hidden" && activeSeason ? (
-        <Card className="mb-6" data-testid="playoff-handoff">
-          <CardContent className="flex flex-col items-center gap-3 p-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Regular season complete ({progress.final} of {progress.total}{" "}
-              games final).
-            </p>
+        // Prototype "banner-cta--accent" treatment: trophy + title/sub left,
+        // the Start-playoffs CTA right. Exactly one element may contain the
+        // phrase "Regular season complete" (e2e regex, strict mode).
+        <Card
+          className="mb-6 border-accent/40 bg-accent/5"
+          data-testid="playoff-handoff"
+        >
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-3.5">
+              <Trophy className="h-6 w-6 shrink-0 text-accent" aria-hidden="true" />
+              <div>
+                <p className="font-bold text-foreground">
+                  Regular season complete
+                </p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">
+                  All {progress.total} games are final — seed the bracket to
+                  begin the playoffs.
+                </p>
+              </div>
+            </div>
             {handoff === "start" ? (
               <AdvanceToPlayoffsButton
                 leagueId={leagueId}
@@ -363,7 +379,7 @@ export default async function LeagueSchedulePage({
               />
             ) : (
               <p className="text-sm text-foreground">
-                Regular season complete — waiting for playoffs to start.
+                Waiting for playoffs to start.
               </p>
             )}
           </CardContent>
@@ -389,7 +405,11 @@ export default async function LeagueSchedulePage({
           </CardContent>
         </Card>
       ) : (
-        <ScheduleWeeks weeks={weekViews} initialOpenKeys={initialOpenKeys} />
+        <ScheduleWeeks
+          weeks={weekViews}
+          initialOpenKeys={initialOpenKeys}
+          progress={progress}
+        />
       )}
     </div>
   );

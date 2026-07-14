@@ -1,10 +1,29 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import type { Standing } from "@sports-management/shared-types";
+import { Badge } from "@/components/ui/badge";
+import { TeamMark } from "@/components/team-mark";
 
 export interface StandingsTableProps {
   rows: Standing[];
   /** When set, renders a division header above this table block. */
   divisionName?: string;
+  /**
+   * WSM-000250 dashboard polish — season playoff team count. Rows ranked at
+   * or above the cut (that have played) get a "Clinched" badge. Optional and
+   * off by default so the public viewer and visual harness stay unchanged.
+   */
+  playoffCut?: number;
+  /**
+   * Render the dashed "Playoff cut" divider under the row whose league rank
+   * equals `playoffCut`. Only meaningful when rows are league-rank ordered
+   * (the flat league table) — division tables pass `playoffCut` alone.
+   */
+  showPlayoffCutDivider?: boolean;
+  /** Render a TeamMark monogram before each team name (dashboard polish). */
+  withTeamMarks?: boolean;
+  /** Team brand colors by team id, for TeamMark (name-derived fallback). */
+  teamColors?: Record<string, string | null>;
 }
 
 /**
@@ -16,7 +35,12 @@ export interface StandingsTableProps {
 export default function StandingsTable({
   rows,
   divisionName,
+  playoffCut,
+  showPlayoffCutDivider = false,
+  withTeamMarks = false,
+  teamColors,
 }: StandingsTableProps) {
+  const cut = playoffCut && playoffCut > 0 ? playoffCut : 0;
   return (
     <div className="w-full">
       {divisionName ? (
@@ -62,18 +86,42 @@ export default function StandingsTable({
         <tbody>
           {rows.map((row) => {
             const diff = row.pointsFor - row.pointsAgainst;
+            const clinched =
+              cut > 0 &&
+              row.leagueRank <= cut &&
+              row.wins + row.losses + row.ties > 0;
+            const teamLink = (
+              <Link
+                href={`/dashboard/teams/${row.teamId}`}
+                className="text-primary hover:underline"
+              >
+                {row.teamName}
+              </Link>
+            );
             return (
-              <tr key={row.teamId} className="border-b border-border">
+              <Fragment key={row.teamId}>
+              <tr className="border-b border-border">
                 <td className="px-4 py-2 font-mono tabular-nums text-foreground">
                   {row.leagueRank}
                 </td>
                 <td className="px-4 py-2 text-foreground">
-                  <Link
-                    href={`/dashboard/teams/${row.teamId}`}
-                    className="text-primary hover:underline"
-                  >
-                    {row.teamName}
-                  </Link>
+                  {withTeamMarks || clinched ? (
+                    <span className="flex items-center gap-2.5">
+                      {withTeamMarks ? (
+                        <TeamMark
+                          name={row.teamName}
+                          primaryColor={teamColors?.[row.teamId]}
+                          size="sm"
+                        />
+                      ) : null}
+                      {teamLink}
+                      {clinched ? (
+                        <Badge variant="success">Clinched</Badge>
+                      ) : null}
+                    </span>
+                  ) : (
+                    teamLink
+                  )}
                 </td>
                 <td className="px-4 py-2 text-right font-mono tabular-nums text-foreground">
                   {row.wins}
@@ -106,6 +154,18 @@ export default function StandingsTable({
                   {row.divisionRank}
                 </td>
               </tr>
+              {showPlayoffCutDivider && cut > 0 && row.leagueRank === cut ? (
+                <tr aria-hidden="true" data-testid="playoff-cut-divider">
+                  <td colSpan={9} className="p-0">
+                    <div className="relative border-t-2 border-dashed border-border-strong">
+                      <span className="absolute -top-2 right-3 bg-card px-1.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Playoff cut
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             );
           })}
         </tbody>
