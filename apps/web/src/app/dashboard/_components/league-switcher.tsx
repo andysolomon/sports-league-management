@@ -48,7 +48,7 @@ export function LeagueSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex h-9 min-w-0 items-center gap-2 rounded-control border border-border bg-surface px-3 text-[13px] font-semibold text-text transition-colors hover:bg-surface-2 disabled:opacity-60"
+        className="flex h-9 min-w-0 items-center gap-2 rounded-control border border-border bg-surface-2 px-3 text-[13px] font-semibold text-text transition-colors hover:bg-surface-3 disabled:opacity-60"
         disabled={isPending}
         aria-label="Switch league"
       >

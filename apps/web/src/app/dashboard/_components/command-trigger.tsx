@@ -46,7 +46,7 @@ export function CommandTrigger({
       variant="outline"
       size="sm"
       onClick={openCommandPalette}
-      className="text-text-subtle h-[38px] max-w-[360px] flex-1 justify-between gap-2 border-border bg-surface-2 font-medium hover:bg-surface-2 hover:text-text-subtle"
+      className="text-text-subtle h-[38px] max-w-[360px] flex-1 justify-between gap-2 rounded-control border-border bg-surface-2 font-medium hover:bg-surface-2 hover:text-text-subtle"
     >
       <span className="flex items-center gap-2">
         <Search className="h-3.5 w-3.5" />

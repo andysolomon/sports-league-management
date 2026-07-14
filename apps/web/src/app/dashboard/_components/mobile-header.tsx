@@ -4,7 +4,12 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import Sidebar from "./sidebar";
 import { LeagueSwitcher } from "./league-switcher";
 import { CommandTrigger } from "./command-trigger";
@@ -33,7 +38,12 @@ export default function MobileHeader({
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[212px] border-r border-border bg-bg p-0">
+        <SheetContent
+          side="left"
+          hideCloseButton
+          className="w-[248px] border-r border-border bg-bg p-0"
+        >
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
           <Sidebar onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>

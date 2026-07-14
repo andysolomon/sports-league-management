@@ -27,8 +27,8 @@ export default async function DashboardLayout({
         Skip to content
       </a>
 
-      {/* Desktop sidebar — prototype shell: 212px rail on --bg */}
-      <aside className="hidden w-[212px] shrink-0 border-r border-border bg-bg lg:block">
+      {/* Desktop sidebar — prototype shell: 248px rail on --bg */}
+      <aside className="hidden w-[248px] shrink-0 border-r border-border bg-bg lg:block">
         <Sidebar />
       </aside>
 
