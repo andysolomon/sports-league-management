@@ -46,13 +46,13 @@ export function CommandTrigger({
       variant="outline"
       size="sm"
       onClick={openCommandPalette}
-      className="text-muted-foreground w-56 justify-between gap-2 font-normal"
+      className="text-text-subtle h-[38px] max-w-[360px] flex-1 justify-between gap-2 border-border bg-surface-2 font-medium hover:bg-surface-2 hover:text-text-subtle"
     >
       <span className="flex items-center gap-2">
-        <Search className="h-4 w-4" />
+        <Search className="h-3.5 w-3.5" />
         Search…
       </span>
-      <kbd className="bg-muted text-muted-foreground pointer-events-none inline-flex h-5 items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium select-none">
+      <kbd className="text-text-subtle pointer-events-none inline-flex items-center rounded-md border border-border px-1.5 py-0.5 font-mono text-[11px] font-medium select-none">
         {isMac ? "⌘" : "Ctrl"} K
       </kbd>
     </Button>
