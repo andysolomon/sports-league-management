@@ -1,0 +1,18 @@
+WSM-000245 - Leagues & Seasons Operator-Shell Visual Overhaul - Progress
+Generated: 2026-07-13 16:35:53 EDT
+Archived: 2026-07-14 (WSM-000252 / #554) — epic complete.
+
+[x] 1.0 - WSM-000246 - Operator shell reskin (#548) — merged #567
+    [x] 1.1 - Reskin sidebar brand, active pill, spacing (no prototype watermark)
+    [x] 1.2 - Align desktop header composition (league switcher, command, theme/account)
+    [x] 1.3 - Keep mobile header + a11y landmarks; no route/data changes
+    [x] 1.4 - Verify lint/unit/nav smoke; open PR Closes #548
+[x] 2.0 - WSM-000247 - Hub headers (league + season) — merged #565
+[x] 3.0 - WSM-000248 - Teams table + team detail sheet — merged #562
+[x] 4.0 - WSM-000249 - Players + Divisions polish — merged #563
+[x] 5.0 - WSM-000250 - Schedule / standings / playoffs surface polish — merged #566
+[x] 6.0 - WSM-000251 - League manage polish — merged #564
+[x] 7.0 - WSM-000252 - Visual regression + ship (#554)
+    [x] 7.1 - Update visual baselines; mobile parity
+    [x] 7.2 - Close epic #547 after children merge
+    [x] 7.3 - Move docs/WSM-000245-* to docs/archive/

@@ -47,7 +47,9 @@ const ROWS: Standing[] = [
 ];
 
 export default function StandingsTableVisualHarness() {
-  if (process.env.VERCEL_ENV === "production") notFound();
+  if (process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production") {
+    notFound();
+  }
   return (
     <div className="bg-background p-6">
       <div data-testid="standings" className="w-[760px]">

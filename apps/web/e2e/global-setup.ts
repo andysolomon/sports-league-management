@@ -45,6 +45,19 @@ async function checkSalesforceConnection(baseURL: string) {
 export default async function globalSetup(config: FullConfig) {
   await clerkSetup();
 
+  // Visual regression only needs the Next dev server + /dev/visual harnesses
+  // (no Convex seed, no Salesforce). Prefer an explicit opt-out so
+  // `test:visual` / `test:visual:update` work without a local Convex backend
+  // (WSM-000252). Also skip when the filtered project list is visual-only.
+  const visualOnly =
+    process.env.PLAYWRIGHT_VISUAL_ONLY === "1" ||
+    (config.projects.length > 0 &&
+      config.projects.every((project) => project.name === "visual"));
+  if (visualOnly) {
+    console.log("✓ Skipping Salesforce health + canonical seed (visual-only run)");
+    return;
+  }
+
   const baseURL =
     config.projects[0]?.use?.baseURL ?? "http://localhost:3000";
   await checkSalesforceConnection(baseURL);
