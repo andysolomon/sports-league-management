@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
@@ -36,9 +37,31 @@ import {
 import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
 
 /**
- * League manage surface (WSM-000254): admin settings relocated from the league
- * info destination. Polish is scoped to WSM-000251 — preserve existing controls.
+ * League manage surface (WSM-000254), recomposed into the prototype's
+ * "Manage league" settings-row pattern (WSM-000251): one Settings card of
+ * label + description + control rows, ending in a Danger zone. Every control
+ * predates the polish and keeps its behavior.
  */
+function SettingsRow({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+      <div className="min-w-0">
+        <p className="text-label-14 text-foreground">{title}</p>
+        <p className="text-caption-12 text-text-muted">{description}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    </div>
+  );
+}
+
 export default async function LeagueManagePage({
   params,
 }: {
@@ -92,45 +115,73 @@ export default async function LeagueManagePage({
         ]}
       />
       <BackLink href={`/dashboard/leagues/${id}`} label="Back to League" />
-      <WorkspaceHeader title={league.name} sub="Manage league settings" />
+      <WorkspaceHeader
+        title="Manage league"
+        sub="Settings, members, and roster tools."
+      />
 
       <Card data-testid="league-manage-settings">
         <CardContent className="pt-6">
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center gap-1">
+          <h2 className="text-lg font-bold tracking-[-0.3px] text-foreground">
+            Settings
+          </h2>
+          <div className="divide-y divide-border">
+            <SettingsRow title="League name" description="Rename this league.">
               <RenameLeagueForm leagueId={id} currentName={league.name} />
-              <DeleteLeagueButton leagueId={id} leagueName={league.name} />
-            </div>
-            <InviteForm orgId={league.orgId} />
-            <InvitationList orgId={league.orgId} />
-            <InviteLinkSection leagueId={id} />
-            <LeaguePublicToggle
-              leagueId={id}
-              initialIsPublic={visibility?.isPublic ?? false}
-            />
-            <LeagueClaimableToggle
-              leagueId={id}
-              initialClaimable={claimable}
-              isPublic={visibility?.isPublic ?? false}
-            />
-            <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
-              <div className="min-w-0">
-                <p className="text-label-14 text-foreground">Teams</p>
-                <p className="text-caption-12 text-text-muted">
-                  Add a team to this league.
-                </p>
+            </SettingsRow>
+
+            <div className="space-y-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-label-14 text-foreground">
+                    Members &amp; invites
+                  </p>
+                  <p className="text-caption-12 text-text-muted">
+                    Invite operators and coaches.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Link
+                    href={`/dashboard/leagues/${id}/members`}
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    Manage Members &rarr;
+                  </Link>
+                  <Link
+                    href={`/dashboard/leagues/${id}/requests`}
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    Join Requests &rarr;
+                  </Link>
+                </div>
               </div>
-              <AddTeamForm leagueId={id} />
+              <InviteForm orgId={league.orgId} />
+              <InvitationList orgId={league.orgId} />
+              <InviteLinkSection leagueId={id} />
             </div>
+
+            <div className="py-4">
+              <LeaguePublicToggle
+                leagueId={id}
+                initialIsPublic={visibility?.isPublic ?? false}
+              />
+            </div>
+
+            <div className="py-4">
+              <LeagueClaimableToggle
+                leagueId={id}
+                initialClaimable={claimable}
+                isPublic={visibility?.isPublic ?? false}
+              />
+            </div>
+
+            <SettingsRow title="Teams" description="Add a team to this league.">
+              <AddTeamForm leagueId={id} />
+            </SettingsRow>
+
             {canGenerateRosters ? (
-              <div className="space-y-3 border-t border-border pt-4">
-                <UndersizedRosterPanel
-                  leagueId={id}
-                  target={rosterDeficit.target}
-                  undersizedTeams={rosterDeficit.teams}
-                  canAutoFill={!seasonStarted}
-                />
-                <div className="flex flex-wrap items-center gap-3">
+              <div className="space-y-3 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-label-14 text-foreground">
                       Synthetic rosters
@@ -138,10 +189,10 @@ export default async function LeagueManagePage({
                     <p className="text-caption-12 text-text-muted">
                       {seasonStarted
                         ? "Season has started — roster and ratings generation is locked."
-                        : "Fill every team in this league with fake test players (~48 each) for demos. Not real people."}
+                        : "Fill every team with ~48 fake players for demos."}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <SyntheticRosterButton
                       kind="league"
                       id={id}
@@ -160,21 +211,16 @@ export default async function LeagueManagePage({
                     />
                   </div>
                 </div>
+                <UndersizedRosterPanel
+                  leagueId={id}
+                  target={rosterDeficit.target}
+                  undersizedTeams={rosterDeficit.teams}
+                  canAutoFill={!seasonStarted}
+                />
               </div>
             ) : null}
-            <div className="flex flex-wrap gap-x-4 gap-y-2">
-              <Link
-                href={`/dashboard/leagues/${id}/members`}
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-              >
-                Manage Members &rarr;
-              </Link>
-              <Link
-                href={`/dashboard/leagues/${id}/requests`}
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-              >
-                Join Requests &rarr;
-              </Link>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-2 py-4">
               <Link
                 href={`/dashboard/leagues/${id}/schedule`}
                 className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
@@ -188,6 +234,17 @@ export default async function LeagueManagePage({
                 Standings &rarr;
               </Link>
             </div>
+
+            <SettingsRow
+              title="Danger zone"
+              description="Delete this league and all its data."
+            >
+              <DeleteLeagueButton
+                leagueId={id}
+                leagueName={league.name}
+                appearance="labeled"
+              />
+            </SettingsRow>
           </div>
         </CardContent>
       </Card>
