@@ -1,12 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import { playoffsV1, schedulesStandingsV1, statKeepingV1 } from "@/lib/flags";
 import {
   getLeague,
   getLeagueOrgId,
   getSeasons,
   getPlayoffBracket,
+  getTeamsByLeague,
   listFixturesBySeason,
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
@@ -66,6 +68,14 @@ export default async function LeaguePlayoffsPage({
   const bracket = activeSeason
     ? await getPlayoffBracket(activeSeason.id)
     : null;
+
+  // Visual polish (WSM-000250): TeamMark brand colors for bracket cards.
+  const teams = bracket
+    ? await getTeamsByLeague(leagueId, orgContext).catch(() => [])
+    : [];
+  const teamColors = Object.fromEntries(
+    teams.map((team) => [team.id, team.primaryColor ?? null]),
+  );
 
   const phase = activeSeason
     ? playoffPagePhase({
@@ -154,12 +164,13 @@ export default async function LeaguePlayoffsPage({
               canManage={isAdmin}
             />
           ) : null}
-          <PlayoffBracket bracket={bracket} />
+          <PlayoffBracket bracket={bracket} teamColors={teamColors} />
         </div>
       ) : phase === "ready" ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-            <p className="text-sm text-muted-foreground">
+          <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
+            <Trophy className="h-8 w-8 text-accent" aria-hidden="true" />
+            <p className="max-w-md text-sm text-muted-foreground">
               Regular season complete ({progress.final} of {progress.total} games
               final). Ready to seed the bracket from current standings.
             </p>
@@ -181,18 +192,25 @@ export default async function LeaguePlayoffsPage({
         </Card>
       ) : (
         <Card>
-          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
-            <p className="text-sm text-muted-foreground">
+          <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
+            <p className="max-w-md text-sm text-muted-foreground">
               Regular season in progress — {progress.final} of {progress.total}{" "}
-              games final.
+              games final. Finish the schedule to seed the bracket.
             </p>
-            {isAdmin && !seasonCompleted ? (
-              <AdvanceToPlayoffsButton
-                leagueId={leagueId}
-                seasonId={activeSeason.id}
-                disabled
-              />
-            ) : null}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {isAdmin && !seasonCompleted ? (
+                <AdvanceToPlayoffsButton
+                  leagueId={leagueId}
+                  seasonId={activeSeason.id}
+                  disabled
+                />
+              ) : null}
+              <Button asChild size="sm" variant="outline">
+                <Link href={`/dashboard/leagues/${leagueId}/schedule`}>
+                  Go to schedule
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
