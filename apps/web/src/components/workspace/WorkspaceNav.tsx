@@ -13,10 +13,7 @@ export function WorkspaceNav({ links }: { links: WorkspaceNavLink[] }) {
   if (links.length === 0) return null;
 
   return (
-    <nav
-      aria-label="Workspace"
-      className="mt-3 flex flex-wrap gap-3"
-    >
+    <nav aria-label="Workspace" className="mt-3 flex flex-wrap gap-4">
       {links.map((link) => (
         <Link
           key={link.href}
