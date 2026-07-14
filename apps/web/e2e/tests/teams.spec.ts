@@ -1,37 +1,45 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
+import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { TEAMS } from "../helpers/test-data";
 
 test.describe("Teams Page", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
+    const canonical = readCanonicalFixture();
+    if (canonical) {
+      await setActiveLeague(page, canonical.leagueId);
+    }
     await page.goto("/dashboard/teams");
   });
 
   test("shows Teams heading", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: "Teams" })).toBeVisible();
+    await expect(
+      page.locator("#main-content").getByRole("heading", { name: "Teams" }),
+    ).toBeVisible();
   });
 
-  test("renders at least 4 team cards", async ({ page }) => {
-    const cards = page.locator("main a[href^='/dashboard/teams/']");
-    await expect(cards.first()).toBeVisible();
-    expect(await cards.count()).toBeGreaterThanOrEqual(4);
+  test("renders at least 4 team rows", async ({ page }) => {
+    const rows = page.locator("#main-content").getByTestId("team-row");
+    await expect(rows.first()).toBeVisible();
+    expect(await rows.count()).toBeGreaterThanOrEqual(4);
   });
 
-  test("Cowboys card shows correct details", async ({ page }) => {
+  test("Cowboys row is present in the table", async ({ page }) => {
+    const main = page.locator("#main-content");
     const cowboys = TEAMS.COWBOYS;
-    const card = page.locator("a", { hasText: cowboys.name });
-    await expect(card).toBeVisible();
-    await expect(card).toContainText(cowboys.city);
-    await expect(card).toContainText(cowboys.stadium);
-    await expect(card).toContainText(String(cowboys.foundedYear));
+    const row = main.getByRole("row", { name: new RegExp(cowboys.name) });
+    await expect(row).toBeVisible();
+    await expect(row.getByRole("link", { name: cowboys.name })).toBeVisible();
   });
 
-  test("each team card is a link", async ({ page }) => {
-    const cards = page.locator("main a[href^='/dashboard/teams/']");
-    await expect(cards.first()).toBeVisible();
-    for (const card of await cards.all()) {
-      const href = await card.getAttribute("href");
+  test("each team name links to the team detail route", async ({ page }) => {
+    const links = page.locator(
+      "#main-content a[href^='/dashboard/teams/']",
+    );
+    await expect(links.first()).toBeVisible();
+    for (const link of await links.all()) {
+      const href = await link.getAttribute("href");
       expect(href).toBeTruthy();
     }
   });
