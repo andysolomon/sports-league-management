@@ -3,63 +3,78 @@ import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 import { PLAYERS } from "../helpers/test-data";
 
-test.describe("DataTable Interactions", () => {
+// The players page replaced the generic DataTable with the directory list
+// view (WSM-000249); these tests cover the same interactions — search,
+// empty state, sorting, pagination summary — against the new surface.
+test.describe("Players directory list interactions", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
     await setActiveLeague(page, readCanonicalFixture().leagueId);
     await page.goto("/dashboard/players");
-    await expect(page.getByRole("heading", { name: "Players" })).toBeVisible();
+    const main = page.locator("#main-content");
+    await expect(main.getByRole("heading", { name: "Players" })).toBeVisible();
+    await main.getByRole("button", { name: "List" }).click();
+    await expect(main.locator("thead th").first()).toBeVisible();
   });
 
   test("search filters table rows", async ({ page }) => {
-    await page.getByPlaceholder("Search players...").fill("Prescott");
-    const rows = page.locator("tbody tr");
+    const main = page.locator("#main-content");
+    await main.getByPlaceholder("Search players or teams…").fill("Prescott");
+    const rows = main.locator("tbody tr");
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText(PLAYERS.PRESCOTT.name);
   });
 
   test("search is case-insensitive", async ({ page }) => {
-    await page.getByPlaceholder("Search players...").fill("PRESCOTT");
-    const rows = page.locator("tbody tr");
+    const main = page.locator("#main-content");
+    await main.getByPlaceholder("Search players or teams…").fill("PRESCOTT");
+    const rows = main.locator("tbody tr");
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toContainText(PLAYERS.PRESCOTT.name);
   });
 
   test("search with no results shows empty state", async ({ page }) => {
-    await page.getByPlaceholder("Search players...").fill("ZZZZNONEXISTENT");
-    await expect(page.getByText("No results found.")).toBeVisible();
-    await expect(page.locator("tbody tr")).toHaveCount(1); // empty state row
+    const main = page.locator("#main-content");
+    await main
+      .getByPlaceholder("Search players or teams…")
+      .fill("ZZZZNONEXISTENT");
+    await expect(main.getByText("No players found")).toBeVisible();
+    await expect(
+      main.getByText("Try a different search or filter."),
+    ).toBeVisible();
   });
 
   test("column sorting toggles order", async ({ page }) => {
-    const nameButton = page.locator("thead button", { hasText: "Name" });
-    await nameButton.click();
-    const firstNameAsc = await page.locator("tbody tr").first().locator("td").first().textContent();
+    const main = page.locator("#main-content");
+    const nameHeader = main.locator("thead th", { hasText: "Name" });
+    await nameHeader.click();
+    const firstAsc = await main
+      .locator("tbody tr")
+      .first()
+      .locator("td")
+      .first()
+      .textContent();
 
-    await nameButton.click();
-    const firstNameDesc = await page.locator("tbody tr").first().locator("td").first().textContent();
+    await nameHeader.click();
+    const firstDesc = await main
+      .locator("tbody tr")
+      .first()
+      .locator("td")
+      .first()
+      .textContent();
 
-    expect(firstNameAsc).not.toBe(firstNameDesc);
+    expect(firstAsc).not.toBe(firstDesc);
   });
 
-  test("pagination controls visible for 12+ rows", async ({ page }) => {
-    await expect(page.getByText(/Showing 1–10 of 12/)).toBeVisible();
-    await expect(page.getByText("Page 1 of 2")).toBeVisible();
-  });
-
-  test("pagination navigation works", async ({ page }) => {
-    // The pagination section has Previous and Next buttons with chevron icons
-    const paginationArea = page.locator("div.flex.items-center.justify-between");
-    const buttons = paginationArea.locator("button");
-    const prevButton = buttons.first();
-    const nextButton = buttons.last();
-
-    await nextButton.click();
-    await expect(page.getByText("Page 2 of 2")).toBeVisible();
-    await expect(page.getByText(/Showing 11–12 of 12/)).toBeVisible();
-
-    await prevButton.click();
-    await expect(page.getByText("Page 1 of 2")).toBeVisible();
-    await expect(page.getByText(/Showing 1–10 of 12/)).toBeVisible();
+  test("pagination summary reflects the roster size", async ({ page }) => {
+    // Canonical league fits on one page (page size 25 in list view), so the
+    // summary shows the full range and the pagers are disabled.
+    const main = page.locator("#main-content");
+    await expect(main.getByText(/Showing 1–\d+ of \d+/)).toBeVisible();
+    await expect(main.getByText(/Page 1 of 1/)).toBeVisible();
+    await expect(
+      main.getByRole("button", { name: "Previous page" }),
+    ).toBeDisabled();
+    await expect(main.getByRole("button", { name: "Next page" })).toBeDisabled();
   });
 });
