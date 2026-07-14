@@ -48,15 +48,15 @@ export function LeagueSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="flex min-w-0 items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+        className="flex h-9 min-w-0 items-center gap-2 rounded-control border border-border bg-surface-2 px-3 text-[13px] font-semibold text-text transition-colors hover:bg-surface-3 disabled:opacity-60"
         disabled={isPending}
         aria-label="Switch league"
       >
-        <Trophy className="h-4 w-4 shrink-0 text-primary" />
+        <Trophy className="h-3.5 w-3.5 shrink-0 text-accent" strokeWidth={1.9} />
         <span className="max-w-[10rem] truncate">
           {active?.name ?? "Select league"}
         </span>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-text-muted" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuLabel>Active league</DropdownMenuLabel>

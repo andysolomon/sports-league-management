@@ -22,13 +22,13 @@ export default async function DashboardLayout({
     : { leagues: [], activeLeagueId: null };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-bg">
       <a href="#main-content" className="skip-to-content">
         Skip to content
       </a>
 
-      {/* Desktop sidebar */}
-      <aside className="hidden w-56 border-r border-border bg-card lg:block">
+      {/* Desktop sidebar — prototype shell: 248px rail on --bg */}
+      <aside className="hidden w-[248px] shrink-0 border-r border-border bg-bg lg:block">
         <Sidebar />
       </aside>
 
@@ -39,13 +39,13 @@ export default async function DashboardLayout({
         {/* Mobile header with hamburger */}
         <MobileHeader leagues={leagues} activeLeagueId={activeLeagueId} />
 
-        {/* Desktop header — the league switcher is the focus anchor (WSM-000103) */}
-        <header className="hidden items-center justify-between border-b border-border px-8 py-4 lg:flex">
-          <div className="flex items-center gap-3">
+        {/* Desktop header — league switcher + command left; density/theme/account right */}
+        <header className="hidden h-14 shrink-0 items-center justify-between gap-3.5 border-b border-border bg-bg px-[22px] lg:flex">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <LeagueSwitcher leagues={leagues} activeLeagueId={activeLeagueId} />
             <CommandTrigger />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2.5">
             <DensityToggle />
             <ThemeToggle />
             <UserButton />
