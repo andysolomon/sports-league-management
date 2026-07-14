@@ -62,7 +62,7 @@ export async function addTeamsToLeague(
   leagueId: string,
   names: string[],
 ): Promise<void> {
-  await page.goto(`/dashboard/leagues/${leagueId}`);
+  await page.goto(`/dashboard/leagues/${leagueId}/manage`);
   for (const name of names) {
     await page.getByRole("button", { name: "Add team" }).click();
     await page.getByPlaceholder("Team name").fill(name);
@@ -95,7 +95,7 @@ export async function generateLeagueSyntheticData(
   page: Page,
   leagueId: string,
 ): Promise<void> {
-  await page.goto(`/dashboard/leagues/${leagueId}`);
+  await page.goto(`/dashboard/leagues/${leagueId}/manage`);
   const rostersBtn = page.getByRole("button", { name: "Generate rosters" });
   await rostersBtn.click();
   await confirmLifecycleDialog(page);
