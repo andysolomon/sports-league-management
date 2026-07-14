@@ -10,6 +10,9 @@ test.describe("Team Detail Page", () => {
     // Navigate to Cowboys detail via the teams list
     await page.goto("/dashboard/teams");
     await page.locator("a", { hasText: TEAMS.COWBOYS.name }).click();
+    // The teams list is itself a table now — wait for the detail route so
+    // thead/table assertions don't race client-side navigation.
+    await expect(page).toHaveURL(/\/dashboard\/teams\/[^/]+$/);
   });
 
   test("shows team name as heading", async ({ page }) => {
