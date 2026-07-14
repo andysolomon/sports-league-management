@@ -23,12 +23,13 @@ test.describe("Mobile Responsive Navigation", () => {
     await page.getByLabel("Open navigation menu").click();
 
     // WSM-000252 / WSM-000246 — mobile sheet mirrors desktop rail chrome
+    const sheet = page.getByRole("dialog");
     await expect(
-      page.getByRole("heading", { name: "Sports League" }),
+      sheet.getByRole("heading", { name: "Sports League" }),
     ).toBeVisible();
 
     for (const label of NAV_LABELS) {
-      await expect(page.getByRole("link", { name: label })).toBeVisible();
+      await expect(sheet.getByRole("link", { name: label })).toBeVisible();
     }
   });
 

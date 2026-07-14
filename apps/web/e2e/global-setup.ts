@@ -43,20 +43,20 @@ async function checkSalesforceConnection(baseURL: string) {
 }
 
 export default async function globalSetup(config: FullConfig) {
-  await clerkSetup();
-
   // Visual regression only needs the Next dev server + /dev/visual harnesses
-  // (no Convex seed, no Salesforce). Prefer an explicit opt-out so
-  // `test:visual` / `test:visual:update` work without a local Convex backend
-  // (WSM-000252). Also skip when the filtered project list is visual-only.
+  // (no Clerk testing tokens, Convex seed, or Salesforce). Check this BEFORE
+  // clerkSetup so `test:visual` / `test:visual:update` stay harness-only
+  // (WSM-000252).
   const visualOnly =
     process.env.PLAYWRIGHT_VISUAL_ONLY === "1" ||
     (config.projects.length > 0 &&
       config.projects.every((project) => project.name === "visual"));
   if (visualOnly) {
-    console.log("✓ Skipping Salesforce health + canonical seed (visual-only run)");
+    console.log("✓ Skipping Clerk setup + Salesforce health + canonical seed (visual-only run)");
     return;
   }
+
+  await clerkSetup();
 
   const baseURL =
     config.projects[0]?.use?.baseURL ?? "http://localhost:3000";
