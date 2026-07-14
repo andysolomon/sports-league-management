@@ -20,8 +20,13 @@ test.describe("Status Badges and Date Formatting", () => {
   test("Active player has green badge", async ({ page }) => {
     await page.goto("/dashboard/players");
 
-    // Search first — players paginate at 10/page (Prescott may be off page 1).
-    await page.getByPlaceholder("Search players...").fill(PLAYERS.PRESCOTT.name);
+    // Directory defaults to cards — switch to the list view, then search
+    // (the row locators below are table-based).
+    const main = page.locator("#main-content");
+    await main.getByRole("button", { name: "List" }).click();
+    await main
+      .getByPlaceholder("Search players or teams…")
+      .fill(PLAYERS.PRESCOTT.name);
     const row = page.locator("tbody tr", { hasText: PLAYERS.PRESCOTT.name });
     const badge = row.getByText(PLAYERS.PRESCOTT.status, { exact: true });
     await expect(badge).toBeVisible();
@@ -32,7 +37,11 @@ test.describe("Status Badges and Date Formatting", () => {
   test("Injured player has yellow badge", async ({ page }) => {
     await page.goto("/dashboard/players");
 
-    await page.getByPlaceholder("Search players...").fill(PLAYERS.PARSONS.name);
+    const main = page.locator("#main-content");
+    await main.getByRole("button", { name: "List" }).click();
+    await main
+      .getByPlaceholder("Search players or teams…")
+      .fill(PLAYERS.PARSONS.name);
     const row = page.locator("tbody tr", { hasText: PLAYERS.PARSONS.name });
     const badge = row.getByText(PLAYERS.PARSONS.status, { exact: true });
     await expect(badge).toBeVisible();
@@ -43,8 +52,11 @@ test.describe("Status Badges and Date Formatting", () => {
   test("Inactive player has gray badge", async ({ page }) => {
     await page.goto("/dashboard/players");
 
-    // Barmore is on page 2 if unpaginated — search to bring the row into view.
-    await page.getByPlaceholder("Search players...").fill(PLAYERS.BARMORE.name);
+    const main = page.locator("#main-content");
+    await main.getByRole("button", { name: "List" }).click();
+    await main
+      .getByPlaceholder("Search players or teams…")
+      .fill(PLAYERS.BARMORE.name);
     const row = page.locator("tbody tr", { hasText: PLAYERS.BARMORE.name });
     const badge = row.getByText(PLAYERS.BARMORE.status, { exact: true });
     await expect(badge).toBeVisible();
