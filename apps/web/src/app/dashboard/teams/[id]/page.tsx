@@ -17,6 +17,7 @@ import { playerAttributesV1, syntheticRostersV1 } from "@/lib/flags";
 import type { PlayerSnapshot } from "@/lib/attributes/headline-columns";
 import TeamManagement from "./team-management";
 import { ClaimTeamButton } from "./claim-team-button";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function TeamDetailPage({
   params,
@@ -48,6 +49,7 @@ export default async function TeamDetailPage({
   // Matches the players/[id] + divisions/[id] guard pattern.
   const team = await getTeam(id, orgContext).catch(() => null);
   if (!team) notFound();
+  await syncActiveLeagueForResource(team.leagueId);
 
   // canManage = admin or coach (roster/players/edit); canDelete = admin only
   // (removing the whole team). WSM-000121 intra-org roles. Safe to run now that

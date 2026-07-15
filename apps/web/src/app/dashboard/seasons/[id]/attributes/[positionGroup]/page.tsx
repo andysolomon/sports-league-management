@@ -12,6 +12,7 @@ import {
   POSITION_GROUPS,
   isValidPositionGroup,
 } from "@/lib/attributes/position-groups";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 const TOP_LIMIT = 50;
 const TOP_ATTRIBUTES_SHOWN = 3;
@@ -44,6 +45,7 @@ export default async function SeasonAttributesByPositionPage({
   const orgContext = await resolveOrgContext(userId);
   const season = await getSeason(seasonId, orgContext).catch(() => null);
   if (!season) notFound();
+  await syncActiveLeagueForResource(season.leagueId);
 
   const rows = await getSeasonAttributesByPosition(
     seasonId,

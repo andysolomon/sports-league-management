@@ -40,6 +40,7 @@ import { BackLink } from "@/components/workspace/BackLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 /**
  * Season hub (WSM-000213): one home per season. Progress, standings snapshot,
@@ -63,6 +64,7 @@ export default async function SeasonHubPage({
 
   const league = await getLeague(season.leagueId, orgContext).catch(() => null);
   if (!league) notFound();
+  await syncActiveLeagueForResource(league.id);
 
   let isAdmin = false;
   if (league.orgId) {

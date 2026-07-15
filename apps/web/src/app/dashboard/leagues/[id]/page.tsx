@@ -38,6 +38,7 @@ import { LeagueLifecycleBanners } from "@/components/league/LeagueLifecycleBanne
 import { LeagueCurrentSeasonCard } from "@/components/league/LeagueCurrentSeasonCard";
 import { LeagueStandingsCard } from "@/components/league/LeagueStandingsCard";
 import { LeagueTeamsGrid } from "@/components/league/LeagueTeamsGrid";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 /**
  * League info destination (WSM-000254): read-oriented league home with
@@ -56,6 +57,7 @@ export default async function LeagueInfoPage({
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(id, orgContext).catch(() => null);
   if (!league) notFound();
+  await syncActiveLeagueForResource(league.id);
 
   let isAdmin = false;
   if (league.orgId) {

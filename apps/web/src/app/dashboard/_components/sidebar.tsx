@@ -10,6 +10,7 @@ import {
   Compass,
   Upload,
   CreditCard,
+  PlusCircle,
 } from "lucide-react";
 import NavLink from "./nav-link";
 
@@ -25,11 +26,25 @@ const navItems = [
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
 ];
 
+const hiddenWithoutLeagueHrefs = new Set([
+  "/dashboard",
+  "/dashboard/leagues",
+  "/dashboard/teams",
+  "/dashboard/players",
+  "/dashboard/seasons",
+  "/dashboard/divisions",
+]);
+
 interface SidebarProps {
+  hasLeagues?: boolean;
   onNavigate?: () => void;
 }
 
-export default function Sidebar({ onNavigate }: SidebarProps) {
+export default function Sidebar({ hasLeagues = true, onNavigate }: SidebarProps) {
+  const visibleNavItems = hasLeagues
+    ? navItems
+    : navItems.filter((item) => !hiddenWithoutLeagueHrefs.has(item.href));
+
   return (
     <div className="flex h-full flex-col px-3 py-[18px]">
       <div className="flex items-center gap-2.5 px-2 pb-4">
@@ -48,7 +63,16 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
         role="navigation"
         aria-label="Main navigation"
       >
-        {navItems.map((item) => (
+        {!hasLeagues ? (
+          <NavLink
+            href="/dashboard/leagues"
+            icon={PlusCircle}
+            onClick={onNavigate}
+          >
+            League Directory
+          </NavLink>
+        ) : null}
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.href}
             href={item.href}

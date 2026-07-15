@@ -12,6 +12,7 @@ import { BackLink } from "@/components/workspace/BackLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function LeagueStatLeadersPage({
   params,
@@ -31,6 +32,7 @@ export default async function LeagueStatLeadersPage({
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
+  await syncActiveLeagueForResource(league.id);
 
   const { season: seasonParam } = await searchParams;
   const allSeasons = await getSeasons([leagueId]);

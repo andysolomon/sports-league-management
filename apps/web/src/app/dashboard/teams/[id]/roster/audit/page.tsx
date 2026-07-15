@@ -12,6 +12,7 @@ import {
 } from "@/lib/data-api";
 import { getUserRoleInOrg } from "@/lib/org-context";
 import RosterAuditTimeline from "@/components/roster/RosterAuditTimeline";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function RosterAuditPage({
   params,
@@ -42,6 +43,7 @@ export default async function RosterAuditPage({
 
   const role = await getUserRoleInOrg(orgId, userId);
   if (!role) notFound();
+  await syncActiveLeagueForResource(team.leagueId);
 
   const seasons = await getSeasons([team.leagueId]);
   const activeSeason =

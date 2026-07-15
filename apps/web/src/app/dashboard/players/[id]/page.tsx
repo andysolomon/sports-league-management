@@ -26,6 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { UserCircle } from "lucide-react";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 /*
  * Player profile (WSM-000088). Core page, not flag-gated — only the
@@ -63,6 +64,11 @@ export default async function PlayerProfilePage({
   const orgContext = await resolveOrgContext(userId);
   const player = await getPlayer(playerId, orgContext).catch(() => null);
   if (!player) notFound();
+  const playerLeagueId = await getTeamLeagueId(player.teamId).catch(
+    () => null,
+  );
+  if (!playerLeagueId) notFound();
+  await syncActiveLeagueForResource(playerLeagueId);
 
   const team = await getTeam(player.teamId, orgContext).catch(() => null);
   const positionGroup = derivePositionGroup(player.position);
@@ -84,9 +90,6 @@ export default async function PlayerProfilePage({
     );
   }
   // Coaches + admins may edit SPRT attributes on the profile card (WSM-000121).
-  const playerLeagueId = team
-    ? await getTeamLeagueId(team.id).catch(() => null)
-    : null;
   const playerOrgId = playerLeagueId
     ? await getLeagueOrgId(playerLeagueId)
     : null;

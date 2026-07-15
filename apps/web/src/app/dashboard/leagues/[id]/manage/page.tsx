@@ -35,6 +35,7 @@ import {
   buildLeagueRosterDeficitProjection,
 } from "@/lib/roster-deficit";
 import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 /**
  * League manage surface (WSM-000254), recomposed into the prototype's
@@ -82,6 +83,7 @@ export default async function LeagueManagePage({
   } catch {
     notFound();
   }
+  await syncActiveLeagueForResource(league.id);
 
   const visibility = await getLeagueVisibility(id);
   const claimable = await getLeagueClaimable(id);

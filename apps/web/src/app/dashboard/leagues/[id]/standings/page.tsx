@@ -20,6 +20,7 @@ import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import { trackStandingsView } from "@/lib/analytics";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function LeagueStandingsPage({
   params,
@@ -41,6 +42,7 @@ export default async function LeagueStandingsPage({
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
+  await syncActiveLeagueForResource(league.id);
 
   const { season: seasonParam } = await searchParams;
   const allSeasons = await getSeasons([leagueId]);
