@@ -46,7 +46,7 @@ describe("active league server synchronization", () => {
     });
 
     await expect(syncActiveLeagueForResource("league-2")).rejects.toThrow(
-      "NEXT_REDIRECT:/dashboard/_active-league?leagueId=league-2&returnTo=%2Fdashboard%2Fteams%2Fteam-2%2Froster%3Fview%3Dall",
+      "NEXT_REDIRECT:/dashboard/active-league?leagueId=league-2&returnTo=%2Fdashboard%2Fteams%2Fteam-2%2Froster%3Fview%3Dall",
     );
   });
 

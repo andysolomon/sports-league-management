@@ -72,7 +72,7 @@ describe("active league recovery route", () => {
     await expect(
       GET(
         request(
-          "/dashboard/_active-league?leagueId=league-2&returnTo=/dashboard/teams/team-1",
+          "/dashboard/active-league?leagueId=league-2&returnTo=/dashboard/teams/team-1",
         ),
       ),
     ).rejects.toThrow("NEXT_REDIRECT:/dashboard/teams/team-1");
@@ -90,7 +90,7 @@ describe("active league recovery route", () => {
     await expect(
       GET(
         request(
-          "/dashboard/_active-league?leagueId=league-2&returnTo=https://evil.test/dashboard",
+          "/dashboard/active-league?leagueId=league-2&returnTo=https://evil.test/dashboard",
         ),
       ),
     ).rejects.toThrow("NEXT_REDIRECT:/dashboard");
@@ -101,7 +101,7 @@ describe("active league recovery route", () => {
   it("recovers stale preferences to the deterministic league home", async () => {
     mockResolveActiveLeague.mockResolvedValue({ activeLeagueId: "league-1" });
 
-    await expect(GET(request("/dashboard/_active-league"))).rejects.toThrow(
+    await expect(GET(request("/dashboard/active-league"))).rejects.toThrow(
       "NEXT_REDIRECT:/dashboard/leagues/league-1",
     );
     expect(mockSet).toHaveBeenCalledWith(
@@ -114,7 +114,7 @@ describe("active league recovery route", () => {
   it("clears the stale cookie and redirects to onboarding when no leagues exist", async () => {
     mockResolveActiveLeague.mockResolvedValue({ activeLeagueId: null });
 
-    await expect(GET(request("/dashboard/_active-league"))).rejects.toThrow(
+    await expect(GET(request("/dashboard/active-league"))).rejects.toThrow(
       "NEXT_REDIRECT:/dashboard/leagues",
     );
     expect(mockDelete).toHaveBeenCalledWith(ACTIVE_LEAGUE_COOKIE);

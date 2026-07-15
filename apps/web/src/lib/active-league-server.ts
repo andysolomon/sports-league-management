@@ -20,5 +20,5 @@ export async function syncActiveLeagueForResource(
 
   const returnTo = await currentDashboardPath();
   const params = new URLSearchParams({ leagueId, returnTo });
-  redirect(`/dashboard/_active-league?${params.toString()}`);
+  redirect(`/dashboard/active-league?${params.toString()}`);
 }

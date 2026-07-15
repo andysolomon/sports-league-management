@@ -34,7 +34,7 @@ export default async function DashboardLayout({
     !isActiveLeagueResourcePath(dashboardPath)
   ) {
     redirect(
-      `/dashboard/_active-league?returnTo=${encodeURIComponent(
+      `/dashboard/active-league?returnTo=${encodeURIComponent(
         normalizeDashboardReturnPath(dashboardPath),
       )}`,
     );
