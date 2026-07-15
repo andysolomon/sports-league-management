@@ -5,6 +5,7 @@ import { getDivision, getTeams, getLeague } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
 import { EmptyState } from "@/components/empty-state";
 import { Users } from "lucide-react";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function DivisionDetailPage({
   params,
@@ -18,6 +19,7 @@ export default async function DivisionDetailPage({
   const orgContext = await resolveOrgContext(userId);
   const division = await getDivision(id, orgContext).catch(() => null);
   if (!division) notFound();
+  await syncActiveLeagueForResource(division.leagueId);
 
   const [league, allTeams] = await Promise.all([
     getLeague(division.leagueId, orgContext).catch(() => null),

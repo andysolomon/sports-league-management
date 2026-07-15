@@ -16,6 +16,7 @@ import PixelLineChart from "@/components/attributes/PixelLineChart";
 import AttributesUploadDialog from "@/components/attributes/AttributesUploadDialog";
 import { seasonYearLabel } from "@/lib/attributes/season-label";
 import { trackPlayerAttributesView } from "@/lib/analytics";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function PlayerDevelopmentPage({
   params,
@@ -46,6 +47,8 @@ export default async function PlayerDevelopmentPage({
   const playerLeagueId = await getTeamLeagueId(player.teamId).catch(
     () => null,
   );
+  if (!playerLeagueId) notFound();
+  await syncActiveLeagueForResource(playerLeagueId);
   const playerOrgId = playerLeagueId
     ? await getLeagueOrgId(playerLeagueId)
     : null;

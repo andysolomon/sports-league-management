@@ -24,6 +24,7 @@ import GamecastView from "@/components/gamecast/GamecastView";
 import GamecastEmptyState from "@/components/gamecast/GamecastEmptyState";
 import type { GamecastPlayerNameMap } from "@/lib/gamecast";
 import { getTeam } from "@/lib/data-api";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function GamecastPage({
   params,
@@ -46,6 +47,7 @@ export default async function GamecastPage({
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
+  await syncActiveLeagueForResource(league.id);
 
   const seasons = await getSeasons([leagueId]).catch(() => []);
   const activeSeason = seasons.find((s) => s.status === "active") ?? null;

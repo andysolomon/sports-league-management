@@ -1,0 +1,22 @@
+issue-570 - Active League Navigation Context - Progress
+Generated: 2026-07-15 12:00:00 EDT
+On completion, move this file and the plan to docs/archive/.
+
+[x] 1.0 - Phase 1 - Deterministic resolver and persistence boundary
+    [x] 1.1 - Refactor and test deterministic Active League selection
+    [x] 1.2 - Add validated server-owned preference mutation
+[x] 2.0 - Phase 2 - Server-first recovery and deep-link synchronization
+    [x] 2.1 - Add safe internal recovery route and request-path propagation
+    [x] 2.2 - Add access-checked resource page synchronization
+    [x] 2.3 - Add stale preference recovery in the dashboard shell
+[x] 3.0 - Phase 3 - Switching, history, and no-League shell
+    [x] 3.1 - Replace client cookie mutation with validated replace navigation
+    [x] 3.2 - Render context-aware desktop and mobile navigation
+[x] 4.0 - Phase 4 - Focused verification
+    [x] 4.1 - Run focused tests (24 passed) and full web unit suite (1247 passed)
+    [x] 4.2 - Run web type-check and lint (passed)
+    [x] 4.3 - Attempt authenticated navigation E2E (blocked before execution: worktree has no CLERK_PUBLISHABLE_KEY; broad authenticated coverage remains in issue #578)
+[x] 5.0 - Phase 5 - Ship and archive
+    [x] 5.1 - Review issue-scoped diff and prepare conventional commit with Closes #570
+    [x] 5.2 - Hand off the verified change set to arc-git-pr-check
+    [x] 5.3 - Include docs/issue-570-IMPLEMENTATION_PLAN.md + docs/issue-570-progress.txt under docs/archive/ in the shipping change set

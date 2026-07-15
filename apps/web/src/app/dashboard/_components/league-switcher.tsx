@@ -12,17 +12,24 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
-import { ACTIVE_LEAGUE_COOKIE } from "@/lib/active-league-cookie";
+import { setActiveLeaguePreferenceAction } from "@/app/dashboard/_actions/active-league";
 
 interface LeagueOption {
   id: string;
   name: string;
 }
 
+export function activeLeagueSwitchDestination(result: {
+  ok: boolean;
+  redirectTo: string | null;
+}): string | null {
+  return result.ok ? result.redirectTo : null;
+}
+
 /**
- * Global league switcher (WSM-000103). Sets the active-league preference cookie
- * and refreshes so server components re-scope to the chosen league. Renders
- * nothing when the user has no leagues.
+ * Global league switcher (WSM-000103). Persists the active-league preference
+ * through a server action and replaces history with the selected league home.
+ * Renders nothing when the user has no leagues.
  */
 export function LeagueSwitcher({
   leagues,
@@ -40,9 +47,13 @@ export function LeagueSwitcher({
 
   function select(id: string) {
     if (id === activeLeagueId) return;
-    // Preference cookie — read by server components on the next request.
-    document.cookie = `${ACTIVE_LEAGUE_COOKIE}=${id}; path=/; max-age=31536000; samesite=lax`;
-    startTransition(() => router.refresh());
+    startTransition(async () => {
+      const result = await setActiveLeaguePreferenceAction(id);
+      const destination = activeLeagueSwitchDestination(result);
+      if (destination) {
+        router.replace(destination);
+      }
+    });
   }
 
   return (

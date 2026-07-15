@@ -12,6 +12,7 @@ import {
   getSeasonLeagueId,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 import {
   buildBoxScoreTables,
   type BoxScoreGroupTable,
@@ -124,6 +125,7 @@ export default async function BoxScorePage({
   const orgContext = await resolveOrgContext(userId);
   const league = await getLeague(leagueId, orgContext).catch(() => null);
   if (!league) notFound();
+  await syncActiveLeagueForResource(league.id);
 
   const [result, allStats, homePlayers, awayPlayers] = await Promise.all([
     getResultByFixture(fixtureId),

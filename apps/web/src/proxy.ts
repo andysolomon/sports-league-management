@@ -54,12 +54,20 @@ const isCliRoute = createRouteMatcher(["/api/cli/(.*)"]);
 
 export default clerkMiddleware(async (auth, request) => {
   const { pathname } = request.nextUrl;
+  const requestHeaders = new Headers(request.headers);
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
+    requestHeaders.set(
+      "x-dashboard-path",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
+  }
+
   if (pathname.match(/\/org\/(null|undefined)(\/|$)/)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
   if (isCliRoute(request)) {
     await auth.protect({ token: ["session_token", "api_key"] });
-    return;
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
   if (!isPublicRoute(request)) {
     // BFF API routes must answer an unauthenticated caller with a 401 JSON body
@@ -72,10 +80,11 @@ export default clerkMiddleware(async (auth, request) => {
       if (!userId) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
-      return;
+      return NextResponse.next({ request: { headers: requestHeaders } });
     }
     await auth.protect();
   }
+  return NextResponse.next({ request: { headers: requestHeaders } });
 });
 
 export const config = {

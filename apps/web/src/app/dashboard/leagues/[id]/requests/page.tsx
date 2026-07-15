@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getLeague } from "@/lib/data-api";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import RequestsTable from "./requests-table";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function RequestsPage({
   params,
@@ -26,6 +27,7 @@ export default async function RequestsPage({
   } catch {
     redirect(`/dashboard/leagues/${id}`);
   }
+  await syncActiveLeagueForResource(league.id);
 
   return (
     <div>

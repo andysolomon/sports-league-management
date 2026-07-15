@@ -14,6 +14,7 @@ import {
 import { canManageTeam } from "@/lib/authorization";
 import { resolveOrgContext } from "@/lib/org-context";
 import StatsEntry from "@/components/stats/StatsEntry";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function StatsEntryPage({
   params,
@@ -39,6 +40,7 @@ export default async function StatsEntryPage({
   if (!team || !fixture) notFound();
   // The team must actually be in this game.
   if (fixture.homeTeamId !== teamId && fixture.awayTeamId !== teamId) notFound();
+  await syncActiveLeagueForResource(team.leagueId);
 
   const players = await getPlayersByTeam(teamId, orgContext);
   const entered = (await getPlayerGameStatsByFixture(gameId)).filter(

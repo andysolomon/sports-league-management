@@ -23,6 +23,62 @@ export interface ActiveLeagueContext {
   leagues: LeagueDto[];
   /** The active league id, or null when the user has no leagues. */
   activeLeagueId: string | null;
+  /** The active league row, or null when the user has no leagues. */
+  activeLeague: LeagueDto | null;
+  /** Whether the persisted preference was usable for this request. */
+  preferenceStatus: ActiveLeaguePreferenceStatus;
+  /** The raw cookie value, when one was sent. */
+  preferredLeagueId: string | null;
+}
+
+export type ActiveLeaguePreferenceStatus = "valid" | "missing" | "stale" | "none";
+
+export interface ActiveLeagueSelection {
+  activeLeagueId: string | null;
+  activeLeague: LeagueDto | null;
+  status: ActiveLeaguePreferenceStatus;
+}
+
+export function selectActiveLeaguePreference({
+  leagues,
+  orgContext,
+  preferredLeagueId,
+}: {
+  leagues: LeagueDto[];
+  orgContext: Pick<OrgContext, "orgIds">;
+  preferredLeagueId: string | null | undefined;
+}): ActiveLeagueSelection {
+  if (leagues.length === 0) {
+    return {
+      activeLeagueId: null,
+      activeLeague: null,
+      status: preferredLeagueId ? "stale" : "none",
+    };
+  }
+
+  const preferred =
+    preferredLeagueId ?
+      leagues.find((league) => league.id === preferredLeagueId) ?? null
+    : null;
+  if (preferred) {
+    return {
+      activeLeagueId: preferred.id,
+      activeLeague: preferred,
+      status: "valid",
+    };
+  }
+
+  const owned =
+    leagues.find(
+      (league) => league.orgId !== null && orgContext.orgIds.includes(league.orgId),
+    ) ?? null;
+  const fallback = owned ?? leagues[0] ?? null;
+
+  return {
+    activeLeagueId: fallback?.id ?? null,
+    activeLeague: fallback,
+    status: preferredLeagueId ? "stale" : "missing",
+  };
 }
 
 /**
@@ -34,21 +90,21 @@ export const resolveActiveLeague = cache(
   async (userId: string): Promise<ActiveLeagueContext> => {
     const orgContext = await resolveOrgContext(userId);
     const leagues = await getLeagues(orgContext.visibleLeagueIds);
-    const cookieVal = (await cookies()).get(ACTIVE_LEAGUE_COOKIE)?.value;
-    // Default order (WSM-000105): an explicit switcher choice (cookie) wins;
-    // otherwise prefer a league the user's org OWNS (their primary) over any
-    // followed/subscribed public league; finally fall back to the first
-    // visible league. `leagues` is name-sorted, so each pick is deterministic.
-    const owned = leagues.filter(
-      (l) => l.orgId !== null && orgContext.orgIds.includes(l.orgId),
-    );
-    const activeLeagueId =
-      (cookieVal && leagues.some((l) => l.id === cookieVal)
-        ? cookieVal
-        : null) ??
-      owned[0]?.id ??
-      leagues[0]?.id ??
-      null;
-    return { orgContext, leagues, activeLeagueId };
+    const preferredLeagueId =
+      (await cookies()).get(ACTIVE_LEAGUE_COOKIE)?.value ?? null;
+    const selection = selectActiveLeaguePreference({
+      leagues,
+      orgContext,
+      preferredLeagueId,
+    });
+
+    return {
+      orgContext,
+      leagues,
+      activeLeagueId: selection.activeLeagueId,
+      activeLeague: selection.activeLeague,
+      preferenceStatus: selection.status,
+      preferredLeagueId,
+    };
   },
 );

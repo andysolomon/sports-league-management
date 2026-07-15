@@ -1,5 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import Sidebar from "./_components/sidebar";
 import MobileHeader from "./_components/mobile-header";
 import { LeagueSwitcher } from "./_components/league-switcher";
@@ -10,6 +11,11 @@ import { Breadcrumbs } from "./_components/breadcrumbs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DensityToggle } from "@/components/density-toggle";
 import { resolveActiveLeague } from "@/lib/active-league";
+import {
+  isActiveLeagueResourcePath,
+  normalizeDashboardReturnPath,
+} from "@/lib/active-league-cookie";
+import { currentDashboardPath } from "@/lib/active-league-server";
 
 export default async function DashboardLayout({
   children,
@@ -17,9 +23,24 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { userId } = await auth();
-  const { leagues, activeLeagueId } = userId
+  const { leagues, activeLeagueId, preferenceStatus } = userId
     ? await resolveActiveLeague(userId)
-    : { leagues: [], activeLeagueId: null };
+    : { leagues: [], activeLeagueId: null, preferenceStatus: "none" as const };
+  const dashboardPath = await currentDashboardPath();
+
+  if (
+    userId &&
+    preferenceStatus === "stale" &&
+    !isActiveLeagueResourcePath(dashboardPath)
+  ) {
+    redirect(
+      `/dashboard/active-league?returnTo=${encodeURIComponent(
+        normalizeDashboardReturnPath(dashboardPath),
+      )}`,
+    );
+  }
+
+  const hasLeagues = leagues.length > 0;
 
   return (
     <div className="flex min-h-screen bg-bg">
@@ -29,7 +50,7 @@ export default async function DashboardLayout({
 
       {/* Desktop sidebar — prototype shell: 248px rail on --bg */}
       <aside className="hidden w-[248px] shrink-0 border-r border-border bg-bg lg:block">
-        <Sidebar />
+        <Sidebar hasLeagues={hasLeagues} />
       </aside>
 
       {/* min-w-0 lets this flex child shrink below its content's intrinsic

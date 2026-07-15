@@ -14,6 +14,7 @@ import {
 import { resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
 import RosterBoard from "@/components/roster/RosterBoard";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function RosterPage({
   params,
@@ -47,6 +48,7 @@ export default async function RosterPage({
 
   const role = await resolveOrgRole(orgId, userId);
   if (!role) notFound();
+  await syncActiveLeagueForResource(team.leagueId);
   // Coaches + admins edit the roster; viewers see it read-only (WSM-000121).
   const canManage = canManageRoster(role);
 

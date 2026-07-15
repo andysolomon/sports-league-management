@@ -6,6 +6,7 @@ import { getTeam, getFixture, getLiveGameState } from "@/lib/data-api";
 import { canManageTeam } from "@/lib/authorization";
 import { resolveOrgContext } from "@/lib/org-context";
 import LiveScoreboard from "@/components/live/LiveScoreboard";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function LiveScoreboardPage({
   params,
@@ -31,6 +32,7 @@ export default async function LiveScoreboardPage({
   if (!team || !fixture) notFound();
   // The team must actually be in this game.
   if (fixture.homeTeamId !== teamId && fixture.awayTeamId !== teamId) notFound();
+  await syncActiveLeagueForResource(team.leagueId);
 
   const initial = await getLiveGameState(gameId);
 
