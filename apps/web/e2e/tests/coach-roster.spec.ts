@@ -15,8 +15,8 @@ import { signInTestUser } from "../helpers/clerk-signin";
 test.use({ storageState: { cookies: [], origins: [] } });
 
 // Reachability smoke for the roster + audit routes. Originally these
-// drove the dashboard team list and clicked through to a Salesforce-mirrored
-// Cowboys team — that coupled the spec to whatever local seed state happened
+// drove the dashboard team list and clicked through to a legacy seed team —
+// that coupled the spec to whatever local seed state happened
 // to exist in Convex. Now both tests stand up their own org-owned fixture
 // via withRosterFixture, navigate directly via the Convex teamId, and
 // assert the page renders for an authorized user.

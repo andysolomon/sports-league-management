@@ -20,7 +20,7 @@
  *
  * Usage:
  *   node scripts/ghsa-seed/build-import.mjs
- *   node scripts/ghsa-seed/build-import.mjs --in data/ghsa-2024-26.json --out out/ghsa-import.json
+ *   node scripts/ghsa-seed/build-import.mjs --in scripts/ghsa-seed/data/ghsa-2024-26.json --out out/ghsa-import.json
  *   node scripts/ghsa-seed/build-import.mjs --post http://localhost:3000 --key sk_live_xxx
  */
 
@@ -33,7 +33,10 @@ const PLACEHOLDER = "TBD"; // city/stadium filled by coach on claim
 
 // --- tiny arg parser -------------------------------------------------------
 function parseArgs(argv) {
-  const args = { in: "data/ghsa-2024-26.json", out: "out/ghsa-import.json" };
+  const args = {
+    in: resolve(HERE, "data/ghsa-2024-26.json"),
+    out: resolve(HERE, "out/ghsa-import.json"),
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--in") args.in = argv[++i];
@@ -133,7 +136,7 @@ async function main() {
       [
         "GHSA seed importer (prototype)",
         "",
-        "  --in <path>    alignment JSON      (default data/ghsa-2024-26.json)",
+        "  --in <path>    alignment JSON      (default scripts/ghsa-seed/data/ghsa-2024-26.json)",
         "  --out <path>   write payload JSON  (default out/ghsa-import.json)",
         "  --post <url>   POST to <url>/api/cli/import (requires --key)",
         "  --key <key>    Clerk API key for --post",

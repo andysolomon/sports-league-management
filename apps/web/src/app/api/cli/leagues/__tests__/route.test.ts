@@ -56,13 +56,13 @@ describe("GET /api/cli/leagues", () => {
     expect(mockGetLeagues).toHaveBeenCalledWith(fakeOrgContext.visibleLeagueIds);
   });
 
-  it("returns 503 when Salesforce fails", async () => {
+  it("returns 503 when upstream fails", async () => {
     mockAuth.mockResolvedValue({
       userId: "user_123",
       tokenType: "session_token",
     });
     mockResolveOrgContext.mockResolvedValue(fakeOrgContext);
-    mockGetLeagues.mockRejectedValue(new Error("SF connection failed"));
+    mockGetLeagues.mockRejectedValue(new Error("upstream connection failed"));
 
     const res = await GET();
     expect(res.status).toBe(503);

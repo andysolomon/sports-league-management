@@ -98,8 +98,7 @@ export interface OrgContext {
  * Visible leagues = leagues owned by user's orgs + explicitly subscribed public
  * leagues. The org → league mapping is read from Convex via the `by_orgId`
  * index on the `leagues` table; the subscriptions list is read from the
- * Convex `leagueSubscriptions` table indexed by userId. Salesforce is no
- * longer in this read path (per Sprint 5).
+ * Convex `leagueSubscriptions` table indexed by userId.
  */
 export const resolveOrgContext = cache(
   async (userId: string): Promise<OrgContext> => {

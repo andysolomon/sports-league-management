@@ -80,10 +80,10 @@ describe("GET /api/cli/teams", () => {
     expect(mockGetTeams).not.toHaveBeenCalled();
   });
 
-  it("returns 503 on Salesforce failure", async () => {
+  it("returns 503 on upstream failure", async () => {
     mockAuth.mockResolvedValue({ userId: "user_1", tokenType: "api_key" });
     mockResolveOrgContext.mockResolvedValue(fakeOrgContext);
-    mockGetTeams.mockRejectedValue(new Error("SF down"));
+    mockGetTeams.mockRejectedValue(new Error("upstream down"));
 
     const res = await GET(makeRequest("/api/cli/teams"));
     expect(res.status).toBe(503);

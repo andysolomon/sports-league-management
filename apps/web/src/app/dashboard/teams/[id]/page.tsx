@@ -42,8 +42,8 @@ export default async function TeamDetailPage({
         : { href: "/dashboard/teams", label: "Back to Teams" };
   const orgContext = await resolveOrgContext(userId);
 
-  // Resolve the team first, guarded: a bad/legacy team id (e.g. a Salesforce
-  // id like `a00b…` leaking in via a stale link) fails Convex's `v.id("teams")`
+  // Resolve the team first, guarded: a bad/legacy team id (e.g. a stale external
+  // id leaking in via an old link) fails Convex's `v.id("teams")`
   // validation and throws ArgumentValidationError; an unknown-but-valid id
   // resolves to null. Either way the route must 404, not 500 (WSM-000190).
   // Matches the players/[id] + divisions/[id] guard pattern.

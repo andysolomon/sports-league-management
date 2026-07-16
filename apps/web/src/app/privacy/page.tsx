@@ -37,8 +37,8 @@ export default function PrivacyPage() {
       <h3>Content you create</h3>
       <p>
         Teams, leagues, divisions, seasons, players, schedules, and other
-        information you enter is stored in our Salesforce-backed database
-        and associated with your account.
+        information you enter is stored in our database (Convex) and
+        associated with your account.
       </p>
       <h3>Usage analytics (via Vercel)</h3>
       <p>
@@ -79,7 +79,7 @@ export default function PrivacyPage() {
           <strong>Stripe</strong> — payment processing.
         </li>
         <li>
-          <strong>Salesforce</strong> — content storage (rosters, schedules,
+          <strong>Convex</strong> — content storage (rosters, schedules,
           teams).
         </li>
         <li>

@@ -52,7 +52,7 @@ node scripts/ghsa-seed/build-import.mjs --out ../../apps/web/public/seed/ghsa-20
 
 ## Data provenance
 
-`data/ghsa-2024-26.json` is generated from the **GHSA 2025 football
+`scripts/ghsa-seed/data/ghsa-2024-26.json` is generated from the **GHSA 2025 football
 standings / region alignment** — the *football-specific* regions as actually
 competed, all 7 classifications (6A, 5A, 4A, 3A, 2A, A Division I, A Division
 II): **56 regions, 413 schools**.

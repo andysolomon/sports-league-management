@@ -9,10 +9,10 @@ import {
 /*
  * Sprint 5 smoke (WSM-000049).
  *
- * After the SF → Convex read-path swap, every dashboard list page
+ * After the Convex read-path swap, every dashboard list page
  * should render its server component without throwing the
  * "Server Components render" 500 we hit in production while
- * Salesforce JWT auth was broken. This spec walks the tree
+ * backend auth was misconfigured. This spec walks the tree
  * authenticated and asserts each route renders the expected
  * heading / no error UI.
  *

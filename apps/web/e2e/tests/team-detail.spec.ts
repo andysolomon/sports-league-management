@@ -140,7 +140,7 @@ test.describe("Team Detail Page", () => {
   });
 });
 
-// Regression for WSM-000190: a bad/legacy team id (e.g. a Salesforce id leaking
+// Regression for WSM-000190: a bad/legacy team id (e.g. a stale external id
 // in via a stale link) used to crash the page with an unhandled
 // ArgumentValidationError from Convex's `v.id("teams")` validator → a 500 error
 // boundary. The route must now degrade gracefully to the not-found page.
@@ -167,7 +167,7 @@ test.describe("Team Detail Page — invalid id", () => {
     await expect(page.getByRole("heading", { name: "Teams" })).toBeVisible();
   });
 
-  test("a Salesforce-format team id renders not-found, not a 500", async ({
+  test("a legacy-format team id renders not-found, not a 500", async ({
     page,
   }) => {
     // The exact 18-char SF id from the prod runtime log (WSM-000190).
