@@ -94,7 +94,7 @@ export function MarketingFooter({ isSignedIn }: FooterProps) {
         <div className="mt-12 border-t border-border pt-8">
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Arcnology · Built with Next.js, Clerk,
-            Stripe, and Salesforce
+            Stripe, and Convex
           </p>
         </div>
       </div>

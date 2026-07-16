@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<RecordType xmlns="http://soap.sforce.com/2006/04/metadata">
-    <fullName>Amateur</fullName>
-    <active>true</active>
-    <description>Amateur and recreational leagues</description>
-    <label>Amateur League</label>
-</RecordType>

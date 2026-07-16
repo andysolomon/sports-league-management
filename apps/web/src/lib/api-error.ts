@@ -27,7 +27,8 @@ interface ClassifiedError {
   userMessage: string;
 }
 
-const SF_CONNECTION_PATTERNS = [
+// Legacy upstream error strings (still recognized for safe user-facing responses).
+const UPSTREAM_CONNECTION_PATTERNS = [
   "Missing Salesforce JWT config",
   "Salesforce JWT auth failed",
   "INVALID_SESSION_ID",
@@ -35,7 +36,7 @@ const SF_CONNECTION_PATTERNS = [
   "invalid_grant",
 ];
 
-const SF_API_PATTERN = "Salesforce API error";
+const UPSTREAM_API_PATTERN = "Salesforce API error";
 
 export function classifyError(error: unknown): ClassifiedError {
   if (error instanceof ApiError) {
@@ -55,7 +56,7 @@ export function classifyError(error: unknown): ClassifiedError {
     };
   }
 
-  if (SF_CONNECTION_PATTERNS.some((p) => message.includes(p))) {
+  if (UPSTREAM_CONNECTION_PATTERNS.some((p) => message.includes(p))) {
     return { statusCode: 503, userMessage: "Service temporarily unavailable" };
   }
 
@@ -66,7 +67,7 @@ export function classifyError(error: unknown): ClassifiedError {
     return { statusCode: 503, userMessage: "Service temporarily unavailable" };
   }
 
-  if (message.includes(SF_API_PATTERN)) {
+  if (message.includes(UPSTREAM_API_PATTERN)) {
     return { statusCode: 502, userMessage: "Upstream service error" };
   }
 

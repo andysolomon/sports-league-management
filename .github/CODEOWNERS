@@ -27,11 +27,6 @@
 /CONTRIBUTING.md                            @andysolomon
 /docs/development/                          @andysolomon
 
-# --- Salesforce source -----------------------------------------------------
-/sportsmgmt/                                @andysolomon
-/sportsmgmt-football/                       @andysolomon
-/sfdx-project.json                          @andysolomon
-
 # --- Workspace apps --------------------------------------------------------
 /apps/web/                                  @andysolomon
 /apps/tui/                                  @andysolomon

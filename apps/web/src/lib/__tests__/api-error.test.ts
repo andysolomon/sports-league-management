@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { classifyError, handleApiError, ApiError } from "../api-error";
 
 describe("classifyError", () => {
-  it("returns 503 for missing SF JWT config", () => {
+  it("returns 503 for legacy upstream JWT config errors", () => {
     const err = new Error("Missing Salesforce JWT config. Set SF_CLIENT_ID, SF_USERNAME, and SF_PRIVATE_KEY env vars.");
     expect(classifyError(err)).toEqual({
       statusCode: 503,
@@ -26,7 +26,7 @@ describe("classifyError", () => {
     });
   });
 
-  it("returns 502 for Salesforce API error", () => {
+  it("returns 502 for legacy upstream API errors", () => {
     const err = new Error("Salesforce API error");
     expect(classifyError(err)).toEqual({
       statusCode: 502,

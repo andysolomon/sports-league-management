@@ -24,10 +24,7 @@ const KEYS_TO_COMPARE = [
   "CLERK_SECRET_KEY",
   "NEXT_PUBLIC_CLERK_SIGN_IN_URL",
   "NEXT_PUBLIC_CLERK_SIGN_UP_URL",
-  "SF_LOGIN_URL",
-  "SF_CLIENT_ID",
-  "SF_USERNAME",
-  "SF_PRIVATE_KEY",
+  "NEXT_PUBLIC_CONVEX_URL",
 ];
 
 // Post-cutover (WSM-000168 / #386), the Clerk instance keys are EXPECTED to
@@ -157,16 +154,10 @@ function printIdentityMarkers(localEnv, productionEnv) {
     `- prod Clerk: ${clerkKeyType(productionPublishableKey)} (${decodeClerkFrontendApi(productionPublishableKey)})`,
   );
   console.log(
-    `- local Salesforce username: ${normalizeValue(localEnv.SF_USERNAME) || "missing"}`,
+    `- local Convex URL: ${normalizeValue(localEnv.NEXT_PUBLIC_CONVEX_URL) || "missing"}`,
   );
   console.log(
-    `- prod Salesforce username: ${normalizeValue(productionEnv.SF_USERNAME) || "missing"}`,
-  );
-  console.log(
-    `- local Salesforce login URL: ${normalizeValue(localEnv.SF_LOGIN_URL) || "missing"}`,
-  );
-  console.log(
-    `- prod Salesforce login URL: ${normalizeValue(productionEnv.SF_LOGIN_URL) || "missing"}`,
+    `- prod Convex URL: ${normalizeValue(productionEnv.NEXT_PUBLIC_CONVEX_URL) || "missing"}`,
   );
 }
 
