@@ -2,6 +2,12 @@ import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import {
+  buildPlayerSiblingLinks,
+  playerHomeHref,
+  playerSubpageHref,
+} from "@/components/workspace/resource-navigation";
 import {
   getPlayer,
   getTeam,
@@ -50,16 +56,13 @@ function ageFrom(dateOfBirth: string): number | null {
 
 export default async function PlayerProfilePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
 }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { id: playerId } = await params;
-  const { from } = await searchParams;
 
   const orgContext = await resolveOrgContext(userId);
   const player = await getPlayer(playerId, orgContext).catch(() => null);
@@ -135,32 +138,20 @@ export default async function PlayerProfilePage({
     }
   }
 
-  const fromTeamId =
-    from?.startsWith("team-") ? from.slice("team-".length) : null;
-  const backHref =
-    fromTeamId && team && fromTeamId === team.id
-      ? `/dashboard/teams/${team.id}`
-      : team
-        ? `/dashboard/teams/${team.id}`
-        : "/dashboard/players";
-  const backLabel =
-    fromTeamId && team && fromTeamId === team.id
-      ? `Back to ${team.name}`
-      : team
-        ? `Back to ${team.name}`
-        : "Back to Players";
-  const developmentHref = from
-    ? `/dashboard/players/${player.id}/development?from=${encodeURIComponent(from)}`
-    : `/dashboard/players/${player.id}/development`;
+  const developmentHref = playerSubpageHref(player.id, "development");
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <Link
-        href={backHref}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; {backLabel}
-      </Link>
+    <div className="mx-auto max-w-2xl space-y-4">
+      <ResourceHeader
+        kind="player"
+        name={player.name}
+        href={playerHomeHref(player.id)}
+        subtitle="Player overview"
+        siblings={buildPlayerSiblingLinks({
+          playerId: player.id,
+          developmentEnabled: attributesEnabled,
+        })}
+      />
 
       <Card>
         <CardContent className="pt-6">

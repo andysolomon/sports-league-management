@@ -89,7 +89,7 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
     await setActiveLeague(page, readCanonicalFixture().leagueId);
   });
 
-  test("schedule page Back to League navigates without query params", async ({
+  test("schedule page Resource Header identifies the League Home", async ({
     page,
   }) => {
     const { leagueId } = readCanonicalFixture();
@@ -102,11 +102,14 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
       0,
     );
 
-    await page.getByRole("link", { name: "Back to League" }).click();
-    await expect(page).toHaveURL(`/dashboard/leagues/${leagueId}`);
+    // WSM-000571: the Resource Header identifies the League and carries the
+    // canonical Schedule label. The breadcrumb/back-row are gone.
+    const header = page.getByTestId("resource-header-league");
+    await expect(header).toBeVisible();
+    await expect(header).toContainText("Schedule");
   });
 
-  test("playoffs page Back to League navigates without query params", async ({
+  test("playoffs page Resource Header identifies the League Home", async ({
     page,
   }) => {
     const { leagueId } = readCanonicalFixture();
@@ -119,7 +122,8 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
       0,
     );
 
-    await page.getByRole("link", { name: "Back to League" }).click();
-    await expect(page).toHaveURL(`/dashboard/leagues/${leagueId}`);
+    const header = page.getByTestId("resource-header-league");
+    await expect(header).toBeVisible();
+    await expect(header).toContainText("Playoffs");
   });
 });

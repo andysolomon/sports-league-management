@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { rosterSnapshotsV1 } from "@/lib/flags";
+import { depthChartV1, rosterSnapshotsV1 } from "@/lib/flags";
 import {
   getTeam,
   getTeamLeagueId,
@@ -14,6 +13,11 @@ import {
 import { resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
 import RosterBoard from "@/components/roster/RosterBoard";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import {
+  buildTeamSiblingLinks,
+  teamHomeHref,
+} from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function RosterPage({
@@ -57,13 +61,18 @@ export default async function RosterPage({
     seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
   if (!activeSeason) {
     return (
-      <div>
-        <Link
-          href={`/dashboard/teams/${teamId}`}
-          className="mb-4 inline-block text-sm text-primary hover:underline"
-        >
-          &larr; Back to Team
-        </Link>
+      <div className="space-y-4">
+        <ResourceHeader
+          kind="team"
+          name={team.name}
+          href={teamHomeHref(teamId)}
+          subtitle="Roster"
+          siblings={buildTeamSiblingLinks({
+            teamId,
+            rosterEnabled: enabled,
+            depthChartEnabled: await depthChartV1(),
+          })}
+        />
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           No season exists for this league. Create a season before managing the
           roster.
@@ -85,13 +94,18 @@ export default async function RosterPage({
   ]);
 
   return (
-    <div>
-      <Link
-        href={`/dashboard/teams/${teamId}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to Team
-      </Link>
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="team"
+        name={team.name}
+        href={teamHomeHref(teamId)}
+        subtitle="Roster"
+        siblings={buildTeamSiblingLinks({
+          teamId,
+          rosterEnabled: enabled,
+          depthChartEnabled: await depthChartV1(),
+        })}
+      />
       <RosterBoard
         team={team}
         season={activeSeason}

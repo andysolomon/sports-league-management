@@ -14,11 +14,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StandingsTable from "@/components/schedule/StandingsTable";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveViewedSeason } from "@/lib/season-view";
-import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
-import { BackLink } from "@/components/workspace/BackLink";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import { trackStandingsView } from "@/lib/analytics";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
@@ -50,20 +49,13 @@ export default async function LeagueStandingsPage({
 
   if (!activeSeason) {
     return (
-      <div>
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Leagues", href: "/dashboard/leagues" },
-            { label: league.name, href: `/dashboard/leagues/${leagueId}` },
-            { label: "Standings" },
-          ]}
+      <div className="space-y-4">
+        <ResourceHeader
+          kind="league"
+          name={league.name}
+          href={leagueHomeHref(leagueId)}
+          subtitle="Standings"
         />
-        <BackLink
-          href={`/dashboard/leagues/${leagueId}`}
-          label="Back to League"
-        />
-        <WorkspaceHeader title={league.name} size="sub-hub" sub="Standings" />
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             No seasons in this league yet — standings unavailable.
@@ -107,23 +99,12 @@ export default async function LeagueStandingsPage({
   });
 
   return (
-    <div>
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Leagues", href: "/dashboard/leagues" },
-          { label: league.name, href: `/dashboard/leagues/${leagueId}` },
-          { label: "Standings" },
-        ]}
-      />
-      <BackLink
-        href={`/dashboard/leagues/${leagueId}`}
-        label="Back to League"
-      />
-      <WorkspaceHeader
-        title={league.name}
-        size="sub-hub"
-        sub={`Standings · ${activeSeason.name}`}
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="league"
+        name={league.name}
+        href={leagueHomeHref(leagueId)}
+        subtitle={`Standings · ${activeSeason.name}`}
         actions={
           <SeasonSwitcher
             seasons={allSeasons.map((s) => ({

@@ -31,8 +31,8 @@ import { resolveLeagueLifecycleBanner } from "@/lib/league-lifecycle-banners";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import { LeagueLifecycleBanners } from "@/components/league/LeagueLifecycleBanners";
 import { LeagueCurrentSeasonCard } from "@/components/league/LeagueCurrentSeasonCard";
@@ -178,22 +178,13 @@ export default async function LeagueInfoPage({
       ? `/dashboard/leagues/${id}/standings${seasonQuery}`
       : null;
 
-  const contextParts = [
-    `${teams.length} team${teams.length === 1 ? "" : "s"}`,
-    `${seasons.length} season${seasons.length === 1 ? "" : "s"}`,
-  ];
-
   return (
-    <div>
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Leagues", href: "/dashboard/leagues" },
-          { label: league.name },
-        ]}
-      />
-      <WorkspaceHeader
-        title={league.name}
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="league"
+        name={league.name}
+        href={leagueHomeHref(id)}
+        subtitle="League Home"
         status={
           league.orgId ? (
             <Badge variant="secondary" className="shrink-0">
@@ -205,7 +196,12 @@ export default async function LeagueInfoPage({
             </Badge>
           )
         }
-        sub={contextParts.join(" · ")}
+        context={
+          <>
+            {teams.length} team{teams.length === 1 ? "" : "s"} ·{" "}
+            {seasons.length} season{seasons.length === 1 ? "" : "s"}
+          </>
+        }
         actions={
           <>
             {isAdmin && league.orgId ? (

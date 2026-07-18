@@ -7,7 +7,7 @@ import { LeagueSwitcher } from "./_components/league-switcher";
 import { MigrateLocalPrompt } from "./_components/migrate-local-prompt";
 import { CommandPalette } from "./_components/command-palette";
 import { CommandTrigger } from "./_components/command-trigger";
-import { Breadcrumbs } from "./_components/breadcrumbs";
+import { HistoryBackButton } from "./_components/history-back-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DensityToggle } from "@/components/density-toggle";
 import { resolveActiveLeague } from "@/lib/active-league";
@@ -64,6 +64,7 @@ export default async function DashboardLayout({
         <header className="hidden h-14 shrink-0 items-center justify-between gap-3.5 border-b border-border bg-bg px-[22px] lg:flex">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <LeagueSwitcher leagues={leagues} activeLeagueId={activeLeagueId} />
+            <HistoryBackButton />
             <CommandTrigger />
           </div>
           <div className="flex shrink-0 items-center gap-2.5">
@@ -76,7 +77,6 @@ export default async function DashboardLayout({
         <CommandPalette leagues={leagues} />
 
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8">
-          <Breadcrumbs />
           <MigrateLocalPrompt />
           {children}
         </main>
