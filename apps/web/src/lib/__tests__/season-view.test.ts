@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { SeasonDto } from "@sports-management/shared-types";
-import { resolveLifecycleSeason, resolveViewedSeason } from "../season-view";
+import {
+  findActiveSeason,
+  resolveLifecycleSeason,
+  resolveViewedSeason,
+} from "../season-view";
 
 function season(id: string, status: string): SeasonDto {
   return {
@@ -21,6 +25,24 @@ function season(id: string, status: string): SeasonDto {
 const finished = season("s1", "completed");
 const active = season("s2", "active");
 const older = season("s3", "upcoming");
+
+describe("findActiveSeason", () => {
+  it("returns the single active season", () => {
+    expect(findActiveSeason([finished, active, older])).toBe(active);
+  });
+
+  it("returns null when no season is active", () => {
+    expect(findActiveSeason([finished, older])).toBeNull();
+    expect(findActiveSeason([])).toBeNull();
+  });
+
+  it("resolves a multi-active conflict to the newest, deterministically", () => {
+    const olderActive = { ...active, id: "s-active-1", name: "2025", startDate: "2025-09-01" };
+    const latestActive = { ...active, id: "s-active-2", name: "2026", startDate: "2026-09-01" };
+    expect(findActiveSeason([olderActive, finished, latestActive])).toBe(latestActive);
+    expect(findActiveSeason([latestActive, finished, olderActive])).toBe(latestActive);
+  });
+});
 
 describe("resolveViewedSeason", () => {
   it("returns the requested season when the id belongs to the league", () => {

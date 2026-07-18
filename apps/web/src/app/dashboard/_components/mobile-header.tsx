@@ -47,6 +47,7 @@ export default function MobileHeader({
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <Sidebar
             hasLeagues={leagues.length > 0}
+            activeLeagueId={activeLeagueId}
             onNavigate={() => setOpen(false)}
           />
         </SheetContent>

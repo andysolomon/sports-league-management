@@ -6,7 +6,7 @@ import { activeLeagueSwitchDestination } from "../league-switcher";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/dashboard",
-  useRouter: () => ({ replace: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
 vi.mock("@/app/dashboard/_actions/active-league", () => ({
@@ -37,13 +37,29 @@ describe("active league navigation contracts", () => {
 
     expect(html).toContain("League Directory");
     expect(html).toContain('href="/dashboard/leagues"');
-    expect(html).toContain('href="/dashboard/discover"');
     expect(html).toContain('href="/dashboard/import"');
     expect(html).toContain('href="/dashboard/billing"');
     expect(html).not.toContain('href="/dashboard"');
+    expect(html).not.toContain('href="/dashboard/discover"');
+    expect(html).not.toContain("Discover");
     expect(html).not.toContain('href="/dashboard/teams"');
     expect(html).not.toContain('href="/dashboard/players"');
     expect(html).not.toContain('href="/dashboard/seasons"');
     expect(html).not.toContain('href="/dashboard/divisions"');
+  });
+
+  it("emits canonical League Home for Overview when activeLeagueId is provided", () => {
+    const html = renderToStaticMarkup(
+      createElement(Sidebar, {
+        hasLeagues: true,
+        activeLeagueId: "league-1",
+      }),
+    );
+
+    expect(html).toContain('href="/dashboard/leagues/league-1"');
+    expect(html).toContain("Overview");
+    expect(html).not.toContain("Discover");
+    expect(html).not.toContain('href="/dashboard/discover"');
+    expect(html).not.toContain('>Leagues<');
   });
 });

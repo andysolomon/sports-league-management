@@ -29,14 +29,15 @@ test.describe("League info destination (WSM-000254)", () => {
     await expect(
       page.getByRole("link", { name: "Manage" }),
     ).toBeVisible();
-    // Scope to main content — the sidebar nav also has a "Seasons" link.
+    // ASR-21: the header carries only contextual actions — Open Active Season
+    // (the canonical fixture always has an active season) plus admin Manage.
     await expect(
-      page.locator("#main-content").getByRole("link", { name: "Seasons" }),
+      page.getByRole("link", { name: "Open Active Season" }),
     ).toBeVisible();
 
     await expect(page.getByTestId("league-current-season")).toBeVisible();
     await expect(
-      page.getByTestId("league-current-season").getByText("Current season"),
+      page.getByTestId("league-current-season").getByText("Active Season"),
     ).toBeVisible();
 
     await expect(page.getByTestId("league-standings-card")).toBeVisible();

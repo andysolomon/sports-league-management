@@ -2,9 +2,10 @@ import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 import { readCanonicalFixture, setActiveLeague } from "../helpers/seed-canonical";
 
-const NAV_ITEMS = [
-  { label: "Overview", href: "/dashboard" },
-  { label: "Leagues", href: "/dashboard/leagues" },
+const NAV_ITEMS: Array<
+  { label: string; href: string } | { label: string; hrefPattern: RegExp }
+> = [
+  { label: "Overview", hrefPattern: /\/dashboard\/leagues\/[^/]+$/ },
   { label: "Teams", href: "/dashboard/teams" },
   { label: "Players", href: "/dashboard/players" },
   { label: "Seasons", href: "/dashboard/seasons" },
@@ -18,6 +19,7 @@ test.describe("Dashboard Navigation", () => {
 
   test("sidebar shows heading and all nav links", async ({ page }) => {
     await page.goto("/dashboard");
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
 
     const sidebar = page.locator("aside");
     await expect(sidebar.getByText("Sports League")).toBeVisible();
@@ -29,10 +31,15 @@ test.describe("Dashboard Navigation", () => {
 
   test("clicking each nav link navigates to correct URL", async ({ page }) => {
     await page.goto("/dashboard");
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
 
     for (const item of NAV_ITEMS) {
       await page.locator("aside").getByRole("link", { name: item.label }).click();
-      await expect(page).toHaveURL(item.href);
+      if ("hrefPattern" in item) {
+        await expect(page).toHaveURL(item.hrefPattern);
+      } else {
+        await expect(page).toHaveURL(item.href);
+      }
     }
   });
 
@@ -48,6 +55,7 @@ test.describe("Dashboard Navigation", () => {
 
   test("header shows the league switcher", async ({ page }) => {
     await page.goto("/dashboard");
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
 
     // The redesigned header (WSM-000136) anchors on the league switcher rather
     // than a literal "Dashboard" label.
@@ -58,6 +66,7 @@ test.describe("Dashboard Navigation", () => {
 
   test("Clerk user menu is present", async ({ page }) => {
     await page.goto("/dashboard");
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
 
     // Clerk v6 renders the UserButton as a trigger button labelled "Open user
     // menu" (the old data-clerk-component attribute is gone).
@@ -66,11 +75,11 @@ test.describe("Dashboard Navigation", () => {
     ).toBeVisible();
   });
 
-  test("Leagues nav active highlighting", async ({ page }) => {
-    await page.goto("/dashboard/leagues");
+  test("Divisions nav active highlighting", async ({ page }) => {
+    await page.goto("/dashboard/divisions");
 
-    const leaguesLink = page.locator("aside").getByRole("link", { name: "Leagues" });
-    await expect(leaguesLink).toHaveClass(/bg-primary/);
+    const divisionsLink = page.locator("aside").getByRole("link", { name: "Divisions" });
+    await expect(divisionsLink).toHaveClass(/bg-primary/);
 
     const overviewLink = page.locator("aside").getByRole("link", { name: "Overview" });
     await expect(overviewLink).not.toHaveClass(/bg-primary/);
@@ -78,6 +87,7 @@ test.describe("Dashboard Navigation", () => {
 
   test("navigation has accessibility role", async ({ page }) => {
     await page.goto("/dashboard");
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
 
     await expect(page.locator('nav[role="navigation"]')).toBeVisible();
   });

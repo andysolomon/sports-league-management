@@ -1,157 +1,201 @@
+import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getDivisions, getTeams, getLeagueOrgId } from "@/lib/data-api";
+import { Compass, Trophy } from "lucide-react";
+import { getSeasons } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
+import { findActiveSeason } from "@/lib/season-view";
 import { getUserRoleInOrg } from "@/lib/org-context";
-import { statKeepingV1 } from "@/lib/flags";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import {
-  Trophy,
-  BarChart3,
-  CalendarDays,
-  ListOrdered,
-  Settings,
-} from "lucide-react";
-import { LeagueSwitcher } from "../_components/league-switcher";
+  activeSeasonShortcutHref,
+  leagueActivationHref,
+} from "@/components/workspace/resource-navigation";
+import { PageHeader } from "../_components/page-header";
 import {
   CreateLeagueButton,
   DeleteLeagueButton,
   RenameLeagueForm,
 } from "./leagues-actions";
-import { LeaguesAccordion, type AccordionDivision } from "./leagues-accordion";
-import { PageHeader } from "../_components/page-header";
+
+async function resolveAdminOrgIds(
+  orgIds: string[],
+  userId: string,
+): Promise<Set<string>> {
+  const uniqueOrgIds = Array.from(new Set(orgIds));
+  const roles = await Promise.all(
+    uniqueOrgIds.map(async (orgId) => ({
+      orgId,
+      role: await getUserRoleInOrg(orgId, userId),
+    })),
+  );
+  return new Set(
+    roles
+      .filter((entry) => entry.role === "org:admin")
+      .map((entry) => entry.orgId),
+  );
+}
 
 export default async function LeaguesPage() {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
-  const { leagues, activeLeagueId, orgContext } =
-    await resolveActiveLeague(userId);
+  const { leagues, activeLeagueId } = await resolveActiveLeague(userId);
 
   if (leagues.length === 0) {
     return (
       <div>
-        <PageHeader title="Leagues" action={<CreateLeagueButton />} />
+        <PageHeader title="League Directory" action={<CreateLeagueButton />} />
         <EmptyState
           icon={Trophy}
           title="No leagues yet"
           description="Create a league, or add teams from Discover, to get started."
         />
+        <Card className="mt-6">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Find public leagues
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Browse reference leagues and add teams to your workspace.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/dashboard/discover">
+                <Compass className="mr-1.5 h-4 w-4" aria-hidden />
+                Discover
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  const activeLeague =
-    leagues.find((l) => l.id === activeLeagueId) ?? leagues[0];
-
-  // Org-admin of the active league sees CRUD controls (members/coaches don't).
-  const orgId = await getLeagueOrgId(activeLeague.id);
-  const role = orgId ? await getUserRoleInOrg(orgId, userId) : null;
-  const isAdmin = role === "org:admin";
-  const statsEnabled = await statKeepingV1();
-
-  const [divisions, teams] = await Promise.all([
-    getDivisions([activeLeague.id]),
-    getTeams([activeLeague.id]),
+  const leagueIds = leagues.map((league) => league.id);
+  const [seasons, adminOrgIds] = await Promise.all([
+    getSeasons(leagueIds),
+    resolveAdminOrgIds(
+      leagues
+        .map((league) => league.orgId)
+        .filter((orgId): orgId is string => Boolean(orgId)),
+      userId,
+    ),
   ]);
 
-  const teamsByDivision = new Map<string, AccordionDivision["teams"]>();
-  for (const team of teams) {
-    const arr = teamsByDivision.get(team.divisionId) ?? [];
-    arr.push({
-      id: team.id,
-      name: team.name,
-      teamName: team.teamName ?? null,
-      city: team.city ?? null,
-      logoUrl: team.logoUrl ?? null,
-    });
-    teamsByDivision.set(team.divisionId, arr);
+  // Same deterministic Active Season selection as League Home (findActiveSeason)
+  // so the Directory shortcut and League Home never disagree about which
+  // season is active.
+  const seasonsByLeagueId = new Map<string, typeof seasons>();
+  for (const season of seasons) {
+    const arr = seasonsByLeagueId.get(season.leagueId) ?? [];
+    arr.push(season);
+    seasonsByLeagueId.set(season.leagueId, arr);
   }
-
-  const accordionDivisions: AccordionDivision[] = divisions.map((d) => ({
-    id: d.id,
-    name: d.name,
-    teams: teamsByDivision.get(d.id) ?? [],
-  }));
+  const activeSeasonByLeagueId = new Map<string, { id: string; name: string }>();
+  for (const [leagueId, leagueSeasons] of seasonsByLeagueId) {
+    const active = findActiveSeason(leagueSeasons);
+    if (active) {
+      activeSeasonByLeagueId.set(leagueId, { id: active.id, name: active.name });
+    }
+  }
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-foreground">Leagues</h2>
-          <LeagueSwitcher leagues={leagues} activeLeagueId={activeLeagueId} />
-        </div>
-        <CreateLeagueButton />
-      </div>
+      <PageHeader title="League Directory" action={<CreateLeagueButton />} />
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-3">
-              <Trophy className="h-5 w-5 shrink-0 text-primary" />
-              <CardTitle className="truncate">{activeLeague.name}</CardTitle>
-              <Badge variant="secondary" className="shrink-0">
-                {divisions.length} division
-                {divisions.length !== 1 ? "s" : ""}
-              </Badge>
-            </div>
-            {isAdmin ? (
-              <div className="flex items-center gap-1">
-                <RenameLeagueForm
-                  leagueId={activeLeague.id}
-                  currentName={activeLeague.name}
-                />
-                <DeleteLeagueButton
-                  leagueId={activeLeague.id}
-                  leagueName={activeLeague.name}
-                />
-              </div>
-            ) : null}
+      <ul className="space-y-3">
+        {leagues.map((league) => {
+          const activeSeason = activeSeasonByLeagueId.get(league.id) ?? null;
+          const isAdmin = league.orgId ? adminOrgIds.has(league.orgId) : false;
+          const isActiveLeague = league.id === activeLeagueId;
+
+          return (
+            <li key={league.id}>
+              <Card>
+                <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Trophy
+                        className="h-4 w-4 shrink-0 text-primary"
+                        aria-hidden
+                      />
+                      <span className="truncate font-medium text-foreground">
+                        {league.name}
+                      </span>
+                      {league.orgId ? (
+                        <Badge variant="secondary" className="shrink-0">
+                          Organization
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="shrink-0">
+                          Public
+                        </Badge>
+                      )}
+                      {isActiveLeague ? (
+                        <Badge variant="default" className="shrink-0">
+                          Active League
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isAdmin ? (
+                      <>
+                        <RenameLeagueForm
+                          leagueId={league.id}
+                          currentName={league.name}
+                        />
+                        <DeleteLeagueButton
+                          leagueId={league.id}
+                          leagueName={league.name}
+                        />
+                      </>
+                    ) : null}
+                    {activeSeason ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link
+                          href={activeSeasonShortcutHref(
+                            league.id,
+                            activeSeason.id,
+                          )}
+                        >
+                          Active Season
+                        </Link>
+                      </Button>
+                    ) : null}
+                    <Button variant="default" size="sm" asChild>
+                      <Link href={leagueActivationHref(league.id)}>Open</Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </li>
+          );
+        })}
+      </ul>
+
+      <Card className="mt-6">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Find public leagues
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Browse reference leagues and add teams to your workspace.
+            </p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-wrap gap-x-4 gap-y-2 border-b border-border pb-4">
-            <Link
-              href={`/dashboard/leagues/${activeLeague.id}/standings`}
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-            >
-              <BarChart3 className="h-4 w-4" />
-              Standings
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/dashboard/discover">
+              <Compass className="mr-1.5 h-4 w-4" aria-hidden />
+              Discover
             </Link>
-            <Link
-              href={`/dashboard/leagues/${activeLeague.id}/schedule`}
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-            >
-              <CalendarDays className="h-4 w-4" />
-              Schedule
-            </Link>
-            {statsEnabled ? (
-              <Link
-                href={`/dashboard/leagues/${activeLeague.id}/stats`}
-                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-              >
-                <ListOrdered className="h-4 w-4" />
-                Stat leaders
-              </Link>
-            ) : null}
-            {isAdmin ? (
-              <Link
-                href={`/dashboard/leagues/${activeLeague.id}`}
-                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-              >
-                <Settings className="h-4 w-4" />
-                Manage
-              </Link>
-            ) : null}
-          </div>
-          <LeaguesAccordion
-            leagueId={activeLeague.id}
-            isAdmin={isAdmin}
-            divisions={accordionDivisions}
-          />
+          </Button>
         </CardContent>
       </Card>
     </div>

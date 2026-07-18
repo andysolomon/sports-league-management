@@ -11,8 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { setActiveLeaguePreferenceAction } from "@/app/dashboard/_actions/active-league";
+import { leagueDirectoryHref } from "@/components/workspace/resource-navigation";
 
 interface LeagueOption {
   id: string;
@@ -82,6 +84,10 @@ export function LeagueSwitcher({
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => router.push(leagueDirectoryHref())}>
+          League Directory
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

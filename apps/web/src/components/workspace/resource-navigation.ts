@@ -18,6 +18,45 @@ export function leagueHomeHref(leagueId: string): string {
   return `/dashboard/leagues/${leagueId}`;
 }
 
+export function leagueDirectoryHref(): string {
+  return "/dashboard/leagues";
+}
+
+/**
+ * Resolves where `/dashboard` should redirect (ASR-21/22/10).
+ * Active League present → League Home; otherwise League Directory onboarding.
+ */
+export function dashboardEntryPath(activeLeagueId: string | null): string {
+  if (activeLeagueId) {
+    return leagueHomeHref(activeLeagueId);
+  }
+  return leagueDirectoryHref();
+}
+
+/**
+ * League Directory row primary action (ASR-1). Persists the League as Active
+ * via the access-validated `/dashboard/active-league` handler before League Home.
+ */
+export function leagueActivationHref(leagueId: string): string {
+  const returnTo = leagueHomeHref(leagueId);
+  const params = new URLSearchParams({ leagueId, returnTo });
+  return `/dashboard/active-league?${params.toString()}`;
+}
+
+/**
+ * Active Season shortcut from League Directory or League Home (ASR-9).
+ * Routes through the access-validated `/dashboard/active-league` handler so
+ * the owning League is persisted as Active before Season Home renders.
+ */
+export function activeSeasonShortcutHref(
+  leagueId: string,
+  seasonId: string,
+): string {
+  const returnTo = `/dashboard/seasons/${seasonId}`;
+  const params = new URLSearchParams({ leagueId, returnTo });
+  return `/dashboard/active-league?${params.toString()}`;
+}
+
 export function teamHomeHref(teamId: string): string {
   return `/dashboard/teams/${teamId}`;
 }

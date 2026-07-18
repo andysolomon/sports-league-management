@@ -1,9 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
+  activeSeasonShortcutHref,
   buildPlayerSiblingLinks,
   buildSeasonSiblingLinks,
   buildTeamSiblingLinks,
+  dashboardEntryPath,
   isActiveHref,
+  leagueActivationHref,
+  leagueDirectoryHref,
   leagueHomeHref,
   leagueSubpageHref,
   playerHomeHref,
@@ -19,6 +23,33 @@ describe("resource-navigation helpers", () => {
     expect(teamHomeHref("t1")).toBe("/dashboard/teams/t1");
     expect(playerHomeHref("p1")).toBe("/dashboard/players/p1");
     expect(seasonHomeHref("s1")).toBe("/dashboard/seasons/s1");
+  });
+
+  it("returns the League Directory href", () => {
+    expect(leagueDirectoryHref()).toBe("/dashboard/leagues");
+  });
+
+  it("resolves dashboard entry paths", () => {
+    expect(dashboardEntryPath("league-1")).toBe("/dashboard/leagues/league-1");
+    expect(dashboardEntryPath(null)).toBe("/dashboard/leagues");
+  });
+
+  it("builds league activation hrefs through the active-league route", () => {
+    expect(leagueActivationHref("league-1")).toBe(
+      "/dashboard/active-league?leagueId=league-1&returnTo=%2Fdashboard%2Fleagues%2Fleague-1",
+    );
+    expect(leagueActivationHref("league/a")).toBe(
+      "/dashboard/active-league?leagueId=league%2Fa&returnTo=%2Fdashboard%2Fleagues%2Fleague%2Fa",
+    );
+  });
+
+  it("builds active-season shortcuts through the active-league route", () => {
+    expect(activeSeasonShortcutHref("league-1", "season-1")).toBe(
+      "/dashboard/active-league?leagueId=league-1&returnTo=%2Fdashboard%2Fseasons%2Fseason-1",
+    );
+    expect(activeSeasonShortcutHref("league/a", "season/b")).toBe(
+      "/dashboard/active-league?leagueId=league%2Fa&returnTo=%2Fdashboard%2Fseasons%2Fseason%2Fb",
+    );
   });
 
   it("appends ?season= to legacy league subpages when active season provided", () => {

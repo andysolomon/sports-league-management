@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import { CalendarClock, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import {
   getLeague,
   getSeasons,
@@ -18,7 +18,7 @@ import {
   seasonDecidedContext,
 } from "@/lib/dynasty-panel";
 import { DynastyPanel } from "@/components/dynasty/DynastyPanel";
-import { resolveLifecycleSeason } from "@/lib/season-view";
+import { findActiveSeason, resolveLifecycleSeason } from "@/lib/season-view";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import {
   schedulesStandingsV1,
@@ -32,7 +32,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
-import { leagueHomeHref } from "@/components/workspace/resource-navigation";
+import {
+  leagueHomeHref,
+  seasonHomeHref,
+} from "@/components/workspace/resource-navigation";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import { LeagueLifecycleBanners } from "@/components/league/LeagueLifecycleBanners";
 import { LeagueCurrentSeasonCard } from "@/components/league/LeagueCurrentSeasonCard";
@@ -78,7 +81,7 @@ export default async function LeagueInfoPage({
       statKeepingV1(),
     ]);
 
-  const activeSeason = seasons.find((s) => s.status === "active") ?? null;
+  const activeSeason = findActiveSeason(seasons);
   const upcomingSeason = seasons.find((s) => s.status === "upcoming") ?? null;
   const completedSeason = resolveLifecycleSeason(
     seasons.filter((s) => s.status === "completed"),
@@ -204,6 +207,13 @@ export default async function LeagueInfoPage({
         }
         actions={
           <>
+            {activeSeason ? (
+              <Button variant="default" size="sm" asChild>
+                <Link href={seasonHomeHref(activeSeason.id)}>
+                  Open Active Season
+                </Link>
+              </Button>
+            ) : null}
             {isAdmin && league.orgId ? (
               <Button variant="outline" size="sm" asChild>
                 <Link href={`/dashboard/leagues/${id}/manage`}>
@@ -212,12 +222,6 @@ export default async function LeagueInfoPage({
                 </Link>
               </Button>
             ) : null}
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/dashboard/seasons">
-                <CalendarClock className="h-4 w-4" aria-hidden />
-                Seasons
-              </Link>
-            </Button>
           </>
         }
       />
@@ -245,6 +249,7 @@ export default async function LeagueInfoPage({
           }
           progress={progress}
           navLinks={seasonNavLinks}
+          isAdmin={isAdmin}
         />
         <LeagueStandingsCard
           standings={standings}
