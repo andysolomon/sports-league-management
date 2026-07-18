@@ -22,7 +22,7 @@ test.describe("League info destination (WSM-000254)", () => {
     await page.goto(`/dashboard/leagues/${leagueId}`);
 
     await expect(
-      page.getByRole("heading", { name: LEAGUES.NFL }),
+      page.getByTestId("resource-header-league").getByText(LEAGUES.NFL),
     ).toBeVisible();
     await expect(page.getByText("Organization")).toBeVisible();
     await expect(page.getByText(/\d+ teams · \d+ seasons/)).toBeVisible();
@@ -98,7 +98,7 @@ test.describe("League manage access (WSM-000254)", () => {
 
     await expect(page.getByRole("heading", { name: /^404$/ })).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: LEAGUES.NFL }),
+      page.getByTestId("resource-header-league").getByText(LEAGUES.NFL),
     ).toHaveCount(0);
   });
 });

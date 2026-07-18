@@ -36,7 +36,6 @@ import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import {
@@ -240,24 +239,7 @@ export default async function SeasonHubPage({
           statsEnabled,
         })}
       />
-      <WorkspaceHeader
-        title={season.name}
-        size="sub-hub"
-        status={<StatusBadge status={season.status} />}
-        sub={
-          <>
-            <Link
-              href={`/dashboard/leagues/${league.id}`}
-              className="text-accent hover:underline"
-            >
-              {league.name}
-            </Link>
-            {" · "}
-            {formatDate(season.startDate)} &ndash; {formatDate(season.endDate)}
-          </>
-        }
-        nav={<WorkspaceNav links={links} />}
-      />
+      <WorkspaceNav links={links} />
 
       {isUpcomingSeason && (
         <OffseasonHub

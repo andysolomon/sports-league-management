@@ -135,20 +135,23 @@ test.describe("Team Detail Page", () => {
       /\/dashboard\/players\/[^/]+\/development/,
     );
 
-    // WSM-000571: the Player Resource Header's Overview link goes back to
-    // Player Home without any ?from= plumbing.
-    const playerHeader = page.getByTestId("resource-header-player");
-    await playerHeader.getByRole("link", { name: /^Overview$/ }).click();
+    // WSM-000571: the Player Resource Header's Overview sibling returns to
+    // Player Home; the Development sibling marks the active page. No
+    // ?from= plumbing, no generated "Back to …" row.
+    const devHeader = page.getByTestId("resource-header-player");
+    await expect(
+      devHeader.getByRole("link", { name: /^Development$/ }),
+    ).toHaveAttribute("aria-current", "page");
+
+    await devHeader.getByRole("link", { name: /^Overview$/ }).click();
     await expect(page).toHaveURL(/\/dashboard\/players\/[^/]+$/);
 
-    // The Team Resource Header identifies the parent Team Home through its
-    // resource name slot — clicking that link returns to the team detail.
-    const teamHeader = page.getByTestId("resource-header-team");
-    await teamHeader.getByRole("link", { name: TEAMS.COWBOYS.name }).click();
-    await expect(page).toHaveURL(/\/dashboard\/teams\/[^/]+$/);
+    // The Player Home Resource Header marks Overview active and exposes
+    // Development as a sibling (no longer the generated back row).
+    const playerHeader = page.getByTestId("resource-header-player");
     await expect(
-      page.getByRole("heading", { name: TEAMS.COWBOYS.name }),
-    ).toBeVisible();
+      playerHeader.getByRole("link", { name: /^Overview$/ }),
+    ).toHaveAttribute("aria-current", "page");
   });
 });
 

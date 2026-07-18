@@ -83,9 +83,9 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     // "Schedule · {season}" subtitle confirming the active season resolved.
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await expect(
-      page.getByRole("heading", { name: LEAGUE_NAME }),
+      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
     ).toBeVisible();
-    await expect(page.getByText("Schedule · E2E Season")).toBeVisible();
+    await expect(page.getByTestId("resource-header-league").getByText("Schedule · E2E Season")).toBeVisible();
 
     // 2. Create a fixture.
     await page.getByRole("button", { name: "New fixture" }).click();
@@ -125,7 +125,7 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     // CardTitle div, so it's asserted as text, not a heading).
     await page.goto(`/dashboard/leagues/${leagueId}/standings`);
     await expect(
-      page.getByRole("heading", { name: LEAGUE_NAME }),
+      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
     ).toBeVisible();
     await expect(page.getByText("Season standings")).toBeVisible();
     // Hawks row: 1 W, 21 PF, 10 PA, +11 differential.
@@ -270,7 +270,7 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     if (!fixture) test.skip();
     const leagueId = fixture!.leagueId;
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
-    await expect(page.getByText("Schedule · E2E Season")).toBeVisible();
+    await expect(page.getByTestId("resource-header-league").getByText("Schedule · E2E Season")).toBeVisible();
 
     // Seed: Week 1 final game, Week 2 future game.
     await createFixture(page, 1, ACC_HOME, ACC_AWAY);
@@ -355,7 +355,7 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
       forceWithoutChampion: true,
     });
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
-    await expect(page.getByText("Schedule · E2E Season")).toBeVisible();
+    await expect(page.getByTestId("resource-header-league").getByText("Schedule · E2E Season")).toBeVisible();
 
     await expect(
       page.getByRole("button", { name: "New fixture" }),

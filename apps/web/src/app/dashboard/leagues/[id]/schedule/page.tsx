@@ -63,7 +63,6 @@ import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
 import { Button } from "@/components/ui/button";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveLifecycleSeason, resolveViewedSeason } from "@/lib/season-view";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
@@ -274,11 +273,6 @@ export default async function LeagueSchedulePage({
         name={league.name}
         href={leagueHomeHref(leagueId)}
         subtitle={`Schedule${activeSeason ? ` · ${activeSeason.name}` : ""}`}
-      />
-      <WorkspaceHeader
-        title={league.name}
-        size="sub-hub"
-        sub={`Schedule${activeSeason ? ` · ${activeSeason.name}` : ""}`}
         actions={
           <>
             {activeSeason ? (

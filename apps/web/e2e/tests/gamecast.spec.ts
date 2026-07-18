@@ -72,7 +72,7 @@ async function openSimmedGamecastFinal(
 ): Promise<SimmedGamecastContext> {
   await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
   await expect(
-    page.getByRole("heading", { name: LEAGUE_NAME }),
+    page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
   ).toBeVisible();
 
   await revealAllScheduleRows(page);
@@ -191,7 +191,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
 
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await expect(
-      page.getByRole("heading", { name: LEAGUE_NAME }),
+      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
     ).toBeVisible();
 
     await revealAllScheduleRows(page);
@@ -286,7 +286,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     // Return to the schedule to exercise the manual-record → empty-state path.
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await expect(
-      page.getByRole("heading", { name: LEAGUE_NAME }),
+      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
     ).toBeVisible();
 
     const manualRow = page

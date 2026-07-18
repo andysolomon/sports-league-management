@@ -101,6 +101,9 @@ export default async function RosterAuditPage({
           depthChartEnabled: await depthChartV1(),
         })}
       />
+      <h2 className="text-2xl font-bold text-foreground">
+        {team.name} — Roster Audit Log
+      </h2>
       <RosterAuditTimeline entries={entries} players={players} />
     </div>
   );

@@ -68,7 +68,7 @@ test.describe("Simulation scopes (WSM-000183)", () => {
 
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await expect(
-      page.getByRole("heading", { name: LEAGUE_NAME }),
+      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
     ).toBeVisible();
 
     const week1 = weekCard(page, 1);

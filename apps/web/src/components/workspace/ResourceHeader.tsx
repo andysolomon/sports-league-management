@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { ResourceHeaderKind, ResourceSiblingLink } from "./resource-navigation";
 
@@ -10,6 +13,9 @@ import type { ResourceHeaderKind, ResourceSiblingLink } from "./resource-navigat
  * exposes sibling subpage navigation, and marks the active sibling via
  * `aria-current="page"`. The Resource Header is presentation-only — it
  * never fetches data, so access checks remain the caller's responsibility.
+ *
+ * `usePathname()` drives active-sibling highlighting automatically; callers
+ * don't need to thread the current URL.
  */
 export function ResourceHeader({
   kind,
@@ -31,10 +37,12 @@ export function ResourceHeader({
   context?: React.ReactNode;
   actions?: React.ReactNode;
   siblings?: ResourceSiblingLink[];
+  /** Optional override; defaults to the live pathname (path-segment compare). */
   currentHref?: string;
   className?: string;
 }) {
-  const [currentPath] = (currentHref ?? "").split("?");
+  const pathname = usePathname();
+  const comparePath = (currentHref ?? pathname ?? "").split("?")[0] ?? "";
   const dataTestId = `resource-header-${kind}`;
 
   return (
@@ -72,7 +80,7 @@ export function ResourceHeader({
           >
             {siblings.map((sibling) => {
               const [siblingPath] = sibling.href.split("?");
-              const isActive = currentPath === siblingPath;
+              const isActive = comparePath === siblingPath;
               return (
                 <Link
                   key={sibling.href}
