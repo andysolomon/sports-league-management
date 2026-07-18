@@ -2,28 +2,66 @@
   "name": "sports-management",
   "version": "0.3.0",
   "packageManager": "pnpm@9.15.4",
-  "description": "Sports league management monorepo — Next.js web app, Convex backend, and Ink TUI",
+  "description": "Sports League Management application for Salesforce",
   "type": "module",
   "scripts": {
+    "setup-users": "node scripts/setup-users.js",
+    "create-scratch-org": "node scripts/create-scratch-org.js",
+    "seed-data": "node scripts/seed-data.js",
     "check:css": "node scripts/check-css-comments.mjs",
     "check:env": "node scripts/check-web-env-parity.js",
     "check:launch": "node scripts/check-web-env-parity.js --launch",
     "tui": "pnpm --filter @sports-management/tui dev",
-    "prepare": "husky"
+    "test": "pnpm run test:unit",
+    "test:unit": "sf force lightning lwc test run",
+    "test:unit:watch": "sf force lightning lwc test run --watch",
+    "test:unit:debug": "sf force lightning lwc test run --debug",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright test --reporter=html && playwright show-report",
+    "lint": "eslint **/{aura,lwc}/**",
+    "prettier": "prettier --write \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    "prettier:verify": "prettier --list-different \"**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}\"",
+    "prepare": "husky",
+    "precommit": "lint-staged"
   },
   "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/preset-env": "^7.27.2",
     "@commitlint/cli": "^19.5.0",
     "@commitlint/config-conventional": "^19.5.0",
+    "@lwc/eslint-plugin-lwc": "^1.1.2",
+    "@playwright/test": "^1.49.0",
+    "@prettier/plugin-xml": "^2.0.1",
+    "@salesforce/eslint-config-lwc": "^3.2.3",
+    "@salesforce/eslint-plugin-aura": "^2.0.0",
+    "@salesforce/eslint-plugin-lightning": "^1.0.0",
+    "@salesforce/sfdx-lwc-jest": "^1.1.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^12.0.6",
     "@semantic-release/npm": "^13.1.5",
     "@semantic-release/release-notes-generator": "^14.1.0",
+    "babel-jest": "^29.7.0",
     "conventional-changelog-conventionalcommits": "^9.3.0",
+    "eslint": "^8.11.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-jest": "^26.1.2",
     "husky": "^9.1.7",
+    "lint-staged": "^12.3.7",
+    "prettier": "^2.6.0",
+    "prettier-plugin-apex": "^1.10.0",
     "semantic-release": "^25.0.3",
     "turbo": "^2.3.0"
+  },
+  "lint-staged": {
+    "**/*.{cls,cmp,component,css,html,js,json,md,page,trigger,xml,yaml,yml}": [
+      "prettier --write"
+    ],
+    "**/{aura,lwc}/**": [
+      "eslint"
+    ]
   },
   "author": "Sports Management Team",
   "license": "MIT",
@@ -32,12 +70,12 @@
     "url": "https://github.com/andysolomon/sports-league-management.git"
   },
   "keywords": [
+    "salesforce",
+    "lightning",
+    "lwc",
     "sports",
     "management",
-    "league",
-    "nextjs",
-    "convex",
-    "monorepo"
+    "league"
   ],
   "engines": {
     "node": ">=20.9.0",

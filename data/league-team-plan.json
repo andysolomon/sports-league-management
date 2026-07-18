@@ -1,0 +1,18 @@
+[
+  {
+    "sobject": "League__c",
+    "files": ["leagues.json"]
+  },
+  {
+    "sobject": "Team__c",
+    "files": ["teams.json"]
+  },
+  {
+    "sobject": "Season__c",
+    "files": ["seasons.json"]
+  },
+  {
+    "sobject": "Player__c",
+    "files": ["players.json"]
+  }
+]

@@ -1,0 +1,263 @@
+<template>
+    <!-- Loading Spinner -->
+    <template if:true={isLoading}>
+        <lightning-spinner alternative-text="Loading..." variant="brand"></lightning-spinner>
+    </template>
+
+    <div class="slds-card">
+        <div class="slds-card__header slds-grid">
+            <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="standard:date_time" size="medium"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <h2 class="slds-card__header-title">
+                        <span class="slds-text-heading_medium">Season Management</span>
+                    </h2>
+                </div>
+            </header>
+            <div class="slds-no-flex">
+                <lightning-button
+                    variant="brand"
+                    label="Create Season"
+                    onclick={handleCreateSeason}
+                    icon-name="utility:add">
+                </lightning-button>
+            </div>
+        </div>
+
+        <div class="slds-card__body slds-card__body_inner">
+            <!-- Filters -->
+            <div class="slds-grid slds-gutters slds-wrap slds-m-bottom_medium">
+                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+                    <lightning-combobox
+                        name="leagueFilter"
+                        label="Filter by League"
+                        value={selectedLeagueId}
+                        placeholder="Select a league"
+                        options={leagueOptions}
+                        onchange={handleLeagueChange}>
+                    </lightning-combobox>
+                </div>
+            </div>
+
+            <!-- Seasons List -->
+            <template if:true={hasFilteredSeasons}>
+                <div class="slds-m-top_medium">
+                    <h3 class="slds-text-heading_small slds-m-bottom_small">Seasons</h3>
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <template for:each={filteredSeasons} for:item="season">
+                            <div key={season.Id} class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-large-size_1-of-3">
+                                <div class="slds-box">
+                                    <div class="slds-grid slds-grid_align-spread">
+                                        <div class="slds-col">
+                                            <h4 class="slds-text-heading_small">{season.Name}</h4>
+                                            <p class="slds-text-color_weak">
+                                                League: {season.League__r.Name}
+                                            </p>
+                                            <p class="slds-text-body_small slds-m-top_xx-small">
+                                                {season.Start_Date__c} &ndash; {season.End_Date__c}
+                                            </p>
+                                            <template if:true={season.Status__c}>
+                                                <span class="slds-badge slds-m-top_xx-small">{season.Status__c}</span>
+                                            </template>
+                                        </div>
+                                        <div class="slds-col slds-no-flex">
+                                            <lightning-button-menu
+                                                alternative-text="Season Actions"
+                                                icon-size="x-small">
+                                                <lightning-menu-item
+                                                    value="edit"
+                                                    label="Edit"
+                                                    data-id={season.Id}
+                                                    onclick={handleEditSeason}>
+                                                </lightning-menu-item>
+                                                <lightning-menu-item
+                                                    value="delete"
+                                                    label="Delete"
+                                                    data-id={season.Id}
+                                                    onclick={handleDeleteSeason}>
+                                                </lightning-menu-item>
+                                            </lightning-button-menu>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <template if:false={hasFilteredSeasons}>
+                <div class="slds-m-top_medium">
+                    <div class="slds-align_absolute-center">
+                        <div class="slds-text-color_weak">
+                            <lightning-icon icon-name="utility:date_time" size="large"></lightning-icon>
+                            <p class="slds-m-top_small">No seasons found</p>
+                            <p class="slds-text-color_weak">Create your first season to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Create Season Modal -->
+    <template if:true={showCreateModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close" onclick={closeCreateModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Create New Season</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form-element">
+                        <label class="slds-form-element__label" for="create-season-name">Season Name</label>
+                        <div class="slds-form-element__control">
+                            <input type="text" id="create-season-name" class="slds-input"
+                                   value={seasonName} onchange={handleSeasonNameChange}
+                                   placeholder="Enter season name" />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <lightning-combobox
+                            name="createLeague"
+                            label="League"
+                            value={selectedLeagueId}
+                            placeholder="Select a league"
+                            options={leagueOptions}
+                            onchange={handleCreateLeagueChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <label class="slds-form-element__label" for="create-start-date">Start Date</label>
+                        <div class="slds-form-element__control">
+                            <input type="date" id="create-start-date" class="slds-input"
+                                   value={startDate} onchange={handleStartDateChange} />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <label class="slds-form-element__label" for="create-end-date">End Date</label>
+                        <div class="slds-form-element__control">
+                            <input type="date" id="create-end-date" class="slds-input"
+                                   value={endDate} onchange={handleEndDateChange} />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <lightning-combobox
+                            name="createStatus"
+                            label="Status"
+                            value={statusValue}
+                            placeholder="Select a status"
+                            options={statusOptions}
+                            onchange={handleStatusChange}>
+                        </lightning-combobox>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={closeCreateModal}>Cancel</button>
+                    <button class="slds-button slds-button_brand" onclick={handleSaveCreate}>Create</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- Edit Season Modal -->
+    <template if:true={showEditModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close" onclick={closeEditModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Edit Season</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <div class="slds-form-element">
+                        <label class="slds-form-element__label" for="edit-season-name">Season Name</label>
+                        <div class="slds-form-element__control">
+                            <input type="text" id="edit-season-name" class="slds-input"
+                                   value={seasonName} onchange={handleSeasonNameChange}
+                                   placeholder="Enter season name" />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <lightning-combobox
+                            name="editLeague"
+                            label="League"
+                            value={selectedLeagueId}
+                            placeholder="Select a league"
+                            options={leagueOptions}
+                            onchange={handleCreateLeagueChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <label class="slds-form-element__label" for="edit-start-date">Start Date</label>
+                        <div class="slds-form-element__control">
+                            <input type="date" id="edit-start-date" class="slds-input"
+                                   value={startDate} onchange={handleStartDateChange} />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <label class="slds-form-element__label" for="edit-end-date">End Date</label>
+                        <div class="slds-form-element__control">
+                            <input type="date" id="edit-end-date" class="slds-input"
+                                   value={endDate} onchange={handleEndDateChange} />
+                        </div>
+                    </div>
+                    <div class="slds-form-element slds-m-top_medium">
+                        <lightning-combobox
+                            name="editStatus"
+                            label="Status"
+                            value={statusValue}
+                            placeholder="Select a status"
+                            options={statusOptions}
+                            onchange={handleStatusChange}>
+                        </lightning-combobox>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={closeEditModal}>Cancel</button>
+                    <button class="slds-button slds-button_brand" onclick={handleSaveEdit}>Save</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!-- Delete Season Modal -->
+    <template if:true={showDeleteModal}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                            title="Close" onclick={closeDeleteModal}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Delete Season</h2>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium">
+                    <p>Are you sure you want to delete the season <strong>{deletingSeason.Name}</strong>?</p>
+                    <p class="slds-m-top_small slds-text-color_error">
+                        This action cannot be undone.
+                    </p>
+                </div>
+                <footer class="slds-modal__footer">
+                    <button class="slds-button slds-button_neutral" onclick={closeDeleteModal}>Cancel</button>
+                    <button class="slds-button slds-button_destructive" onclick={handleConfirmDelete}>Delete</button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

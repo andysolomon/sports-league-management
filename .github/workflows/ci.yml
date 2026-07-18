@@ -83,5 +83,8 @@ jobs:
       - name: CSS comment guard
         run: pnpm check:css
 
+      - name: Test (LWC Jest)
+        run: npx jest --config jest.config.js --passWithNoTests
+
       - name: Build
         run: pnpm turbo build

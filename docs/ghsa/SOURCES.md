@@ -13,7 +13,7 @@ Authoritative GHSA sources behind the seed importer
 
 | Source | What it is | Used for |
 | --- | --- | --- |
-| <https://www.ghsa.net/2024-ghsa-football-standings> | **2024 football region alignment** as actually competed — regions per class. HTML page, not a PDF. | **Source of record for `scripts/ghsa-seed/data/ghsa-2024-26.json`** (416 football schools, 56 regions). |
+| <https://www.ghsa.net/2024-ghsa-football-standings> | **2024 football region alignment** as actually competed — regions per class. HTML page, not a PDF. | **Source of record for `data/ghsa-2024-26.json`** (416 football schools, 56 regions). |
 | <https://www.ghsa.net/2024-2025-region-alignments> | All-sports region alignments, 2024-25. | Cross-reference. |
 | <https://www.si.com/high-school/georgia/2023/11/16/ghsa-announces-2024-26-regions-and-classifications> | News article, Nov 2023 announced alignment. | Initial draft only — **superseded** by the official football standings above. |
 

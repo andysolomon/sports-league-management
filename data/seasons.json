@@ -1,0 +1,28 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "Season__c", "referenceId": "seasonRef1" },
+      "Name": "2025-2026 NFL Season",
+      "League__c": "@leagueRef1",
+      "Start_Date__c": "2025-09-04",
+      "End_Date__c": "2026-02-08",
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Season__c", "referenceId": "seasonRef2" },
+      "Name": "2024-2025 NFL Season",
+      "League__c": "@leagueRef1",
+      "Start_Date__c": "2024-09-05",
+      "End_Date__c": "2025-02-09",
+      "Status__c": "Completed"
+    },
+    {
+      "attributes": { "type": "Season__c", "referenceId": "seasonRef3" },
+      "Name": "2025 MLS Season",
+      "League__c": "@leagueRef2",
+      "Start_Date__c": "2025-02-22",
+      "End_Date__c": "2025-10-25",
+      "Status__c": "Upcoming"
+    }
+  ]
+}

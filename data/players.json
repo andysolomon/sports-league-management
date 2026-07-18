@@ -1,0 +1,100 @@
+{
+  "records": [
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef1" },
+      "Name": "Dak Prescott",
+      "Team__c": "@teamRef1",
+      "Position__c": "QB",
+      "Jersey_Number__c": 4,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef2" },
+      "Name": "CeeDee Lamb",
+      "Team__c": "@teamRef1",
+      "Position__c": "WR",
+      "Jersey_Number__c": 88,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef3" },
+      "Name": "Micah Parsons",
+      "Team__c": "@teamRef1",
+      "Position__c": "LB",
+      "Jersey_Number__c": 11,
+      "Status__c": "Injured"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef4" },
+      "Name": "Drake Maye",
+      "Team__c": "@teamRef2",
+      "Position__c": "QB",
+      "Jersey_Number__c": 10,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef5" },
+      "Name": "Hunter Henry",
+      "Team__c": "@teamRef2",
+      "Position__c": "TE",
+      "Jersey_Number__c": 85,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef6" },
+      "Name": "Christian Barmore",
+      "Team__c": "@teamRef2",
+      "Position__c": "DT",
+      "Jersey_Number__c": 90,
+      "Status__c": "Inactive"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef7" },
+      "Name": "Riqui Puig",
+      "Team__c": "@teamRef3",
+      "Position__c": "MF",
+      "Jersey_Number__c": 10,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef8" },
+      "Name": "Dejan Joveljic",
+      "Team__c": "@teamRef3",
+      "Position__c": "FW",
+      "Jersey_Number__c": 9,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef9" },
+      "Name": "Maya Yoshida",
+      "Team__c": "@teamRef3",
+      "Position__c": "DF",
+      "Jersey_Number__c": 4,
+      "Status__c": "Injured"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef10" },
+      "Name": "Joao Paulo",
+      "Team__c": "@teamRef4",
+      "Position__c": "MF",
+      "Jersey_Number__c": 6,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef11" },
+      "Name": "Jordan Morris",
+      "Team__c": "@teamRef4",
+      "Position__c": "FW",
+      "Jersey_Number__c": 13,
+      "Status__c": "Active"
+    },
+    {
+      "attributes": { "type": "Player__c", "referenceId": "playerRef12" },
+      "Name": "Stefan Frei",
+      "Team__c": "@teamRef4",
+      "Position__c": "GK",
+      "Jersey_Number__c": 24,
+      "Status__c": "Inactive"
+    }
+  ]
+}

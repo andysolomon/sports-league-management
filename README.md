@@ -1,24 +1,26 @@
 # Sports League Management System
 
-A sports league management platform built as a pnpm + Turborepo monorepo: a **Next.js** web app with **Convex** backend, plus an **Ink TUI** operator console.
-
-Salesforce packages (Apex, LWC, scratch-org tooling) now live in a separate repository: [andysolomon/sprts-salesforce](https://github.com/andysolomon/sprts-salesforce).
+A full-stack sports league management platform combining a Salesforce backend (Apex + LWC) with a Next.js frontend. The system manages leagues, divisions, teams, players, and seasons through both a Salesforce Lightning Experience app and an external web application with role-based access control.
 
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  Next.js Web App (apps/web)                                     │
-│  Clerk Auth ─► BFF API Routes ─► Convex                         │
+│  Clerk Auth ─► BFF API Routes ─► Salesforce REST API            │
 │  shadcn/ui + Tailwind CSS + Playwright E2E                      │
 ├─────────────────────────────────────────────────────────────────┤
 │  Ink TUI (apps/tui)                                             │
-│  Clerk API Keys ─► /api/cli/* BFF Routes ─► Convex              │
+│  Clerk API Keys ─► /api/cli/* BFF Routes ─► Salesforce REST API │
 │  Browse, bulk import, debug — terminal operator console          │
 ├─────────────────────────────────────────────────────────────────┤
 │  Shared Packages                                                │
 │  @sports-management/shared-types    TypeScript DTOs              │
 │  @sports-management/api-contracts   Zod runtime validation       │
+├─────────────────────────────────────────────────────────────────┤
+│  Salesforce Platform                                             │
+│  sportsmgmt (Core)        Apex services, REST API, LWC, objects  │
+│  sportsmgmt-football      Sport-specific extension (scaffolded)  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -26,23 +28,30 @@ Salesforce packages (Apex, LWC, scratch-org tooling) now live in a separate repo
 
 ```
 ├── apps/
-│   ├── web/                   Next.js frontend (Clerk + Convex)
+│   ├── web/                   Next.js 15 frontend (Clerk + Salesforce JWT)
 │   └── tui/                   Ink 7 terminal UI (internal operator console)
 ├── packages/
 │   ├── shared-types/          TypeScript DTO interfaces
 │   └── api-contracts/         Zod validation schemas
-├── scripts/                   Env checks, GHSA seed helpers
-└── docs/                      Guides, sprint plans, market insights
+├── sportsmgmt/                Salesforce core package (5 custom objects, Apex, LWC)
+├── sportsmgmt-football/       Salesforce football extension (scaffolded)
+├── scripts/                   Scratch org setup, data seeding, E2E runner
+├── config/                    Scratch org definitions
+├── data/                      Seed data (JSON import plans)
+└── docs/                      Sprint plans, guides, market insights
 ```
 
 **Tooling:** pnpm workspaces + Turborepo for task orchestration, Corepack for pnpm version management.
 
+> **Backend note (current):** the web app (`apps/web`) now uses **[Convex](https://convex.dev)** as its primary data backend — see [apps/web/CLAUDE.md](apps/web/CLAUDE.md). The Salesforce-REST arrows in the diagram above and parts of [apps/web/README.md](apps/web/README.md) describe the original design and are being reconciled. Production deploy of the web app + Convex is documented in [docs/development/DEPLOY.md](docs/development/DEPLOY.md).
+
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 18+
 - pnpm 9+ (via Corepack: `corepack enable`)
+- Salesforce CLI (`sf`)
+- A Salesforce Dev Hub org
 - A Clerk application (for the web frontend)
-- A Convex deployment (see [apps/web/CLAUDE.md](apps/web/CLAUDE.md))
 
 ## Quick Start
 
@@ -50,14 +59,20 @@ Salesforce packages (Apex, LWC, scratch-org tooling) now live in a separate repo
 # Install dependencies
 pnpm install
 
-# Copy env template and fill in Clerk + Convex values
-cp apps/web/.env.example apps/web/.env.local
+# Create and configure a scratch org
+node scripts/create-scratch-org.js sports-dev 7
+
+# Deploy Salesforce metadata
+sf project deploy start
+
+# Seed test data
+node scripts/seed-data.js
 
 # Start the web app
 pnpm --filter @sports-management/web dev
 ```
 
-The web app runs at `http://localhost:3000`. See [apps/web/README.md](apps/web/README.md) for environment variable setup and [docs/development/DEPLOY.md](docs/development/DEPLOY.md) for production deploy.
+The web app runs at `http://localhost:3000`. See [apps/web/README.md](apps/web/README.md) for environment variable setup.
 
 ### TUI (Terminal Operator Console)
 
@@ -81,6 +96,23 @@ See [apps/tui/README.md](apps/tui/README.md) for keyboard shortcuts, navigation,
 
 ## Development Workflow
 
+### Salesforce Development
+
+```bash
+# Deploy all metadata
+sf project deploy start
+
+# Deploy specific components
+sf project deploy start --source-dir sportsmgmt/main/default/classes
+sf project deploy start --source-dir sportsmgmt/main/default/lwc
+
+# Run all Apex tests (233 tests)
+sf apex test run --wait 10 --code-coverage --result-format human
+
+# Run specific test classes
+sf apex test run --tests DivisionServiceTest,TeamRepositoryTest --wait 10
+```
+
 ### Web App Development
 
 ```bash
@@ -90,9 +122,6 @@ pnpm --filter @sports-management/web dev
 # Type checking
 pnpm --filter @sports-management/web type-check
 
-# Unit tests (Vitest)
-pnpm --filter @sports-management/web test:unit
-
 # Build
 pnpm --filter @sports-management/web build
 ```
@@ -100,37 +129,93 @@ pnpm --filter @sports-management/web build
 ### Testing
 
 ```bash
-# TUI tests
+# Apex tests (233 tests, 82% org-wide coverage)
+sf apex test run --wait 10 --code-coverage --result-format human
+
+# LWC Jest tests (37 tests across 5 suites)
+pnpm exec jest --config jest.config.js
+
+# TUI tests (88 tests)
 pnpm --filter @sports-management/tui test:unit
 
-# Web app unit tests
+# Web app tests (74 tests)
 pnpm --filter @sports-management/web test:unit
 
-# Web E2E — Playwright (Clerk + Convex)
-pnpm --filter @sports-management/web test:e2e
-pnpm --filter @sports-management/web test:e2e:headed
-pnpm --filter @sports-management/web test:e2e:report
+# E2E tests — Playwright, apps/web (~93 passing across 24 specs)
+pnpm --filter @sports-management/web test:e2e          # Headless
+pnpm --filter @sports-management/web test:e2e:headed    # Visible browser
+pnpm --filter @sports-management/web test:e2e:report    # With HTML report
+
+# Convenience script (checks org, loads seed data, runs E2E)
+./scripts/run-e2e-tests.sh [org-alias] [--headed] [--report]
 ```
 
 ### Code Quality
 
 ```bash
-pnpm turbo lint
-pnpm turbo type-check
-pnpm check:css
-pnpm check:env
+pnpm run lint              # ESLint (LWC/Aura)
+pnpm run prettier          # Format all files
+pnpm run prettier:verify   # Check formatting
 ```
 
-## Salesforce (moved out)
+## Data Model
 
-The original Salesforce DX packages (`sportsmgmt`, `sportsmgmt-football`), scratch-org scripts, and Lightning E2E suite have been extracted to [sprts-salesforce](https://github.com/andysolomon/sprts-salesforce). Use that repo for Apex, LWC, and `sf` CLI workflows.
+```
+League__c (1) ──── (n) Division__c
+League__c (1) ──── (n) Team__c
+League__c (1) ──── (n) Season__c
+Team__c   (1) ──── (n) Player__c
+Division__c (1) ── (n) Team__c (via lookup)
+```
+
+**Core Objects:** League, Division, Team, Player, Season — each with full CRUD through both Apex REST endpoints and LWC controllers.
+
+## Permission Sets
+
+| Permission Set | Access Level |
+|---|---|
+| `Sports_League_Management_Access` | App visibility only |
+| `League_Administrator` | Full CRUD on all 5 objects |
+| `Team_Manager` | CRUD on Team/Player, Read on League/Division/Season |
+| `Data_Viewer` | Read-only on all 5 objects |
+| `External_App_Integration` | API access for the web frontend |
+
+## Package Management
+
+The Salesforce solution ships as two unlocked packages:
+
+- **Sports Management Core** (`sportsmgmt`) — Base framework, all 5 objects, services, REST API
+- **Sports Management Football** (`sportsmgmt-football`) — Football-specific extensions (depends on Core)
+
+```bash
+# Create package versions
+./scripts/package-management.sh create-versions --wait 15
+
+# Validate deployment
+sf project deploy validate --source-dir sportsmgmt
+```
 
 ## Documentation
 
 | Document | Description |
 |---|---|
-| [apps/web/README.md](apps/web/README.md) | Web app setup, architecture, auth, testing |
-| [apps/tui/README.md](apps/tui/README.md) | TUI setup, commands, keyboard shortcuts |
+| [apps/tui/README.md](apps/tui/README.md) | TUI setup, commands, keyboard shortcuts, architecture |
+| [apps/web/README.md](apps/web/README.md) | Web app setup, architecture, auth, Salesforce integration |
+| [sportsmgmt/README.md](sportsmgmt/README.md) | Core Salesforce package — objects, Apex classes, LWC |
+| [sportsmgmt-football/README.md](sportsmgmt-football/README.md) | Football extension package |
 | [docs/README.md](docs/README.md) | Documentation index |
-| [docs/development/DEPLOY.md](docs/development/DEPLOY.md) | Production deploy runbook (Vercel + Convex) |
-| [docs/guides/WEB_E2E_TESTING_GUIDE.md](docs/guides/WEB_E2E_TESTING_GUIDE.md) | Web app Playwright E2E — Clerk + Convex |
+| [docs/development/DEPLOY.md](docs/development/DEPLOY.md) | Production deploy runbook (web via Vercel + manual Convex deploy) |
+| [docs/guides/WEB_E2E_TESTING_GUIDE.md](docs/guides/WEB_E2E_TESTING_GUIDE.md) | Web app (apps/web) Playwright E2E — Clerk + Convex, and the CI setup |
+| [docs/guides/E2E_TESTING_GUIDE.md](docs/guides/E2E_TESTING_GUIDE.md) | E2E testing — **legacy Salesforce-Lightning** suite (root `e2e/`) |
+| [docs/guides/USER_SETUP.md](docs/guides/USER_SETUP.md) | User and permission configuration |
+| [docs/guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md](docs/guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md) | Salesforce CLI reference |
+
+## Automation Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/create-scratch-org.js` | Full scratch org setup with users and permissions |
+| `scripts/setup-users.js` | User creation and role-based permission set assignment |
+| `scripts/seed-data.js` | Generate test data (leagues, teams, players, seasons) |
+| `scripts/run-e2e-tests.sh` | Run Playwright E2E tests against a scratch org |
+| `scripts/package-management.sh` | Package version creation and deployment |

@@ -1,0 +1,11 @@
+.slds-modal__container {
+    max-width: 480px;
+}
+
+.slds-box {
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.slds-box:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}

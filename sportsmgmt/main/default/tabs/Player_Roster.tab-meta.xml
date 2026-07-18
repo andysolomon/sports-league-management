@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomTab xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Tab for managing player roster</description>
+    <flexiPage>Player_Roster_Page</flexiPage>
+    <label>Player Roster</label>
+    <motif>Custom63: Handshake</motif>
+</CustomTab>

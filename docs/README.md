@@ -15,6 +15,9 @@
 | Document | Description |
 |---|---|
 | [guides/WEB_E2E_TESTING_GUIDE.md](guides/WEB_E2E_TESTING_GUIDE.md) | Web app (apps/web) Playwright E2E — Clerk + Convex, canonical fixture, and the local-Convex CI setup |
+| [guides/E2E_TESTING_GUIDE.md](guides/E2E_TESTING_GUIDE.md) | **Legacy** Salesforce-Lightning E2E suite (root `e2e/`, scratch orgs) |
+| [guides/USER_SETUP.md](guides/USER_SETUP.md) | Scratch org user creation and permission set assignment |
+| [guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md](guides/SF_CLI_AND_OBJECT_REFERENCE_GUIDE.md) | Salesforce CLI commands and custom object reference |
 
 ## Sprint Plans
 
@@ -76,4 +79,5 @@
 
 - [Root README](../README.md) — Project overview, quick start, full development workflow
 - [apps/web/README.md](../apps/web/README.md) — Next.js frontend: setup, architecture, auth, testing
-- [sprts-salesforce](https://github.com/andysolomon/sprts-salesforce) — Salesforce packages (Apex, LWC, scratch-org tooling; moved out of this repo)
+- [sportsmgmt/README.md](../sportsmgmt/README.md) — Core Salesforce package: objects, Apex, LWC, REST API
+- [sportsmgmt-football/README.md](../sportsmgmt-football/README.md) — Football extension package

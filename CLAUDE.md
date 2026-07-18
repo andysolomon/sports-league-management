@@ -2,108 +2,212 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Repository scope
-
-This monorepo is **Next.js + Convex + TUI only**. Salesforce packages (Apex, LWC, scratch-org tooling) live in a separate repo: [sprts-salesforce](https://github.com/andysolomon/sprts-salesforce).
-
 ## Commands
 
 ### Development Workflow
-
 ```bash
-# Install dependencies
-pnpm install
+# Create scratch org with full setup
+node scripts/create-scratch-org.js [org-alias] [duration-days]
 
-# Web dev server
-pnpm --filter @sports-management/web dev
+# Deploy project to scratch org
+sf project deploy start
 
-# TUI
-pnpm tui
+# Deploy specific components
+sf project deploy start --source-dir sportsmgmt/main/default/classes
+sf project deploy start --source-dir sportsmgmt/main/default/lwc
+sf project deploy start --source-dir sportsmgmt/main/default/objects
 
-# Type-check all workspace packages
-pnpm turbo type-check
+# Run Apex tests
+sf apex test run --wait 10 --code-coverage --result-format human
 
-# Lint all workspace packages
-pnpm turbo lint
+# Run specific test classes
+sf apex test run --tests DivisionManagementControllerTest,DivisionRepositoryTest,DivisionServiceTest --wait 10
 
-# Build all workspace packages
-pnpm turbo build
+# Run LWC tests
+pnpm run test:unit
+pnpm run test:unit:watch
+pnpm run test:unit:debug
 ```
 
-### Testing
-
+### E2E Testing (Playwright)
 ```bash
-# Web unit tests (Vitest)
-pnpm --filter @sports-management/web test:unit
+# Run E2E tests against scratch org (headless)
+pnpm run test:e2e
 
-# TUI unit tests
-pnpm --filter @sports-management/tui test:unit
+# Run E2E tests with visible browser
+pnpm run test:e2e:headed
 
-# Web E2E (Playwright — Clerk + Convex)
-pnpm --filter @sports-management/web test:e2e
-pnpm --filter @sports-management/web test:e2e:headed
+# Run E2E tests with HTML report
+pnpm run test:e2e:report
+
+# Convenience script (checks org, loads seed data, runs tests)
+./scripts/run-e2e-tests.sh [org-alias] [--headed] [--report]
+
+# Install Playwright browsers (first time only)
+pnpm exec playwright install chromium
 ```
 
-### Code Quality
-
+### Code Quality and Linting
 ```bash
-pnpm check:css
-pnpm check:env
-pnpm check:launch
+# Run linter
+pnpm run lint
+
+# Run Prettier formatting
+pnpm run prettier
+pnpm run prettier:verify
+
+# Run all LWC tests with coverage
+sf force lightning lwc test run
+```
+
+### Data Management
+```bash
+# Load test data
+sf data import tree --plan data/league-team-plan.json
+
+# Create sample data using automated script
+node scripts/seed-data.js
+```
+
+### Package Management
+```bash
+# Create package versions
+./scripts/package-management.sh create-versions --wait 15
+
+# Validate deployment
+sf project deploy validate --source-dir sportsmgmt
 ```
 
 ## Architecture
 
 ### Project Structure
+This is a multi-package Salesforce DX project with modular architecture:
 
-- **`apps/web/`** — Next.js 15 frontend with Clerk auth and Convex backend
-- **`apps/tui/`** — Ink 7 terminal operator console
-- **`packages/shared-types/`** — TypeScript DTO interfaces
-- **`packages/api-contracts/`** — Zod validation schemas
-- **`scripts/`** — Env parity checks, GHSA seed helpers
+- **`sportsmgmt/`** - Core package with base functionality
+- **`sportsmgmt-football/`** - Sport-specific implementation (football)
+- **`config/`** - Scratch org definitions
+- **`scripts/`** - Automation scripts for setup and data management
+- **`data/`** - Test data and import plans
 
 ### Package Manager
-
-- **pnpm** workspaces with Turborepo (`turbo.json`)
+- **pnpm** with `shamefully-hoist=true` (required for `@salesforce/sfdx-lwc-jest` compatibility)
+- **Turborepo** for monorepo task orchestration (`turbo.json`)
 - **Corepack** manages the pnpm version (`packageManager` field in `package.json`)
-- Workspace directories: `apps/*`, `packages/*`
+- **Workspace directories:** `apps/` (applications), `packages/` (shared libraries)
+- Salesforce DX directories (`sportsmgmt/`, `sportsmgmt-football/`) are NOT workspace packages
 
-### Web App Patterns
+### Package Dependencies
+- `sportsmgmt-football` depends on `sportsmgmt` (core package)
+- Both packages use API version 58.0
+- Packages are managed via sfdx-project.json
 
-- **Auth:** Clerk (session + API keys for CLI/TUI routes)
-- **Data:** Convex mutations/queries via `apps/web/convex/`
-- **BFF:** Next.js API routes in `apps/web/src/app/api/`
-- **Validation:** Zod schemas from `@sports-management/api-contracts`
+### Code Architecture Patterns
 
-### Testing Strategy
+**Layered Architecture:**
+- **Presentation:** Lightning Web Components in `/lwc/`
+- **Controller:** Apex classes in `/lightning/` (e.g., `DivisionManagementController`)
+- **Service:** Business logic in `/service/` (e.g., `DivisionService`, `TeamService`)
+- **Repository:** Data access in `/service/` (e.g., `DivisionRepository`, `TeamRepository`)
+- **Domain:** Interfaces and abstractions in `/util/`
 
-- **Web unit:** Vitest in `apps/web/src/**/__tests__/`
-- **Web E2E:** Playwright in `apps/web/e2e/` (Clerk testing tokens + Convex seed)
-- **TUI:** Vitest in `apps/tui/`
+**Key Design Patterns:**
+- **Interface Abstraction:** Business logic works with interfaces (`IDivision`, `ITeam`) rather than sObjects
+- **Dependency Injection:** Constructor-based DI for services, test-visible setters for controllers
+- **Repository Pattern:** Clear separation between service logic and data access
+- **Wrapper Pattern:** `DivisionWrapper`, `TeamWrapper` bridge domain interfaces and sObjects
+
+**Testing Strategy:**
+- **Mock Implementations:** Full mock classes extending real repositories
+- **Test Data:** `@TestSetup` with JSON deserialization for complex data
+- **Bulk Testing:** Tests include governor limit validation
+- **94% org-wide test coverage** with 60+ tests
+
+### Naming Conventions
+- **Classes:** PascalCase with descriptive suffixes (`DivisionService`, `TeamRepository`)
+- **Methods:** camelCase with verb-noun patterns (`createDivision`, `getAllDivisionsAsInterface`)
+- **Variables:** camelCase with descriptive names
+- **Sharing:** All classes use `with sharing` for security
+
+### Key Interfaces
+- **`IDivision`** - Contract for division objects with `getId()`, `getName()`, `getLeagueId()`
+- **`ITeam`** - Contract for team objects with similar structure
+- **`AbstractTeam`** - Base implementation with common functionality
+- **Wrapper Classes** - Convert between domain interfaces and sObjects
+
+### Error Handling
+- **Custom Exceptions:** Each class defines nested exception classes
+- **Structured Logging:** `StructuredLogger` utility with JSON serialization
+- **Graceful Degradation:** Controllers return null/empty lists instead of exceptions
+- **Test-aware Exception Handling:** Different behavior in test vs. production
+
+### Lightning Web Components
+- **TypeScript-enabled** LWC components with proper Jest testing
+- **Component structure:** `/lwc/divisionManagement/`, `/lwc/teamDetails/`
+- **Jest configuration** with 75% coverage threshold
+- **Test mocks** for Salesforce platform services
 
 ## Development Guidelines
 
 ### Before Making Changes
+1. **Always run tests first:** `sf apex test run --wait 10` and `pnpm run test:unit`
+2. **Check current coverage:** Ensure org-wide coverage stays above 90%
+3. **Use dependency injection:** Follow established DI patterns for testability
 
-1. Run targeted tests for the area you changed
-2. For Convex changes, read `apps/web/convex/_generated/ai/guidelines.md` first
-3. Follow existing patterns in the surrounding code
+### Code Quality Requirements
+- **All new Apex methods must be virtual** for testability
+- **All service classes must support constructor-based DI**
+- **All controllers must use `@TestVisible` static setters for testing**
+- **Follow existing naming conventions and architecture patterns**
 
-### Validation Expectations
+### Testing Requirements
+- **Write comprehensive tests** for all new functionality
+- **Include bulk testing** for governor limit compliance
+- **Use mock implementations** for unit testing
+- **Test both positive and negative scenarios**
+- **Maintain or improve test coverage percentage**
 
-- Web/Convex changes: `pnpm --filter @sports-management/web type-check` and relevant `test:unit` / `test:e2e`
-- TUI changes: `pnpm --filter @sports-management/tui test:unit`
-- Docs-only changes: no heavy test run needed
+### Data Model
+**Core Objects:**
+- **`League__c`** - Parent object for leagues with RecordType support
+- **`Team__c`** - Child object with lookup to League__c
+- **Key Fields:** `City__c`, `Stadium__c`, `Founded_Year__c`, `Location__c`
+
+### Lightning Experience Integration
+- **Apps:** Sports League Management app with proper permission sets
+- **Permission Sets:**
+  - `Sports_League_Management_Access` — App visibility only
+  - `League_Administrator` — Full CRUD on all 5 objects
+  - `Team_Manager` — CRUD on Team/Player, Read on League/Division/Season
+  - `Data_Viewer` — Read-only on all 5 objects
+- **Navigation:** Custom tabs and flexipages configured
+
+### Automation Scripts
+- **`create-scratch-org.js`** - Complete scratch org setup with users and permissions
+- **`setup-users.js`** - User and permission configuration (assigns role-based permission sets)
+- **`seed-data.js`** - Test data creation
+- **`package-management.sh`** - Package version management
+- **`run-e2e-tests.sh`** - Run Playwright E2E tests against a scratch org
 
 ## Common Tasks
 
-### Adding Web Features
+### Adding New Features
+1. Follow the established layered architecture
+2. Create interface first, then implementation
+3. Add repository for data access
+4. Add service for business logic
+5. Add controller for LWC integration
+6. Create comprehensive tests with mocks
+7. Update test data if needed
 
-1. Add Convex schema/functions in `apps/web/convex/`
-2. Add shared types/contracts in `packages/` if needed
-3. Add API routes or server components in `apps/web/src/`
-4. Add Vitest and Playwright coverage as appropriate
+### Debugging Test Failures
+1. Check if related to dependency injection setup
+2. Verify mock implementations are complete
+3. Ensure test data is properly configured
+4. Check governor limits in bulk operations
+5. Validate exception handling in negative scenarios
 
-### Deploy
-
-See [docs/development/DEPLOY.md](docs/development/DEPLOY.md) — web via Vercel, Convex deploy is manual.
+### Working with Custom Objects
+- All business logic should work with wrapper classes (`DivisionWrapper`, `TeamWrapper`)
+- Repository classes handle sObject manipulation and SOQL
+- Use interfaces for loose coupling between layers
+- Follow established patterns for field access and validation
