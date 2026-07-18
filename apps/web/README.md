@@ -2,14 +2,14 @@
 
 External-facing Next.js application for sports league management.
 
-> **Backend:** the app's primary data backend is **[Convex](https://convex.dev)** (see [CLAUDE.md](./CLAUDE.md) and the `convex/` directory). Sections of this README below describe an earlier **Salesforce JWT bearer** design and are being reconciled — treat CLAUDE.md + the code as authoritative for the current data layer. Deploy: [docs/development/DEPLOY.md](../../docs/development/DEPLOY.md). E2E: [docs/guides/WEB_E2E_TESTING_GUIDE.md](../../docs/guides/WEB_E2E_TESTING_GUIDE.md).
+> **Backend:** **[Convex](https://convex.dev)** (see [CLAUDE.md](./CLAUDE.md) and the `convex/` directory). Deploy: [docs/development/DEPLOY.md](../../docs/development/DEPLOY.md). E2E: [docs/guides/WEB_E2E_TESTING_GUIDE.md](../../docs/guides/WEB_E2E_TESTING_GUIDE.md). Legacy Salesforce packages live in [sprts-salesforce](https://github.com/andysolomon/sprts-salesforce).
 
 ## Tech Stack
 
 - **Next.js 15** (App Router) with React 19
 - **TypeScript** with strict mode
 - **Clerk** for authentication and authorization
-- **jsforce** for Salesforce JWT bearer auth
+- **Convex** for data storage and real-time queries/mutations
 - **Tailwind CSS 4** + **shadcn/ui** (Radix primitives) for the component library
 - **Lucide React** for icons
 - **Sonner** for toast notifications
@@ -20,23 +20,20 @@ External-facing Next.js application for sports league management.
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - pnpm (managed via Corepack)
-- A Salesforce org with the `sportsmgmt` package deployed and a Connected App configured for JWT bearer flow
+- A Convex deployment
 - A Clerk application
 
 ### Environment Variables
 
-Copy `.env.local.example` to `.env.local` and fill in:
+Copy `.env.local.example` to `.env.local` and fill in Clerk + Convex values (see `.env.local.example` for the full list). Key variables:
 
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk public key (client-side) |
 | `CLERK_SECRET_KEY` | Clerk secret key (server-side) |
-| `SF_LOGIN_URL` | Salesforce login endpoint (e.g., `https://login.salesforce.com`) |
-| `SF_CLIENT_ID` | OAuth Connected App client ID |
-| `SF_USERNAME` | Integration user email |
-| `SF_PRIVATE_KEY` | RSA private key (PEM) for JWT signing |
+| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL |
 
 ### Running Locally
 
@@ -94,18 +91,14 @@ src/app/
 - **API routes** verify `userId` from Clerk session before processing requests
 - **Team mutations** check `managedTeamIds` in Clerk user `publicMetadata` via `authorizeTeamMutation()`
 
-### Salesforce Integration
+### Convex Integration
 
-The app connects to Salesforce via JWT bearer flow through jsforce:
-
-1. `lib/salesforce.ts` — Manages OAuth2 JWT auth with 2-hour token caching
-2. `lib/salesforce-api.ts` — Typed client calling Apex REST endpoints at `/services/apexrest/sportsmgmt/v1/*`
-3. API routes act as a BFF layer, adding auth checks and Zod validation before forwarding to Salesforce
+Server components and API routes call Convex via `lib/data-api.ts` and generated Convex clients. Mutations and queries live in `convex/`.
 
 ### Data Flow
 
 ```
-Browser → Next.js API Route → Clerk Auth Check → Salesforce API Client → Apex REST → Salesforce
+Browser → Next.js API Route → Clerk Auth Check → Convex queries/mutations
 ```
 
 ### Shared Packages
@@ -146,7 +139,7 @@ pnpm --filter @sports-management/web test:e2e:report    # With HTML report
 
 **Auth:** Tests use `@clerk/testing/playwright` with `setupClerkTestingToken()` for authenticated access.
 
-**Test data:** Constants in `e2e/helpers/test-data.ts` match what `seed-data.js` creates (2 leagues, 4 teams, 12 players, 3 seasons).
+**Test data:** E2E specs seed a canonical NFL/MLS fixture via Convex (`e2e/helpers/seed-canonical.ts`).
 
 ## Deployment
 

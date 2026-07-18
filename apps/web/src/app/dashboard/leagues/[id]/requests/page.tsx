@@ -1,9 +1,10 @@
-import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getLeague } from "@/lib/data-api";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import RequestsTable from "./requests-table";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function RequestsPage({
@@ -30,17 +31,13 @@ export default async function RequestsPage({
   await syncActiveLeagueForResource(league.id);
 
   return (
-    <div>
-      <Link
-        href={`/dashboard/leagues/${id}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to {league.name}
-      </Link>
-
-      <h2 className="mb-6 text-lg font-semibold text-foreground">
-        Join Requests — {league.name}
-      </h2>
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="league"
+        name={league.name}
+        href={leagueHomeHref(id)}
+        subtitle="Join requests"
+      />
 
       <RequestsTable orgId={league.orgId} />
     </div>

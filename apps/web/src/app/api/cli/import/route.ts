@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * POST /api/cli/import
  *
  * Validates a nested JSON import payload against LeagueImportSchema,
- * then upserts all entities (league, divisions, teams, players) into Salesforce.
+ * then upserts all entities (league, divisions, teams, players) into Convex.
  * Returns an ImportResult with created/updated counts and any entity-level errors.
  *
  * Accepts both session cookies and Clerk API keys.

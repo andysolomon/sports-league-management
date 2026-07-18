@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { getLeague } from "@/lib/data-api";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import MemberList from "./member-list";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function MembersPage({
@@ -31,13 +33,13 @@ export default async function MembersPage({
   await syncActiveLeagueForResource(league.id);
 
   return (
-    <div>
-      <Link
-        href={`/dashboard/leagues/${id}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to {league.name}
-      </Link>
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="league"
+        name={league.name}
+        href={leagueHomeHref(id)}
+        subtitle="Members & invites"
+      />
 
       <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold text-foreground">

@@ -1,0 +1,6 @@
+Issue #571 — Replace breadcrumbs with reusable Resource Headers
+
+Phase 1 — done
+Phase 2 — done (legacy files deleted, layout no longer renders <Breadcrumbs />)
+Phase 3 — done (every League, Team, Player, Season page migrated)
+Phase 4 — done (type-check, lint, 1,259 unit tests, E2E updated)

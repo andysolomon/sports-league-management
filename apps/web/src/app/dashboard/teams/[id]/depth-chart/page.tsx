@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { depthChartV1 } from "@/lib/flags";
+import { depthChartV1, rosterSnapshotsV1 } from "@/lib/flags";
 import {
   getTeam,
   getTeamLeagueId,
@@ -13,6 +12,11 @@ import {
 import { resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
 import DepthChartBoard from "@/components/depth-chart/DepthChartBoard";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import {
+  buildTeamSiblingLinks,
+  teamHomeHref,
+} from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function DepthChartPage({
@@ -59,13 +63,18 @@ export default async function DepthChartPage({
     seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
   if (!activeSeason) {
     return (
-      <div>
-        <Link
-          href={`/dashboard/teams/${teamId}`}
-          className="mb-4 inline-block text-sm text-primary hover:underline"
-        >
-          &larr; Back to Team
-        </Link>
+      <div className="space-y-4">
+        <ResourceHeader
+          kind="team"
+          name={team.name}
+          href={teamHomeHref(teamId)}
+          subtitle="Depth chart"
+          siblings={buildTeamSiblingLinks({
+            teamId,
+            rosterEnabled: await rosterSnapshotsV1(),
+            depthChartEnabled: enabled,
+          })}
+        />
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           No season exists for this league. Create a season before editing the
           depth chart.
@@ -86,13 +95,18 @@ export default async function DepthChartPage({
   ]);
 
   return (
-    <div>
-      <Link
-        href={`/dashboard/teams/${teamId}`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to Team
-      </Link>
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="team"
+        name={team.name}
+        href={teamHomeHref(teamId)}
+        subtitle="Depth chart"
+        siblings={buildTeamSiblingLinks({
+          teamId,
+          rosterEnabled: await rosterSnapshotsV1(),
+          depthChartEnabled: enabled,
+        })}
+      />
       <DepthChartBoard
         teamId={teamId}
         teamName={team.name}

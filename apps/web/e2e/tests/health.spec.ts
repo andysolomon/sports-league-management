@@ -10,11 +10,11 @@ test.describe("Health & Smoke Tests", () => {
     await setupClerkTestingToken({ page });
   });
 
-  test("dashboard loads without Salesforce error", async ({ page }) => {
+  test("dashboard loads without error boundary", async ({ page }) => {
     await page.goto("/dashboard");
 
-    // The error boundary shows "Something went wrong" with "Salesforce API error"
-    // when the SF connection is broken — assert it does NOT appear
+    // The error boundary shows "Something went wrong" when the API/Convex
+    // connection is broken — assert it does NOT appear
     await expect(page.getByText("Something went wrong")).toBeHidden({
       timeout: 15_000,
     });

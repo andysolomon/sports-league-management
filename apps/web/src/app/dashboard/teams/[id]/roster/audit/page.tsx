@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { rosterSnapshotsV1 } from "@/lib/flags";
+import { depthChartV1, rosterSnapshotsV1 } from "@/lib/flags";
 import {
   getTeam,
   getTeamLeagueId,
@@ -12,6 +11,12 @@ import {
 } from "@/lib/data-api";
 import { getUserRoleInOrg } from "@/lib/org-context";
 import RosterAuditTimeline from "@/components/roster/RosterAuditTimeline";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import {
+  buildTeamSiblingLinks,
+  teamHomeHref,
+  teamSubpageHref,
+} from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function RosterAuditPage({
@@ -50,13 +55,16 @@ export default async function RosterAuditPage({
     seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
   if (!activeSeason) {
     return (
-      <div>
-        <Link
-          href={`/dashboard/teams/${teamId}/roster`}
-          className="mb-4 inline-block text-sm text-primary hover:underline"
-        >
-          &larr; Back to Roster
-        </Link>
+      <div className="space-y-4">
+        <ResourceHeader
+          kind="team"
+          name={team.name}
+          href={teamHomeHref(teamId)}
+          subtitle="Roster · Audit log"
+          siblings={[
+            { label: "Roster", href: teamSubpageHref(teamId, "roster") },
+          ]}
+        />
         <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
           No season exists for this league.
         </div>
@@ -80,21 +88,19 @@ export default async function RosterAuditPage({
   ]);
 
   return (
-    <div>
-      <Link
-        href={`/dashboard/teams/${teamId}/roster`}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to Roster
-      </Link>
-      <header className="mb-4">
-        <h2 className="text-2xl font-bold text-foreground">
-          {team.name} — Roster Audit Log
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Season: {activeSeason.name}
-        </p>
-      </header>
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="team"
+        name={team.name}
+        href={teamHomeHref(teamId)}
+        subtitle="Roster · Audit log"
+        context={`Season: ${activeSeason.name}`}
+        siblings={buildTeamSiblingLinks({
+          teamId,
+          rosterEnabled: enabled,
+          depthChartEnabled: await depthChartV1(),
+        })}
+      />
       <RosterAuditTimeline entries={entries} players={players} />
     </div>
   );

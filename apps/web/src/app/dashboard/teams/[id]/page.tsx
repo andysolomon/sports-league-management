@@ -13,37 +13,35 @@ import {
 import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam, canAdministerTeam } from "@/lib/authorization";
-import { playerAttributesV1, syntheticRostersV1 } from "@/lib/flags";
+import {
+  depthChartV1,
+  playerAttributesV1,
+  rosterSnapshotsV1,
+  syntheticRostersV1,
+} from "@/lib/flags";
 import type { PlayerSnapshot } from "@/lib/attributes/headline-columns";
 import TeamManagement from "./team-management";
 import { ClaimTeamButton } from "./claim-team-button";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import {
+  buildTeamSiblingLinks,
+  teamHomeHref,
+} from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function TeamDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
 }) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   const { id } = await params;
-  // Back link reflects where the user came from (WSM-000102): a team reached
-  // from the Leagues page should go back to Leagues, not Teams. Linking pages
-  // pass `?from`; default is the Teams list.
-  const { from } = await searchParams;
-  const back =
-    from === "leagues"
-      ? { href: "/dashboard/leagues", label: "Back to Leagues" }
-      : from === "divisions"
-        ? { href: "/dashboard/divisions", label: "Back to Divisions" }
-        : { href: "/dashboard/teams", label: "Back to Teams" };
   const orgContext = await resolveOrgContext(userId);
 
-  // Resolve the team first, guarded: a bad/legacy team id (e.g. a Salesforce
-  // id like `a00b…` leaking in via a stale link) fails Convex's `v.id("teams")`
+  // Resolve the team first, guarded: a bad/legacy team id (e.g. a stale external
+  // id leaking in via an old link) fails Convex's `v.id("teams")`
   // validation and throws ArgumentValidationError; an unknown-but-valid id
   // resolves to null. Either way the route must 404, not 500 (WSM-000190).
   // Matches the players/[id] + divisions/[id] guard pattern.
@@ -54,11 +52,14 @@ export default async function TeamDetailPage({
   // canManage = admin or coach (roster/players/edit); canDelete = admin only
   // (removing the whole team). WSM-000121 intra-org roles. Safe to run now that
   // the team id is known-valid.
-  const [players, canManage, canDelete] = await Promise.all([
-    getPlayersByTeam(id, orgContext),
-    canManageTeam(id, userId),
-    canAdministerTeam(id, userId),
-  ]);
+  const [players, canManage, canDelete, rosterEnabled, depthChartEnabled] =
+    await Promise.all([
+      getPlayersByTeam(id, orgContext),
+      canManageTeam(id, userId),
+      canAdministerTeam(id, userId),
+      rosterSnapshotsV1(),
+      depthChartV1(),
+    ]);
 
   // Fork affordance (WSM-000115): a reference team in a forkable league can be
   // copied into the user's private workspace (editable). Offered whenever the
@@ -98,14 +99,21 @@ export default async function TeamDetailPage({
     );
   }
 
+  const siblingLinks = buildTeamSiblingLinks({
+    teamId: id,
+    rosterEnabled,
+    depthChartEnabled,
+  });
+
   return (
-    <div>
-      <Link
-        href={back.href}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; {back.label}
-      </Link>
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="team"
+        name={team.name}
+        href={teamHomeHref(id)}
+        subtitle="Team Home"
+        siblings={siblingLinks}
+      />
 
       {offerFork && (
         <div className="mb-4 rounded-md border border-primary/40 bg-primary/5 p-4">

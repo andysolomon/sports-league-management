@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
-import { BackLink } from "@/components/workspace/BackLink";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
-import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { leagueHomeHref, seasonHomeHref } from "@/components/workspace/resource-navigation";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 
@@ -37,21 +35,17 @@ export default function WorkspaceVisualHarness() {
   return (
     <div className="bg-background p-6">
       <div data-testid="workspace-league" className="w-[760px]">
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Leagues", href: "/dashboard/leagues" },
-            { label: LEAGUE.name },
-          ]}
-        />
-        <WorkspaceHeader
-          title={LEAGUE.name}
+        <ResourceHeader
+          kind="league"
+          name={LEAGUE.name}
+          href={leagueHomeHref(LEAGUE.id)}
+          subtitle="League Home"
           status={
             <Badge variant="secondary" className="shrink-0">
               Organization
             </Badge>
           }
-          sub={`${LEAGUE.teams} teams · ${LEAGUE.seasons} seasons`}
+          context={`${LEAGUE.teams} teams · ${LEAGUE.seasons} seasons`}
           actions={
             <button
               type="button"
@@ -64,22 +58,16 @@ export default function WorkspaceVisualHarness() {
       </div>
 
       <div data-testid="workspace-season" className="mt-10 w-[760px]">
-        <Breadcrumbs
-          items={[
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Seasons", href: "/dashboard/seasons" },
-            { label: SEASON.name },
-          ]}
-        />
-        <BackLink href="/dashboard/seasons" label="Back to Seasons" />
-        <WorkspaceHeader
-          title={SEASON.name}
-          size="sub-hub"
+        <ResourceHeader
+          kind="season"
+          name={SEASON.name}
+          href={seasonHomeHref(SEASON.id)}
+          subtitle="Season overview"
           status={<StatusBadge status={SEASON.status} />}
-          sub={
+          context={
             <>
               <Link
-                href={`/dashboard/leagues/${LEAGUE.id}`}
+                href={leagueHomeHref(LEAGUE.id)}
                 className="text-accent hover:underline"
               >
                 {SEASON.leagueName}
@@ -88,24 +76,24 @@ export default function WorkspaceVisualHarness() {
               {SEASON.dateRange}
             </>
           }
-          nav={
-            <WorkspaceNav
-              links={[
-                {
-                  href: `/dashboard/leagues/${LEAGUE.id}/schedule?season=${SEASON.id}`,
-                  label: "Schedule",
-                },
-                {
-                  href: `/dashboard/leagues/${LEAGUE.id}/standings?season=${SEASON.id}`,
-                  label: "Standings",
-                },
-                {
-                  href: `/dashboard/leagues/${LEAGUE.id}/playoffs?season=${SEASON.id}`,
-                  label: "Playoffs",
-                },
-              ]}
-            />
-          }
+          siblings={[
+            {
+              label: "Overview",
+              href: seasonHomeHref(SEASON.id),
+            },
+            {
+              label: "Schedule",
+              href: `/dashboard/leagues/${LEAGUE.id}/schedule?season=${SEASON.id}`,
+            },
+            {
+              label: "Standings",
+              href: `/dashboard/leagues/${LEAGUE.id}/standings?season=${SEASON.id}`,
+            },
+            {
+              label: "Playoffs",
+              href: `/dashboard/leagues/${LEAGUE.id}/playoffs?season=${SEASON.id}`,
+            },
+          ]}
         />
       </div>
     </div>

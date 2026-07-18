@@ -35,11 +35,15 @@ import { resolveLifecycleSeason } from "@/lib/season-view";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
-import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
-import { BackLink } from "@/components/workspace/BackLink";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
+import {
+  buildSeasonSiblingLinks,
+  leagueHomeHref,
+  seasonHomeHref,
+} from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 /**
@@ -208,15 +212,34 @@ export default async function SeasonHubPage({
   });
 
   return (
-    <div className="mx-auto max-w-[960px]">
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Seasons", href: "/dashboard/seasons" },
-          { label: season.name },
-        ]}
+    <div className="mx-auto max-w-[960px] space-y-4">
+      <ResourceHeader
+        kind="season"
+        name={season.name}
+        href={seasonHomeHref(season.id)}
+        subtitle={`Season overview · ${league.name}`}
+        status={<StatusBadge status={season.status} />}
+        context={
+          <>
+            <Link
+              href={leagueHomeHref(league.id)}
+              className="text-accent hover:underline"
+            >
+              {league.name}
+            </Link>
+            {" · "}
+            {formatDate(season.startDate)} &ndash; {formatDate(season.endDate)}
+          </>
+        }
+        siblings={buildSeasonSiblingLinks({
+          seasonId: season.id,
+          leagueId: league.id,
+          activeSeasonId: season.id,
+          scheduleEnabled,
+          playoffsEnabled,
+          statsEnabled,
+        })}
       />
-      <BackLink href="/dashboard/seasons" label="Back to Seasons" />
       <WorkspaceHeader
         title={season.name}
         size="sub-hub"

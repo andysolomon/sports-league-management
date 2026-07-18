@@ -21,11 +21,10 @@ import PlayoffRoundControls from "@/components/playoffs/PlayoffRoundControls";
 import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
 import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
 import { resolveViewedSeason } from "@/lib/season-view";
-import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
-import { BackLink } from "@/components/workspace/BackLink";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function LeaguePlayoffsPage({
@@ -97,23 +96,12 @@ export default async function LeaguePlayoffsPage({
   });
 
   return (
-    <div>
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Leagues", href: "/dashboard/leagues" },
-          { label: league.name, href: `/dashboard/leagues/${leagueId}` },
-          { label: "Playoffs" },
-        ]}
-      />
-      <BackLink
-        href={`/dashboard/leagues/${leagueId}`}
-        label="Back to League"
-      />
-      <WorkspaceHeader
-        title={league.name}
-        size="sub-hub"
-        sub={`Playoffs${activeSeason ? ` · ${activeSeason.name}` : ""}`}
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="league"
+        name={league.name}
+        href={leagueHomeHref(leagueId)}
+        subtitle={`Playoffs${activeSeason ? ` · ${activeSeason.name}` : ""}`}
         actions={
           activeSeason ? (
             <SeasonSwitcher

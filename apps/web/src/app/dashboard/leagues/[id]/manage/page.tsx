@@ -14,9 +14,8 @@ import {
 import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext, requireOrgAdmin } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/card";
-import { Breadcrumbs } from "@/components/workspace/Breadcrumbs";
-import { BackLink } from "@/components/workspace/BackLink";
-import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import InviteForm from "../invite-form";
 import InvitationList from "../invitation-list";
 import InviteLinkSection from "../invite-link-section";
@@ -107,19 +106,13 @@ export default async function LeagueManagePage({
   );
 
   return (
-    <div>
-      <Breadcrumbs
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Leagues", href: "/dashboard/leagues" },
-          { label: league.name, href: `/dashboard/leagues/${id}` },
-          { label: "Manage" },
-        ]}
-      />
-      <BackLink href={`/dashboard/leagues/${id}`} label="Back to League" />
-      <WorkspaceHeader
-        title="Manage league"
-        sub="Settings, members, and roster tools."
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="league"
+        name={league.name}
+        href={leagueHomeHref(id)}
+        subtitle="Manage league"
+        context="Settings, members, and roster tools."
       />
 
       <Card data-testid="league-manage-settings">

@@ -1,54 +1,9 @@
 import { createElement } from "react";
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Breadcrumbs } from "../Breadcrumbs";
-import { BackLink } from "../BackLink";
 import { WorkspaceHeader } from "../WorkspaceHeader";
 import { WorkspaceNav } from "../WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "../build-league-nav-links";
-
-describe("Breadcrumbs", () => {
-  it("renders linked crumbs and a plain-text terminal item", () => {
-    const html = renderToStaticMarkup(
-      createElement(Breadcrumbs, {
-        items: [
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Leagues", href: "/dashboard/leagues" },
-          { label: "NFL" },
-        ],
-      }),
-    );
-    expect(html).toContain('aria-label="Breadcrumb"');
-    expect(html).toContain('href="/dashboard"');
-    expect(html).toContain('href="/dashboard/leagues"');
-    expect(html).toContain("NFL");
-    expect(html).not.toContain('href="/dashboard/leagues/NFL"');
-    // Prototype separator: chevron-right icon, not a text glyph (WSM-000247).
-    expect(html).toContain("lucide-chevron-right");
-  });
-
-  it("renders nothing when items are empty", () => {
-    const html = renderToStaticMarkup(
-      createElement(Breadcrumbs, { items: [] }),
-    );
-    expect(html).toBe("");
-  });
-});
-
-describe("BackLink", () => {
-  it("threads href and label", () => {
-    const html = renderToStaticMarkup(
-      createElement(BackLink, {
-        href: "/dashboard/leagues/league-1",
-        label: "Back to League",
-      }),
-    );
-    expect(html).toContain('href="/dashboard/leagues/league-1"');
-    expect(html).toContain("Back to League");
-    // Prototype back affordance: arrow-left icon (WSM-000247).
-    expect(html).toContain("lucide-arrow-left");
-  });
-});
 
 describe("WorkspaceHeader", () => {
   it("renders title, status, sub line, and actions when provided", () => {

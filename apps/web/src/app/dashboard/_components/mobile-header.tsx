@@ -11,6 +11,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import Sidebar from "./sidebar";
+import { HistoryBackButton } from "./history-back-button";
 import { LeagueSwitcher } from "./league-switcher";
 import { CommandTrigger } from "./command-trigger";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -57,6 +58,9 @@ export default function MobileHeader({
           Sports League
         </h1>
       )}
+      <HistoryBackButton
+        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-bg px-2 py-1 text-sm text-text-muted transition hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+      />
       <div className="flex shrink-0 items-center gap-1.5">
         <CommandTrigger variant="icon" />
         <DensityToggle />

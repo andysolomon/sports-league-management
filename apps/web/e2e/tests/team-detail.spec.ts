@@ -81,9 +81,15 @@ test.describe("Team Detail Page", () => {
     // in its own test below.
   });
 
-  test("Back to Teams link navigates back", async ({ page }) => {
-    await page.getByRole("link", { name: /Back to Teams/ }).click();
-    await expect(page).toHaveURL("/dashboard/teams");
+  test("Resource Header sibling nav highlights Overview as the active sibling", async ({
+    page,
+  }) => {
+    // WSM-000571 replaces the generated back row with a Resource Header.
+    // The Team Home is the active sibling (aria-current="page").
+    const header = page.getByTestId("resource-header-team");
+    await expect(header).toBeVisible();
+    const overviewLink = header.getByRole("link", { name: /^Overview$/ });
+    await expect(overviewLink).toHaveAttribute("aria-current", "page");
   });
 
   // WSM-000098: the wide Status column was replaced by a compact per-row
@@ -114,33 +120,39 @@ test.describe("Team Detail Page", () => {
     ).toHaveCount(0);
   });
 
-  test("team → player → development chart → back returns via ?from= flow", async ({
+  test("team → player → development chart returns via Resource Header", async ({
     page,
   }) => {
     const prescottRow = page.locator("tbody tr", { hasText: "Prescott" });
     await prescottRow.click();
-    await expect(page).toHaveURL(/\/dashboard\/players\/[^?]+\?from=team-/);
+    await expect(page).toHaveURL(/\/dashboard\/players\/[^/]+$/);
     await expect(
       page.getByRole("heading", { name: /Prescott/ }),
     ).toBeVisible();
 
     await page.getByRole("link", { name: "View development chart" }).click();
     await expect(page).toHaveURL(
-      /\/dashboard\/players\/[^/]+\/development\?from=team-/,
+      /\/dashboard\/players\/[^/]+\/development/,
     );
 
-    await page.getByRole("link", { name: /Back to .*Prescott/ }).click();
-    await expect(page).toHaveURL(/\/dashboard\/players\/[^?]+\?from=team-/);
+    // WSM-000571: the Player Resource Header's Overview link goes back to
+    // Player Home without any ?from= plumbing.
+    const playerHeader = page.getByTestId("resource-header-player");
+    await playerHeader.getByRole("link", { name: /^Overview$/ }).click();
+    await expect(page).toHaveURL(/\/dashboard\/players\/[^/]+$/);
 
-    await page.getByRole("link", { name: /Back to Dallas Cowboys/ }).click();
-    await expect(page).toHaveURL(/\/dashboard\/teams\/[^?]+$/);
+    // The Team Resource Header identifies the parent Team Home through its
+    // resource name slot — clicking that link returns to the team detail.
+    const teamHeader = page.getByTestId("resource-header-team");
+    await teamHeader.getByRole("link", { name: TEAMS.COWBOYS.name }).click();
+    await expect(page).toHaveURL(/\/dashboard\/teams\/[^/]+$/);
     await expect(
       page.getByRole("heading", { name: TEAMS.COWBOYS.name }),
     ).toBeVisible();
   });
 });
 
-// Regression for WSM-000190: a bad/legacy team id (e.g. a Salesforce id leaking
+// Regression for WSM-000190: a bad/legacy team id (e.g. a stale external id
 // in via a stale link) used to crash the page with an unhandled
 // ArgumentValidationError from Convex's `v.id("teams")` validator → a 500 error
 // boundary. The route must now degrade gracefully to the not-found page.
@@ -167,7 +179,7 @@ test.describe("Team Detail Page — invalid id", () => {
     await expect(page.getByRole("heading", { name: "Teams" })).toBeVisible();
   });
 
-  test("a Salesforce-format team id renders not-found, not a 500", async ({
+  test("a legacy-format team id renders not-found, not a 500", async ({
     page,
   }) => {
     // The exact 18-char SF id from the prod runtime log (WSM-000190).

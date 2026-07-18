@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
 import { playerAttributesV1 } from "@/lib/flags";
 import {
   getPlayer,
@@ -16,14 +15,17 @@ import PixelLineChart from "@/components/attributes/PixelLineChart";
 import AttributesUploadDialog from "@/components/attributes/AttributesUploadDialog";
 import { seasonYearLabel } from "@/lib/attributes/season-label";
 import { trackPlayerAttributesView } from "@/lib/analytics";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import {
+  buildPlayerSiblingLinks,
+  playerHomeHref,
+} from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
 export default async function PlayerDevelopmentPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
 }) {
   const enabled = await playerAttributesV1();
   if (!enabled) notFound();
@@ -32,7 +34,6 @@ export default async function PlayerDevelopmentPage({
   if (!userId) redirect("/sign-in");
 
   const { id: playerId } = await params;
-  const { from } = await searchParams;
 
   // Resolve the user's visible leagues, then fetch the player through
   // the access check. Anything outside the user's org tree → 404.
@@ -68,20 +69,20 @@ export default async function PlayerDevelopmentPage({
   const last = development[development.length - 1] ?? null;
   const headlineDelta = last?.delta ?? null;
 
-  const playerBackHref = from
-    ? `/dashboard/players/${playerId}?from=${encodeURIComponent(from)}`
-    : `/dashboard/players/${playerId}`;
-
   return (
-    <div>
-      <Link
-        href={playerBackHref}
-        className="mb-4 inline-block text-sm text-primary hover:underline"
-      >
-        &larr; Back to {player.name}
-      </Link>
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="player"
+        name={player.name}
+        href={playerHomeHref(playerId)}
+        subtitle="Development"
+        siblings={buildPlayerSiblingLinks({
+          playerId,
+          developmentEnabled: enabled,
+        })}
+      />
 
-      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-1">
           <h2 className="text-2xl font-bold text-foreground">
             {player.name}
