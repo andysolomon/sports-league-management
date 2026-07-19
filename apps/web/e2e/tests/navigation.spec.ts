@@ -88,11 +88,11 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
     await setActiveLeague(page, readCanonicalFixture().leagueId);
   });
 
-  test("schedule page Resource Header identifies the League Home", async ({
+  test("schedule page Resource Header identifies the Season Home", async ({
     page,
   }) => {
-    const { leagueId } = readCanonicalFixture();
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    const { seasonIds } = readCanonicalFixture();
+    await page.goto(`/dashboard/seasons/${seasonIds[0]}/schedule`);
 
     const workspace = page.locator("main");
     await expect(workspace.getByRole("searchbox")).toHaveCount(0);
@@ -101,18 +101,18 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
       0,
     );
 
-    // WSM-000571: the Resource Header identifies the League and carries the
-    // canonical Schedule label. The breadcrumb/back-row are gone.
-    const header = page.getByTestId("resource-header-league");
+    // WSM-000571 / #575: Schedule is Season-owned; the Resource Header
+    // identifies the Season and carries the canonical Schedule label.
+    const header = page.getByTestId("resource-header-season");
     await expect(header).toBeVisible();
     await expect(header).toContainText("Schedule");
   });
 
-  test("playoffs page Resource Header identifies the League Home", async ({
+  test("playoffs page Resource Header identifies the Season Home", async ({
     page,
   }) => {
-    const { leagueId } = readCanonicalFixture();
-    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+    const { seasonIds } = readCanonicalFixture();
+    await page.goto(`/dashboard/seasons/${seasonIds[0]}/playoffs`);
 
     const workspace = page.locator("main");
     await expect(workspace.getByRole("searchbox")).toHaveCount(0);
@@ -121,8 +121,22 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
       0,
     );
 
-    const header = page.getByTestId("resource-header-league");
+    const header = page.getByTestId("resource-header-season");
     await expect(header).toBeVisible();
     await expect(header).toContainText("Playoffs");
+  });
+
+  test("legacy league competition URLs redirect to Season-owned routes", async ({
+    page,
+  }) => {
+    const { leagueId } = readCanonicalFixture();
+    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await expect(page).toHaveURL(/\/dashboard\/seasons\/[^/]+\/schedule$/);
+
+    await page.goto(`/dashboard/leagues/${leagueId}/standings`);
+    await expect(page).toHaveURL(/\/dashboard\/seasons\/[^/]+\/standings$/);
+
+    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+    await expect(page).toHaveURL(/\/dashboard\/seasons\/[^/]+\/playoffs$/);
   });
 });

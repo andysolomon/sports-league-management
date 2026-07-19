@@ -265,7 +265,7 @@ export default async function TeamsPage({
       : false;
     standingsHref =
       scheduleLinksEnabled && activeLeagueId && divisionSeason
-        ? `/dashboard/leagues/${activeLeagueId}/standings?season=${divisionSeason.id}`
+        ? `/dashboard/seasons/${divisionSeason.id}/standings`
         : null;
     isAdmin = role === "org:admin";
   }

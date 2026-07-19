@@ -1,0 +1,470 @@
+import { auth } from "@clerk/nextjs/server";
+import { notFound, redirect } from "next/navigation";
+import { Trophy } from "lucide-react";
+import {
+  schedulesStandingsV1,
+  liveStreamingV1,
+  statKeepingV1,
+  liveScoringV1,
+  playoffsV1,
+  syntheticRostersV1,
+} from "@/lib/flags";
+import {
+  getLeague,
+  getLeagueOrgId,
+  getSeason,
+  getSeasons,
+  getResultByFixture,
+  getStreamByFixture,
+  getGamePlayLog,
+  getPlayoffBracket,
+  getTeamsByLeague,
+  getPlayers,
+  listFixturesBySeason,
+  computeStandings,
+  type PublicGameStream,
+} from "@/lib/data-api";
+import {
+  formatTeamRecord,
+  projectionFromFixture,
+} from "@/lib/game-drawer-projection";
+import type {
+  FixtureDto,
+  GameResultDto,
+} from "@sports-management/shared-types";
+import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
+import { canManageRoster, canManageOrgSettings } from "@/lib/permissions";
+import { isSeasonStarted } from "@/lib/season-started";
+import { regularSeasonProgress } from "@/lib/playoffs";
+import { resolvePlayoffHandoff } from "@/lib/playoff-handoff";
+import {
+  groupFixturesByWeek,
+  initialOpenWeekKeys,
+} from "@/lib/schedule-weeks";
+import { Card, CardContent } from "@/components/ui/card";
+import FixtureFormDialog from "@/components/schedule/FixtureFormDialog";
+import GenerateScheduleButton from "@/components/schedule/GenerateScheduleButton";
+import {
+  SimulateScopeMenu,
+  SimulateWeekButton,
+} from "@/components/schedule/SimulateControls";
+import ScheduleWeeks, {
+  type ScheduleWeekView,
+} from "@/components/schedule/ScheduleWeeks";
+import { ScheduleFixtureRow } from "@/components/schedule/ScheduleFixtureRow";
+import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
+import { SyntheticRosterButton } from "@/components/roster/SyntheticRosterButton";
+import { UndersizedRosterPanel } from "@/components/roster/UndersizedRosterPanel";
+import {
+  activeRosterCountByTeam,
+  buildLeagueRosterDeficitProjection,
+} from "@/lib/roster-deficit";
+import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
+import SeasonSwitcher from "@/components/schedule/SeasonSwitcher";
+import { resolveLifecycleSeason } from "@/lib/season-view";
+import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
+import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
+import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import {
+  leagueHomeHref,
+  seasonHomeHref,
+} from "@/components/workspace/resource-navigation";
+import { syncActiveLeagueForResource } from "@/lib/active-league-server";
+
+interface FixtureRow {
+  fixture: FixtureDto;
+  result: GameResultDto | null;
+  hasPlayLog: boolean;
+}
+
+export default async function SeasonSchedulePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const enabled = await schedulesStandingsV1();
+  if (!enabled) notFound();
+
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
+
+  const { id: seasonId } = await params;
+  const orgContext = await resolveOrgContext(userId);
+  const season = await getSeason(seasonId, orgContext).catch(() => null);
+  if (!season) notFound();
+
+  const league = await getLeague(season.leagueId, orgContext).catch(() => null);
+  if (!league) notFound();
+  await syncActiveLeagueForResource(league.id);
+
+  // Manager gate: admins and coaches see "New fixture" + "Record result"
+  // (coaches run schedules/results, WSM-000121).
+  const orgId = await getLeagueOrgId(league.id);
+  const role = orgId ? await resolveOrgRole(orgId, userId) : null;
+  const isAdmin = canManageRoster(role);
+  // Live streaming is a dark flag (default OFF everywhere). The "Go live"
+  // control is admin-only — it maps to the action's `canAdministerTeam` gate, so
+  // coaches (who can manage rosters but not administer) never see a button that
+  // would just 403.
+  const streamingEnabled = await liveStreamingV1();
+  const canStream = streamingEnabled && canManageOrgSettings(role);
+  // Box-score entry (WSM-000112): a league admin/coach can enter either team's
+  // stats; the entry page re-checks canManageTeam for the specific team.
+  const statsEnabled = await statKeepingV1();
+  // Live scoring (WSM-000152): operator-driven running scoreboard. Same
+  // admin/coach surface as stats; the live page re-checks canManageTeam.
+  const liveEnabled = await liveScoringV1();
+  // Playoffs (WSM-000164/165): bracket lives on its own page; link when enabled.
+  const playoffsEnabled = await playoffsV1();
+  const statsNavEnabled = await statKeepingV1();
+  // Synthetic rosters (WSM-000173): discoverability shortcut — admins setting up
+  // a schedule often need rosters first. Same admin + flag gate as the league
+  // detail page; the server actions re-check flag + role.
+  const rosterGenEnabled = canManageOrgSettings(role) && (await syntheticRostersV1());
+
+  const allSeasons = await getSeasons([league.id]);
+
+  // Completed seasons are read-only history (WSM-000238/239): every mutation
+  // control disappears; results, Gamecast links, and clips annotation remain.
+  const seasonCompleted = season.status === "completed";
+  const canMutate = isAdmin && !seasonCompleted;
+  const canGoLive = canStream && !seasonCompleted;
+  const canGenerateRosters = rosterGenEnabled && !seasonCompleted;
+
+  const teams = await getTeamsByLeague(league.id, orgContext);
+  const leaguePlayers = canGenerateRosters
+    ? await getPlayers([league.id]).catch(() => [])
+    : [];
+  const rosterDeficit = canGenerateRosters
+    ? buildLeagueRosterDeficitProjection(
+        teams,
+        activeRosterCountByTeam(leaguePlayers),
+      )
+    : { target: DEFAULT_TARGET_ROSTER_SIZE, teams: [] };
+
+  const fixtures = await listFixturesBySeason(season.id);
+
+  const seasonStarted = isSeasonStarted(season, fixtures);
+
+  // Hydrate per-fixture result for "Record result" pre-fill + score display.
+  const fixturesWithResults: FixtureRow[] = await Promise.all(
+    fixtures.map(async (f) => {
+      const result =
+        f.status === "final" ? await getResultByFixture(f.id) : null;
+      const hasPlayLog =
+        f.status === "final" ? (await getGamePlayLog(f.id)) !== null : false;
+      return { fixture: f, result, hasPlayLog };
+    }),
+  );
+
+  const standings = await computeStandings(season.id);
+  const recordByTeamId = new Map(
+    standings.map((s) => [
+      s.teamId,
+      formatTeamRecord(s.wins, s.losses, s.ties),
+    ]),
+  );
+
+  // Per-fixture live-stream state — only fetched when the dark flag is on for
+  // an admin, so the default (flag off) path adds zero reads. The full public
+  // projection is kept (not just status): the clips control (WSM-000201)
+  // needs vodAssetId/vodPlaybackId to know a recording exists.
+  const streams = new Map<string, PublicGameStream | null>();
+  if (canStream) {
+    await Promise.all(
+      fixtures.map(async (f) => {
+        streams.set(f.id, await getStreamByFixture(f.id));
+      }),
+    );
+  }
+
+  // Playoff handoff (WSM-000239): the schedule page offers "Start playoffs"
+  // the moment the DECIDED active season's regular slate is done and no
+  // bracket exists yet. Bracket lookup only runs when the cheap pure checks
+  // could possibly surface the panel.
+  const decidedSeason = resolveLifecycleSeason(allSeasons);
+  const progress = regularSeasonProgress(fixtures);
+  const bracket =
+    playoffsEnabled &&
+    decidedSeason?.id === season.id &&
+    progress.total > 0 &&
+    progress.complete
+      ? await getPlayoffBracket(season.id).catch(() => null)
+      : null;
+  const handoff = resolvePlayoffHandoff({
+    playoffsEnabled,
+    viewedSeasonId: season.id,
+    viewedSeasonStatus: season.status,
+    decidedSeasonId: decidedSeason?.id ?? null,
+    playoffTeams: season.playoffTeams,
+    regularTotal: progress.total,
+    regularComplete: progress.complete,
+    bracketExists: bracket !== null,
+    canManage: isAdmin,
+  });
+
+  // Lifecycle accordion timeline (WSM-000239): weeks grouped and classified by
+  // the pure helper; completed weeks start collapsed, mixed weeks split their
+  // finished games into a nested subsection. The client component receives
+  // fully-rendered table slots — all fetching stays here on the server.
+  const weekGroups = groupFixturesByWeek(fixturesWithResults, (r) => r.fixture);
+  const fixtureTable = (rows: FixtureRow[]) => (
+    <FixtureTable
+      rows={rows}
+      leagueId={league.id}
+      isAdmin={isAdmin}
+      canMutate={canMutate}
+      canGoLive={canGoLive}
+      canStream={canStream}
+      statsEnabled={statsEnabled}
+      liveEnabled={liveEnabled}
+      streams={streams}
+      recordByTeamId={recordByTeamId}
+    />
+  );
+  const weekViews: ScheduleWeekView[] = weekGroups.map((group) => ({
+    key: group.key,
+    label: group.label,
+    status: group.status,
+    summary: `${group.rows.length} ${group.rows.length === 1 ? "game" : "games"}`,
+    totalCount: group.rows.length,
+    // "completed", not "final" — completedRows also counts cancelled games.
+    completedCount: group.completedRows.length,
+    actions:
+      canMutate &&
+      
+      group.week !== null &&
+      group.rows.some(({ fixture }) => fixture.status === "scheduled") ? (
+        <SimulateWeekButton
+          leagueId={league.id}
+          seasonId={season.id}
+          week={group.week}
+        />
+      ) : undefined,
+    content:
+      group.status === "mixed"
+        ? fixtureTable(group.remainingRows)
+        : fixtureTable(group.rows),
+    completedContent:
+      group.status === "mixed" ? fixtureTable(group.completedRows) : undefined,
+  }));
+  const initialOpenKeys = initialOpenWeekKeys(weekGroups);
+
+  const peerNavLinks = buildLeagueSeasonNavLinks({
+    leagueId: league.id,
+    seasonId: season.id,
+    scheduleEnabled: enabled,
+    playoffsEnabled,
+    statsEnabled: statsNavEnabled,
+    exclude: "schedule",
+  });
+
+  return (
+    <div className="space-y-4">
+      <ResourceHeader
+        kind="season"
+        name={season.name}
+        href={seasonHomeHref(season.id)}
+        subtitle={`Schedule · ${league.name}`}
+        context={
+          <a
+            href={leagueHomeHref(league.id)}
+            className="text-accent hover:underline"
+          >
+            {league.name}
+          </a>
+        }
+        actions={
+          <>
+            <SeasonSwitcher
+              seasons={allSeasons.map((s) => ({
+                id: s.id,
+                name: s.name,
+                status: s.status,
+              }))}
+              currentSeasonId={season.id}
+            />
+            {canMutate &&  teams.length >= 2 ? (
+              <GenerateScheduleButton
+                leagueId={league.id}
+                seasonId={season.id}
+                seasonName={season.name}
+                hasFixtures={fixtures.length > 0}
+              />
+            ) : null}
+            {canMutate ? (
+              <FixtureFormDialog
+                leagueId={league.id}
+                seasonId={season.id}
+                teams={teams.map((t) => ({ id: t.id, name: t.name }))}
+              />
+            ) : null}
+            {canMutate &&  fixtures.length > 0 ? (
+              <SimulateScopeMenu
+                leagueId={league.id}
+                seasonId={season.id}
+                playoffFormat={
+                  bracket?.format ?? season.playoffFormat ?? "single"
+                }
+              />
+            ) : null}
+            {canGenerateRosters ? (
+              <>
+                <SyntheticRosterButton
+                  kind="league"
+                  id={league.id}
+                  seasonStarted={seasonStarted}
+                />
+                <SyntheticRosterButton
+                  kind="league"
+                  id={league.id}
+                  action="attributes"
+                  seasonStarted={seasonStarted}
+                />
+              </>
+            ) : null}
+          </>
+        }
+      />
+      <WorkspaceNav links={peerNavLinks} />
+
+      {canGenerateRosters && rosterDeficit.teams.length > 0 ? (
+        <div className="mb-6">
+          <UndersizedRosterPanel
+            leagueId={league.id}
+            target={rosterDeficit.target}
+            undersizedTeams={rosterDeficit.teams}
+            canAutoFill={!seasonStarted}
+          />
+        </div>
+      ) : null}
+
+      {handoff !== "hidden" ? (
+        // Prototype "banner-cta--accent" treatment: trophy + title/sub left,
+        // the Start-playoffs CTA right. Exactly one element may contain the
+        // phrase "Regular season complete" (e2e regex, strict mode).
+        <Card
+          className="mb-6 border-accent/40 bg-accent/5"
+          data-testid="playoff-handoff"
+        >
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-3.5">
+              <Trophy className="h-6 w-6 shrink-0 text-accent" aria-hidden="true" />
+              <div>
+                <p className="font-bold text-foreground">
+                  Regular season complete
+                </p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">
+                  All {progress.total} games are final — seed the bracket to
+                  begin the playoffs.
+                </p>
+              </div>
+            </div>
+            {handoff === "start" ? (
+              <AdvanceToPlayoffsButton
+                leagueId={league.id}
+                seasonId={season.id}
+                triggerLabel="Start playoffs"
+              />
+            ) : (
+              <p className="text-sm text-foreground">
+                Waiting for playoffs to start.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {weekViews.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            No fixtures scheduled yet for {season.name}.
+          </CardContent>
+        </Card>
+      ) : (
+        <ScheduleWeeks
+          weeks={weekViews}
+          initialOpenKeys={initialOpenKeys}
+          progress={progress}
+        />
+      )}
+    </div>
+  );
+}
+
+/*
+ * One week's fixture table — server-rendered and handed to the client
+ * accordion as a slot. `isAdmin` keeps the Actions column (read links, clips)
+ * for managers even on completed seasons; `canMutate` gates every control
+ * that would change the season; `canGoLive` gates stream creation.
+ */
+function FixtureTable({
+  rows,
+  leagueId,
+  isAdmin,
+  canMutate,
+  canGoLive,
+  canStream,
+  statsEnabled,
+  liveEnabled,
+  streams,
+  recordByTeamId,
+}: {
+  rows: FixtureRow[];
+  leagueId: string;
+  isAdmin: boolean;
+  canMutate: boolean;
+  canGoLive: boolean;
+  canStream: boolean;
+  statsEnabled: boolean;
+  liveEnabled: boolean;
+  streams: Map<string, PublicGameStream | null>;
+  recordByTeamId: Map<string, string>;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm">
+        <thead>
+          <tr className="border-b-2 border-border bg-muted text-left text-foreground">
+            <th className="px-4 py-2 font-mono text-xs uppercase">When</th>
+            <th className="px-4 py-2 font-mono text-xs uppercase">Home</th>
+            <th className="px-4 py-2 font-mono text-xs uppercase">Away</th>
+            <th className="px-4 py-2 text-right font-mono text-xs uppercase">
+              Score
+            </th>
+            <th className="px-4 py-2 font-mono text-xs uppercase">Status</th>
+            {isAdmin ? (
+              <th className="px-4 py-2 font-mono text-xs uppercase">
+                Actions
+              </th>
+            ) : null}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ fixture, result, hasPlayLog }) => (
+            <ScheduleFixtureRow
+              key={fixture.id}
+              fixture={fixture}
+              result={result}
+              hasPlayLog={hasPlayLog}
+              projection={projectionFromFixture({
+                fixture,
+                result,
+                hasPlayLog,
+                recordByTeamId,
+              })}
+              leagueId={leagueId}
+              isAdmin={isAdmin}
+              canMutate={canMutate}
+              canGoLive={canGoLive}
+              canStream={canStream}
+              statsEnabled={statsEnabled}
+              liveEnabled={liveEnabled}
+              stream={streams.get(fixture.id)}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

@@ -58,7 +58,7 @@ export default async function StatsEntryPage({
   return (
     <div className="mx-auto max-w-3xl">
       <Link
-        href={`/dashboard/leagues/${team.leagueId}/schedule`}
+        href={`/dashboard/seasons/${fixture.seasonId}/schedule`}
         className="mb-4 inline-block text-sm text-primary hover:underline"
       >
         &larr; Back to Schedule

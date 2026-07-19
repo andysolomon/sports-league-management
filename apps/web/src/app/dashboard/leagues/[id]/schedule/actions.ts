@@ -113,6 +113,8 @@ export async function createFixtureAction(
       venue: input.venue,
       actorUserId: userId,
     });
+    revalidatePath(`/dashboard/seasons/${input.seasonId}/schedule`);
+    revalidatePath(`/dashboard/seasons/${input.seasonId}/standings`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     void trackFixtureCreated({
@@ -159,6 +161,8 @@ export async function generateScheduleAction(input: {
       confirm: input.confirm,
       format: input.format,
     });
+    revalidatePath(`/dashboard/seasons/${input.seasonId}/schedule`);
+    revalidatePath(`/dashboard/seasons/${input.seasonId}/standings`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     return { ok: true, ...res };
@@ -200,12 +204,16 @@ export async function recordGameResultAction(
   }
 
   try {
+    const fixture = await getFixture(input.fixtureId);
+    if (!fixture) return { ok: false, error: "fixture_not_found" };
     await recordGameResult({
       fixtureId: input.fixtureId,
       homeScore: input.homeScore,
       awayScore: input.awayScore,
       actorUserId: userId,
     });
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/schedule`);
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/standings`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     revalidatePath(`/leagues/${input.leagueId}/standings`);
@@ -237,7 +245,11 @@ export async function deleteFixtureAction(
   if (!guard.ok) return guard;
 
   try {
+    const fixture = await getFixture(input.fixtureId);
+    if (!fixture) return { ok: false, error: "fixture_not_found" };
     await deleteFixture(input.fixtureId);
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/schedule`);
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/standings`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     return { ok: true };
@@ -294,6 +306,8 @@ export async function simulateGameAction(input: {
       profileCache: new Map(),
       simulationFlavor,
     });
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/schedule`);
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/standings`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
     revalidatePath(`/leagues/${input.leagueId}/standings`);
@@ -306,11 +320,18 @@ export async function simulateGameAction(input: {
 
 const MAX_PLAYOFF_ROUNDS = 8;
 
-function revalidateSchedulePaths(leagueId: string, includePlayoffs = false) {
+function revalidateSchedulePaths(
+  leagueId: string,
+  seasonId: string,
+  includePlayoffs = false,
+) {
+  revalidatePath(`/dashboard/seasons/${seasonId}/schedule`);
+  revalidatePath(`/dashboard/seasons/${seasonId}/standings`);
   revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
   revalidatePath(`/dashboard/leagues/${leagueId}/standings`);
   revalidatePath(`/leagues/${leagueId}/standings`);
   if (includePlayoffs) {
+    revalidatePath(`/dashboard/seasons/${seasonId}/playoffs`);
     revalidatePath(`/dashboard/leagues/${leagueId}/playoffs`);
   }
 }
@@ -558,7 +579,7 @@ export async function simulateWeekAction(input: {
       });
       simulated += 1;
     }
-    revalidateSchedulePaths(input.leagueId);
+    revalidateSchedulePaths(input.leagueId, input.seasonId);
     return { ok: true, simulated };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -584,7 +605,7 @@ export async function simulateRegularSeasonAction(input: {
       orgContext,
       new Map(),
     );
-    revalidateSchedulePaths(input.leagueId);
+    revalidateSchedulePaths(input.leagueId, input.seasonId);
     return { ok: true, simulated };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -641,7 +662,7 @@ export async function simulatePlayoffsAction(input: {
       () => null,
     );
     const champion = championFromBracket(updatedBracket);
-    revalidateSchedulePaths(input.leagueId, true);
+    revalidateSchedulePaths(input.leagueId, input.seasonId, true);
     return { ok: true, playoffGames, champion };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -680,7 +701,7 @@ export async function advancePlayoffRoundAction(input: {
       profileCache,
     );
     if (!res.ok) return res;
-    revalidateSchedulePaths(input.leagueId, true);
+    revalidateSchedulePaths(input.leagueId, input.seasonId, true);
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -721,7 +742,7 @@ export async function simulateChampionshipAction(input: {
     if (!res.ok) return res;
     const bracket = await getPlayoffBracket(input.seasonId).catch(() => null);
     const champion = championFromBracket(bracket);
-    revalidateSchedulePaths(input.leagueId, true);
+    revalidateSchedulePaths(input.leagueId, input.seasonId, true);
     return { ok: true, simulated: res.simulated, champion };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -787,7 +808,7 @@ export async function simulateSeasonThroughChampionAction(input: {
 
     if (!season || !size) {
       // No playoffs configured — regular season is the whole story.
-      revalidateSchedulePaths(input.leagueId);
+      revalidateSchedulePaths(input.leagueId, input.seasonId);
       return { ok: true, regularSimulated, playoffGames: 0, champion: null };
     }
 
@@ -810,7 +831,7 @@ export async function simulateSeasonThroughChampionAction(input: {
     const bracket = await getPlayoffBracket(input.seasonId).catch(() => null);
     const champion = championFromBracket(bracket);
 
-    revalidateSchedulePaths(input.leagueId, true);
+    revalidateSchedulePaths(input.leagueId, input.seasonId, true);
     return { ok: true, regularSimulated, playoffGames, champion };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

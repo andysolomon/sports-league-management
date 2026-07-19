@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export interface GamecastEmptyStateProps {
   leagueId: string;
+  seasonId: string;
   reason: "no_log" | "parse_error";
 }
 
@@ -16,6 +17,7 @@ export function gamecastEmptyMessage(reason: GamecastEmptyStateProps["reason"]):
 
 export default function GamecastEmptyState({
   leagueId,
+  seasonId,
   reason,
 }: GamecastEmptyStateProps) {
   return (
@@ -23,7 +25,7 @@ export default function GamecastEmptyState({
       <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
         <p className="text-sm text-muted-foreground">{gamecastEmptyMessage(reason)}</p>
         <Button asChild size="sm" variant="outline">
-          <Link href={`/dashboard/leagues/${leagueId}/schedule`}>
+          <Link href={`/dashboard/seasons/${seasonId}/schedule`}>
             Back to schedule
           </Link>
         </Button>

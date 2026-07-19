@@ -74,6 +74,7 @@ export async function startGameStream(
       maxDurationMinutes: MAX_STREAM_DURATION_MINUTES,
     });
 
+    revalidatePath(`/dashboard/seasons/${guard.seasonId}/schedule`);
     revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
     revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
 
@@ -128,6 +129,7 @@ export async function startYoutubeStream(
       startedBy: guard.userId,
       maxDurationMinutes: MAX_STREAM_DURATION_MINUTES,
     });
+    revalidatePath(`/dashboard/seasons/${guard.seasonId}/schedule`);
     revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
     revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
     return { ok: true };
@@ -164,6 +166,7 @@ export async function stopGameStream(
       }
     }
 
+    revalidatePath(`/dashboard/seasons/${guard.seasonId}/schedule`);
     revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
     revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
     return { ok: true };

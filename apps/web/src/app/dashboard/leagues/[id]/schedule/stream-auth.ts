@@ -22,6 +22,7 @@ export async function authorizeStreamAction(
       userId: string;
       fixtureStatus: string;
       seasonStatus: string;
+      seasonId: string;
     }
   | { ok: false; error: string }
 > {
@@ -51,5 +52,6 @@ export async function authorizeStreamAction(
     userId,
     fixtureStatus: fixture.status,
     seasonStatus: season.status,
+    seasonId: season.id,
   };
 }

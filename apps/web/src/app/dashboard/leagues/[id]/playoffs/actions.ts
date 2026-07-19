@@ -111,6 +111,7 @@ export async function generatePlayoffsAction(input: {
       confirm: input.confirm,
       format: input.format,
     });
+    revalidatePath(`/dashboard/seasons/${input.seasonId}/playoffs`);
     revalidatePath(`/dashboard/leagues/${input.leagueId}/playoffs`);
     return { ok: true, ...res };
   } catch (err) {
@@ -122,7 +123,10 @@ export async function generatePlayoffsAction(input: {
   }
 }
 
-function revalidatePlayoffPaths(leagueId: string) {
+function revalidatePlayoffPaths(leagueId: string, seasonId: string) {
+  revalidatePath(`/dashboard/seasons/${seasonId}/playoffs`);
+  revalidatePath(`/dashboard/seasons/${seasonId}/schedule`);
+  revalidatePath(`/dashboard/seasons/${seasonId}/standings`);
   revalidatePath(`/dashboard/leagues/${leagueId}/playoffs`);
   revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
   revalidatePath(`/dashboard/leagues/${leagueId}/standings`);
@@ -195,7 +199,7 @@ export async function advanceToPlayoffsAction(input: {
       divisionWinnersQualify: activeSeason.divisionWinnersQualify,
       format: activeSeason.playoffFormat ?? undefined,
     });
-    revalidatePlayoffPaths(input.leagueId);
+    revalidatePlayoffPaths(input.leagueId, activeSeason.id);
     return { ok: true, ...res };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

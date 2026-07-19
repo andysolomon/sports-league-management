@@ -4,8 +4,9 @@
  * touching data: callers must already have authorized the resource, and
  * the Resource Header itself is presentation-only (no fetches).
  *
- * `?season=` is preserved on legacy League competition URLs until
- * issue #575 moves them under Season Home.
+ * Competition views (schedule / standings / playoffs / stats) are Season-owned
+ * (`/dashboard/seasons/<id>/<subpage>`) as of issue #575; the legacy
+ * League-owned URLs now permanently redirect to these.
  */
 export type ResourceHeaderKind = "league" | "team" | "player" | "season";
 
@@ -70,9 +71,19 @@ export function seasonHomeHref(seasonId: string): string {
 }
 
 /**
- * Builds the canonical sub-page URL for a League, preserving the legacy
- * `?season=` query parameter when an active season is supplied. ASR-3
- * moves these routes under Season Home in #575.
+ * Canonical sub-page URL for a Season Home child route (ASR-3).
+ */
+export function seasonSubpageHref(
+  seasonId: string,
+  subpage: "schedule" | "standings" | "playoffs" | "stats",
+): string {
+  return `/dashboard/seasons/${seasonId}/${subpage}`;
+}
+
+/**
+ * Legacy League sub-page URL. Competition views (schedule / standings /
+ * playoffs / stats) now live under Season Home and these URLs only remain
+ * as redirect sources (ASR-15).
  */
 export function leagueSubpageHref(
   leagueId: string,
@@ -143,37 +154,32 @@ export function buildPlayerSiblingLinks({
 
 export function buildSeasonSiblingLinks({
   seasonId,
-  leagueId,
-  activeSeasonId,
   scheduleEnabled,
   playoffsEnabled,
   statsEnabled,
 }: {
   seasonId: string;
-  leagueId: string;
-  activeSeasonId: string | null;
   scheduleEnabled: boolean;
   playoffsEnabled: boolean;
   statsEnabled: boolean;
 }): ResourceSiblingLink[] {
-  const query = activeSeasonId ? `?season=${activeSeasonId}` : "";
   const links: (ResourceSiblingLink | false)[] = [
     { label: "Overview", href: seasonHomeHref(seasonId) },
     scheduleEnabled && {
       label: "Schedule",
-      href: `/dashboard/leagues/${leagueId}/schedule${query}`,
+      href: seasonSubpageHref(seasonId, "schedule"),
     },
     scheduleEnabled && {
       label: "Standings",
-      href: `/dashboard/leagues/${leagueId}/standings${query}`,
+      href: seasonSubpageHref(seasonId, "standings"),
     },
     playoffsEnabled && {
       label: "Playoffs",
-      href: `/dashboard/leagues/${leagueId}/playoffs${query}`,
+      href: seasonSubpageHref(seasonId, "playoffs"),
     },
     statsEnabled && {
       label: "Stat leaders",
-      href: `/dashboard/leagues/${leagueId}/stats${query}`,
+      href: seasonSubpageHref(seasonId, "stats"),
     },
   ];
   return links.filter((link): link is ResourceSiblingLink => Boolean(link));

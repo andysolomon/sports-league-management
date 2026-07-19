@@ -13,6 +13,7 @@ import {
   playerHomeHref,
   playerSubpageHref,
   seasonHomeHref,
+  seasonSubpageHref,
   teamHomeHref,
   teamSubpageHref,
 } from "../resource-navigation";
@@ -69,6 +70,18 @@ describe("resource-navigation helpers", () => {
     expect(playerSubpageHref("p1", "development")).toBe(
       "/dashboard/players/p1/development",
     );
+    expect(seasonSubpageHref("s1", "schedule")).toBe(
+      "/dashboard/seasons/s1/schedule",
+    );
+    expect(seasonSubpageHref("s1", "standings")).toBe(
+      "/dashboard/seasons/s1/standings",
+    );
+    expect(seasonSubpageHref("s1", "playoffs")).toBe(
+      "/dashboard/seasons/s1/playoffs",
+    );
+    expect(seasonSubpageHref("s1", "stats")).toBe(
+      "/dashboard/seasons/s1/stats",
+    );
   });
 });
 
@@ -123,8 +136,6 @@ describe("buildSeasonSiblingLinks", () => {
   it("includes Schedule and Standings under the schedule flag, plus Playoffs and Stat Leaders", () => {
     const links = buildSeasonSiblingLinks({
       seasonId: "s1",
-      leagueId: "l1",
-      activeSeasonId: "s1",
       scheduleEnabled: true,
       playoffsEnabled: true,
       statsEnabled: true,
@@ -136,17 +147,21 @@ describe("buildSeasonSiblingLinks", () => {
       "Playoffs",
       "Stat leaders",
     ]);
-    // Overview points at Season Home (no ?season=); siblings are the legacy
-    // League-owned competition routes that carry ?season= until #575.
+    // Overview points at Season Home; siblings are canonical Season-owned
+    // competition routes (no ?season=).
     expect(links[0]!.href).toBe("/dashboard/seasons/s1");
-    expect(links.slice(1).every((l) => l.href.includes("?season=s1"))).toBe(true);
+    expect(links.map((l) => l.href)).toEqual([
+      "/dashboard/seasons/s1",
+      "/dashboard/seasons/s1/schedule",
+      "/dashboard/seasons/s1/standings",
+      "/dashboard/seasons/s1/playoffs",
+      "/dashboard/seasons/s1/stats",
+    ]);
   });
 
   it("omits feature-disabled siblings", () => {
     const links = buildSeasonSiblingLinks({
       seasonId: "s1",
-      leagueId: "l1",
-      activeSeasonId: null,
       scheduleEnabled: false,
       playoffsEnabled: false,
       statsEnabled: false,
