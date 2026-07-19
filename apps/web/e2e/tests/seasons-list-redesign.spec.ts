@@ -165,6 +165,6 @@ test.describe("Seasons list redesign — lifecycle actions (WSM-000255)", () => 
     )).toBeVisible();
 
     await success.getByTestId("create-season-generate-schedule").click();
-    await expect(page).toHaveURL(/\/dashboard\/leagues\/[^/]+\/schedule/);
+    await expect(page).toHaveURL(/\/dashboard\/seasons\/[^/]+\/schedule/);
   });
 });

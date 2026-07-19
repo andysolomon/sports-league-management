@@ -74,11 +74,14 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const leagueId = fixture!.leagueId;
+    const seasonId = fixture!.seasonId;
 
-    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+    await page.goto(`/dashboard/seasons/${seasonId}/playoffs`);
     await expect(
-      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
+      page
+        .locator("#main-content")
+        .getByTestId("resource-header-season")
+        .getByText(`Playoffs · ${LEAGUE_NAME}`),
     ).toBeVisible();
     await expect(page.getByText(/Regular season in progress/)).toBeVisible();
     await expect(
@@ -86,12 +89,12 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     ).toBeDisabled();
 
     // WSM-000239: while games remain, the schedule page offers NO handoff.
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
-    await expect(page.getByTestId("playoff-handoff")).toHaveCount(0);
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
+    await expect(page.locator("#main-content").getByTestId("playoff-handoff")).toHaveCount(0);
     await simRegularSeason(page);
 
     // Playoffs page flips to ready (its advance button enables)…
-    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+    await page.goto(`/dashboard/seasons/${seasonId}/playoffs`);
     await expect(page.getByText(/Regular season complete/)).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Advance to playoffs" }),
@@ -99,8 +102,8 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
 
     // …and the schedule page now shows the admin handoff panel. Start the
     // playoffs from HERE (WSM-000239).
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
-    const handoff = page.getByTestId("playoff-handoff");
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
+    const handoff = page.locator("#main-content").getByTestId("playoff-handoff");
     await expect(handoff).toBeVisible();
     await expect(handoff.getByText(/Regular season complete/)).toBeVisible();
     const startPlayoffs = handoff.getByRole("button", {
@@ -115,9 +118,9 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
 
     // Once the bracket exists the handoff disappears from the schedule page.
     await page.reload();
-    await expect(page.getByTestId("playoff-handoff")).toHaveCount(0);
+    await expect(page.locator("#main-content").getByTestId("playoff-handoff")).toHaveCount(0);
 
-    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+    await page.goto(`/dashboard/seasons/${seasonId}/playoffs`);
     await expect(page.getByText("Champion", { exact: true })).toHaveCount(0);
     await expect(page.getByTestId(/^playoff-drawer-trigger-/).first()).toBeVisible();
     await expect(page.getByText(/E2E PO|E2E Team/).first()).toBeVisible();
@@ -133,7 +136,7 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden();
 
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
     await simPlayoffsScope(page);
     await expect(
       page.getByText(/through the semifinals|Simulated \d+ playoff game/),
@@ -141,7 +144,7 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
       timeout: 120_000,
     });
 
-    await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
+    await page.goto(`/dashboard/seasons/${seasonId}/playoffs`);
     await expect(page.getByText("Champion", { exact: true })).toHaveCount(0);
     await simChampionship(page);
     await expect(page.getByText(/wins the championship!/)).toBeVisible({

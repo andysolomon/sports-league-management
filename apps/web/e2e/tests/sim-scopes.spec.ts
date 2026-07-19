@@ -64,11 +64,14 @@ test.describe("Simulation scopes (WSM-000183)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const leagueId = fixture!.leagueId;
+    const seasonId = fixture!.seasonId;
 
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
     await expect(
-      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
+      page
+        .locator("#main-content")
+        .getByTestId("resource-header-season")
+        .getByText(`Schedule · ${LEAGUE_NAME}`),
     ).toBeVisible();
 
     const week1 = weekCard(page, 1);
