@@ -1,0 +1,8 @@
+Issue 572 — League Directory / League Home entry points
+
+[x] Phase 1 — Navigation primitives (leagueDirectoryHref, activeSeasonShortcutHref + tests) — verified: type-check pass, 16/16 focused tests
+[x] Phase 2 — Shell chrome (sidebar Leagues/Discover removal, Overview → canonical League Home, nav-link active logic, switcher Directory link) — same verification run
+[x] Phase 3 — Pages (/dashboard redirect + bento retirement, League Directory rebuild, League Home Open Active Season + no-active-season state) — verified: diff reviewed, full test:unit 1254/1254, type-check + lint pass
+[ ] Phase 4 — Verify and ship (e2e spec updates in progress; then independent review, commit/push, PR, CI, merge, archive, close #572)
+
+Status: plan approved in-session 2026-07-18 (bento retirement included) and posted to issue #572. Phases 1-3 implemented and verified; Phase 4 e2e spec updates delegated.

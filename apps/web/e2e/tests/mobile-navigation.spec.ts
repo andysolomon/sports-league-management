@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 
-const NAV_LABELS = ["Overview", "Leagues", "Teams", "Players", "Seasons", "Divisions"];
+const NAV_LABELS = ["Overview", "Teams", "Players", "Seasons", "Divisions"];
 
 test.describe("Mobile Responsive Navigation", () => {
   test.beforeEach(async ({ page }) => {

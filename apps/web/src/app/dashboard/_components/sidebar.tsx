@@ -7,43 +7,71 @@ import {
   Calendar,
   Layers,
   Trophy,
-  Compass,
   Upload,
   CreditCard,
   PlusCircle,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import NavLink from "./nav-link";
+import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 
-const navItems = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/leagues", label: "Leagues", icon: Trophy },
-  { href: "/dashboard/discover", label: "Discover", icon: Compass },
-  { href: "/dashboard/teams", label: "Teams", icon: Users },
-  { href: "/dashboard/players", label: "Players", icon: UserCircle },
-  { href: "/dashboard/seasons", label: "Seasons", icon: Calendar },
-  { href: "/dashboard/divisions", label: "Divisions", icon: Layers },
-  { href: "/dashboard/import", label: "Import", icon: Upload },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+interface NavItem {
+  label: string;
+  icon: LucideIcon;
+  hideWithoutLeague?: boolean;
+  getHref: (activeLeagueId?: string | null) => string;
+}
+
+const navItems: NavItem[] = [
+  {
+    label: "Overview",
+    icon: LayoutDashboard,
+    hideWithoutLeague: true,
+    getHref: (activeLeagueId) =>
+      activeLeagueId ? leagueHomeHref(activeLeagueId) : "/dashboard",
+  },
+  {
+    label: "Teams",
+    icon: Users,
+    hideWithoutLeague: true,
+    getHref: () => "/dashboard/teams",
+  },
+  {
+    label: "Players",
+    icon: UserCircle,
+    hideWithoutLeague: true,
+    getHref: () => "/dashboard/players",
+  },
+  {
+    label: "Seasons",
+    icon: Calendar,
+    hideWithoutLeague: true,
+    getHref: () => "/dashboard/seasons",
+  },
+  {
+    label: "Divisions",
+    icon: Layers,
+    hideWithoutLeague: true,
+    getHref: () => "/dashboard/divisions",
+  },
+  { label: "Import", icon: Upload, getHref: () => "/dashboard/import" },
+  { label: "Billing", icon: CreditCard, getHref: () => "/dashboard/billing" },
 ];
-
-const hiddenWithoutLeagueHrefs = new Set([
-  "/dashboard",
-  "/dashboard/leagues",
-  "/dashboard/teams",
-  "/dashboard/players",
-  "/dashboard/seasons",
-  "/dashboard/divisions",
-]);
 
 interface SidebarProps {
   hasLeagues?: boolean;
+  activeLeagueId?: string | null;
   onNavigate?: () => void;
 }
 
-export default function Sidebar({ hasLeagues = true, onNavigate }: SidebarProps) {
+export default function Sidebar({
+  hasLeagues = true,
+  activeLeagueId = null,
+  onNavigate,
+}: SidebarProps) {
   const visibleNavItems = hasLeagues
     ? navItems
-    : navItems.filter((item) => !hiddenWithoutLeagueHrefs.has(item.href));
+    : navItems.filter((item) => !item.hideWithoutLeague);
 
   return (
     <div className="flex h-full flex-col px-3 py-[18px]">
@@ -72,16 +100,19 @@ export default function Sidebar({ hasLeagues = true, onNavigate }: SidebarProps)
             League Directory
           </NavLink>
         ) : null}
-        {visibleNavItems.map((item) => (
-          <NavLink
-            key={item.href}
-            href={item.href}
-            icon={item.icon}
-            onClick={onNavigate}
-          >
-            {item.label}
-          </NavLink>
-        ))}
+        {visibleNavItems.map((item) => {
+          const href = item.getHref(activeLeagueId);
+          return (
+            <NavLink
+              key={item.label}
+              href={href}
+              icon={item.icon}
+              onClick={onNavigate}
+            >
+              {item.label}
+            </NavLink>
+          );
+        })}
       </nav>
     </div>
   );

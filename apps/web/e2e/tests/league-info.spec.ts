@@ -27,16 +27,15 @@ test.describe("League info destination (WSM-000254)", () => {
     await expect(page.getByText("Organization")).toBeVisible();
     await expect(page.getByText(/\d+ teams · \d+ seasons/)).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Manage" }),
+      page.getByRole("link", { name: "Manage", exact: true }),
     ).toBeVisible();
-    // Scope to main content — the sidebar nav also has a "Seasons" link.
-    await expect(
-      page.locator("#main-content").getByRole("link", { name: "Seasons" }),
-    ).toBeVisible();
-
+    // ASR-21 removed the generic Seasons header action; the Active Season card
+    // below is the stable assertion (the shared canonical league's active
+    // season is not guaranteed at every point in a CI run, so the conditional
+    // "Open Active Season" header link is not asserted here).
     await expect(page.getByTestId("league-current-season")).toBeVisible();
     await expect(
-      page.getByTestId("league-current-season").getByText("Current season"),
+      page.getByTestId("league-current-season").getByText("Active Season", { exact: true }),
     ).toBeVisible();
 
     await expect(page.getByTestId("league-standings-card")).toBeVisible();
@@ -61,7 +60,7 @@ test.describe("League info destination (WSM-000254)", () => {
     ).toHaveCount(0);
     await expect(page.getByPlaceholder("user@example.com")).toHaveCount(0);
 
-    await page.getByRole("link", { name: "Manage" }).click();
+    await page.getByRole("link", { name: "Manage", exact: true }).click();
     await expect(page).toHaveURL(`/dashboard/leagues/${leagueId}/manage`);
     await expect(page.getByTestId("league-manage-settings")).toBeVisible();
     await expect(

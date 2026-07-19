@@ -12,6 +12,7 @@ test.describe("Health & Smoke Tests", () => {
 
   test("dashboard loads without error boundary", async ({ page }) => {
     await page.goto("/dashboard");
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
 
     // The error boundary shows "Something went wrong" when the API/Convex
     // connection is broken — assert it does NOT appear
@@ -19,7 +20,7 @@ test.describe("Health & Smoke Tests", () => {
       timeout: 15_000,
     });
     await expect(
-      page.getByRole("heading", { name: "Overview" })
+      page.getByTestId("resource-header-league").getByText("League Home"),
     ).toBeVisible();
   });
 
@@ -35,8 +36,9 @@ test.describe("Health & Smoke Tests", () => {
 
   test("no error toasts on initial page load", async ({ page }) => {
     await page.goto("/dashboard");
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
     await expect(
-      page.getByRole("heading", { name: "Overview" })
+      page.getByTestId("resource-header-league").getByText("League Home"),
     ).toBeVisible();
 
     // Wait briefly then check no error toasts appeared

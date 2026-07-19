@@ -51,15 +51,16 @@ test.describe.serial(
       await setupClerkTestingToken({ page });
     });
 
-    test("dashboard root renders Overview + 5 stat cards (no error)", async ({
+    test("dashboard root redirects to League Home (no error)", async ({
       page,
     }) => {
       if (!fixture) test.skip();
       await page.goto("/dashboard");
+      await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
 
-      await expect(
-        page.getByRole("heading", { name: "Overview" }),
-      ).toBeVisible();
+      const header = page.getByTestId("resource-header-league");
+      await expect(header).toBeVisible();
+      await expect(header.getByText("League Home")).toBeVisible();
       // No degradation banner (the SF degradation banner was removed
       // in WSM-000045 because Convex can't fail on JWT auth).
       await expect(
@@ -68,25 +69,12 @@ test.describe.serial(
       await expect(
         page.getByRole("heading", { name: /Something went wrong/i }),
       ).toHaveCount(0);
-
-      // 5 stat card labels render.
-      for (const label of [
-        "Leagues",
-        "Teams",
-        "Players",
-        "Seasons",
-        "Divisions",
-      ]) {
-        await expect(
-          page.getByText(label, { exact: true }).first(),
-        ).toBeVisible();
-      }
     });
 
     test("each list page renders its heading (no 500)", async ({ page }) => {
       if (!fixture) test.skip();
-      const routes: Array<{ path: string; heading: RegExp }> = [
-        { path: "/dashboard/leagues", heading: /Leagues/ },
+      const routes: Array<{ path: string; heading: RegExp | string }> = [
+        { path: "/dashboard/leagues", heading: "League Directory" },
         { path: "/dashboard/teams", heading: /Teams/ },
         { path: "/dashboard/players", heading: /Players/ },
         { path: "/dashboard/seasons", heading: /Seasons/ },

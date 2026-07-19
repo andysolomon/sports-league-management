@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 
@@ -13,6 +14,7 @@ export interface LeagueCurrentSeasonCardProps {
   } | null;
   progress: { final: number; total: number };
   navLinks: { href: string; label: string }[];
+  isAdmin?: boolean;
 }
 
 function formatPlayoffFormat(playoffFormat: string | null): string {
@@ -24,16 +26,29 @@ export function LeagueCurrentSeasonCard({
   season,
   progress,
   navLinks,
+  isAdmin = false,
 }: LeagueCurrentSeasonCardProps) {
   return (
     <Card data-testid="league-current-season">
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-        <CardTitle>Current season</CardTitle>
+        <CardTitle>Active Season</CardTitle>
         {season ? <StatusBadge status={season.status} /> : null}
       </CardHeader>
       <CardContent>
         {!season ? (
-          <p className="text-sm text-muted-foreground">No active season.</p>
+          <div className="space-y-3" data-testid="league-no-active-season">
+            <p className="text-sm text-muted-foreground">No active season</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/dashboard/seasons">Seasons Home</Link>
+              </Button>
+              {isAdmin ? (
+                <Button variant="default" size="sm" asChild>
+                  <Link href="/dashboard/seasons">Manage seasons</Link>
+                </Button>
+              ) : null}
+            </div>
+          </div>
         ) : (
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between gap-2">

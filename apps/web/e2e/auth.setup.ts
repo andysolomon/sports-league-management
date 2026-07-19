@@ -23,12 +23,15 @@ setup("authenticate as the primary e2e user", async ({ page }) => {
   await signInTestUser(page);
   fs.mkdirSync(path.dirname(STORAGE_STATE), { recursive: true });
 
-  // Confirm the session is actually live (dashboard renders for the user) before
-  // persisting it — a stale/empty state would silently fail every authed spec.
+  // Confirm the session is actually live before persisting it — a stale/empty
+  // state would silently fail every authed spec. /dashboard now redirects to
+  // the Active League's League Home (issue #572), so follow the redirect and
+  // assert the League Home Resource Header instead of the old Overview page.
   await page.goto("/dashboard");
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible({
-    timeout: 20_000,
-  });
+  await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/, { timeout: 20_000 });
+  await expect(
+    page.getByTestId("resource-header-league").getByText("League Home"),
+  ).toBeVisible({ timeout: 20_000 });
 
   await page.context().storageState({ path: STORAGE_STATE });
 });

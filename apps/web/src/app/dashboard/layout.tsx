@@ -50,7 +50,7 @@ export default async function DashboardLayout({
 
       {/* Desktop sidebar — prototype shell: 248px rail on --bg */}
       <aside className="hidden w-[248px] shrink-0 border-r border-border bg-bg lg:block">
-        <Sidebar hasLeagues={hasLeagues} />
+        <Sidebar hasLeagues={hasLeagues} activeLeagueId={activeLeagueId} />
       </aside>
 
       {/* min-w-0 lets this flex child shrink below its content's intrinsic

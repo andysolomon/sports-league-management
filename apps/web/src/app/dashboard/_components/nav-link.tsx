@@ -5,6 +5,16 @@ import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function isNavLinkActive(pathname: string, href: string): boolean {
+  if (href === "/dashboard") {
+    return pathname === href;
+  }
+  if (href.startsWith("/dashboard/leagues/")) {
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+  return pathname === href || pathname.startsWith(href);
+}
+
 interface NavLinkProps {
   href: string;
   icon?: LucideIcon;
@@ -19,8 +29,7 @@ export default function NavLink({
   children,
 }: NavLinkProps) {
   const pathname = usePathname();
-  const isActive =
-    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+  const isActive = isNavLinkActive(pathname, href);
 
   return (
     <Link
