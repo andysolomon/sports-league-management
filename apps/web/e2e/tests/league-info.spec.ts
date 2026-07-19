@@ -35,7 +35,7 @@ test.describe("League info destination (WSM-000254)", () => {
     // "Open Active Season" header link is not asserted here).
     await expect(page.getByTestId("league-current-season")).toBeVisible();
     await expect(
-      page.getByTestId("league-current-season").getByText("Active Season"),
+      page.getByTestId("league-current-season").getByText("Active Season", { exact: true }),
     ).toBeVisible();
 
     await expect(page.getByTestId("league-standings-card")).toBeVisible();
