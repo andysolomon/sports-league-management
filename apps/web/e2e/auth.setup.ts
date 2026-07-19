@@ -29,8 +29,11 @@ setup("authenticate as the primary e2e user", async ({ page }) => {
   // assert the League Home Resource Header instead of the old Overview page.
   await page.goto("/dashboard");
   await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/, { timeout: 20_000 });
+  // The Resource Header can render two spans ("League Home" subtitle + a
+  // sibling-injected current-section label) under strict mode; assert at
+  // least one is visible.
   await expect(
-    page.getByTestId("resource-header-league").getByText("League Home"),
+    page.getByTestId("resource-header-league").getByText("League Home").first(),
   ).toBeVisible({ timeout: 20_000 });
 
   await page.context().storageState({ path: STORAGE_STATE });

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { Standing } from "@sports-management/shared-types";
 import { TeamMark } from "@/components/team-mark";
 import { EmptyState } from "@/components/empty-state";
@@ -13,6 +12,7 @@ import {
   CreateDivisionButton,
   DivisionRowActions,
 } from "../leagues/division-controls";
+import { divisionsViewHref } from "../teams/teams-home-navigation";
 
 export interface DivisionPanel {
   id: string;
@@ -28,6 +28,7 @@ interface DivisionsTableProps {
   activeSeasonName: string | null;
   hasPlayedGames: boolean;
   standingsHref: string | null;
+  selectedDivisionId: string | null;
 }
 
 export function DivisionsTable({
@@ -37,8 +38,12 @@ export function DivisionsTable({
   activeSeasonName,
   hasPlayedGames,
   standingsHref,
+  selectedDivisionId,
 }: DivisionsTableProps) {
-  const router = useRouter();
+  const selectedDivision = selectedDivisionId
+    ? divisions.find((division) => division.id === selectedDivisionId) ?? null
+    : null;
+  const visibleDivisions = selectedDivision ? [selectedDivision] : divisions;
 
   if (divisions.length === 0) {
     return (
@@ -67,6 +72,14 @@ export function DivisionsTable({
         {isAdmin && activeLeagueId ? (
           <CreateDivisionButton leagueId={activeLeagueId} />
         ) : null}
+        {selectedDivision ? (
+          <Link
+            href={divisionsViewHref()}
+            className="text-primary hover:underline"
+          >
+            All divisions &rarr;
+          </Link>
+        ) : null}
         <Link href="/dashboard/teams" className="text-primary hover:underline">
           Teams &rarr;
         </Link>
@@ -85,7 +98,7 @@ export function DivisionsTable({
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {divisions.map((division) => {
+        {visibleDivisions.map((division) => {
           const leader = hasPlayedGames ? division.rows[0] : null;
           return (
             <Card key={division.id} className="overflow-hidden p-0">
@@ -93,7 +106,13 @@ export function DivisionsTable({
                 <div className="flex min-w-0 items-center gap-2.5">
                   <Layers className="h-[18px] w-[18px] shrink-0 text-accent" />
                   <h3 className="truncate text-sm font-semibold text-foreground">
-                    {division.name}
+                    <Link
+                      href={divisionsViewHref(division.id)}
+                      className="hover:underline"
+                      aria-label={`View ${division.name} division`}
+                    >
+                      {division.name}
+                    </Link>
                   </h3>
                   <Badge variant="outline">{division.rows.length}</Badge>
                   {isAdmin ? (
@@ -148,12 +167,7 @@ export function DivisionsTable({
                         return (
                           <tr
                             key={row.teamId}
-                            className="cursor-pointer border-b border-border transition-colors hover:bg-muted/40"
-                            onClick={() =>
-                              router.push(
-                                `/dashboard/teams/${row.teamId}?from=divisions`,
-                              )
-                            }
+                            className="border-b border-border transition-colors hover:bg-muted/40"
                           >
                             <td className="px-4 py-2.5 font-mono text-muted-foreground">
                               {row.divisionRank}
@@ -167,7 +181,12 @@ export function DivisionsTable({
                                   }
                                   size="sm"
                                 />
-                                <span className="truncate">{row.teamName}</span>
+                                <Link
+                                  href={`/dashboard/teams/${row.teamId}`}
+                                  className="truncate font-medium hover:underline"
+                                >
+                                  {row.teamName}
+                                </Link>
                                 {hasPlayedGames && row.divisionRank === 1 ? (
                                   <Badge variant="success">Leader</Badge>
                                 ) : null}

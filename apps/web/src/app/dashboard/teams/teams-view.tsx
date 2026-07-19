@@ -6,11 +6,19 @@ import { Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "../_components/page-header";
+import {
+  DivisionsTable,
+  type DivisionPanel,
+} from "../divisions/divisions-table";
 import { TeamsTable, type TeamsTableRow } from "./teams-table";
 import {
   TeamDetailSheet,
   type TeamDetailSheetData,
 } from "./team-detail-sheet";
+import {
+  divisionsViewHref,
+  type TeamsHomeView,
+} from "./teams-home-navigation";
 
 export interface TeamsViewProps {
   teamCount: number;
@@ -20,6 +28,13 @@ export interface TeamsViewProps {
   leagueId: string | null;
   scheduleLinksEnabled: boolean;
   hasActiveSeason: boolean;
+  currentView: TeamsHomeView;
+  divisions: DivisionPanel[];
+  isAdmin: boolean;
+  activeSeasonName: string | null;
+  hasPlayedGames: boolean;
+  standingsHref: string | null;
+  selectedDivisionId: string | null;
 }
 
 export function TeamsView({
@@ -30,6 +45,13 @@ export function TeamsView({
   leagueId,
   scheduleLinksEnabled,
   hasActiveSeason,
+  currentView,
+  divisions,
+  isAdmin,
+  activeSeasonName,
+  hasPlayedGames,
+  standingsHref,
+  selectedDivisionId,
 }: TeamsViewProps) {
   const [selectedTeamId, setSelectedTeamId] = React.useState<string | null>(null);
   const selectedData = selectedTeamId
@@ -50,12 +72,6 @@ export function TeamsView({
           <div className="flex flex-wrap items-center gap-3">
             <Badge variant="outline">{teamCount}</Badge>
             <Link
-              href="/dashboard/divisions"
-              className="text-sm text-primary hover:underline"
-            >
-              Divisions →
-            </Link>
-            <Link
               href="/dashboard/players"
               className="text-sm text-primary hover:underline"
             >
@@ -65,7 +81,45 @@ export function TeamsView({
         }
       />
 
-      {!hasActiveSeason ? (
+      <nav
+        aria-label="Teams Home views"
+        className="mb-5 flex items-center gap-4 border-b border-border text-sm font-medium"
+      >
+        <Link
+          href="/dashboard/teams"
+          aria-current={currentView === "teams" ? "page" : undefined}
+          className={
+            currentView === "teams"
+              ? "border-b-2 border-primary pb-2 text-foreground"
+              : "pb-2 text-muted-foreground hover:text-foreground"
+          }
+        >
+          Teams
+        </Link>
+        <Link
+          href={divisionsViewHref()}
+          aria-current={currentView === "divisions" ? "page" : undefined}
+          className={
+            currentView === "divisions"
+              ? "border-b-2 border-primary pb-2 text-foreground"
+              : "pb-2 text-muted-foreground hover:text-foreground"
+          }
+        >
+          Divisions
+        </Link>
+      </nav>
+
+      {currentView === "divisions" ? (
+        <DivisionsTable
+          divisions={divisions}
+          isAdmin={isAdmin}
+          activeLeagueId={leagueId}
+          activeSeasonName={activeSeasonName}
+          hasPlayedGames={hasPlayedGames}
+          standingsHref={standingsHref}
+          selectedDivisionId={selectedDivisionId}
+        />
+      ) : !hasActiveSeason ? (
         <EmptyState
           icon={Users}
           title="No active season"
@@ -88,7 +142,7 @@ export function TeamsView({
       ) : (
         <TeamsTable
           rows={rows}
-          onRowClick={(teamId) => setSelectedTeamId(teamId)}
+          onQuickView={(teamId) => setSelectedTeamId(teamId)}
         />
       )}
 

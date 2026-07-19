@@ -78,7 +78,7 @@ test.describe.serial(
         { path: "/dashboard/teams", heading: /Teams/ },
         { path: "/dashboard/players", heading: /Players/ },
         { path: "/dashboard/seasons", heading: /Seasons/ },
-        { path: "/dashboard/divisions", heading: /Divisions/ },
+        { path: "/dashboard/teams?view=divisions", heading: /Teams/ },
       ];
 
       for (const { path, heading } of routes) {

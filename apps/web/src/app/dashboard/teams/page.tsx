@@ -2,8 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import type { PlayerDto, Standing, TeamDto } from "@sports-management/shared-types";
 import {
+  computeDivisionStandings,
   computeStandings,
   getDivisions,
+  getLeagueOrgId,
   getPlayers,
   getSeasons,
   getTeamAttributeSnapshots,
@@ -14,7 +16,7 @@ import {
   listResultsBySeason,
 } from "@/lib/data-api";
 import { resolveActiveLeague } from "@/lib/active-league";
-import { resolveOrgContext } from "@/lib/org-context";
+import { getUserRoleInOrg, resolveOrgContext } from "@/lib/org-context";
 import { playerAttributesV1, schedulesStandingsV1 } from "@/lib/flags";
 import { DEFAULT_TARGET_ROSTER_SIZE } from "@/lib/offseason-activate";
 import {
@@ -28,6 +30,8 @@ import {
 import type { TeamsTableRow } from "./teams-table";
 import type { TeamDetailSheetData } from "./team-detail-sheet";
 import { TeamsView } from "./teams-view";
+import type { DivisionPanel } from "../divisions/divisions-table";
+import { teamsHomeView } from "./teams-home-navigation";
 
 function groupPlayersByTeam(players: PlayerDto[]): Map<string, PlayerDto[]> {
   const map = new Map<string, PlayerDto[]>();
@@ -144,7 +148,14 @@ async function buildTeamsPageData(input: {
   return { rows, sheetDataByTeamId };
 }
 
-export default async function TeamsPage() {
+export default async function TeamsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    view?: string | string[];
+    division?: string | string[];
+  }>;
+}) {
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
@@ -161,6 +172,16 @@ export default async function TeamsPage() {
       schedulesStandingsV1(),
       playerAttributesV1(),
     ]);
+  const params = await searchParams;
+  const currentView = teamsHomeView(params.view);
+  const requestedDivisionId = Array.isArray(params.division)
+    ? params.division[0]
+    : params.division;
+  const selectedDivisionId =
+    currentView === "divisions" &&
+    divisions.some((division) => division.id === requestedDivisionId)
+      ? requestedDivisionId ?? null
+      : null;
 
   const activeSeason =
     seasons.find((season) => season.status.toLowerCase() === "active") ?? null;
@@ -194,6 +215,61 @@ export default async function TeamsPage() {
     sheetDataByTeamId = built.sheetDataByTeamId;
   }
 
+  const divisionSeason =
+    seasons.find((season) => season.status === "active") ?? seasons[0] ?? null;
+  let divisionPanels: DivisionPanel[] = [];
+  let isAdmin = false;
+  let hasPlayedGames = false;
+  let standingsHref: string | null = null;
+
+  if (currentView === "divisions") {
+    const orgId = activeLeagueId ? await getLeagueOrgId(activeLeagueId) : null;
+    const role = orgId ? await getUserRoleInOrg(orgId, userId) : null;
+    const teamColors = Object.fromEntries(
+      teams.map((team) => [team.id, team.primaryColor]),
+    );
+    divisionPanels = await Promise.all(
+      divisions.map(async (division) => {
+        if (!divisionSeason) {
+          const divisionTeams = teams.filter(
+            (team) => team.divisionId === division.id,
+          );
+          return {
+            id: division.id,
+            name: division.name,
+            teamColors,
+            rows: divisionTeams.map((team, index) => ({
+              teamId: team.id,
+              teamName: team.name,
+              wins: 0,
+              losses: 0,
+              ties: 0,
+              pointsFor: 0,
+              pointsAgainst: 0,
+              divisionRank: index + 1,
+              leagueRank: index + 1,
+            })),
+          };
+        }
+
+        return {
+          id: division.id,
+          name: division.name,
+          teamColors,
+          rows: await computeDivisionStandings(divisionSeason.id, division.id),
+        };
+      }),
+    );
+    hasPlayedGames = divisionSeason
+      ? (await listResultsBySeason(divisionSeason.id).catch(() => [])).length > 0
+      : false;
+    standingsHref =
+      scheduleLinksEnabled && activeLeagueId && divisionSeason
+        ? `/dashboard/leagues/${activeLeagueId}/standings?season=${divisionSeason.id}`
+        : null;
+    isAdmin = role === "org:admin";
+  }
+
   return (
     <TeamsView
       teamCount={teams.length}
@@ -203,6 +279,13 @@ export default async function TeamsPage() {
       leagueId={activeLeagueId}
       scheduleLinksEnabled={scheduleLinksEnabled}
       hasActiveSeason={activeSeason != null}
+      currentView={currentView}
+      divisions={divisionPanels}
+      isAdmin={isAdmin}
+      activeSeasonName={divisionSeason?.name ?? null}
+      hasPlayedGames={hasPlayedGames}
+      standingsHref={standingsHref}
+      selectedDivisionId={selectedDivisionId}
     />
   );
 }

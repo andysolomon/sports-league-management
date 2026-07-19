@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { ResourceHeaderKind, ResourceSiblingLink } from "./resource-navigation";
+import {
+  isActiveHref,
+  type ResourceHeaderKind,
+  type ResourceSiblingLink,
+} from "./resource-navigation";
 
 /**
  * Resource Header (WSM-000571, ASR-7, ASR-18, ASR-19, ASR-20).
@@ -80,7 +84,10 @@ export function ResourceHeader({
           >
             {siblings.map((sibling) => {
               const [siblingPath] = sibling.href.split("?");
-              const isActive = comparePath === siblingPath;
+              const isHomeSibling = siblingPath === href.split("?")[0];
+              const isActive =
+                comparePath === siblingPath ||
+                (!isHomeSibling && isActiveHref(comparePath, sibling.href));
               return (
                 <Link
                   key={sibling.href}

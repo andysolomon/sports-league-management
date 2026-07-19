@@ -16,7 +16,7 @@ type Result<T = unknown> = ({ ok: true } & T) | { ok: false; error: string };
 /** Pages that render division controls and must refresh after a mutation. */
 function revalidateDivisionViews(): void {
   revalidatePath("/dashboard/leagues");
-  revalidatePath("/dashboard/divisions");
+  revalidatePath("/dashboard/teams");
 }
 
 /** Org-admin gate for a division's league. Mirrors leagues/actions.ts. */
