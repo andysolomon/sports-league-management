@@ -45,7 +45,6 @@ describe("active league navigation contracts", () => {
     expect(html).not.toContain('href="/dashboard/teams"');
     expect(html).not.toContain('href="/dashboard/players"');
     expect(html).not.toContain('href="/dashboard/seasons"');
-    expect(html).not.toContain('href="/dashboard/divisions"');
   });
 
   it("emits canonical League Home for Overview when activeLeagueId is provided", () => {
@@ -61,5 +60,6 @@ describe("active league navigation contracts", () => {
     expect(html).not.toContain("Discover");
     expect(html).not.toContain('href="/dashboard/discover"');
     expect(html).not.toContain('>Leagues<');
+    expect(html).not.toContain('href="/dashboard/divisions"');
   });
 });

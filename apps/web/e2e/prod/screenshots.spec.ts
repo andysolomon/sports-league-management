@@ -19,7 +19,7 @@ const ROUTES: Array<{ slug: string; path: string }> = [
   { slug: "teams", path: "/dashboard/teams" },
   { slug: "players", path: "/dashboard/players" },
   { slug: "seasons", path: "/dashboard/seasons" },
-  { slug: "divisions", path: "/dashboard/divisions" },
+  { slug: "divisions", path: "/dashboard/teams?view=divisions" },
   { slug: "discover", path: "/dashboard/discover" },
   { slug: "import", path: "/dashboard/import" },
   { slug: "billing", path: "/dashboard/billing" },

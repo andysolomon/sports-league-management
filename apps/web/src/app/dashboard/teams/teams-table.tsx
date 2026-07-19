@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { Eye } from "lucide-react";
 import type { Standing, TeamDto } from "@sports-management/shared-types";
 import { TeamMark } from "@/components/team-mark";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -29,10 +30,10 @@ export interface TeamsTableRow {
 
 export interface TeamsTableProps {
   rows: TeamsTableRow[];
-  onRowClick: (teamId: string) => void;
+  onQuickView: (teamId: string) => void;
 }
 
-export function TeamsTable({ rows, onRowClick }: TeamsTableProps) {
+export function TeamsTable({ rows, onQuickView }: TeamsTableProps) {
   return (
     <Card className="gap-0 overflow-hidden py-0" data-testid="teams-table">
       <Table>
@@ -45,7 +46,7 @@ export function TeamsTable({ rows, onRowClick }: TeamsTableProps) {
             <TableHead className="px-4 text-right">PF</TableHead>
             <TableHead className="px-4 text-right">Diff</TableHead>
             <TableHead className="px-4 text-right">Roster</TableHead>
-            <TableHead className="w-8 px-2" />
+            <TableHead className="w-12 px-2" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -57,8 +58,6 @@ export function TeamsTable({ rows, onRowClick }: TeamsTableProps) {
               <TableRow
                 key={row.team.id}
                 data-testid="team-row"
-                className="cursor-pointer"
-                onClick={() => onRowClick(row.team.id)}
               >
                 <TableCell className="px-4 font-mono text-muted-foreground">
                   {row.standing.leagueRank}
@@ -74,7 +73,6 @@ export function TeamsTable({ rows, onRowClick }: TeamsTableProps) {
                       <Link
                         href={`/dashboard/teams/${row.team.id}`}
                         className="block font-semibold text-foreground hover:underline"
-                        onClick={(event) => event.stopPropagation()}
                       >
                         {row.team.name}
                       </Link>
@@ -111,8 +109,17 @@ export function TeamsTable({ rows, onRowClick }: TeamsTableProps) {
                 <TableCell className="px-4 text-right font-mono tabular-nums">
                   {row.rosterCount}/{row.rosterLimit}
                 </TableCell>
-                <TableCell className="px-2 text-muted-foreground/70">
-                  <ChevronRight className="h-4 w-4" aria-hidden />
+                <TableCell className="px-2 text-right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Quick view ${row.team.name}`}
+                    title={`Quick view ${row.team.name}`}
+                    onClick={() => onQuickView(row.team.id)}
+                  >
+                    <Eye className="h-4 w-4" aria-hidden />
+                  </Button>
                 </TableCell>
               </TableRow>
             );

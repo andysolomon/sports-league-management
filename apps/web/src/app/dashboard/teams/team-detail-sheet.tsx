@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TeamMark } from "@/components/team-mark";
 import { cn } from "@/lib/utils";
+import { divisionsViewHref } from "./teams-home-navigation";
 import {
   formatStandingRecord,
   standingPointDifferential,
@@ -197,7 +198,7 @@ export function TeamDetailSheet({
             </div>
 
             <Link
-              href="/dashboard/divisions"
+              href={divisionsViewHref(team.divisionId)}
               className="rounded-xl border border-border bg-card p-3.5 text-left transition-colors hover:bg-muted/40"
             >
               <p className="mb-2.5 font-mono text-[10.5px] font-semibold uppercase tracking-wide text-muted-foreground">

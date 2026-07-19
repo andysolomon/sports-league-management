@@ -3,6 +3,12 @@ import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ResourceHeader } from "../ResourceHeader";
 
+function linkMarkup(html: string, label: string): string {
+  const match = html.match(new RegExp(`<a[^>]*>${label}</a>`));
+  expect(match).toBeTruthy();
+  return match![0];
+}
+
 describe("ResourceHeader", () => {
   it("identifies the resource, links the parent home, and exposes sibling nav", () => {
     const html = renderToStaticMarkup(
@@ -46,15 +52,49 @@ describe("ResourceHeader", () => {
     // Exactly one sibling is marked current.
     expect((html.match(/aria-current="page"/g) ?? []).length).toBe(1);
     // The Roster link carries the indicator; the Overview link does not.
-    // React's attribute order isn't stable, so check both orders.
-    const rosterActive = /aria-current="page"[^>]*href="\/dashboard\/teams\/team-1\/roster"/.test(
-      html,
-    ) || /href="\/dashboard\/teams\/team-1\/roster"[^>]*aria-current="page"/.test(html);
-    expect(rosterActive).toBe(true);
-    const overviewActive = /aria-current="page"[^>]*href="\/dashboard\/teams\/team-1"/.test(
-      html,
+    expect(linkMarkup(html, "Roster")).toContain('aria-current="page"');
+    expect(linkMarkup(html, "Overview")).not.toContain('aria-current="page"');
+  });
+
+  it("keeps roster active on roster audit child routes", () => {
+    const html = renderToStaticMarkup(
+      createElement(ResourceHeader, {
+        kind: "team",
+        name: "Dallas Cowboys",
+        href: "/dashboard/teams/team-1",
+        siblings: [
+          { label: "Overview", href: "/dashboard/teams/team-1" },
+          { label: "Roster", href: "/dashboard/teams/team-1/roster" },
+          {
+            label: "Depth chart",
+            href: "/dashboard/teams/team-1/depth-chart",
+          },
+        ],
+        currentHref: "/dashboard/teams/team-1/roster/audit",
+      }),
     );
-    expect(overviewActive).toBe(false);
+    expect((html.match(/aria-current="page"/g) ?? []).length).toBe(1);
+    expect(linkMarkup(html, "Roster")).toContain('aria-current="page"');
+    expect(linkMarkup(html, "Overview")).not.toContain('aria-current="page"');
+    expect(linkMarkup(html, "Depth chart")).not.toContain(
+      'aria-current="page"',
+    );
+  });
+
+  it("does not mark prefix-only sibling routes as active", () => {
+    const html = renderToStaticMarkup(
+      createElement(ResourceHeader, {
+        kind: "team",
+        name: "Dallas Cowboys",
+        href: "/dashboard/teams/team-1",
+        siblings: [
+          { label: "Overview", href: "/dashboard/teams/team-1" },
+          { label: "Roster", href: "/dashboard/teams/team-1/roster" },
+        ],
+        currentHref: "/dashboard/teams/team-1/roster-audit",
+      }),
+    );
+    expect((html.match(/aria-current="page"/g) ?? []).length).toBe(0);
   });
 
   it("treats sibling hrefs with query strings as the same path", () => {

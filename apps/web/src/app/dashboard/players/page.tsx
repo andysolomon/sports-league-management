@@ -12,6 +12,7 @@ import { playerAttributesV1 } from "@/lib/flags";
 import type { DirectoryPlayer } from "@/lib/players-directory";
 import { PlayersTable } from "./players-table";
 import { PageHeader } from "../_components/page-header";
+import { divisionsViewHref } from "../teams/teams-home-navigation";
 
 export default async function PlayersPage() {
   const { userId } = await auth();
@@ -63,7 +64,7 @@ export default async function PlayersPage() {
               Teams &rarr;
             </Link>
             <Link
-              href="/dashboard/divisions"
+              href={divisionsViewHref()}
               className="text-primary hover:underline"
             >
               Divisions &rarr;

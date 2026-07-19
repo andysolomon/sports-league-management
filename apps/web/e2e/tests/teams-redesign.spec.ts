@@ -37,23 +37,25 @@ test.describe("Teams table redesign — canonical league (WSM-000248)", () => {
     ).toBeVisible();
   });
 
-  test("row opens detail sheet with team name", async ({ page }) => {
+  test("Quick View remains an explicit secondary action", async ({ page }) => {
     const main = page.locator("#main-content");
     const cowboysRow = main.getByRole("row", {
       name: new RegExp(TEAMS.COWBOYS.name),
     });
     await expect(cowboysRow).toBeVisible();
-    await cowboysRow.click();
+    await cowboysRow
+      .getByRole("button", { name: `Quick view ${TEAMS.COWBOYS.name}` })
+      .click();
     const sheet = page.getByTestId("team-detail-sheet");
     await expect(sheet).toBeVisible();
     await expect(sheet.getByText(TEAMS.COWBOYS.name)).toBeVisible();
   });
 
-  test("team name link navigates to team detail page", async ({ page }) => {
+  test("team name is the primary Team Home destination", async ({ page }) => {
     const main = page.locator("#main-content");
     await main.getByRole("link", { name: TEAMS.COWBOYS.name }).click();
     await expect(
-      page.getByRole("heading", { name: TEAMS.COWBOYS.name }),
+      page.getByTestId("resource-header-team").getByText(TEAMS.COWBOYS.name),
     ).toBeVisible();
   });
 });
@@ -111,7 +113,9 @@ test.describe("Teams table redesign — fixture league records (WSM-000248)", ()
     const homeRow = main.getByRole("row", { name: /E2E TT Home/ });
     await expect(homeRow).toBeVisible();
     await expect(homeRow).toContainText(/\d+-\d+/);
-    await homeRow.click();
+    await homeRow
+      .getByRole("button", { name: "Quick view E2E TT Home" })
+      .click();
     const sheet = page.getByTestId("team-detail-sheet");
     await expect(sheet).toBeVisible();
     await expect(sheet.getByText("E2E TT Home")).toBeVisible();

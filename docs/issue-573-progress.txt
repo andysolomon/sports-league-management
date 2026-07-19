@@ -1,0 +1,10 @@
+Issue 573 — Teams Home / Divisions consolidation
+
+[x] Teams and Divisions canonical URL helpers with focused unit coverage
+[x] Teams Home alternate Divisions view with selected-Division history state
+[x] Explicit Team Home primary action and accessible Team Quick View secondary action
+[x] Access-validated legacy Division permanent redirects with non-disclosing 404 coverage
+[x] Desktop/mobile navigation and in-scope links updated to canonical Teams Home URLs
+[x] Relevant Playwright specs updated and identified for execution
+[x] Verification: type-check, lint, focused navigation/redirect/resource-header tests, and the full web unit suite pass after linking the existing workspace dependencies
+[!] Focused Playwright execution remains blocked by the local Convex service not listening on 127.0.0.1:3212; run the listed divisions/teams specs in an E2E-capable environment

@@ -9,7 +9,6 @@ const NAV_ITEMS: Array<
   { label: "Teams", href: "/dashboard/teams" },
   { label: "Players", href: "/dashboard/players" },
   { label: "Seasons", href: "/dashboard/seasons" },
-  { label: "Divisions", href: "/dashboard/divisions" },
 ];
 
 test.describe("Dashboard Navigation", () => {
@@ -73,16 +72,6 @@ test.describe("Dashboard Navigation", () => {
     await expect(
       page.locator("header").getByRole("button", { name: /open user menu/i }),
     ).toBeVisible();
-  });
-
-  test("Divisions nav active highlighting", async ({ page }) => {
-    await page.goto("/dashboard/divisions");
-
-    const divisionsLink = page.locator("aside").getByRole("link", { name: "Divisions" });
-    await expect(divisionsLink).toHaveClass(/bg-primary/);
-
-    const overviewLink = page.locator("aside").getByRole("link", { name: "Overview" });
-    await expect(overviewLink).not.toHaveClass(/bg-primary/);
   });
 
   test("navigation has accessibility role", async ({ page }) => {
