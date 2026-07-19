@@ -1,7 +1,12 @@
 export type LeagueSubpage = "schedule" | "standings" | "playoffs" | "stats";
 
 /**
- * Flag-gated peer links for league sub-pages, preserving ?season= (WSM-000236).
+ * Flag-gated peer links for a league's competition views (WSM-000236, #575).
+ *
+ * When a season is in context these are the canonical Season-owned routes
+ * (`/dashboard/seasons/<id>/<subpage>`, no `?season=`). With no active season
+ * the links fall back to the legacy League-owned paths, which redirect
+ * (resolving/activating the League) once followed.
  */
 export function buildLeagueSeasonNavLinks({
   leagueId,
@@ -18,27 +23,30 @@ export function buildLeagueSeasonNavLinks({
   statsEnabled: boolean;
   exclude?: LeagueSubpage;
 }): { label: string; href: string }[] {
-  const seasonQuery = seasonId ? `?season=${seasonId}` : "";
+  const href = (subpage: LeagueSubpage) =>
+    seasonId
+      ? `/dashboard/seasons/${seasonId}/${subpage}`
+      : `/dashboard/leagues/${leagueId}/${subpage}`;
 
   return [
     scheduleEnabled &&
       exclude !== "schedule" && {
-        href: `/dashboard/leagues/${leagueId}/schedule${seasonQuery}`,
+        href: href("schedule"),
         label: "Schedule",
       },
     scheduleEnabled &&
       exclude !== "standings" && {
-        href: `/dashboard/leagues/${leagueId}/standings${seasonQuery}`,
+        href: href("standings"),
         label: "Standings",
       },
     playoffsEnabled &&
       exclude !== "playoffs" && {
-        href: `/dashboard/leagues/${leagueId}/playoffs${seasonQuery}`,
+        href: href("playoffs"),
         label: "Playoffs",
       },
     statsEnabled &&
       exclude !== "stats" && {
-        href: `/dashboard/leagues/${leagueId}/stats${seasonQuery}`,
+        href: href("stats"),
         label: "Stat leaders",
       },
   ].filter((link): link is { label: string; href: string } => Boolean(link));

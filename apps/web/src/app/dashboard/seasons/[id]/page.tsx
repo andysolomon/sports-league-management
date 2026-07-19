@@ -48,7 +48,7 @@ import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 /**
  * Season hub (WSM-000213): one home per season. Progress, standings snapshot,
  * champion when decided, and season-scoped links into schedule / standings /
- * playoffs / stats (via ?season=, WSM-000214).
+ * playoffs / stats (canonical Season-owned routes, WSM-000214 / #575).
  */
 export default async function SeasonHubPage({
   params,
@@ -201,7 +201,6 @@ export default async function SeasonHubPage({
     ? offseasonTeams.map((team) => ({ id: team.id, name: team.name }))
     : manageableTeams;
 
-  const seasonQuery = `?season=${season.id}`;
   const links = buildLeagueSeasonNavLinks({
     leagueId: league.id,
     seasonId: season.id,
@@ -232,8 +231,6 @@ export default async function SeasonHubPage({
         }
         siblings={buildSeasonSiblingLinks({
           seasonId: season.id,
-          leagueId: league.id,
-          activeSeasonId: season.id,
           scheduleEnabled,
           playoffsEnabled,
           statsEnabled,
@@ -371,7 +368,7 @@ export default async function SeasonHubPage({
             )}
             {scheduleEnabled && standings.length > 0 && (
               <Link
-                href={`/dashboard/leagues/${league.id}/standings${seasonQuery}`}
+                href={`/dashboard/seasons/${season.id}/standings`}
                 className="mt-4 inline-block text-sm text-primary hover:underline"
               >
                 Full standings &rarr;

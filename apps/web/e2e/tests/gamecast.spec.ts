@@ -48,15 +48,26 @@ function playByPlayRows(page: import("@playwright/test").Page) {
  * collapsed (rows unmounted) and a mixed week's finished games sit inside a
  * nested, collapsed "Completed" disclosure. Expand every week, then open any
  * collapsed disclosures, so rows can be found by content instead of position.
+ *
+ * Wait for the client ScheduleWeeks handlers to hydrate before clicking
+ * Expand all — otherwise the SSR button is a no-op and completed weeks stay
+ * collapsed (flake after a fresh schedule navigation).
  */
 async function revealAllScheduleRows(
   page: import("@playwright/test").Page,
 ): Promise<void> {
-  const expandAll = page.getByRole("button", { name: "Expand all" });
-  if (await expandAll.isVisible().catch(() => false)) {
-    await expandAll.click();
-  }
-  const toggles = page.getByRole("button", { name: /^Completed games — / });
+  const expandAll = page
+    .locator("#main-content")
+    .getByRole("button", { name: "Expand all" });
+  await expect(expandAll).toBeVisible({ timeout: 15_000 });
+  await expandAll.click();
+  // Completed weeks mount fixture rows only when expanded.
+  await expect(
+    page.locator("#main-content").getByTestId(/^schedule-fixture-/).first(),
+  ).toBeVisible({ timeout: 15_000 });
+  const toggles = page
+    .locator("#main-content")
+    .getByRole("button", { name: /^Completed games — / });
   const count = await toggles.count();
   for (let i = 0; i < count; i++) {
     const toggle = toggles.nth(i);
@@ -68,11 +79,14 @@ async function revealAllScheduleRows(
 
 async function openSimmedGamecastFinal(
   page: import("@playwright/test").Page,
-  leagueId: string,
+  seasonId: string,
 ): Promise<SimmedGamecastContext> {
-  await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+  await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
   await expect(
-    page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
+    page
+      .locator("#main-content")
+      .getByTestId("resource-header-season")
+      .getByText(`Schedule · ${LEAGUE_NAME}`),
   ).toBeVisible();
 
   await revealAllScheduleRows(page);
@@ -187,11 +201,14 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const leagueId = fixture!.leagueId;
+    const seasonId = fixture!.seasonId;
 
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
     await expect(
-      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
+      page
+        .locator("#main-content")
+        .getByTestId("resource-header-season")
+        .getByText(`Schedule · ${LEAGUE_NAME}`),
     ).toBeVisible();
 
     await revealAllScheduleRows(page);
@@ -284,9 +301,12 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     ).toBeVisible();
 
     // Return to the schedule to exercise the manual-record → empty-state path.
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
     await expect(
-      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
+      page
+        .locator("#main-content")
+        .getByTestId("resource-header-season")
+        .getByText(`Schedule · ${LEAGUE_NAME}`),
     ).toBeVisible();
 
     const manualRow = page
@@ -326,7 +346,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const ctx = await openSimmedGamecastFinal(page, fixture!.leagueId);
+    const ctx = await openSimmedGamecastFinal(page, fixture!.seasonId);
     await assertFinalReviewState(page, ctx);
     await expect(
       page.getByRole("button", { name: "Review", pressed: true }),
@@ -337,7 +357,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const ctx = await openSimmedGamecastFinal(page, fixture!.leagueId);
+    const ctx = await openSimmedGamecastFinal(page, fixture!.seasonId);
     await assertFinalReviewState(page, ctx);
 
     const { total } = await readPlayCounter(page);
@@ -399,7 +419,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const ctx = await openSimmedGamecastFinal(page, fixture!.leagueId);
+    const ctx = await openSimmedGamecastFinal(page, fixture!.seasonId);
     await assertFinalReviewState(page, ctx);
 
     const { total } = await readPlayCounter(page);
@@ -437,7 +457,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    await openSimmedGamecastFinal(page, fixture!.leagueId);
+    await openSimmedGamecastFinal(page, fixture!.seasonId);
 
     const { total } = await readPlayCounter(page);
     const mid = Math.max(2, Math.floor(total / 2));
@@ -480,7 +500,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    await openSimmedGamecastFinal(page, fixture!.leagueId);
+    await openSimmedGamecastFinal(page, fixture!.seasonId);
 
     await page.getByRole("button", { name: "Restart" }).click();
     await page.getByRole("button", { name: "Sim", exact: true }).click();
@@ -526,7 +546,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const ctx = await openSimmedGamecastFinal(page, fixture!.leagueId);
+    const ctx = await openSimmedGamecastFinal(page, fixture!.seasonId);
     await assertFinalReviewState(page, ctx);
 
     await page.getByTestId("gamecast-layout-field-first").click();
@@ -571,9 +591,9 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const leagueId = fixture!.leagueId;
+    const seasonId = fixture!.seasonId;
 
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
     await revealAllScheduleRows(page);
 
     const scheduledRow = page
@@ -610,22 +630,19 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const ctx = await openSimmedGamecastFinal(page, fixture!.leagueId);
+    const ctx = await openSimmedGamecastFinal(page, fixture!.seasonId);
 
-    await page.goto(`/dashboard/leagues/${fixture!.leagueId}/schedule`);
+    await page.goto(`/dashboard/seasons/${fixture!.seasonId}/schedule`);
+    await expect(
+      page.locator("#main-content").getByTestId("resource-header-season"),
+    ).toBeVisible();
     await revealAllScheduleRows(page);
 
-    const finalRow = page.getByTestId(/^schedule-fixture-/).filter({
-      has: page.getByText("Final", { exact: true }),
-    }).first();
-    await finalRow
-      .getByRole("button", {
-        name: new RegExp(
-          `View final for ${ctx.homeName} vs ${ctx.awayName}`,
-        ),
-      })
-      .first()
-      .click();
+    const viewFinal = page.getByRole("button", {
+      name: new RegExp(`View final for ${ctx.homeName} vs ${ctx.awayName}`),
+    });
+    await expect(viewFinal.first()).toBeVisible({ timeout: 15_000 });
+    await viewFinal.first().click();
 
     const drawer = page.getByTestId("game-context-drawer");
     await expect(drawer).toBeVisible();
@@ -650,7 +667,7 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
   }) => {
     if (!fixture) test.skip();
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`/dashboard/leagues/${fixture!.leagueId}/schedule`);
+    await page.goto(`/dashboard/seasons/${fixture!.seasonId}/schedule`);
     await revealAllScheduleRows(page);
 
     const pageOverflow = () =>

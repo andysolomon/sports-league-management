@@ -217,13 +217,21 @@ export default async function LeagueManagePage({
 
             <div className="flex flex-wrap gap-x-4 gap-y-2 py-4">
               <Link
-                href={`/dashboard/leagues/${id}/schedule`}
+                href={
+                  activeSeason
+                    ? `/dashboard/seasons/${activeSeason.id}/schedule`
+                    : `/dashboard/leagues/${id}/schedule`
+                }
                 className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
               >
                 Schedule &rarr;
               </Link>
               <Link
-                href={`/dashboard/leagues/${id}/standings`}
+                href={
+                  activeSeason
+                    ? `/dashboard/seasons/${activeSeason.id}/standings`
+                    : `/dashboard/leagues/${id}/standings`
+                }
                 className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
               >
                 Standings &rarr;

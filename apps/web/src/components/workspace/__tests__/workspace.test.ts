@@ -39,7 +39,7 @@ describe("WorkspaceHeader", () => {
         size: "sub-hub",
         sub: createElement("span", null, "League context"),
         nav: createElement(WorkspaceNav, {
-          links: [{ href: "/dashboard/leagues/l1/schedule", label: "Schedule" }],
+          links: [{ href: "/dashboard/seasons/s1/schedule", label: "Schedule" }],
         }),
       }),
     );
@@ -58,14 +58,14 @@ describe("WorkspaceNav", () => {
       createElement(WorkspaceNav, {
         links: [
           {
-            href: "/dashboard/leagues/l1/schedule?season=s1",
+            href: "/dashboard/seasons/s1/schedule",
             label: "Schedule",
           },
         ],
       }),
     );
     expect(html).toContain('aria-label="Workspace"');
-    expect(html).toContain('href="/dashboard/leagues/l1/schedule?season=s1"');
+    expect(html).toContain('href="/dashboard/seasons/s1/schedule"');
     expect(html).toContain("Schedule");
     expect(html).toContain("→");
   });
@@ -79,7 +79,7 @@ describe("WorkspaceNav", () => {
 });
 
 describe("buildLeagueSeasonNavLinks", () => {
-  it("appends ?season= to every peer link", () => {
+  it("emits canonical Season-owned peer links when a season is in context", () => {
     const links = buildLeagueSeasonNavLinks({
       leagueId: "league-1",
       seasonId: "season-9",
@@ -90,15 +90,15 @@ describe("buildLeagueSeasonNavLinks", () => {
     });
     expect(links).toEqual([
       {
-        href: "/dashboard/leagues/league-1/standings?season=season-9",
+        href: "/dashboard/seasons/season-9/standings",
         label: "Standings",
       },
       {
-        href: "/dashboard/leagues/league-1/playoffs?season=season-9",
+        href: "/dashboard/seasons/season-9/playoffs",
         label: "Playoffs",
       },
       {
-        href: "/dashboard/leagues/league-1/stats?season=season-9",
+        href: "/dashboard/seasons/season-9/stats",
         label: "Stat leaders",
       },
     ]);
@@ -115,13 +115,13 @@ describe("buildLeagueSeasonNavLinks", () => {
     });
     expect(links).toEqual([
       {
-        href: "/dashboard/leagues/league-1/schedule?season=season-9",
+        href: "/dashboard/seasons/season-9/schedule",
         label: "Schedule",
       },
     ]);
   });
 
-  it("omits ?season= when seasonId is null", () => {
+  it("falls back to legacy League-owned paths when seasonId is null", () => {
     const links = buildLeagueSeasonNavLinks({
       leagueId: "league-1",
       seasonId: null,

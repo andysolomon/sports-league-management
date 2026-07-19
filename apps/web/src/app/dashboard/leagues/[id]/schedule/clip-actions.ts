@@ -84,6 +84,7 @@ export async function createClip(
       endTime: endSec,
       createdBy: guard.userId,
     });
+    revalidatePath(`/dashboard/seasons/${guard.seasonId}/schedule`);
     revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
     revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
     return { ok: true };
@@ -113,6 +114,7 @@ export async function deleteClip(
     // converges instead of erroring.
     await deleteMuxAsset(clip.muxAssetId);
     await removeGameClip(clipId, fixtureId);
+    revalidatePath(`/dashboard/seasons/${guard.seasonId}/schedule`);
     revalidatePath(`/dashboard/leagues/${leagueId}/schedule`);
     revalidatePath(`/leagues/${leagueId}/games/${fixtureId}`);
     return { ok: true };

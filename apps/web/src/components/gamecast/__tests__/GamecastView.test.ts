@@ -197,6 +197,7 @@ describe("GamecastView", () => {
     const html = renderToStaticMarkup(
       createElement(GamecastEmptyState, {
         leagueId: "league-1",
+        seasonId: "season-1",
         reason: "no_log",
       }),
     );

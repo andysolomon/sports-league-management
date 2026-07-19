@@ -1,0 +1,12 @@
+issue-575-progress
+
+[x] Finish navigation helper canonicalization
+[x] Move/re-export season actions (kept actions in place, updated revalidatePath to canonical season URLs)
+[x] Create season-owned competition pages (schedule, standings, playoffs, stats)
+[x] Convert legacy league competition pages to redirects
+[x] Update first-party link emitters (league home, teams home, season actions, manage, game pages, gamecast empty state)
+[x] Update remaining emitters without season context (team-detail-sheet intentionally keeps /dashboard/leagues/[id]/(schedule|standings) — no active-season context at the teams layer; relies on the preserved permanent redirect. GamecastEmptyState already done)
+[x] Update E2E tests for canonical URLs / redirects (navigation.spec: seasonId -> seasonIds[0]; schedules-standings.spec: accordion subtitle now E2E:schedule-accordion, out-of-scope `canonical` replaced by in-scope seasonIds destructure)
+[x] Type-check / lint / unit tests
+[x] Focused Playwright verification (17/17 passed: navigation.spec.ts + schedules-standings.spec.ts)
+[x] Final diff review

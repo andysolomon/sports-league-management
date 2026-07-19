@@ -17,3 +17,6 @@ e2e/.auth/
 
 # Prod screenshot sweep artifacts (WSM-000188)
 prod-screenshots/
+
+# clerk configuration (can include secrets)
+/.clerk/

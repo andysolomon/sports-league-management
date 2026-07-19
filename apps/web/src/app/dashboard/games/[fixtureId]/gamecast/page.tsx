@@ -75,9 +75,9 @@ export default async function GamecastPage({
 
   let body: ReactNode;
   if (!row) {
-    body = <GamecastEmptyState leagueId={leagueId} reason="no_log" />;
+    body = <GamecastEmptyState leagueId={leagueId} seasonId={fixture.seasonId} reason="no_log" />;
   } else if (!log) {
-    body = <GamecastEmptyState leagueId={leagueId} reason="parse_error" />;
+    body = <GamecastEmptyState leagueId={leagueId} seasonId={fixture.seasonId} reason="parse_error" />;
   } else {
     const [homeTeam, awayTeam, homePlayers, awayPlayers] = await Promise.all([
       getTeam(fixture.homeTeamId, orgContext).catch(() => null),
@@ -111,7 +111,7 @@ export default async function GamecastPage({
   return (
     <div className="mx-auto max-w-6xl">
       <Link
-        href={`/dashboard/leagues/${leagueId}/schedule`}
+        href={`/dashboard/seasons/${fixture.seasonId}/schedule`}
         className="mb-4 inline-block text-sm text-primary hover:underline"
       >
         &larr; Back to Schedule

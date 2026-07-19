@@ -79,13 +79,14 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     if (!fixture) test.skip();
     const leagueId = fixture!.leagueId;
 
-    // 1. Open the schedule page — headed by the league name, with the
-    // "Schedule · {season}" subtitle confirming the active season resolved.
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
+    // 1. Open the schedule page — Season-owned route headed by the season
+    // name, with the "Schedule · {league}" subtitle confirming the league
+    // resolved from the season.
+    await page.goto(`/dashboard/seasons/${fixture!.seasonId}/schedule`);
     await expect(
-      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
+      page.getByTestId("resource-header-season").getByText("E2E Season"),
     ).toBeVisible();
-    await expect(page.getByTestId("resource-header-league").getByText("Schedule · E2E Season")).toBeVisible();
+    await expect(page.getByTestId("resource-header-season").getByText(`Schedule · ${LEAGUE_NAME}`)).toBeVisible();
 
     // 2. Create a fixture.
     await page.getByRole("button", { name: "New fixture" }).click();
@@ -123,9 +124,9 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
 
     // 4. Standings page reflects the result ("Season standings" is a
     // CardTitle div, so it's asserted as text, not a heading).
-    await page.goto(`/dashboard/leagues/${leagueId}/standings`);
+    await page.goto(`/dashboard/seasons/${fixture!.seasonId}/standings`);
     await expect(
-      page.getByTestId("resource-header-league").getByText(LEAGUE_NAME),
+      page.getByTestId("resource-header-season").getByText("E2E Season"),
     ).toBeVisible();
     await expect(page.getByText("Season standings")).toBeVisible();
     // Hawks row: 1 W, 21 PF, 10 PA, +11 differential.
@@ -198,6 +199,7 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
  *   Week 2 → scheduled only (upcoming, starts open).
  */
 const ACCORDION_KEY = "schedule-accordion";
+const ACC_LEAGUE_NAME = `E2E:${ACCORDION_KEY}`;
 const ACC_HOME = "E2E Acc Home";
 const ACC_AWAY = "E2E Acc Away";
 
@@ -268,9 +270,9 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     page,
   }) => {
     if (!fixture) test.skip();
-    const leagueId = fixture!.leagueId;
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
-    await expect(page.getByTestId("resource-header-league").getByText("Schedule · E2E Season")).toBeVisible();
+    const seasonId = fixture!.seasonId;
+    await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
+    await expect(page.getByTestId("resource-header-season").getByText(`Schedule · ${ACC_LEAGUE_NAME}`)).toBeVisible();
 
     // Seed: Week 1 final game, Week 2 future game.
     await createFixture(page, 1, ACC_HOME, ACC_AWAY);
@@ -354,8 +356,9 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     await completeSeason(page, fixture!.seasonId, {
       forceWithoutChampion: true,
     });
-    await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
-    await expect(page.getByTestId("resource-header-league").getByText("Schedule · E2E Season")).toBeVisible();
+    await page.goto(`/dashboard/seasons/${fixture!.seasonId}/schedule`);
+    await expect(page.getByTestId("resource-header-season").getByText("E2E Season")).toBeVisible();
+    await expect(page.getByTestId("resource-header-season").getByText(`Schedule · ${ACC_LEAGUE_NAME}`)).toBeVisible();
 
     await expect(
       page.getByRole("button", { name: "New fixture" }),
@@ -385,7 +388,7 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     // Read paths remain: every week is completed (collapsed) — expand and
     // confirm the recorded scores are still there.
     await page.goto(
-      `/dashboard/leagues/${leagueId}/schedule?season=${fixture!.seasonId}`,
+      `/dashboard/seasons/${fixture!.seasonId}/schedule`,
     );
     await page.getByRole("button", { name: "Expand all" }).click();
     await expect(page.getByText("21 – 7")).toBeVisible();
@@ -411,7 +414,7 @@ test.describe("Standings — division groups (canonical)", () => {
   test("division headers render and team names link to team pages", async ({
     page,
   }) => {
-    const { leagueId } = readCanonicalFixture();
+    const { leagueId, seasonIds } = readCanonicalFixture();
 
     await page.goto(`/dashboard/leagues/${leagueId}/schedule`);
     await page.getByRole("button", { name: "New fixture" }).click();
@@ -441,8 +444,8 @@ test.describe("Standings — division groups (canonical)", () => {
     await resultDialog.getByRole("button", { name: "Save result" }).click();
     await expect(resultDialog).toBeHidden();
 
-    await page.goto(`/dashboard/leagues/${leagueId}/standings`);
-    await expect(page.getByText("League Division", { exact: true })).toBeVisible();
+    await page.goto(`/dashboard/seasons/${seasonIds[0]}/standings`);
+    await expect(page.getByText("League Division", { exact: true }).first()).toBeVisible();
     const cowboysLink = page.getByRole("link", {
       name: TEAMS.COWBOYS.name,
       exact: true,

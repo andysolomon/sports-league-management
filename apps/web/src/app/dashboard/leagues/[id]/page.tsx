@@ -168,7 +168,6 @@ export default async function LeagueInfoPage({
     ]),
   );
 
-  const seasonQuery = activeSeason ? `?season=${activeSeason.id}` : "";
   const seasonNavLinks = buildLeagueSeasonNavLinks({
     leagueId: id,
     seasonId: activeSeason?.id ?? null,
@@ -178,7 +177,7 @@ export default async function LeagueInfoPage({
   });
   const fullStandingsHref =
     scheduleEnabled && activeSeason
-      ? `/dashboard/leagues/${id}/standings${seasonQuery}`
+      ? `/dashboard/seasons/${activeSeason.id}/standings`
       : null;
 
   return (

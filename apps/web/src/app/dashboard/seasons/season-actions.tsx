@@ -334,7 +334,7 @@ export function CreateSeasonButton({ leagueId }: { leagueId: string }) {
               </Button>
               <Button asChild data-testid="create-season-generate-schedule">
                 <Link
-                  href={`/dashboard/leagues/${leagueId}/schedule${createdId ? `?seasonId=${createdId}` : ""}`}
+                  href={createdId ? `/dashboard/seasons/${createdId}/schedule` : `/dashboard/leagues/${leagueId}/schedule`}
                 >
                   Generate schedule
                 </Link>

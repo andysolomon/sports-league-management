@@ -6,15 +6,16 @@ import GamecastEmptyState, {
 } from "@/components/gamecast/GamecastEmptyState";
 
 describe("GamecastEmptyState", () => {
-  it("renders the no-log message and schedule link", () => {
+  it("renders the no-log message and canonical season schedule link", () => {
     const html = renderToStaticMarkup(
       createElement(GamecastEmptyState, {
         leagueId: "league-1",
+        seasonId: "season-1",
         reason: "no_log",
       }),
     );
     expect(html).toContain(gamecastEmptyMessage("no_log"));
-    expect(html).toContain("/dashboard/leagues/league-1/schedule");
+    expect(html).toContain("/dashboard/seasons/season-1/schedule");
     expect(html).toContain("Back to schedule");
   });
 
@@ -22,6 +23,7 @@ describe("GamecastEmptyState", () => {
     const html = renderToStaticMarkup(
       createElement(GamecastEmptyState, {
         leagueId: "league-2",
+        seasonId: "season-2",
         reason: "parse_error",
       }),
     );

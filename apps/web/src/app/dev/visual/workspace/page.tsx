@@ -83,15 +83,15 @@ export default function WorkspaceVisualHarness() {
             },
             {
               label: "Schedule",
-              href: `/dashboard/leagues/${LEAGUE.id}/schedule?season=${SEASON.id}`,
+              href: `/dashboard/seasons/${SEASON.id}/schedule`,
             },
             {
               label: "Standings",
-              href: `/dashboard/leagues/${LEAGUE.id}/standings?season=${SEASON.id}`,
+              href: `/dashboard/seasons/${SEASON.id}/standings`,
             },
             {
               label: "Playoffs",
-              href: `/dashboard/leagues/${LEAGUE.id}/playoffs?season=${SEASON.id}`,
+              href: `/dashboard/seasons/${SEASON.id}/playoffs`,
             },
           ]}
         />
