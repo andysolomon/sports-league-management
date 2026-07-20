@@ -6,8 +6,7 @@ import {
   UserCircle,
   Calendar,
   Trophy,
-  Upload,
-  CreditCard,
+  Settings,
   PlusCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -20,8 +19,7 @@ const SHELL_ICONS: Record<string, LucideIcon> = {
   teams: Users,
   players: UserCircle,
   seasons: Calendar,
-  import: Upload,
-  billing: CreditCard,
+  settings: Settings,
 };
 
 interface SidebarProps {

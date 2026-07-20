@@ -30,7 +30,7 @@ export async function setLeaguePublicAction(
 
   await setLeaguePublicMutation(leagueId, isPublic);
   revalidatePath(`/dashboard/leagues/${leagueId}`);
-  revalidatePath(`/dashboard/leagues/${leagueId}/manage`);
+  revalidatePath("/dashboard/settings/league");
   return { ok: true };
 }
 
@@ -57,6 +57,6 @@ export async function setLeagueClaimableAction(
 
   await setLeagueClaimableMutation(leagueId, claimable);
   revalidatePath(`/dashboard/leagues/${leagueId}`);
-  revalidatePath(`/dashboard/leagues/${leagueId}/manage`);
+  revalidatePath("/dashboard/settings/league");
   return { ok: true };
 }

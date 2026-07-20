@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  accountBillingHref,
+  accountImportHref,
+  accountSettingsHref,
   activeSeasonShortcutHref,
   buildPlayerSiblingLinks,
   buildSeasonSiblingLinks,
@@ -9,11 +12,13 @@ import {
   leagueActivationHref,
   leagueDirectoryHref,
   leagueHomeHref,
+  leagueSettingsHref,
   leagueSubpageHref,
   playerHomeHref,
   playerSubpageHref,
   seasonHomeHref,
   seasonSubpageHref,
+  settingsHomeHref,
   teamHomeHref,
   teamSubpageHref,
 } from "../resource-navigation";
@@ -40,6 +45,14 @@ describe("resource-navigation helpers", () => {
 
   it("returns the League Directory href", () => {
     expect(leagueDirectoryHref()).toBe("/dashboard/leagues");
+  });
+
+  it("returns Settings tree hrefs — the redirect targets for legacy import/billing/manage (issue #576)", () => {
+    expect(settingsHomeHref()).toBe("/dashboard/settings");
+    expect(leagueSettingsHref()).toBe("/dashboard/settings/league");
+    expect(accountSettingsHref()).toBe("/dashboard/settings/account");
+    expect(accountImportHref()).toBe("/dashboard/settings/account/import");
+    expect(accountBillingHref()).toBe("/dashboard/settings/account/billing");
   });
 
   it("resolves dashboard entry paths", () => {

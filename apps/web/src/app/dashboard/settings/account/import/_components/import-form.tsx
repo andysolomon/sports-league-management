@@ -227,7 +227,7 @@ export function ImportForm() {
             player data. Existing records are matched by name and updated. See
             the{" "}
             <a
-              href="/dashboard/import/format"
+              href="/dashboard/settings/account/import/format"
               className="font-medium text-primary hover:underline"
             >
               import format guide

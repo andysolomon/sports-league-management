@@ -1,16 +1,22 @@
 import { test, expect } from "@playwright/test";
 import { setupClerkTestingToken } from "@clerk/testing/playwright";
 
-/** Shell destinations shared by desktop aside + mobile sheet (ASR-13 / #577). */
+/** Shell destinations shared by desktop aside + mobile sheet (ASR-4 / #576). */
 const NAV_LABELS = [
   "Overview",
   "Teams",
   "Players",
   "Seasons",
+  "Settings",
+];
+// Import/Billing moved under Settings → Account in #576.
+const OBSOLETE_TOP_LEVEL = [
+  "Divisions",
+  "Discover",
+  "Leagues",
   "Import",
   "Billing",
 ];
-const OBSOLETE_TOP_LEVEL = ["Divisions", "Discover", "Leagues"];
 
 test.describe("Mobile Responsive Navigation", () => {
   test.beforeEach(async ({ page }) => {

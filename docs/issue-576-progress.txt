@@ -1,0 +1,20 @@
+issue-576 - Settings League + Account homes - Progress
+Generated: 2026-07-20
+On completion, move this file and the plan to docs/archive/.
+
+[x] 1.0 - Phase 1 - Settings route tree + redirects
+    [x] 1.1 - Settings Home hub
+    [x] 1.2 - Account Settings + Import/Billing under account
+    [x] 1.3 - League Settings from Active League + manage redirect
+    [x] 1.4 - Redirect /dashboard/import and /dashboard/billing
+[x] 2.0 - Phase 2 - Shell, League Home, first-party links
+    [x] 2.1 - shell-nav: Settings replaces Import/Billing
+    [x] 2.2 - League Home Manage → League Settings
+    [x] 2.3 - Update unit/mobile nav expectations
+[x] 3.0 - Phase 3 - Tests + type-check
+    [x] 3.1 - Unit: shell + settings auth/redirects (vitest 182 files / 1270 tests green)
+    [x] 3.2 - Playwright: league-info, mobile-import, settings-home smoke updated/added
+    [x] 3.3 - type-check + focused e2e green (21/21: mobile-navigation, league-info, mobile-import, settings-home)
+[ ] 4.0 - Ship & archive
+    [ ] 4.1 - Open PR with Closes #576
+    [ ] 4.2 - On merge: move docs/issue-576-* to docs/archive/

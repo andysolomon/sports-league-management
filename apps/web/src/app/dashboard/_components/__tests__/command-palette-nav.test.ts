@@ -10,12 +10,21 @@ describe("shell + command palette nav contracts (issue #577)", () => {
       "Teams",
       "Players",
       "Seasons",
-      "Import",
-      "Billing",
+      "Settings",
     ]);
     expect(items.find((i) => i.id === "overview")?.href).toBe(
       "/dashboard/leagues/league-1",
     );
+    expect(items.find((i) => i.id === "settings")?.href).toBe(
+      "/dashboard/settings",
+    );
+    // ASR-22: Settings hosts Account Settings, so it must survive the
+    // zero-league filter that hides league-scoped destinations.
+    expect(items.find((i) => i.id === "settings")?.hideWithoutLeague).toBe(
+      undefined,
+    );
+    expect(items.some((i) => i.href === "/dashboard/import")).toBe(false);
+    expect(items.some((i) => i.href === "/dashboard/billing")).toBe(false);
     expect(items.some((i) => i.href === "/dashboard/divisions")).toBe(false);
     expect(items.some((i) => i.href === "/dashboard/discover")).toBe(false);
   });
@@ -26,9 +35,10 @@ describe("shell + command palette nav contracts (issue #577)", () => {
 
     expect(labels).toContain("League Directory");
     expect(labels).toContain("Overview");
-    expect(labels).toContain("Import");
-    expect(labels).toContain("Billing");
+    expect(labels).toContain("Settings");
 
+    expect(labels).not.toContain("Import");
+    expect(labels).not.toContain("Billing");
     expect(labels).not.toContain("Divisions");
     expect(labels).not.toContain("Discover");
     expect(labels).not.toContain("Roles & permissions");
