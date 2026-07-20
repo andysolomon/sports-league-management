@@ -13,6 +13,6 @@ On completion, move this file and the plan to docs/archive/.
 [x] 3.0 - Phase 3 - Tests + type-check
     [x] 3.1 - Unit tests for palette destination contracts
     [x] 3.2 - type-check + focused Playwright green (mobile-navigation 12/12)
-[ ] 4.0 - Ship & archive
-    [ ] 4.1 - Open PR with Closes #577
-    [ ] 4.2 - On merge: move docs/issue-577-IMPLEMENTATION_PLAN.md + docs/issue-577-progress.txt to docs/archive/
+[x] 4.0 - Ship & archive
+    [x] 4.1 - Open PR with Closes #577 (merged as #585)
+    [x] 4.2 - Archived docs/issue-577-* to docs/archive/
