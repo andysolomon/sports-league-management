@@ -74,7 +74,7 @@ export default async function DashboardLayout({
           </div>
         </header>
 
-        <CommandPalette leagues={leagues} />
+        <CommandPalette leagues={leagues} activeLeagueId={activeLeagueId} />
 
         <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8">
           <MigrateLocalPrompt />
