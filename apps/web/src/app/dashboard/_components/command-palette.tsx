@@ -8,8 +8,7 @@ import {
   Users,
   UserCircle,
   Calendar,
-  Upload,
-  CreditCard,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -36,8 +35,7 @@ const PALETTE_ICONS: Record<string, LucideIcon> = {
   teams: Users,
   players: UserCircle,
   seasons: Calendar,
-  import: Upload,
-  billing: CreditCard,
+  settings: Settings,
 };
 
 interface LeagueOption {

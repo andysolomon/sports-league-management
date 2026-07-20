@@ -45,7 +45,9 @@ test.describe("Mobile — import flow touch targets (WSM-000085)", () => {
   test.beforeEach(async ({ page }) => {
     await setupClerkTestingToken({ page });
     await signInTestUser(page);
-    await page.goto("/dashboard/import");
+    // Canonical Import URL under Account Settings (#576); the legacy
+    // /dashboard/import path permanently redirects here.
+    await page.goto("/dashboard/settings/account/import");
     await page.waitForLoadState("networkidle");
   });
 

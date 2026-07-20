@@ -41,7 +41,7 @@ export async function sendReceiptEmail(params: ReceiptEmailParams) {
 
       <p style="color: #71717a; font-size: 14px;">
         Manage your subscription anytime from your
-        <a href="https://sprtsmng.andrewsolomon.dev/dashboard/billing" style="color: #2563eb;">billing dashboard</a>.
+        <a href="https://sprtsmng.andrewsolomon.dev/dashboard/settings/account/billing" style="color: #2563eb;">billing dashboard</a>.
       </p>
     </div>
   `;
@@ -74,7 +74,7 @@ export async function sendPaymentFailedEmail(params: PaymentFailedEmailParams) {
         Please update your payment method to keep your subscription active.
       </p>
 
-      <a href="https://sprtsmng.andrewsolomon.dev/dashboard/billing"
+      <a href="https://sprtsmng.andrewsolomon.dev/dashboard/settings/account/billing"
          style="display: inline-block; background: #18181b; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none;">
         Update payment method
       </a>

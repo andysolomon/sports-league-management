@@ -1,11 +1,13 @@
 import {
   dashboardEntryPath,
   leagueDirectoryHref,
+  settingsHomeHref,
 } from "@/components/workspace/resource-navigation";
 
 /**
  * Canonical shell destinations shared by the desktop/mobile sidebar and the
- * ⌘K command palette (ASR-4, ASR-13, ASR-23). Import/Billing remain until #576.
+ * ⌘K command palette (ASR-4, ASR-13, ASR-23): Overview / Teams / Players /
+ * Seasons / Settings. Import and Billing moved under Settings → Account (#576).
  */
 export interface ShellNavDestination {
   id: string;
@@ -44,8 +46,9 @@ export function buildShellNavItems(
       href: "/dashboard/seasons",
       hideWithoutLeague: true,
     },
-    { id: "import", label: "Import", href: "/dashboard/import" },
-    { id: "billing", label: "Billing", href: "/dashboard/billing" },
+    // No hideWithoutLeague: Account Settings must stay reachable for
+    // operators with zero leagues (ASR-22).
+    { id: "settings", label: "Settings", href: settingsHomeHref() },
   ];
 }
 

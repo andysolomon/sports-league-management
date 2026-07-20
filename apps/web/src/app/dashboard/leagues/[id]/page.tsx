@@ -34,6 +34,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import {
   leagueHomeHref,
+  leagueSettingsHref,
   seasonHomeHref,
 } from "@/components/workspace/resource-navigation";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
@@ -46,7 +47,8 @@ import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 /**
  * League info destination (WSM-000254): read-oriented league home with
  * current-season context, standings snapshot, teams grid, and lifecycle banners.
- * Admin settings live at `/manage`.
+ * Admin settings live at League Settings (`/dashboard/settings/league`); this
+ * page has already synced the Active League, so Manage targets this league.
  */
 export default async function LeagueInfoPage({
   params,
@@ -215,7 +217,7 @@ export default async function LeagueInfoPage({
             ) : null}
             {isAdmin && league.orgId ? (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/dashboard/leagues/${id}/manage`}>
+                <Link href={leagueSettingsHref()}>
                   <Settings2 className="h-4 w-4" aria-hidden />
                   Manage
                 </Link>

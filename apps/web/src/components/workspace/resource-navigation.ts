@@ -58,6 +58,35 @@ export function activeSeasonShortcutHref(
   return `/dashboard/active-league?${params.toString()}`;
 }
 
+/**
+ * Settings Home (issue #576, ASR-8). Branches to League Settings (Org Admin
+ * of the Active League) and Account Settings; always available, even with no
+ * leagues (ASR-22), so it must never be hidden behind `hideWithoutLeague`.
+ */
+export function settingsHomeHref(): string {
+  return "/dashboard/settings";
+}
+
+/** League Settings for the Active League (Org Admin only — ASR-11). */
+export function leagueSettingsHref(): string {
+  return "/dashboard/settings/league";
+}
+
+/** Account Settings hub; owns Import and Billing (ASR-8). */
+export function accountSettingsHref(): string {
+  return "/dashboard/settings/account";
+}
+
+/** Cross-league Import under Account Settings (payload owns league identity). */
+export function accountImportHref(): string {
+  return "/dashboard/settings/account/import";
+}
+
+/** User-scoped Billing under Account Settings. */
+export function accountBillingHref(): string {
+  return "/dashboard/settings/account/billing";
+}
+
 export function teamHomeHref(teamId: string): string {
   return `/dashboard/teams/${teamId}`;
 }

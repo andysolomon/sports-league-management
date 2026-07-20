@@ -37,8 +37,11 @@ describe("active league navigation contracts", () => {
 
     expect(html).toContain("League Directory");
     expect(html).toContain('href="/dashboard/leagues"');
-    expect(html).toContain('href="/dashboard/import"');
-    expect(html).toContain('href="/dashboard/billing"');
+    // ASR-22: Account Settings must stay reachable with zero leagues, so
+    // Settings is never hidden; Import/Billing moved under it (#576).
+    expect(html).toContain('href="/dashboard/settings"');
+    expect(html).not.toContain('href="/dashboard/import"');
+    expect(html).not.toContain('href="/dashboard/billing"');
     expect(html).not.toContain('href="/dashboard"');
     expect(html).not.toContain('href="/dashboard/discover"');
     expect(html).not.toContain("Discover");
@@ -57,6 +60,9 @@ describe("active league navigation contracts", () => {
 
     expect(html).toContain('href="/dashboard/leagues/league-1"');
     expect(html).toContain("Overview");
+    expect(html).toContain('href="/dashboard/settings"');
+    expect(html).not.toContain('href="/dashboard/import"');
+    expect(html).not.toContain('href="/dashboard/billing"');
     expect(html).not.toContain("Discover");
     expect(html).not.toContain('href="/dashboard/discover"');
     expect(html).not.toContain('>Leagues<');

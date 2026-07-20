@@ -30,13 +30,13 @@ export async function GET(request: NextRequest) {
 
   const priceId = resolvePriceId(plan, interval);
   if (!priceId) {
-    return NextResponse.redirect(`${appUrl}/dashboard/billing`);
+    return NextResponse.redirect(`${appUrl}/dashboard/settings/account/billing`);
   }
 
   try {
     const url = await createSubscriptionCheckoutUrl(userId, priceId);
     return NextResponse.redirect(url);
   } catch {
-    return NextResponse.redirect(`${appUrl}/dashboard/billing?error=checkout`);
+    return NextResponse.redirect(`${appUrl}/dashboard/settings/account/billing?error=checkout`);
   }
 }

@@ -60,8 +60,10 @@ test.describe("League info destination (WSM-000254)", () => {
     ).toHaveCount(0);
     await expect(page.getByPlaceholder("user@example.com")).toHaveCount(0);
 
+    // #576: Manage lands on League Settings for the Active League (the info
+    // page already synced it to this league).
     await page.getByRole("link", { name: "Manage", exact: true }).click();
-    await expect(page).toHaveURL(`/dashboard/leagues/${leagueId}/manage`);
+    await expect(page).toHaveURL("/dashboard/settings/league");
     await expect(page.getByTestId("league-manage-settings")).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Make public|Make private/ }).first(),
@@ -80,6 +82,9 @@ test.describe("League manage access (WSM-000254)", () => {
     await signInTestUser(page, { userVariant: "B" });
 
     const { leagueId } = readCanonicalFixture();
+    // #576: the legacy manage URL is now an access-validated redirect to
+    // /dashboard/settings/league — probing it must still 404 without
+    // disclosing the league.
     await page.goto(`/dashboard/leagues/${leagueId}/manage`);
 
     await expect(page.getByRole("heading", { name: /^404$/ })).toBeVisible();

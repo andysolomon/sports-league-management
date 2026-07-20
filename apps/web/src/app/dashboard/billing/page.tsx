@@ -1,116 +1,23 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { getUserTier, getStripeCustomerId } from "@/lib/authorization";
-import { TIER_CONFIGS } from "@/lib/tiers";
-import { getTeams } from "@/lib/data-api";
-import { resolveOrgContext } from "@/lib/org-context";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { BillingActions } from "./_components/billing-actions";
+import { permanentRedirect } from "next/navigation";
+import { accountBillingHref } from "@/components/workspace/resource-navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function BillingPage({
+/**
+ * Legacy Billing URL. The Billing UI moved under Account Settings (issue
+ * #576, ASR-8). Stripe Checkout / portal return URLs historically pointed
+ * here, so the redirect must preserve every query param (`success`,
+ * `cancelled`, `session_id`, `error`).
+ */
+export default async function LegacyBillingRedirect({
   searchParams,
 }: {
-  searchParams: Promise<{ success?: string; cancelled?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { userId } = await auth();
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
   const params = await searchParams;
-  const tier = await getUserTier();
-  const stripeCustomerId = await getStripeCustomerId();
-  const config = TIER_CONFIGS[tier];
-
-  // Fetch usage stats from Convex
-  let teamCount = 0;
-  try {
-    const orgContext = await resolveOrgContext(userId);
-    const teams = await getTeams(orgContext.visibleLeagueIds);
-    teamCount = teams.length;
-  } catch {
-    // Data fetch errors should not break the billing page
-    teamCount = 0;
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") query.set(key, value);
+    else if (Array.isArray(value)) value.forEach((v) => query.append(key, v));
   }
-
-  const teamLimit = config.limits.maxTeams;
-  const teamLimitDisplay = teamLimit === -1 ? "unlimited" : teamLimit.toString();
-
-  return (
-    <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
-        <p className="text-sm text-muted-foreground">Manage your subscription and usage</p>
-      </div>
-
-      {params.success && (
-        <Card className="border-accent/30 bg-accent/10">
-          <CardContent className="py-4">
-            <p className="text-sm text-accent">
-              ✓ Subscription activated. Welcome to {config.name}!
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {params.cancelled && (
-        <Card className="border-amber-500/30 bg-amber-500/10">
-          <CardContent className="py-4">
-            <p className="text-sm text-amber-300">
-              Checkout cancelled. You can upgrade anytime below.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Current plan card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                Current Plan
-                <Badge variant={tier === "free" ? "secondary" : "default"}>
-                  {config.name}
-                </Badge>
-              </CardTitle>
-              <CardDescription>{config.description}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Teams</p>
-              <p className="text-2xl font-semibold">
-                {teamCount}
-                <span className="text-sm font-normal text-muted-foreground"> / {teamLimitDisplay}</span>
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Players</p>
-              <p className="text-2xl font-semibold">
-                <span className="text-sm font-normal text-muted-foreground">unlimited</span>
-              </p>
-            </div>
-          </div>
-
-          {stripeCustomerId && tier !== "free" && (
-            <div className="pt-4">
-              <BillingActions hasSubscription={true} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Pricing table for upgrades */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold">Choose a plan</h2>
-        <BillingActions currentTier={tier} hasSubscription={false} showPricingTable />
-      </div>
-    </div>
-  );
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  permanentRedirect(`${accountBillingHref()}${suffix}`);
 }
