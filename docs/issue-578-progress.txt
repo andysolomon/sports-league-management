@@ -1,0 +1,24 @@
+issue-578 - Verify navigation architecture - Progress
+Generated: 2026-07-20
+On completion, move this file and the plan + matrix to docs/archive/.
+
+[x] 1.0 - Inventory navigation surface + tests at HEAD
+[x] 2.0 - Build docs/issue-578-verification-matrix.md
+[x] 3.0 - Run focused vitest + tsc at HEAD
+        vitest: pnpm --filter @sports-management/web exec vitest run
+                 182 test files / 1270 tests passed (6.31s)
+        type-check: pnpm --filter @sports-management/web exec tsc --noEmit
+                     exit 0, no diagnostics
+[x] 4.0 - Fetch CI + E2E conclusions on main
+        last E2E run (workflow=E2E, branch=main) databaseId=28414432534 head=40f309bd
+          Playwright (apps/web)              success
+          Visual regression (non-blocking)  failure  (non-blocking, excluded from Pass)
+        last CI run (workflow=CI, branch=main) databaseId=29781865053 head=1bf0616
+          Lint, Type-check, Test & Build    success
+          Commitlint                        skipped  (chore commit)
+[x] 5.0 - Partial rows -> follow-up issues under epic #569
+        ASR-9  e2e Active Season shortcut from League Home
+        ASR-12 e2e cross-league Back/history boundary
+        ASR-14 e2e no-league Directory shortcut visibility
+        ASR-16 e2e view-change Back semantics
+[ ] 6.0 - Ship docs-only PR + close #578 when green
