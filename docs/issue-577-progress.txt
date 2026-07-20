@@ -1,0 +1,18 @@
+issue-577 - Mobile nav + command palette - Progress
+Generated: 2026-07-19 20:00:39 EDT
+Updated: 2026-07-19
+On completion, move this file and the plan to docs/archive/.
+
+[x] 1.0 - Phase 1 - Shared destination helpers + palette rewrite
+    [x] 1.1 - Thread activeLeagueId into CommandPalette from layout
+    [x] 1.2 - Canonicalize Navigate destinations (drop Divisions/Discover/Roles/Leagues; keep League Directory + Import/Billing)
+    [x] 1.3 - League picks use leagueActivationHref
+[x] 2.0 - Phase 2 - Viewport parity verification (mobile)
+    [x] 2.1 - Audit mobile chrome (no breadcrumb substitute; Sidebar shared via Sheet + onNavigate close)
+    [x] 2.2 - Extend mobile-navigation.spec.ts for destination parity + drawer close
+[x] 3.0 - Phase 3 - Tests + type-check
+    [x] 3.1 - Unit tests for palette destination contracts
+    [x] 3.2 - type-check + focused Playwright green (mobile-navigation 12/12)
+[ ] 4.0 - Ship & archive
+    [ ] 4.1 - Open PR with Closes #577
+    [ ] 4.2 - On merge: move docs/issue-577-IMPLEMENTATION_PLAN.md + docs/issue-577-progress.txt to docs/archive/

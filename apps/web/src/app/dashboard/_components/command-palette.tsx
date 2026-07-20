@@ -1,18 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Trophy,
-  Compass,
   Users,
   UserCircle,
   Calendar,
-  Layers,
   Upload,
   CreditCard,
-  Shield,
+  type LucideIcon,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -22,6 +20,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { leagueActivationHref } from "@/components/workspace/resource-navigation";
+import { buildPaletteNavItems } from "./shell-nav";
 
 /** Window event that any trigger button dispatches to open the single palette. */
 export const COMMAND_PALETTE_EVENT = "command-palette:open";
@@ -30,18 +30,15 @@ export function openCommandPalette() {
   window.dispatchEvent(new Event(COMMAND_PALETTE_EVENT));
 }
 
-const NAV = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/leagues", label: "Leagues", icon: Trophy },
-  { href: "/dashboard/discover", label: "Discover", icon: Compass },
-  { href: "/dashboard/teams", label: "Teams", icon: Users },
-  { href: "/dashboard/players", label: "Players", icon: UserCircle },
-  { href: "/dashboard/seasons", label: "Seasons", icon: Calendar },
-  { href: "/dashboard/divisions", label: "Divisions", icon: Layers },
-  { href: "/dashboard/import", label: "Import", icon: Upload },
-  { href: "/dashboard/roles", label: "Roles & permissions", icon: Shield },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-];
+const PALETTE_ICONS: Record<string, LucideIcon> = {
+  overview: LayoutDashboard,
+  "league-directory": Trophy,
+  teams: Users,
+  players: UserCircle,
+  seasons: Calendar,
+  import: Upload,
+  billing: CreditCard,
+};
 
 interface LeagueOption {
   id: string;
@@ -49,14 +46,24 @@ interface LeagueOption {
 }
 
 /**
- * Global ⌘K command palette (WSM-000136 P2). Mounted ONCE in the dashboard
- * layout; opens on ⌘K / Ctrl+K or a `command-palette:open` window event (so
- * header buttons can trigger the same instance). Jumps to nav destinations and
- * the user's leagues.
+ * Global ⌘K command palette (WSM-000136 P2 / issue #577). Mounted ONCE in the
+ * dashboard layout; opens on ⌘K / Ctrl+K or a `command-palette:open` window
+ * event. Emits only canonical Home destinations (ASR-23) and activates the
+ * Active League when a League is selected (ASR-1).
  */
-export function CommandPalette({ leagues }: { leagues: LeagueOption[] }) {
+export function CommandPalette({
+  leagues,
+  activeLeagueId = null,
+}: {
+  leagues: LeagueOption[];
+  activeLeagueId?: string | null;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const navItems = useMemo(
+    () => buildPaletteNavItems(activeLeagueId),
+    [activeLeagueId],
+  );
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -90,16 +97,19 @@ export function CommandPalette({ leagues }: { leagues: LeagueOption[] }) {
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
         <CommandGroup heading="Navigate">
-          {NAV.map((item) => (
-            <CommandItem
-              key={item.href}
-              value={`go ${item.label}`}
-              onSelect={() => go(item.href)}
-            >
-              <item.icon />
-              {item.label}
-            </CommandItem>
-          ))}
+          {navItems.map((item) => {
+            const Icon = PALETTE_ICONS[item.id] ?? LayoutDashboard;
+            return (
+              <CommandItem
+                key={item.id}
+                value={`go ${item.label}`}
+                onSelect={() => go(item.href)}
+              >
+                <Icon />
+                {item.label}
+              </CommandItem>
+            );
+          })}
         </CommandGroup>
         {leagues.length > 0 && (
           <CommandGroup heading="Leagues">
@@ -107,7 +117,7 @@ export function CommandPalette({ leagues }: { leagues: LeagueOption[] }) {
               <CommandItem
                 key={league.id}
                 value={`league ${league.name}`}
-                onSelect={() => go(`/dashboard/leagues/${league.id}`)}
+                onSelect={() => go(leagueActivationHref(league.id))}
               >
                 <Trophy />
                 {league.name}

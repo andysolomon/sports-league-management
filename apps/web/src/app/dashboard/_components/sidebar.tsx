@@ -9,47 +9,20 @@ import {
   Upload,
   CreditCard,
   PlusCircle,
+  type LucideIcon,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import NavLink from "./nav-link";
-import { leagueHomeHref } from "@/components/workspace/resource-navigation";
+import { leagueDirectoryHref } from "@/components/workspace/resource-navigation";
+import { buildShellNavItems } from "./shell-nav";
 
-interface NavItem {
-  label: string;
-  icon: LucideIcon;
-  hideWithoutLeague?: boolean;
-  getHref: (activeLeagueId?: string | null) => string;
-}
-
-const navItems: NavItem[] = [
-  {
-    label: "Overview",
-    icon: LayoutDashboard,
-    hideWithoutLeague: true,
-    getHref: (activeLeagueId) =>
-      activeLeagueId ? leagueHomeHref(activeLeagueId) : "/dashboard",
-  },
-  {
-    label: "Teams",
-    icon: Users,
-    hideWithoutLeague: true,
-    getHref: () => "/dashboard/teams",
-  },
-  {
-    label: "Players",
-    icon: UserCircle,
-    hideWithoutLeague: true,
-    getHref: () => "/dashboard/players",
-  },
-  {
-    label: "Seasons",
-    icon: Calendar,
-    hideWithoutLeague: true,
-    getHref: () => "/dashboard/seasons",
-  },
-  { label: "Import", icon: Upload, getHref: () => "/dashboard/import" },
-  { label: "Billing", icon: CreditCard, getHref: () => "/dashboard/billing" },
-];
+const SHELL_ICONS: Record<string, LucideIcon> = {
+  overview: LayoutDashboard,
+  teams: Users,
+  players: UserCircle,
+  seasons: Calendar,
+  import: Upload,
+  billing: CreditCard,
+};
 
 interface SidebarProps {
   hasLeagues?: boolean;
@@ -62,6 +35,7 @@ export default function Sidebar({
   activeLeagueId = null,
   onNavigate,
 }: SidebarProps) {
+  const navItems = buildShellNavItems(activeLeagueId);
   const visibleNavItems = hasLeagues
     ? navItems
     : navItems.filter((item) => !item.hideWithoutLeague);
@@ -86,7 +60,7 @@ export default function Sidebar({
       >
         {!hasLeagues ? (
           <NavLink
-            href="/dashboard/leagues"
+            href={leagueDirectoryHref()}
             icon={PlusCircle}
             onClick={onNavigate}
           >
@@ -94,12 +68,12 @@ export default function Sidebar({
           </NavLink>
         ) : null}
         {visibleNavItems.map((item) => {
-          const href = item.getHref(activeLeagueId);
+          const Icon = SHELL_ICONS[item.id] ?? LayoutDashboard;
           return (
             <NavLink
-              key={item.label}
-              href={href}
-              icon={item.icon}
+              key={item.id}
+              href={item.href}
+              icon={Icon}
               onClick={onNavigate}
             >
               {item.label}
