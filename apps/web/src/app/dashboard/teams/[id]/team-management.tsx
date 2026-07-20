@@ -18,6 +18,7 @@ import {
   presentHeadlineKeys,
   type PlayerSnapshot,
 } from "@/lib/attributes/headline-columns";
+import { playerHomeHref } from "@/components/workspace/resource-navigation";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -404,9 +405,7 @@ export default function TeamManagement({
               searchPlaceholder="Search players..."
               searchKeys={["name", "position", "status"]}
               onRowClick={(p) =>
-                router.push(
-                  `/dashboard/players/${(p as RosterRow).id}?from=team-${team.id}`,
-                )
+                router.push(playerHomeHref((p as RosterRow).id))
               }
               actions={
                 canManage

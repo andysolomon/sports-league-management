@@ -56,7 +56,7 @@ export default async function PlayersPage() {
   return (
     <div>
       <PageHeader
-        title="Players"
+        title="Players Home"
         description={`All players on rosters${activeSeason ? ` · ${activeSeason.name}` : ""}`}
         action={
           <div className="flex items-center gap-4 text-sm">

@@ -26,6 +26,18 @@ describe("resource-navigation helpers", () => {
     expect(seasonHomeHref("s1")).toBe("/dashboard/seasons/s1");
   });
 
+  it("player hrefs never carry ?from= orientation queries (ASR-19 / #574)", () => {
+    expect(playerHomeHref("p1")).not.toContain("?");
+    expect(playerSubpageHref("p1", "development")).not.toContain("?");
+    for (const link of buildPlayerSiblingLinks({
+      playerId: "p1",
+      developmentEnabled: true,
+    })) {
+      expect(link.href).not.toContain("?");
+      expect(link.href).not.toMatch(/[?&]from=/);
+    }
+  });
+
   it("returns the League Directory href", () => {
     expect(leagueDirectoryHref()).toBe("/dashboard/leagues");
   });

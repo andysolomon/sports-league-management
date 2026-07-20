@@ -123,9 +123,12 @@ test.describe("Team Detail Page", () => {
   test("team → player → development chart returns via Resource Header", async ({
     page,
   }) => {
+    // ASR-19 (#574): roster rows navigate to the canonical Player Home with
+    // no ?from= query parameter.
     const prescottRow = page.locator("tbody tr", { hasText: "Prescott" });
     await prescottRow.click();
-    await expect(page).toHaveURL(/\/dashboard\/players\/[^/]+$/);
+    await expect(page).toHaveURL(/\/dashboard\/players\/[^/?]+$/);
+    expect(new URL(page.url()).search).toBe("");
     await expect(
       page.getByRole("heading", { name: /Prescott/ }),
     ).toBeVisible();

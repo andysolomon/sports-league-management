@@ -1,0 +1,16 @@
+issue-574 - Players Home / Player child navigation - Progress
+Generated: 2026-07-20
+On completion, move this file and the plan to docs/archive/.
+
+[x] 1.0 - Phase 1 - Kill ?from= emitters
+    [x] 1.1 - team-management.tsx → playerHomeHref
+    [x] 1.2 - rg audit: no production players/?from=
+[x] 2.0 - Phase 2 - Players Home orientation polish
+    [x] 2.1 - PageHeader title "Players Home"
+[x] 3.0 - Phase 3 - Tests + type-check
+    [x] 3.1 - Unit regression for no ?from= emitters
+    [x] 3.2 - Playwright roster → Player Home URL (search empty)
+    [x] 3.3 - type-check + focused e2e green (team-detail + players + data-table: 25/25)
+[ ] 4.0 - Ship & archive
+    [ ] 4.1 - Open PR with Closes #574
+    [ ] 4.2 - On merge: move docs/issue-574-* to docs/archive/

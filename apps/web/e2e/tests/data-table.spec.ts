@@ -12,7 +12,7 @@ test.describe("Players directory list interactions", () => {
     await setActiveLeague(page, readCanonicalFixture().leagueId);
     await page.goto("/dashboard/players");
     const main = page.locator("#main-content");
-    await expect(main.getByRole("heading", { name: "Players" })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Players Home" })).toBeVisible();
     await main.getByRole("button", { name: "List" }).click();
     await expect(main.locator("thead th").first()).toBeVisible();
   });
