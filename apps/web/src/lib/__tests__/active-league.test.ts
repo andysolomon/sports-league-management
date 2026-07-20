@@ -94,9 +94,9 @@ describe("selectActiveLeaguePreference", () => {
 
 describe("dashboard active-league path helpers", () => {
   it("normalizes only dashboard-local return paths", () => {
-    expect(normalizeDashboardReturnPath("/dashboard/teams/t1?from=x")).toBe(
-      "/dashboard/teams/t1?from=x",
-    );
+    expect(
+      normalizeDashboardReturnPath("/dashboard/teams?view=divisions"),
+    ).toBe("/dashboard/teams?view=divisions");
     expect(normalizeDashboardReturnPath("https://evil.test/dashboard")).toBe(
       "/dashboard",
     );

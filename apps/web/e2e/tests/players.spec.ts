@@ -12,7 +12,7 @@ test.describe("Players Page", () => {
 
   test("shows Players heading", async ({ page }) => {
     const main = page.locator("#main-content");
-    await expect(main.getByRole("heading", { name: "Players" })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Players Home" })).toBeVisible();
   });
 
   test("directory toolbar is present", async ({ page }) => {
