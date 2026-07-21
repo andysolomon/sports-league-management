@@ -7,6 +7,7 @@ const statusVariantMap: Record<string, BadgeProps["variant"]> = {
   Inactive: "secondary",
   // Season / generic statuses
   Planned: "outline",
+  Upcoming: "outline",
   "In Progress": "default",
   Completed: "success",
   Cancelled: "destructive",

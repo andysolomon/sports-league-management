@@ -39,8 +39,12 @@ test.describe("League info destination (WSM-000254)", () => {
     ).toBeVisible();
 
     await expect(page.getByTestId("league-standings-card")).toBeVisible();
+    // The card title is "Standings" and, when results exist, the
+    // "Full standings →" link also matches "Standings". Assert the title
+    // (the first match) to stay strict-mode safe regardless of standings
+    // population.
     await expect(
-      page.getByTestId("league-standings-card").getByText("Standings"),
+      page.getByTestId("league-standings-card").getByText("Standings").first(),
     ).toBeVisible();
 
     const teamsGrid = page.getByTestId("league-teams-grid");

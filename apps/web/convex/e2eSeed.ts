@@ -50,10 +50,16 @@ const CANONICAL_PLAYERS = [
   { team: "Seattle Sounders FC", name: "Stefan Frei", position: "GK", jersey: 24, status: "Inactive" },
 ] as const;
 
+// Status values mirror the lowercase contract used everywhere else in the
+// codebase (see apps/web/src/lib/season-view.ts findActiveSeason and
+// apps/web/convex/sports.ts setActiveSeason). TitleCase statuses would make
+// `findActiveSeason` miss the active row, hiding the "Open Active Season"
+// shortcut on League Home (see #591 / #596). Roster statuses on players
+// (above) remain TitleCase because they are a different domain.
 const CANONICAL_SEASONS = [
-  { name: "2025-2026 NFL Season", startDate: "2025-09-04", endDate: "2026-02-08", status: "Active" },
-  { name: "2024-2025 NFL Season", startDate: "2024-09-05", endDate: "2025-02-09", status: "Completed" },
-  { name: "2025 MLS Season", startDate: "2025-02-22", endDate: "2025-10-25", status: "Upcoming" },
+  { name: "2025-2026 NFL Season", startDate: "2025-09-04", endDate: "2026-02-08", status: "active" },
+  { name: "2024-2025 NFL Season", startDate: "2024-09-05", endDate: "2025-02-09", status: "completed" },
+  { name: "2025 MLS Season", startDate: "2025-02-22", endDate: "2025-10-25", status: "upcoming" },
 ] as const;
 
 function assertSeedEnabled(): void {
