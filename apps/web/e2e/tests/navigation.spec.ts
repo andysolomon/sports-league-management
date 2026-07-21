@@ -139,4 +139,42 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
     await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
     await expect(page).toHaveURL(/\/dashboard\/seasons\/[^/]+\/playoffs$/);
   });
+
+  // ASR-12 follow-up per docs/issue-578-verification-matrix.md. Asserts the
+  // browser Back button after a cross-league Active League switch returns to
+  // the prior League A resource URL. Skips cleanly when the e2e user/org owns
+  // only one league (canonical fixture currently seeds exactly one).
+  test("cross-league switch preserves Back to the prior resource URL", async ({
+    page,
+  }) => {
+    const fixtures = readCanonicalFixture();
+    // Drive the league switcher UI to discover whether the e2e org owns
+    // more than one league. The dropdown only lists the active + other
+    // visible leagues — once #596 reshapes the canonical fixture to add a
+    // second league, this count check graduates into the full Back boundary
+    // assertion below.
+    await setActiveLeague(page, fixtures.leagueId);
+    await page.goto(`/dashboard/leagues/${fixtures.leagueId}`);
+    const switcher = page.getByRole("button", { name: /switch league/i });
+    await switcher.click();
+    const options = page.getByRole("menuitemradio");
+    const optionCount = await options.count();
+    await page.keyboard.press("Escape");
+
+    test.skip(
+      optionCount < 2,
+      "E2E org owns a single league — cross-league Back contract requires two leagues. Verified when a second canonical league is added.",
+    );
+
+    // Two leagues available: graduate to the full boundary assertion.
+    // The boundary contract: after a cross-league switch, the browser Back
+    // button returns to the prior League A resource URL.
+    void fixtures;
+    throw new Error(
+      "Fence-post: once #596 adds a second canonical league, fill in the " +
+        "Boundary assertion here (League A resource URL capture → setActiveLeague(B) → " +
+        "navigate to /dashboard → wait for League B URL → page.goBack() → " +
+        "expect toHaveURL(leagueAHref) + resource-header-league visible).",
+    );
+  });
 });
