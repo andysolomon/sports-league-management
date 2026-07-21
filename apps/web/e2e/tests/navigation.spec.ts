@@ -139,4 +139,44 @@ test.describe("League workspace back navigation (WSM-000236)", () => {
     await page.goto(`/dashboard/leagues/${leagueId}/playoffs`);
     await expect(page).toHaveURL(/\/dashboard\/seasons\/[^/]+\/playoffs$/);
   });
+
+  // ASR-12 follow-up per docs/issue-578-verification-matrix.md. Asserts the
+  // browser Back button after a cross-league Active League switch returns to
+  // the prior League A resource URL. Skips cleanly when the e2e user/org owns
+  // only one league (canonical fixture currently seeds exactly one).
+  test("cross-league switch preserves Back to the prior resource URL", async ({
+    page,
+  }) => {
+    const fixtures = readCanonicalFixture();
+    type LeagueSummary = { id: string; name: string };
+    const visibleLeagues = (await page.request.get("/api/leagues")) as unknown as {
+      ok: () => boolean;
+    } & { status: () => number; json: () => Promise<LeagueSummary[]> };
+    expect(visibleLeagues.status()).toBe(200);
+    const leagues = await visibleLeagues.json();
+    const leagueB = leagues.find((l) => l.id !== fixtures.leagueId) ?? null;
+
+    test.skip(
+      !leagueB,
+      "E2E org owns a single league — cross-league Back contract requires two leagues. Verified when a second canonical league is added.",
+    );
+
+    // 1. League A: navigate to a canonical resource (League Home).
+    const { leagueId: leagueAId } = fixtures;
+    await setActiveLeague(page, leagueAId);
+    await page.goto(`/dashboard/leagues/${leagueAId}`);
+    const leagueAHref = page.url();
+
+    // 2. Switch to League B via the league switcher (mirrors user UX).
+    await setActiveLeague(page, leagueB!.id);
+    await page.goto(`/dashboard`);
+    await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
+    // Sanity: the post-switch URL targets League B.
+    expect(page.url()).toContain(`/dashboard/leagues/${leagueB!.id}`);
+
+    // 3. Click the browser Back button.
+    await page.goBack();
+    await expect(page).toHaveURL(leagueAHref);
+    await expect(page.getByTestId("resource-header-league")).toBeVisible();
+  });
 });
