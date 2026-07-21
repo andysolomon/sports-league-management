@@ -83,3 +83,45 @@ describe("resolveViewedSeason", () => {
     expect(resolveViewedSeason([], "s1")).toBeNull();
   });
 });
+
+/*
+ * Canonical-fixture status casing contract (issue #596).
+ *
+ * `apps/web/convex/e2eSeed.ts CANONICAL_SEASONS` must seed season statuses
+ * using the lowercase values every reader expects ("active" | "completed" |
+ * "upcoming"). A regression to TitleCase would make `findActiveSeason` miss
+ * the canonical active season, silently dropping the "Open Active Season"
+ * shortcut on League Home (the ASR-9 spec added in #591 would skip rather
+ * than fail). These tests pin the casing the fixture must use.
+ */
+describe("canonical fixture status casing contract (issue #596)", () => {
+  it("uses lowercase 'active' for the canonical active season", () => {
+    const canonicalActive = season("canon-active", "active");
+    expect(findActiveSeason([canonicalActive])).toBe(canonicalActive);
+  });
+
+  it("uses lowercase 'completed' for finished seasons", () => {
+    const canonicalCompleted = season("canon-completed", "completed");
+    expect(findActiveSeason([canonicalCompleted])).toBeNull();
+    const lifecycle = resolveLifecycleSeason([canonicalCompleted]);
+    expect(lifecycle?.id).toBe(canonicalCompleted.id);
+  });
+
+  it("uses lowercase 'upcoming' for upcoming seasons", () => {
+    const canonicalUpcoming = season("canon-upcoming", "upcoming");
+    const lifecycle = resolveLifecycleSeason([
+      season("canon-completed", "completed"),
+      canonicalUpcoming,
+    ]);
+    expect(lifecycle?.id).toBe(canonicalUpcoming.id);
+  });
+
+  it("does not regress to TitleCase statuses", () => {
+    // If anyone reintroduces "Active" / "Completed" / "Upcoming" in the
+    // canonical fixture, findActiveSeason must still miss it — proving the
+    // lowercase contract is load-bearing for League Home's active-season
+    // shortcut and the ASR-9 spec.
+    const titleCaseActive = season("canon-titlecase", "Active");
+    expect(findActiveSeason([titleCaseActive])).toBeNull();
+  });
+});
