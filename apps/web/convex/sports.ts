@@ -6459,6 +6459,35 @@ export const getPlayerSeasonTotals = query({
 });
 
 /*
+ * Career box-score totals — every season the player has entered stats for.
+ * Uses the `by_playerId_seasonId` index on its leading field, so this is a
+ * single indexed range read rather than a scan. `seasonCount` lets the caller
+ * decide whether a career line is worth showing (a one-season player's career
+ * totals are just their season totals).
+ */
+export const getPlayerCareerTotals = query({
+  args: { playerId: v.id("players") },
+  returns: v.object({
+    statsJson: v.string(),
+    gameCount: v.number(),
+    seasonCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerGameStats")
+      .withIndex("by_playerId_seasonId", (q) => q.eq("playerId", args.playerId))
+      .collect();
+    const totals = aggregateStatLines(rows.map((r) => parseStatLine(r.statsJson)));
+    const seasons = new Set(rows.map((r) => r.seasonId));
+    return {
+      statsJson: JSON.stringify(totals),
+      gameCount: rows.length,
+      seasonCount: seasons.size,
+    };
+  },
+});
+
+/*
  * HS SPRT ratings for a season, computed on-read from entered game stats
  * (WSM-000112, PR5). Aggregates each player's playerGameStats rows, maps their
  * roster position to a rating group, and z-scores within the season cohort (see

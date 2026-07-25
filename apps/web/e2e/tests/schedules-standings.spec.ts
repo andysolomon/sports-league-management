@@ -86,7 +86,7 @@ test.describe("Schedules & standings — fixture loop (WSM-000074)", () => {
     await expect(
       page.getByTestId("resource-header-season").getByText("E2E Season"),
     ).toBeVisible();
-    await expect(page.getByTestId("resource-header-season").getByText(`Schedule · ${LEAGUE_NAME}`)).toBeVisible();
+    await expect(page.getByTestId("resource-header-season").getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
 
     // 2. Create a fixture.
     await page.getByRole("button", { name: "New fixture" }).click();
@@ -272,7 +272,7 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     if (!fixture) test.skip();
     const seasonId = fixture!.seasonId;
     await page.goto(`/dashboard/seasons/${seasonId}/schedule`);
-    await expect(page.getByTestId("resource-header-season").getByText(`Schedule · ${ACC_LEAGUE_NAME}`)).toBeVisible();
+    await expect(page.getByTestId("resource-header-season").getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
 
     // Seed: Week 1 final game, Week 2 future game.
     await createFixture(page, 1, ACC_HOME, ACC_AWAY);
@@ -358,7 +358,7 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     });
     await page.goto(`/dashboard/seasons/${fixture!.seasonId}/schedule`);
     await expect(page.getByTestId("resource-header-season").getByText("E2E Season")).toBeVisible();
-    await expect(page.getByTestId("resource-header-season").getByText(`Schedule · ${ACC_LEAGUE_NAME}`)).toBeVisible();
+    await expect(page.getByTestId("resource-header-season").getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
 
     await expect(
       page.getByRole("button", { name: "New fixture" }),

@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { PlayerDto } from "@sports-management/shared-types";
 import {
+  buildPositionFilterOptions,
   filterPlayers,
-  matchesPositionSideGroup,
+  matchesPositionFilter,
   paginatePlayers,
-  positionSideGroup,
+  playerPositionGroup,
+  positionSide,
   sortPlayers,
   type DirectoryPlayer,
 } from "../players-directory";
@@ -37,27 +39,65 @@ const roster: DirectoryPlayer[] = [
   player({ id: "p4", name: "Dan Davis", position: "K", overallRating: 70 }),
 ];
 
-describe("positionSideGroup", () => {
+describe("positionSide", () => {
   it("maps offense, defense, and special positions", () => {
-    expect(positionSideGroup("qb")).toBe("off");
-    expect(positionSideGroup("ILB")).toBe("def");
-    expect(positionSideGroup("P")).toBe("st");
-    expect(positionSideGroup("MF")).toBeNull();
+    expect(positionSide("qb")).toBe("off");
+    expect(positionSide("ILB")).toBe("def");
+    expect(positionSide("P")).toBe("st");
+    expect(positionSide("MF")).toBeNull();
   });
 });
 
-describe("matchesPositionSideGroup", () => {
-  it("filters by side group", () => {
-    expect(matchesPositionSideGroup("QB", "off")).toBe(true);
-    expect(matchesPositionSideGroup("QB", "def")).toBe(false);
-    expect(matchesPositionSideGroup("QB", "all")).toBe(true);
+describe("playerPositionGroup", () => {
+  it("buckets a position into its group, or Other", () => {
+    expect(playerPositionGroup("qb")).toBe("QB");
+    expect(playerPositionGroup("ILB")).toBe("LB");
+    expect(playerPositionGroup("SS")).toBe("DB");
+    expect(playerPositionGroup("P")).toBe("K/P");
+    expect(playerPositionGroup("MF")).toBe("Other");
+  });
+});
+
+describe("matchesPositionFilter", () => {
+  it("filters by position group", () => {
+    expect(matchesPositionFilter("QB", "QB")).toBe(true);
+    expect(matchesPositionFilter("QB", "WR")).toBe(false);
+    expect(matchesPositionFilter("QB", "all")).toBe(true);
+    // Sub-positions match their group, not their own label.
+    expect(matchesPositionFilter("ILB", "LB")).toBe(true);
+  });
+});
+
+describe("buildPositionFilterOptions", () => {
+  it("offers All plus only the groups present, in football order", () => {
+    const options = buildPositionFilterOptions(roster);
+    expect(options.map((o) => o.value)).toEqual([
+      "all",
+      "QB",
+      "WR",
+      "DB",
+      "K/P",
+    ]);
+    expect(options[0]).toMatchObject({ label: "All", count: 4 });
+    expect(options.every((o) => o.count > 0)).toBe(true);
+  });
+
+  it("puts unmappable positions in a trailing Other bucket", () => {
+    const options = buildPositionFilterOptions([
+      ...roster,
+      player({ id: "p5", name: "Eli Evans", position: "MF" }),
+    ]);
+    expect(options.at(-1)).toMatchObject({ value: "Other", count: 1 });
   });
 });
 
 describe("filterPlayers", () => {
-  it("filters by position side and search query", () => {
-    const offense = filterPlayers(roster, "", "off");
-    expect(offense.map((p) => p.id)).toEqual(["p1", "p2"]);
+  it("filters by position group and search query", () => {
+    const quarterbacks = filterPlayers(roster, "", "QB");
+    expect(quarterbacks.map((p) => p.id)).toEqual(["p1"]);
+
+    const defensiveBacks = filterPlayers(roster, "", "DB");
+    expect(defensiveBacks.map((p) => p.id)).toEqual(["p3"]);
 
     const searched = filterPlayers(roster, "bravo", "all");
     expect(searched).toHaveLength(1);

@@ -16,17 +16,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  buildPositionFilterOptions,
   filterPlayers,
   paginatePlayers,
   PLAYERS_PAGE_SIZE,
-  POSITION_SIDE_GROUPS,
   sortPlayers,
   type DirectoryPlayer,
   type PlayerSort,
   type PlayerSortKey,
   type PlayersViewMode,
-  type PositionSideGroup,
+  type PositionFilter,
 } from "@/lib/players-directory";
+import { PositionBadge } from "@/components/position-badge";
 import { UserCircle } from "lucide-react";
 
 const VIEW_STORAGE_KEY = "sl-players-view";
@@ -49,7 +50,7 @@ function SegmentedControl<T extends string>({
   onChange,
 }: {
   label: string;
-  options: ReadonlyArray<{ value: T; label: string }>;
+  options: ReadonlyArray<{ value: T; label: string; count?: number }>;
   value: T;
   onChange: (next: T) => void;
 }) {
@@ -75,6 +76,16 @@ function SegmentedControl<T extends string>({
             )}
           >
             {option.label}
+            {option.count != null ? (
+              <span
+                className={cn(
+                  "ml-1.5 font-mono text-[11px] tabular-nums",
+                  isActive ? "opacity-70" : "text-text-subtle",
+                )}
+              >
+                {option.count}
+              </span>
+            ) : null}
           </button>
         );
       })}
@@ -131,7 +142,7 @@ interface PlayersTableProps {
 export function PlayersTable({ players, showOverall }: PlayersTableProps) {
   const router = useRouter();
   const [view, setView] = useState<PlayersViewMode>(readStoredView);
-  const [group, setGroup] = useState<PositionSideGroup>("all");
+  const [group, setGroup] = useState<PositionFilter>("all");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<PlayerSort>({
     key: showOverall ? "rating" : "name",
@@ -147,6 +158,10 @@ export function PlayersTable({ players, showOverall }: PlayersTableProps) {
     }
   }, [view]);
 
+  const positionOptions = useMemo(
+    () => buildPositionFilterOptions(players),
+    [players],
+  );
   const filtered = useMemo(
     () => filterPlayers(players, query, group),
     [players, query, group],
@@ -201,13 +216,13 @@ export function PlayersTable({ players, showOverall }: PlayersTableProps) {
           ]}
         />
         <SegmentedControl
-          label="Position group"
+          label="Position"
           value={group}
           onChange={(next) => {
             setGroup(next);
             resetPage();
           }}
-          options={POSITION_SIDE_GROUPS}
+          options={positionOptions}
         />
         <div className="flex-1" />
         <div className="relative w-full max-w-[340px] flex-[1_1_220px]">
@@ -245,10 +260,9 @@ export function PlayersTable({ players, showOverall }: PlayersTableProps) {
                   <p className="truncate text-[15px] font-semibold text-foreground">
                     {player.name}
                   </p>
-                  <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">
-                    <span className="font-mono">{player.position}</span>
-                    {" · "}
-                    {player.teamName}
+                  <p className="mt-1 flex items-center gap-1.5 truncate text-[12.5px] text-muted-foreground">
+                    <PositionBadge position={player.position} />
+                    <span className="truncate">{player.teamName}</span>
                   </p>
                 </div>
                 <TeamMark
@@ -352,8 +366,8 @@ export function PlayersTable({ players, showOverall }: PlayersTableProps) {
                         <span className="truncate">{player.teamName}</span>
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-muted-foreground">
-                      {player.position}
+                    <td className="px-4 py-2.5">
+                      <PositionBadge position={player.position} />
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono tabular-nums text-foreground">
                       {player.jerseyNumber ?? "\u2014"}

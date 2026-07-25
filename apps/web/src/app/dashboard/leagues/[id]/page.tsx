@@ -186,9 +186,8 @@ export default async function LeagueInfoPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="league"
-        name={league.name}
-        href={leagueHomeHref(id)}
-        subtitle="League Home"
+        title={league.name}
+        homeHref={leagueHomeHref(id)}
         status={
           league.orgId ? (
             <Badge variant="secondary" className="shrink-0">

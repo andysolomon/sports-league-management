@@ -152,6 +152,7 @@ type AllowedPublicSportsReads =
   | "getPlayerDevelopment"
   | "getPlayerDevelopmentPublic"
   | "getPlayerGameStatsByFixture"
+  | "getPlayerCareerTotals"
   | "getPlayerMaddenRating"
   | "getPlayerSeasonAttributes"
   | "getPlayerSeasonTotals"

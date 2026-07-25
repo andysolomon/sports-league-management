@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import { leagueHomeHref, seasonHomeHref } from "@/components/workspace/resource-navigation";
 import { StatusBadge } from "@/components/status-badge";
@@ -37,9 +36,8 @@ export default function WorkspaceVisualHarness() {
       <div data-testid="workspace-league" className="w-[760px]">
         <ResourceHeader
           kind="league"
-          name={LEAGUE.name}
-          href={leagueHomeHref(LEAGUE.id)}
-          subtitle="League Home"
+          title={LEAGUE.name}
+          homeHref={leagueHomeHref(LEAGUE.id)}
           status={
             <Badge variant="secondary" className="shrink-0">
               Organization
@@ -60,22 +58,10 @@ export default function WorkspaceVisualHarness() {
       <div data-testid="workspace-season" className="mt-10 w-[760px]">
         <ResourceHeader
           kind="season"
-          name={SEASON.name}
-          href={seasonHomeHref(SEASON.id)}
-          subtitle="Season overview"
+          title={SEASON.name}
+          homeHref={seasonHomeHref(SEASON.id)}
           status={<StatusBadge status={SEASON.status} />}
-          context={
-            <>
-              <Link
-                href={leagueHomeHref(LEAGUE.id)}
-                className="text-accent hover:underline"
-              >
-                {SEASON.leagueName}
-              </Link>
-              {" · "}
-              {SEASON.dateRange}
-            </>
-          }
+          context={`${SEASON.leagueName} · ${SEASON.dateRange}`}
           siblings={[
             {
               label: "Overview",

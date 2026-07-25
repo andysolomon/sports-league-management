@@ -28,6 +28,13 @@
   --accent: #18a558;
   --danger: #e5484d;
 
+  /* Position-side hues (offense / defense / special teams). Categorical, not
+     semantic — never reuse them for status. Chosen to stay distinguishable
+     from `--accent` (green) and `--danger` (red), which already carry meaning. */
+  --pos-off: #2f6fed;
+  --pos-def: #c2670a;
+  --pos-st: #8b5cf6;
+
   --radius-control: 10px;
   --radius-card: 14px;
 }
@@ -45,6 +52,10 @@
   --primary: #fafafa;
   --accent: #46c964;
   --danger: #ff6166;
+
+  --pos-off: #6f9dff;
+  --pos-def: #f0a03c;
+  --pos-st: #b18cff;
 }
 
 @theme inline {
@@ -68,6 +79,9 @@
   --color-accent-foreground: var(--bg);
   --color-danger: var(--danger);
   --color-danger-foreground: var(--bg);
+  --color-pos-off: var(--pos-off);
+  --color-pos-def: var(--pos-def);
+  --color-pos-st: var(--pos-st);
 
   /* Legacy shadcn aliases → semantic tokens (keep existing call sites working) */
   --color-background: var(--bg);

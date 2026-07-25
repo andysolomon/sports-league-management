@@ -11,10 +11,15 @@ export function SeasonStatsCard({
   stats,
   gameCount,
   seasonName,
+  title = "Season stats",
+  emptyMessage = "No stats recorded yet this season.",
 }: {
   stats: PlayerGameStatLine;
   gameCount: number;
+  /** Scope line shown top-right, e.g. a season name or "3 seasons". */
   seasonName: string;
+  title?: string;
+  emptyMessage?: string;
 }) {
   const groups = STAT_GROUPS.map((g) => {
     const groupStats = stats[g.key] as Record<string, number> | undefined;
@@ -28,16 +33,14 @@ export function SeasonStatsCard({
     <Card className="mt-6">
       <CardContent className="pt-6">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-heading-18 text-foreground">Season stats</h3>
+          <h3 className="text-heading-18 text-foreground">{title}</h3>
           <span className="text-sm text-muted-foreground">
             {seasonName} · {gameCount} game{gameCount === 1 ? "" : "s"}
           </span>
         </div>
 
         {groups.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            No stats recorded yet this season.
-          </p>
+          <p className="mt-4 text-sm text-muted-foreground">{emptyMessage}</p>
         ) : (
           <div className="mt-4 space-y-4">
             {groups.map(({ def, groupStats, fields }) => (

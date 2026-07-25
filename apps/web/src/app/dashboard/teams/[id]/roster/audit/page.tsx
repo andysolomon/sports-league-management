@@ -58,9 +58,9 @@ export default async function RosterAuditPage({
       <div className="space-y-4">
         <ResourceHeader
           kind="team"
-          name={team.name}
-          href={teamHomeHref(teamId)}
-          subtitle="Roster · Audit log"
+          title="Roster audit log"
+          homeHref={teamHomeHref(teamId)}
+          context={team.name}
           siblings={[
             { label: "Roster", href: teamSubpageHref(teamId, "roster") },
           ]}
@@ -91,19 +91,15 @@ export default async function RosterAuditPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="team"
-        name={team.name}
-        href={teamHomeHref(teamId)}
-        subtitle="Roster · Audit log"
-        context={`Season: ${activeSeason.name}`}
+        title="Roster audit log"
+        homeHref={teamHomeHref(teamId)}
+        context={`${team.name} · ${activeSeason.name}`}
         siblings={buildTeamSiblingLinks({
           teamId,
           rosterEnabled: enabled,
           depthChartEnabled: await depthChartV1(),
         })}
       />
-      <h2 className="text-2xl font-bold text-foreground">
-        {team.name} — Roster Audit Log
-      </h2>
       <RosterAuditTimeline entries={entries} players={players} />
     </div>
   );

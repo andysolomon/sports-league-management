@@ -19,8 +19,11 @@ test.describe("Health & Smoke Tests", () => {
     await expect(page.getByText("Something went wrong")).toBeHidden({
       timeout: 15_000,
     });
+    // Title-first header: League Home names the league in its h1 (ASR-7).
     await expect(
-      page.getByTestId("resource-header-league").getByText("League Home"),
+      page.getByTestId("resource-header-league").getByRole("heading", {
+        level: 1,
+      }),
     ).toBeVisible();
   });
 
@@ -38,7 +41,9 @@ test.describe("Health & Smoke Tests", () => {
     await page.goto("/dashboard");
     await page.waitForURL(/\/dashboard\/leagues\/[^/]+$/);
     await expect(
-      page.getByTestId("resource-header-league").getByText("League Home"),
+      page.getByTestId("resource-header-league").getByRole("heading", {
+        level: 1,
+      }),
     ).toBeVisible();
 
     // Wait briefly then check no error toasts appeared

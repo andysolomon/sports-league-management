@@ -81,7 +81,7 @@ test.describe("Playoffs bracket (WSM-000164)", () => {
       page
         .locator("#main-content")
         .getByTestId("resource-header-season")
-        .getByText(`Playoffs · ${LEAGUE_NAME}`),
+        .getByRole("heading", { level: 1, name: "Playoffs" }),
     ).toBeVisible();
     await expect(page.getByText(/Regular season in progress/)).toBeVisible();
     await expect(

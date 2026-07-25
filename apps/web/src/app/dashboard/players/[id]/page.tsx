@@ -15,6 +15,7 @@ import {
   getPlayerMaddenRating,
   getSeasons,
   getPlayerSeasonTotals,
+  getPlayerCareerTotals,
   computeSeasonSprt,
   getTeamLeagueId,
   getLeagueOrgId,
@@ -26,7 +27,11 @@ import { gradeToClassYear } from "@/lib/class-year";
 import { orderedMaddenAttributes } from "@/lib/madden/attributes";
 import { playerAttributesV1, statKeepingV1 } from "@/lib/flags";
 import { SeasonStatsCard } from "@/components/stats/SeasonStatsCard";
-import { HsRatingCard } from "@/components/stats/HsRatingCard";
+import {
+  HsRatingCard,
+  HsRatingUnavailableCard,
+} from "@/components/stats/HsRatingCard";
+import { positionToRatingGroup } from "../../../../../convex/lib/hsSprt";
 import { SprtRatingCard } from "@/components/attributes/SprtRatingCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -115,26 +120,50 @@ export default async function PlayerProfilePage({
     gameCount: number;
     seasonName: string;
   } | null = null;
+  // Career totals across every season with entered stats. Only surfaced once
+  // the player has more than one season on record — for a single-season player
+  // the career line is identical to the season line above.
+  let careerStats: {
+    stats: Awaited<ReturnType<typeof getPlayerCareerTotals>>["stats"];
+    gameCount: number;
+    seasonCount: number;
+  } | null = null;
   let gameRating: {
     overall: number;
     attributes: Record<string, number>;
   } | null = null;
-  if ((await statKeepingV1()) && team) {
+  // Whether this player's position has a rating model at all (K/P/LS/OL do
+  // not). Drives the explanatory empty state instead of a missing card.
+  const isRateablePosition = positionToRatingGroup(player.position) !== null;
+  const statsEnabled = await statKeepingV1();
+  if (statsEnabled && team) {
     const seasons = await getSeasons([team.leagueId]).catch(() => []);
     const activeSeason =
       seasons.find((s) => s.status === "active") ?? seasons[0] ?? null;
-    if (activeSeason) {
-      const [totals, sprt] = await Promise.all([
-        getPlayerSeasonTotals(playerId, activeSeason.id).catch(() => null),
-        computeSeasonSprt(activeSeason.id).catch(() => []),
-      ]);
-      if (totals && totals.gameCount > 0) {
-        seasonStats = { ...totals, seasonName: activeSeason.name };
-      }
+    const [career, seasonResult] = await Promise.all([
+      getPlayerCareerTotals(playerId).catch(() => null),
+      activeSeason
+        ? Promise.all([
+            getPlayerSeasonTotals(playerId, activeSeason.id).catch(() => null),
+            computeSeasonSprt(activeSeason.id).catch(() => []),
+          ])
+        : Promise.resolve(null),
+    ]);
+    if (activeSeason && seasonResult) {
+      const [totals, sprt] = seasonResult;
+      // Render the card even at zero games so the page explains the absence.
+      seasonStats = {
+        stats: totals?.stats ?? {},
+        gameCount: totals?.gameCount ?? 0,
+        seasonName: activeSeason.name,
+      };
       const mine = sprt.find((r) => r.playerId === playerId);
       if (mine) {
         gameRating = { overall: mine.overall, attributes: mine.attributes };
       }
+    }
+    if (career && career.seasonCount > 1) {
+      careerStats = career;
     }
   }
 
@@ -144,9 +173,8 @@ export default async function PlayerProfilePage({
     <div className="mx-auto max-w-2xl space-y-4">
       <ResourceHeader
         kind="player"
-        name={player.name}
-        href={playerHomeHref(player.id)}
-        subtitle="Player overview"
+        title={player.name}
+        homeHref={playerHomeHref(player.id)}
         siblings={buildPlayerSiblingLinks({
           playerId: player.id,
           developmentEnabled: attributesEnabled,
@@ -170,9 +198,12 @@ export default async function PlayerProfilePage({
               </div>
             )}
             <div className="min-w-0">
-              <h2 className="text-2xl font-bold text-foreground">
+              {/* Not a heading: the Resource Header's h1 already names the
+                  player, so a second same-text heading is a screen-reader
+                  duplicate. Kept visually as the profile card's identity line. */}
+              <p className="text-2xl font-bold text-foreground">
                 {player.name}
-              </h2>
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {player.position}
                 {positionGroup && positionGroup !== player.position
@@ -246,12 +277,38 @@ export default async function PlayerProfilePage({
         />
       )}
 
-      {gameRating && (
+      {careerStats && (
+        <SeasonStatsCard
+          stats={careerStats.stats}
+          gameCount={careerStats.gameCount}
+          seasonName={`${careerStats.seasonCount} seasons`}
+          title="Career stats"
+          emptyMessage="No career stats recorded."
+        />
+      )}
+
+      {gameRating ? (
         <HsRatingCard
           overall={gameRating.overall}
           attributes={gameRating.attributes}
         />
-      )}
+      ) : statsEnabled && team && !rating ? (
+        // Only explain the absence when no other rating is on the page. The
+        // attributes-based SprtRatingCard below shares the "SPRT Rating"
+        // heading, so showing both reads as a contradiction.
+        <HsRatingUnavailableCard
+          reason={
+            !isRateablePosition
+              ? `SPRT ratings aren't modelled for ${player.position} yet. Ratings currently cover QB, RB, WR, TE, DL, LB, and DB.`
+              : (seasonStats?.gameCount ?? 0) === 0
+                ? "No rating yet — SPRT is derived from entered game stats, and this player has none recorded for the current season."
+                : // Has stats but still unrated: the cohort is too small. SPRT
+                  // z-scores within a position group, so a group needs at least
+                  // two qualified players before anyone in it can be ranked.
+                  "Not enough players at this position recorded stats this season to rank against — SPRT scores each player against their position group."
+          }
+        />
+      ) : null}
 
       {rating && (
         <SprtRatingCard

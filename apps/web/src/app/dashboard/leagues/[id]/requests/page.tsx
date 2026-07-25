@@ -34,9 +34,9 @@ export default async function RequestsPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="league"
-        name={league.name}
-        href={leagueHomeHref(id)}
-        subtitle="Join requests"
+        title="Join requests"
+        homeHref={leagueHomeHref(id)}
+        context={league.name}
       />
 
       <RequestsTable orgId={league.orgId} />

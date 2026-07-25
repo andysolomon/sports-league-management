@@ -31,7 +31,7 @@ Removed or relocated first-party routes must redirect to their canonical replace
 
 ## ASR-7 — Orientation without breadcrumbs
 
-Dashboard pages must not render breadcrumb trails or generic “Back to …” rows. A child page must instead use a stable Resource Header that identifies and links its parent Home and exposes sibling subpage navigation. The topbar retains its history-based Back control.
+Dashboard pages must not render breadcrumb trails, ancestry link chains, or generic “Back to …” rows. A child page must instead use a stable, title-first Resource Header: an `h1` naming the page itself (the resource name on a Home page, the subpage label otherwise), an optional muted context line naming the owning resources as **plain text**, and sibling subpage navigation. The context line is orientation only — no segment of it is a link, so it cannot degrade back into a breadcrumb. Moving up the hierarchy is served by the topbar League switcher, the topbar history-based Back control, and the primary nav.
 
 ## ASR-8 — Explicit Settings ownership scopes
 

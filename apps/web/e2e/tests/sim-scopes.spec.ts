@@ -71,7 +71,7 @@ test.describe("Simulation scopes (WSM-000183)", () => {
       page
         .locator("#main-content")
         .getByTestId("resource-header-season")
-        .getByText(`Schedule · ${LEAGUE_NAME}`),
+        .getByRole("heading", { level: 1, name: "Schedule" }),
     ).toBeVisible();
 
     const week1 = weekCard(page, 1);

@@ -66,9 +66,9 @@ export default async function DepthChartPage({
       <div className="space-y-4">
         <ResourceHeader
           kind="team"
-          name={team.name}
-          href={teamHomeHref(teamId)}
-          subtitle="Depth chart"
+          title="Depth chart"
+          homeHref={teamHomeHref(teamId)}
+          context={team.name}
           siblings={buildTeamSiblingLinks({
             teamId,
             rosterEnabled: await rosterSnapshotsV1(),
@@ -98,9 +98,9 @@ export default async function DepthChartPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="team"
-        name={team.name}
-        href={teamHomeHref(teamId)}
-        subtitle="Depth chart"
+        title="Depth chart"
+        homeHref={teamHomeHref(teamId)}
+        context={team.name}
         siblings={buildTeamSiblingLinks({
           teamId,
           rosterEnabled: await rosterSnapshotsV1(),

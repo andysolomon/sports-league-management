@@ -40,7 +40,6 @@ import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import {
   buildSeasonSiblingLinks,
-  leagueHomeHref,
   seasonHomeHref,
 } from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
@@ -213,18 +212,12 @@ export default async function SeasonHubPage({
     <div className="mx-auto max-w-[960px] space-y-4">
       <ResourceHeader
         kind="season"
-        name={season.name}
-        href={seasonHomeHref(season.id)}
-        subtitle={`Season overview · ${league.name}`}
+        title={season.name}
+        homeHref={seasonHomeHref(season.id)}
         status={<StatusBadge status={season.status} />}
         context={
           <>
-            <Link
-              href={leagueHomeHref(league.id)}
-              className="text-accent hover:underline"
-            >
-              {league.name}
-            </Link>
+            {league.name}
             {" · "}
             {formatDate(season.startDate)} &ndash; {formatDate(season.endDate)}
           </>

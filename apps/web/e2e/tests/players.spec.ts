@@ -47,7 +47,14 @@ test.describe("Players Page", () => {
     for (const player of [PLAYERS.PRESCOTT, PLAYERS.MORRIS, PLAYERS.PUIG]) {
       await search.fill(player.name);
       await expect(main.getByText(player.name, { exact: true })).toBeVisible();
-      await expect(main.getByText(player.position)).toBeVisible();
+      // The position filter chips also render bare position labels ("QB"), so
+      // target the player's own position badge rather than any text match.
+      await expect(
+        main
+          .getByTestId("player-position")
+          .filter({ hasText: new RegExp(`^${player.position}$`) })
+          .first(),
+      ).toBeVisible();
       await search.clear();
     }
   });
