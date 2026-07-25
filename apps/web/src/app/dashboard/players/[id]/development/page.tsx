@@ -73,9 +73,9 @@ export default async function PlayerDevelopmentPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="player"
-        name={player.name}
-        href={playerHomeHref(playerId)}
-        subtitle="Development"
+        title="Development"
+        homeHref={playerHomeHref(playerId)}
+        context={player.name}
         siblings={buildPlayerSiblingLinks({
           playerId,
           developmentEnabled: enabled,

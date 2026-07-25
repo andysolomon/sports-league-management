@@ -24,6 +24,28 @@ const LABELS: Record<string, string> = {
 const label = (key: string) =>
   LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1);
 
+/*
+ * Explains why a player has no SPRT number instead of silently dropping the
+ * card. Two distinct causes: the position has no rating model at all (K, P, LS,
+ * OL — see positionToRatingGroup), or the position is rateable but the player
+ * hasn't accumulated any box-score stats this season.
+ */
+export function HsRatingUnavailableCard({ reason }: { reason: string }) {
+  return (
+    <Card className="mt-6">
+      <CardContent className="pt-6">
+        <h3 className="text-lg font-semibold text-foreground">
+          SPRT Rating
+          <span className="ml-2 text-xs font-normal text-muted-foreground">
+            from game stats
+          </span>
+        </h3>
+        <p className="mt-3 text-sm text-muted-foreground">{reason}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function HsRatingCard({
   overall,
   attributes,

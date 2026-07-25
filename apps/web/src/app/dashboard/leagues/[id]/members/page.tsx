@@ -36,15 +36,12 @@ export default async function MembersPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="league"
-        name={league.name}
-        href={leagueHomeHref(id)}
-        subtitle="Members & invites"
+        title="Members & invites"
+        homeHref={leagueHomeHref(id)}
+        context={league.name}
       />
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">
-          Members — {league.name}
-        </h2>
+      <div className="mb-6 flex flex-wrap items-center justify-end gap-2">
         <Link
           href="/dashboard/roles"
           className="text-sm text-primary hover:underline"

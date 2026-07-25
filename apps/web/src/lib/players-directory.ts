@@ -1,7 +1,15 @@
 import type { PlayerDto } from "@sports-management/shared-types";
+import {
+  derivePositionGroup,
+  OTHER_GROUP,
+  POSITION_GROUP_ORDER,
+  type RosterGroup,
+} from "@/lib/position-group";
 
 export type PlayersViewMode = "cards" | "list";
-export type PositionSideGroup = "all" | "off" | "def" | "st";
+export type PositionSide = "off" | "def" | "st";
+/** Directory filter: every position group present in the data, plus "all". */
+export type PositionFilter = "all" | RosterGroup;
 
 export type PlayerSortKey =
   | "name"
@@ -20,16 +28,6 @@ export const PLAYERS_PAGE_SIZE: Record<PlayersViewMode, number> = {
   cards: 24,
   list: 25,
 };
-
-export const POSITION_SIDE_GROUPS: ReadonlyArray<{
-  value: PositionSideGroup;
-  label: string;
-}> = [
-  { value: "all", label: "All" },
-  { value: "off", label: "Offense" },
-  { value: "def", label: "Defense" },
-  { value: "st", label: "Special" },
-];
 
 const OFFENSE_POSITIONS = new Set([
   "QB",
@@ -75,7 +73,11 @@ export interface DirectoryPlayer extends PlayerDto {
   overallRating: number | null;
 }
 
-export function positionSideGroup(position: string): "off" | "def" | "st" | null {
+/**
+ * Which side of the ball a position plays. Drives colour coding only — the
+ * directory filters by position group, so this no longer gates visibility.
+ */
+export function positionSide(position: string): PositionSide | null {
   const pos = position.trim().toUpperCase();
   if (OFFENSE_POSITIONS.has(pos)) return "off";
   if (DEFENSE_POSITIONS.has(pos)) return "def";
@@ -83,23 +85,55 @@ export function positionSideGroup(position: string): "off" | "def" | "st" | null
   return null;
 }
 
-export function matchesPositionSideGroup(
+/** The filter bucket a player falls into — their group, or "Other". */
+export function playerPositionGroup(position: string): RosterGroup {
+  return derivePositionGroup(position) ?? OTHER_GROUP;
+}
+
+export function matchesPositionFilter(
   position: string,
-  group: PositionSideGroup,
+  filter: PositionFilter,
 ): boolean {
-  if (group === "all") return true;
-  return positionSideGroup(position) === group;
+  if (filter === "all") return true;
+  return playerPositionGroup(position) === filter;
+}
+
+/**
+ * Filter chips for the directory: "All" plus every position group that is
+ * actually represented, in canonical football order with "Other" last. Groups
+ * with no players are omitted rather than shown as dead zero-count chips.
+ */
+export function buildPositionFilterOptions(
+  players: readonly DirectoryPlayer[],
+): Array<{ value: PositionFilter; label: string; count: number }> {
+  const counts = new Map<RosterGroup, number>();
+  for (const player of players) {
+    const group = playerPositionGroup(player.position);
+    counts.set(group, (counts.get(group) ?? 0) + 1);
+  }
+
+  const ordered: RosterGroup[] = [...POSITION_GROUP_ORDER, OTHER_GROUP];
+  return [
+    { value: "all" as const, label: "All", count: players.length },
+    ...ordered
+      .filter((group) => (counts.get(group) ?? 0) > 0)
+      .map((group) => ({
+        value: group as PositionFilter,
+        label: group,
+        count: counts.get(group) ?? 0,
+      })),
+  ];
 }
 
 export function filterPlayers(
   players: readonly DirectoryPlayer[],
   query: string,
-  group: PositionSideGroup,
+  filter: PositionFilter,
 ): DirectoryPlayer[] {
   const q = query.trim().toLowerCase();
   return players.filter(
     (player) =>
-      matchesPositionSideGroup(player.position, group) &&
+      matchesPositionFilter(player.position, filter) &&
       (!q ||
         player.name.toLowerCase().includes(q) ||
         player.teamName.toLowerCase().includes(q) ||

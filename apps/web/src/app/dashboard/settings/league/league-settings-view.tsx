@@ -91,10 +91,9 @@ export async function LeagueSettingsView({
     <div className="space-y-4">
       <ResourceHeader
         kind="league"
-        name={league.name}
-        href={leagueHomeHref(id)}
-        subtitle="League Settings"
-        context="Settings, members, and roster tools."
+        title="League settings"
+        homeHref={leagueHomeHref(id)}
+        context={`${league.name} · Settings, members, and roster tools.`}
       />
 
       <Card data-testid="league-manage-settings">

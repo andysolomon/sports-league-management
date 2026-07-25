@@ -895,6 +895,10 @@ const refs = {
     { playerId: string; seasonId: string },
     { statsJson: string; gameCount: number }
   >("sports:getPlayerSeasonTotals"),
+  getPlayerCareerTotals: queryRef<
+    { playerId: string },
+    { statsJson: string; gameCount: number; seasonCount: number }
+  >("sports:getPlayerCareerTotals"),
   computeSeasonSprt: queryRef<
     { seasonId: string },
     Array<{
@@ -2534,6 +2538,22 @@ export async function getPlayerSeasonTotals(
 ): Promise<{ stats: PlayerGameStatLine; gameCount: number }> {
   const res = await queryConvex(refs.getPlayerSeasonTotals, { playerId, seasonId });
   return { stats: parseStatLine(res.statsJson), gameCount: res.gameCount };
+}
+
+/** Career box-score totals across every season the player has stats for. */
+export async function getPlayerCareerTotals(
+  playerId: string,
+): Promise<{
+  stats: PlayerGameStatLine;
+  gameCount: number;
+  seasonCount: number;
+}> {
+  const res = await queryConvex(refs.getPlayerCareerTotals, { playerId });
+  return {
+    stats: parseStatLine(res.statsJson),
+    gameCount: res.gameCount,
+    seasonCount: res.seasonCount,
+  };
 }
 
 /** Season stat-leaders per category (WSM-000186). Server-side read; callers

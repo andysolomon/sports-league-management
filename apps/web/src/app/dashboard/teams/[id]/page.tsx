@@ -109,9 +109,8 @@ export default async function TeamDetailPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="team"
-        name={team.name}
-        href={teamHomeHref(id)}
-        subtitle="Team Home"
+        title={team.name}
+        homeHref={teamHomeHref(id)}
         siblings={siblingLinks}
       />
 

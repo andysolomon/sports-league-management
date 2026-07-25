@@ -14,6 +14,7 @@ test.describe("/dashboard entry redirect", () => {
 
     const header = page.getByTestId("resource-header-league");
     await expect(header).toBeVisible();
-    await expect(header.getByText("League Home")).toBeVisible();
+    // Title-first header: League Home names the league in its h1.
+    await expect(header.getByRole("heading", { level: 1 })).toBeVisible();
   });
 });

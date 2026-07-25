@@ -64,9 +64,9 @@ export default async function RosterPage({
       <div className="space-y-4">
         <ResourceHeader
           kind="team"
-          name={team.name}
-          href={teamHomeHref(teamId)}
-          subtitle="Roster"
+          title="Roster"
+          homeHref={teamHomeHref(teamId)}
+          context={team.name}
           siblings={buildTeamSiblingLinks({
             teamId,
             rosterEnabled: enabled,
@@ -97,9 +97,9 @@ export default async function RosterPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="team"
-        name={team.name}
-        href={teamHomeHref(teamId)}
-        subtitle="Roster"
+        title="Roster"
+        homeHref={teamHomeHref(teamId)}
+        context={team.name}
         siblings={buildTeamSiblingLinks({
           teamId,
           rosterEnabled: enabled,

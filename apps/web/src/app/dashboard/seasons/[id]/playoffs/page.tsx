@@ -25,7 +25,6 @@ import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
 import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import {
-  leagueHomeHref,
   seasonHomeHref,
   seasonSubpageHref,
 } from "@/components/workspace/resource-navigation";
@@ -93,17 +92,9 @@ export default async function SeasonPlayoffsPage({
     <div className="space-y-4">
       <ResourceHeader
         kind="season"
-        name={season.name}
-        href={seasonHomeHref(seasonId)}
-        subtitle={`Playoffs · ${league.name}`}
-        context={
-          <a
-            href={leagueHomeHref(league.id)}
-            className="text-accent hover:underline"
-          >
-            {league.name}
-          </a>
-        }
+        title="Playoffs"
+        homeHref={seasonHomeHref(seasonId)}
+        context={`${season.name} · ${league.name}`}
         actions={
           <SeasonSwitcher
             seasons={allSeasons.map((s) => ({

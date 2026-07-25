@@ -162,10 +162,10 @@ export default function TeamEditForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* DialogContent caps height + scrolls (base); the footer below is pinned
-          (sticky) so Save is always reachable on a short mobile viewport. */}
-      <DialogContent>
-        <DialogHeader>
+      {/* Height-capped flex column: only the field list scrolls, so the footer
+          occupies its own row instead of floating over the last fields. */}
+      <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Edit Team</DialogTitle>
           <DialogDescription>
             Update the team&apos;s information.
@@ -173,196 +173,203 @@ export default function TeamEditForm({
         </DialogHeader>
 
         {error && (
-          <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
+          <div className="shrink-0 rounded-md bg-destructive/10 p-3 text-sm text-destructive" role="alert">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="team-name">School / Organization name</Label>
-            <Input
-              id="team-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="team-teamname">Team name / mascot</Label>
-            <Input
-              id="team-teamname"
-              type="text"
-              value={teamName}
-              placeholder="e.g. Buccaneers (optional)"
-              onChange={(e) => setTeamName(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Shown as &ldquo;{name || "School"}
-              {teamName.trim() ? ` — ${teamName.trim()}` : ""}&rdquo;.
-            </p>
-          </div>
-
-          {/* State + City pick lists — real, mappable places (no free text). */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          {/* Negative margins let the scroll edge run full-bleed while the
+              fields keep the dialog's 24px inset. */}
+          <div className="-mx-6 min-h-0 flex-1 space-y-4 overflow-y-auto px-6">
             <div className="space-y-2">
-              <Label htmlFor="team-state">State</Label>
-              <Select value={stateValue} onValueChange={onStateChange}>
-                <SelectTrigger
-                  id="team-state"
-                  className="w-full"
-                  onPointerDown={() => void ensureCities()}
-                >
-                  <SelectValue placeholder="Select a state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {US_STATES.map((s) => (
-                    <SelectItem key={s.code} value={s.code}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="team-city">City</Label>
-              <Select
-                value={cityValue}
-                onValueChange={setCityValue}
-                disabled={!stateValue && cityOptions.length === 0}
-              >
-                <SelectTrigger
-                  id="team-city"
-                  className="w-full"
-                  onPointerDown={() => void ensureCities()}
-                  aria-label="City"
-                >
-                  <SelectValue
-                    placeholder={
-                      loadingCities
-                        ? "Loading cities…"
-                        : stateValue
-                          ? "Select a city"
-                          : "Pick a state first"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {cityOptions.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="team-stadium">Stadium</Label>
-            <Input
-              id="team-stadium"
-              type="text"
-              value={stadium}
-              onChange={(e) => setStadium(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="team-founded">Founded Year</Label>
-            <Input
-              id="team-founded"
-              type="number"
-              value={foundedYear}
-              onChange={(e) => setFoundedYear(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="team-logo">Logo URL</Label>
-            <Input
-              id="team-logo"
-              type="url"
-              inputMode="url"
-              value={logoUrl}
-              placeholder="https://… (optional)"
-              onChange={(e) => setLogoUrl(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="team-maxpreps">MaxPreps Supplier ID</Label>
-            <Input
-              id="team-maxpreps"
-              type="text"
-              value={maxprepsSupplierId}
-              placeholder="e.g. 12345678-1234-1234-123456789012 (optional)"
-              onChange={(e) => setMaxprepsSupplierId(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              From your MaxPreps account (register as a Stat Supplier). Used as
-              line 1 of the stat export so it&apos;s ready to upload.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <input
-                type="checkbox"
-                checked={useColors}
-                onChange={(e) => setUseColors(e.target.checked)}
+              <Label htmlFor="team-name">School / Organization name</Label>
+              <Input
+                id="team-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
-              Custom team colors
-            </label>
-            {useColors ? (
-              <div className="flex flex-wrap gap-4 pt-1">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="team-primary" className="text-xs">
-                    Primary
-                  </Label>
-                  <input
-                    id="team-primary"
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="h-8 w-12 cursor-pointer rounded border border-input bg-background"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="team-secondary" className="text-xs">
-                    Secondary
-                  </Label>
-                  <input
-                    id="team-secondary"
-                    type="color"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="h-8 w-12 cursor-pointer rounded border border-input bg-background"
-                  />
-                </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="team-teamname">Team name / mascot</Label>
+              <Input
+                id="team-teamname"
+                type="text"
+                value={teamName}
+                placeholder="e.g. Buccaneers (optional)"
+                onChange={(e) => setTeamName(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown as &ldquo;{name || "School"}
+                {teamName.trim() ? ` — ${teamName.trim()}` : ""}&rdquo;.
+              </p>
+            </div>
+
+            {/* State + City pick lists — real, mappable places (no free text). */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="team-state">State</Label>
+                <Select value={stateValue} onValueChange={onStateChange}>
+                  <SelectTrigger
+                    id="team-state"
+                    className="w-full"
+                    onPointerDown={() => void ensureCities()}
+                  >
+                    <SelectValue placeholder="Select a state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {US_STATES.map((s) => (
+                      <SelectItem key={s.code} value={s.code}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : null}
-          </div>
 
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <input
-                type="checkbox"
-                checked={allowDuplicateJerseys}
-                onChange={(e) => setAllowDuplicateJerseys(e.target.checked)}
+              <div className="space-y-2">
+                <Label htmlFor="team-city">City</Label>
+                <Select
+                  value={cityValue}
+                  onValueChange={setCityValue}
+                  disabled={!stateValue && cityOptions.length === 0}
+                >
+                  <SelectTrigger
+                    id="team-city"
+                    className="w-full"
+                    onPointerDown={() => void ensureCities()}
+                    aria-label="City"
+                  >
+                    <SelectValue
+                      placeholder={
+                        loadingCities
+                          ? "Loading cities…"
+                          : stateValue
+                            ? "Select a city"
+                            : "Pick a state first"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cityOptions.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="team-stadium">Stadium</Label>
+              <Input
+                id="team-stadium"
+                type="text"
+                value={stadium}
+                onChange={(e) => setStadium(e.target.value)}
               />
-              Allow duplicate jersey numbers
-            </label>
-            <p className="text-xs text-muted-foreground">
-              {allowDuplicateJerseys
-                ? "Players may share a number — duplicates are flagged but allowed."
-                : "Saving a number already on the roster is blocked."}
-            </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="team-founded">Founded Year</Label>
+              <Input
+                id="team-founded"
+                type="number"
+                value={foundedYear}
+                onChange={(e) => setFoundedYear(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="team-logo">Logo URL</Label>
+              <Input
+                id="team-logo"
+                type="url"
+                inputMode="url"
+                value={logoUrl}
+                placeholder="https://… (optional)"
+                onChange={(e) => setLogoUrl(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="team-maxpreps">MaxPreps Supplier ID</Label>
+              <Input
+                id="team-maxpreps"
+                type="text"
+                value={maxprepsSupplierId}
+                placeholder="e.g. 12345678-1234-1234-123456789012 (optional)"
+                onChange={(e) => setMaxprepsSupplierId(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                From your MaxPreps account (register as a Stat Supplier). Used as
+                line 1 of the stat export so it&apos;s ready to upload.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={useColors}
+                  onChange={(e) => setUseColors(e.target.checked)}
+                />
+                Custom team colors
+              </label>
+              {useColors ? (
+                <div className="flex flex-wrap gap-4 pt-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="team-primary" className="text-xs">
+                      Primary
+                    </Label>
+                    <input
+                      id="team-primary"
+                      type="color"
+                      value={primaryColor}
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      className="h-8 w-12 cursor-pointer rounded border border-input bg-background"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="team-secondary" className="text-xs">
+                      Secondary
+                    </Label>
+                    <input
+                      id="team-secondary"
+                      type="color"
+                      value={secondaryColor}
+                      onChange={(e) => setSecondaryColor(e.target.value)}
+                      className="h-8 w-12 cursor-pointer rounded border border-input bg-background"
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={allowDuplicateJerseys}
+                  onChange={(e) => setAllowDuplicateJerseys(e.target.checked)}
+                />
+                Allow duplicate jersey numbers
+              </label>
+              <p className="text-xs text-muted-foreground">
+                {allowDuplicateJerseys
+                  ? "Players may share a number — duplicates are flagged but allowed."
+                  : "Saving a number already on the roster is blocked."}
+              </p>
+            </div>
           </div>
 
-          <div className="sticky bottom-0 -mx-6 -mb-6 flex justify-end gap-3 border-t border-border bg-background px-6 py-4">
+          <div className="-mx-6 -mb-6 mt-4 flex shrink-0 justify-end gap-3 border-t border-border bg-background px-6 py-4">
             <Button
               type="button"
               variant="outline"

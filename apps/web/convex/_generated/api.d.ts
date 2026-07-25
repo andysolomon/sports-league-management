@@ -18,6 +18,7 @@ import type * as lib_liveScore from "../lib/liveScore.js";
 import type * as lib_offseason from "../lib/offseason.js";
 import type * as lib_playerStats from "../lib/playerStats.js";
 import type * as lib_roundRobin from "../lib/roundRobin.js";
+import type * as lib_seasonLifecycle from "../lib/seasonLifecycle.js";
 import type * as lib_standings from "../lib/standings.js";
 import type * as lib_statLeaders from "../lib/statLeaders.js";
 import type * as migrations_20260422_seasonsRosterLocked from "../migrations/20260422_seasonsRosterLocked.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "lib/offseason": typeof lib_offseason;
   "lib/playerStats": typeof lib_playerStats;
   "lib/roundRobin": typeof lib_roundRobin;
+  "lib/seasonLifecycle": typeof lib_seasonLifecycle;
   "lib/standings": typeof lib_standings;
   "lib/statLeaders": typeof lib_statLeaders;
   "migrations/20260422_seasonsRosterLocked": typeof migrations_20260422_seasonsRosterLocked;
