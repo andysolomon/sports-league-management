@@ -34,6 +34,7 @@ export function PositionBadge({
   const side = positionSide(position);
   return (
     <span
+      data-testid="player-position"
       className={cn(
         "inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide",
         positionSideClasses(position),

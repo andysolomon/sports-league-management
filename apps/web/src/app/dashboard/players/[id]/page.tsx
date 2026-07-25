@@ -198,9 +198,12 @@ export default async function PlayerProfilePage({
               </div>
             )}
             <div className="min-w-0">
-              <h2 className="text-2xl font-bold text-foreground">
+              {/* Not a heading: the Resource Header's h1 already names the
+                  player, so a second same-text heading is a screen-reader
+                  duplicate. Kept visually as the profile card's identity line. */}
+              <p className="text-2xl font-bold text-foreground">
                 {player.name}
-              </h2>
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {player.position}
                 {positionGroup && positionGroup !== player.position

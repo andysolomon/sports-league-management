@@ -442,7 +442,7 @@ test.describe.serial(
         `/dashboard/teams/${fixture!.teamId}/roster/audit`,
       );
       await expect(
-        page.getByRole("heading", { name: /Roster Audit Log/ }),
+        page.getByRole("heading", { name: /Roster Audit Log/i }),
       ).toBeVisible();
 
       // Audit chips render the action label with underscores replaced by

@@ -266,7 +266,11 @@ export default function TeamManagement({
                 </div>
               )}
               <div className="min-w-0">
-                <h2 className="min-w-0 break-words text-2xl font-bold text-foreground">
+                {/* Not a heading: the Resource Header's h1 already names the
+                    team, and a second heading with the same text is a
+                    duplicate for screen readers. Kept visually — it carries
+                    the mascot, which the h1 does not. */}
+                <p className="min-w-0 break-words text-2xl font-bold text-foreground">
                   {team.name}
                   {team.teamName ? (
                     <span className="text-muted-foreground">
@@ -274,7 +278,7 @@ export default function TeamManagement({
                       &mdash; {team.teamName}
                     </span>
                   ) : null}
-                </h2>
+                </p>
                 {team.primaryColor || team.secondaryColor ? (
                   <div className="mt-1 flex gap-1" aria-hidden>
                     {team.primaryColor ? (
