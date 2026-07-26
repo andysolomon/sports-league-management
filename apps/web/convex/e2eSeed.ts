@@ -153,6 +153,15 @@ async function cascadeDeleteLeague(
       deleted += 1;
     }
   }
+  // Dynasty feed (F4) — league-scoped, so cleared once rather than per season.
+  const events = (await ctx.db
+    .query("dynastyEvents")
+    .withIndex("by_leagueId_createdAt", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"dynastyEvents"> }>;
+  for (const row of events) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
   for (const team of teams as Array<{ _id: Id<"teams"> }>) {
     const teamDepth = (await ctx.db
       .query("depthChartEntries")
