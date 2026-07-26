@@ -9,6 +9,7 @@
  * A full ~48-man roster follows a believable position spread (QB→K/P). Jersey
  * numbers are unique within the batch and avoid any the team already uses.
  */
+import { mulberry32, seedFromString } from "@/lib/rng";
 
 export interface SyntheticPlayer {
   name: string;
@@ -147,27 +148,14 @@ const LAST_NAMES: readonly string[] = [
   "Zamora", "Zhang", "Zimmerman",
 ];
 
-/** mulberry32 — tiny deterministic PRNG so generation is seedable + testable. */
-function rng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/**
+ * PRNG and string-hash now live in `@/lib/rng` (the shared seed policy, F1).
+ * Both were byte-identical to the implementations that used to sit here, so
+ * generated output is unchanged. Re-exported for the existing import sites.
+ */
+const rng = mulberry32;
 
-/** Stable 32-bit hash of a string — used to seed generation from a team id. */
-export function seedFromString(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
+export { seedFromString };
 
 export interface GenerateOptions {
   count: number;

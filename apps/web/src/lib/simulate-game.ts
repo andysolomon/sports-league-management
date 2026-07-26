@@ -10,7 +10,7 @@
  * differential, get a small home-field bump, then add seeded variance — enough
  * that a clearly stronger team usually (not always) wins.
  */
-import { seedFromString } from "@/lib/synthetic-roster";
+import { mulberry32, seedFromString } from "@/lib/rng";
 import {
   DEFAULT_SIMULATION_FLAVOR,
   normalizeSimulationFlavor,
@@ -23,17 +23,13 @@ const BASELINE_POINTS = 21;
 /** Home-field edge, in points. */
 const HOME_FIELD = 2.5;
 
-/** mulberry32 — small deterministic PRNG (same family as synthetic-roster). */
-export function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+/*
+ * PRNG + string-hash moved to `@/lib/rng` (shared seed policy, F1). Both are
+ * re-exported here because `pbp/engine.ts`, `dynasty-progression.ts` and
+ * `simulate-fixture.ts` import them from this module. New code should import
+ * from `@/lib/rng` and prefer `seedFor(domain, ...parts)` over a bare hash.
+ */
+export { mulberry32 };
 
 function rng(seed: number): () => number {
   return mulberry32(seed);

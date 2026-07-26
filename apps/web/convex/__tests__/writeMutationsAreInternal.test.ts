@@ -203,6 +203,64 @@ const _noLeakedPublicSportsWrites: LeakedPublicSportsWrites extends never
   : LeakedPublicSportsWrites = true;
 void _noLeakedPublicSportsWrites;
 
+/*
+ * Dynasty Mode modules (F1) — same backstop, one per module.
+ *
+ * `convex/{dynasty,sim,program,history}.ts` are where every Dynasty Mode write
+ * lands. They start empty apart from a readiness probe, so each allow-list is a
+ * single name today — and that is exactly the point: the FIRST write added to
+ * any of these modules is guarded from its first commit, instead of the guard
+ * being retrofitted after a leak. Adding a genuinely-public READ query means
+ * adding its name below, which is a deliberate, security-reviewed act.
+ *
+ * Note these unions are NOT interchangeable with `AllowedPublicSportsReads`.
+ * Each `Exclude` is keyed to its own module, so a write leaking onto
+ * `api.program` cannot be masked by an allow-list entry on another module.
+ */
+void api.dynasty.moduleStatus;
+void api.sim.moduleStatus;
+void api.program.moduleStatus;
+void api.history.moduleStatus;
+
+type AllowedPublicDynastyReads = "moduleStatus";
+type AllowedPublicSimReads = "moduleStatus";
+type AllowedPublicProgramReads = "moduleStatus";
+type AllowedPublicHistoryReads = "moduleStatus";
+
+type LeakedPublicDynastyWrites = Exclude<
+  keyof typeof api.dynasty,
+  AllowedPublicDynastyReads
+>;
+type LeakedPublicSimWrites = Exclude<
+  keyof typeof api.sim,
+  AllowedPublicSimReads
+>;
+type LeakedPublicProgramWrites = Exclude<
+  keyof typeof api.program,
+  AllowedPublicProgramReads
+>;
+type LeakedPublicHistoryWrites = Exclude<
+  keyof typeof api.history,
+  AllowedPublicHistoryReads
+>;
+
+const _noLeakedPublicDynastyWrites: LeakedPublicDynastyWrites extends never
+  ? true
+  : LeakedPublicDynastyWrites = true;
+const _noLeakedPublicSimWrites: LeakedPublicSimWrites extends never
+  ? true
+  : LeakedPublicSimWrites = true;
+const _noLeakedPublicProgramWrites: LeakedPublicProgramWrites extends never
+  ? true
+  : LeakedPublicProgramWrites = true;
+const _noLeakedPublicHistoryWrites: LeakedPublicHistoryWrites extends never
+  ? true
+  : LeakedPublicHistoryWrites = true;
+void _noLeakedPublicDynastyWrites;
+void _noLeakedPublicSimWrites;
+void _noLeakedPublicProgramWrites;
+void _noLeakedPublicHistoryWrites;
+
 // --- e2e seed mutations MUST be internal too (WSM-000139) ---
 // Same vuln class as the sports.ts writes above: they create/destroy real
 // rows, so they must never be reachable by an anonymous client. The env gate
@@ -243,6 +301,17 @@ describe("sports write mutations are internal (WSM-000096)", () => {
 describe("e2e seed mutations are internal (WSM-000139)", () => {
   it("is enforced at compile time (see @ts-expect-error guards above)", () => {
     expect(typeof internal.e2eSeed.createRosterFixture).not.toBe("undefined");
+  });
+});
+
+describe("dynasty module writes are internal (F1)", () => {
+  it("is enforced at compile time (see the per-module Exclude backstops above)", () => {
+    // The four Dynasty Mode modules must expose reads only. The real guard is
+    // tsc; this documents intent and keeps the suite honest about coverage.
+    expect(typeof api.dynasty.moduleStatus).not.toBe("undefined");
+    expect(typeof api.sim.moduleStatus).not.toBe("undefined");
+    expect(typeof api.program.moduleStatus).not.toBe("undefined");
+    expect(typeof api.history.moduleStatus).not.toBe("undefined");
   });
 });
 
