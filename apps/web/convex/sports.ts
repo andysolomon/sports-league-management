@@ -8,7 +8,12 @@ import { internalMutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
-import { computeStandingsPure } from "./lib/standings";
+import { computeStandingsPure, rankTeamStats } from "./lib/standings";
+import {
+  buildTeamRecord,
+  recordsToRankableStats,
+  serializeHeadToHead,
+} from "./lib/teamRecords";
 import { aggregateStatLines, parseStatLine } from "./lib/playerStats";
 import {
   categoryValues,
@@ -1007,6 +1012,7 @@ export const deleteLeagueBatch = internalMutationGeneric({
         )
         .collect())
         await ctx.db.delete(pa._id);
+      await clearSeasonTeamRecords(ctx as MutationCtx, season._id);
       await ctx.db.delete(season._id);
     }
 
@@ -1082,6 +1088,7 @@ export const deleteLeague = internalMutationGeneric({
         )
         .collect())
         await ctx.db.delete(pa._id);
+      await clearSeasonTeamRecords(ctx as MutationCtx, season._id);
       await ctx.db.delete(season._id);
     }
 
@@ -1930,6 +1937,9 @@ async function purgeTeam(ctx: MutationCtx, teamId: Id<"teams">): Promise<void> {
     await ctx.db.delete(fixture._id);
   }
 
+  // Cached season records for this team, across every season (F2).
+  await clearTeamRecordsForTeam(ctx, teamId);
+
   await ctx.db.delete(teamId);
 }
 
@@ -2564,6 +2574,9 @@ export const deleteSeason = internalMutationGeneric({
   handler: async (ctx, args) => {
     const season = await ctx.db.get(args.seasonId);
     if (!season) return null;
+
+    // Cached season records go with the season they summarize (F2).
+    await clearSeasonTeamRecords(ctx as MutationCtx, args.seasonId);
 
     const fixtures = await ctx.db
       .query("fixtures")
@@ -4668,6 +4681,10 @@ export const generateSeasonSchedule = internalMutationGeneric({
       await ctx.db.delete(f._id);
     }
 
+    // The games those records summarized are gone, so the cache goes too (F2).
+    // The new slate rebuilds it as results come in.
+    await clearSeasonTeamRecords(ctx as MutationCtx, args.seasonId);
+
     const teamIds = teams.map((t) => t._id);
     const pairings =
       args.format === "double"
@@ -5519,6 +5536,245 @@ const gameResultDtoValidator = v.object({
   recordedBy: v.string(),
 });
 
+/*
+ * ── Persisted season team records (Dynasty Mode F2) ─────────────────────────
+ *
+ * `seasonTeamRecords` is a CACHE of what folding a team's completed games
+ * produces. `buildTeamRecord` in `lib/teamRecords.ts` is the definition; these
+ * helpers keep the stored rows equal to it.
+ *
+ * After any result write we rebuild the two affected teams from THEIR OWN
+ * games rather than applying an in-place delta. `fixtures` is already indexed
+ * `by_homeTeamId`/`by_awayTeamId`, so that is a bounded read (a team plays
+ * ~10–16 games), and it is exactly equal to a full rebuild by construction —
+ * including for `streak` and `lastResults`, which are order-dependent and
+ * cannot be corrected by adding and subtracting counters when an EARLIER game
+ * is re-recorded (a re-sim under a new engine version, say).
+ */
+
+/**
+ * Deterministic chronological order for a team's games. Anything unscheduled
+ * sorts last; `_id` is the final tiebreak so the order is total and stable.
+ */
+function compareFixturesChronologically(
+  a: { week: number | null; scheduledAt: string | null; _id: string },
+  b: { week: number | null; scheduledAt: string | null; _id: string },
+): number {
+  const aWeek = a.week ?? Number.MAX_SAFE_INTEGER;
+  const bWeek = b.week ?? Number.MAX_SAFE_INTEGER;
+  if (aWeek !== bWeek) return aWeek - bWeek;
+
+  const aAt = a.scheduledAt ?? "";
+  const bAt = b.scheduledAt ?? "";
+  if (aAt !== bAt) return aAt < bAt ? -1 : 1;
+
+  return a._id < b._id ? -1 : a._id > b._id ? 1 : 0;
+}
+
+/** Games that count toward a record: final, non-playoff, in this season. */
+function countsTowardRecord(fixture: {
+  seasonId: Id<"seasons">;
+  status: string;
+  stage?: string;
+}): boolean {
+  return fixture.status === "final" && fixture.stage !== "playoff";
+}
+
+/**
+ * Rebuild and persist one team's record for a season. Writes nothing but the
+ * single `seasonTeamRecords` row.
+ */
+async function rebuildTeamRecord(
+  ctx: MutationCtx,
+  args: {
+    seasonId: Id<"seasons">;
+    teamId: Id<"teams">;
+    /** Division lookups reused across teams in the same rebuild. */
+    divisionCache: Map<string, string | null>;
+  },
+): Promise<void> {
+  const team = await ctx.db.get(args.teamId);
+  if (!team) return;
+
+  const divisionOf = async (teamId: Id<"teams">): Promise<string | null> => {
+    const cached = args.divisionCache.get(teamId);
+    if (cached !== undefined) return cached;
+    const doc = await ctx.db.get(teamId);
+    const divisionId = doc?.divisionId ?? null;
+    args.divisionCache.set(teamId, divisionId);
+    return divisionId;
+  };
+
+  const ownDivision = await divisionOf(args.teamId);
+
+  const [homeFixtures, awayFixtures] = await Promise.all([
+    ctx.db
+      .query("fixtures")
+      .withIndex("by_homeTeamId", (q) => q.eq("homeTeamId", args.teamId))
+      .collect(),
+    ctx.db
+      .query("fixtures")
+      .withIndex("by_awayTeamId", (q) => q.eq("awayTeamId", args.teamId))
+      .collect(),
+  ]);
+
+  const relevant = [...homeFixtures, ...awayFixtures]
+    .filter((f) => f.seasonId === args.seasonId && countsTowardRecord(f))
+    .sort(compareFixturesChronologically);
+
+  const outcomes = [];
+  for (const fixture of relevant) {
+    const result = await ctx.db
+      .query("gameResults")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fixture._id))
+      .first();
+    // A fixture flagged final with no result row contributes nothing, exactly
+    // as the fixture-scanning standings implementation treated it.
+    if (!result) continue;
+
+    const isHome = fixture.homeTeamId === args.teamId;
+    const opponentTeamId = isHome ? fixture.awayTeamId : fixture.homeTeamId;
+    const opponentDivision = await divisionOf(opponentTeamId);
+
+    outcomes.push({
+      opponentTeamId: opponentTeamId as string,
+      teamScore: isHome ? result.homeScore : result.awayScore,
+      opponentScore: isHome ? result.awayScore : result.homeScore,
+      sameDivision: ownDivision !== null && ownDivision === opponentDivision,
+    });
+  }
+
+  const built = buildTeamRecord({
+    teamId: args.teamId as string,
+    divisionId: ownDivision,
+    outcomes,
+  });
+
+  const existing = await ctx.db
+    .query("seasonTeamRecords")
+    .withIndex("by_seasonId_teamId", (q) =>
+      q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+    )
+    .first();
+
+  // A team with no counted games carries no information: standings already
+  // default a missing row to 0-0-0. Keeping the table minimal means a rebuild
+  // produces exactly the same row set as incremental maintenance, so "cache
+  // equals rebuild" is a strict equality rather than an approximate one. It
+  // also means a season whose results are all deleted returns to empty.
+  if (built.gamesCounted === 0) {
+    if (existing) await ctx.db.delete(existing._id);
+    return;
+  }
+
+  const payload = {
+    leagueId: team.leagueId,
+    seasonId: args.seasonId,
+    teamId: args.teamId,
+    divisionId: (ownDivision as Id<"divisions"> | null) ?? null,
+    wins: built.wins,
+    losses: built.losses,
+    ties: built.ties,
+    pointsFor: built.pointsFor,
+    pointsAgainst: built.pointsAgainst,
+    divisionWins: built.divisionWins,
+    divisionLosses: built.divisionLosses,
+    divisionTies: built.divisionTies,
+    headToHeadJson: serializeHeadToHead(built.headToHead),
+    streak: built.streak,
+    lastResults: built.lastResults as string[],
+    gamesCounted: built.gamesCounted,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (existing) {
+    await ctx.db.replace(existing._id, payload);
+  } else {
+    await ctx.db.insert("seasonTeamRecords", payload);
+  }
+}
+
+/** Refresh both teams involved in a fixture. The post-result-write hook. */
+async function syncTeamRecordsForFixture(
+  ctx: MutationCtx,
+  fixture: {
+    seasonId: Id<"seasons">;
+    homeTeamId: Id<"teams">;
+    awayTeamId: Id<"teams">;
+    stage?: string;
+  },
+): Promise<void> {
+  // Playoff results never enter a record, so they need no refresh.
+  if (fixture.stage === "playoff") return;
+
+  const divisionCache = new Map<string, string | null>();
+  for (const teamId of [fixture.homeTeamId, fixture.awayTeamId]) {
+    await rebuildTeamRecord(ctx, {
+      seasonId: fixture.seasonId,
+      teamId,
+      divisionCache,
+    });
+  }
+}
+
+/** Rebuild every team in a season. The repair and backfill path. */
+async function rebuildSeasonTeamRecordsCore(
+  ctx: MutationCtx,
+  seasonId: Id<"seasons">,
+): Promise<number> {
+  const season = await ctx.db.get(seasonId);
+  if (!season) return 0;
+
+  const teams = await ctx.db
+    .query("teams")
+    .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+    .collect();
+
+  const divisionCache = new Map<string, string | null>();
+  for (const team of teams) {
+    await rebuildTeamRecord(ctx, { seasonId, teamId: team._id, divisionCache });
+  }
+  return teams.length;
+}
+
+/** Drop a season's cached records (schedule wipe, season delete). */
+async function clearSeasonTeamRecords(
+  ctx: MutationCtx,
+  seasonId: Id<"seasons">,
+): Promise<void> {
+  const rows = await ctx.db
+    .query("seasonTeamRecords")
+    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+    .collect();
+  for (const row of rows) await ctx.db.delete(row._id);
+}
+
+/** Drop one team's cached records across every season (team delete). */
+async function clearTeamRecordsForTeam(
+  ctx: MutationCtx,
+  teamId: Id<"teams">,
+): Promise<void> {
+  const rows = await ctx.db
+    .query("seasonTeamRecords")
+    .withIndex("by_teamId", (q) => q.eq("teamId", teamId))
+    .collect();
+  for (const row of rows) await ctx.db.delete(row._id);
+}
+
+/**
+ * Repair entry point. Safe to run at any time — the table holds nothing that
+ * cannot be rederived, so this is the answer to any suspected drift (a
+ * mid-season division change, an interrupted mutation, a manual data edit).
+ */
+export const rebuildSeasonTeamRecords = internalMutation({
+  args: { seasonId: v.id("seasons") },
+  returns: v.object({ teamsRebuilt: v.number() }),
+  handler: async (ctx, args) => {
+    const teamsRebuilt = await rebuildSeasonTeamRecordsCore(ctx, args.seasonId);
+    return { teamsRebuilt };
+  },
+});
+
 export const recordGameResult = internalMutationGeneric({
   args: {
     fixtureId: v.id("fixtures"),
@@ -5558,6 +5814,11 @@ export const recordGameResult = internalMutationGeneric({
     if (fixture.status !== "final") {
       await ctx.db.patch(args.fixtureId, { status: "final" });
     }
+
+    // Keep the cached season record in step with the result, in the same
+    // transaction (F2). Standings read the cache, so letting it lag would
+    // surface a stale table immediately after a game is recorded.
+    await syncTeamRecordsForFixture(ctx as MutationCtx, fixture);
 
     // Playoff games advance the winner up the bracket atomically with the
     // result (WSM-000164). Idempotent: re-recording recomputes the same tree.
@@ -5663,6 +5924,61 @@ const standingValidator = v.object({
   leagueRank: v.number(),
 });
 
+/*
+ * Standings read path (F2).
+ *
+ * These used to scan every fixture in the season and then fetch each result —
+ * O(season) reads on every render, repeated per standings surface. They now
+ * hydrate the persisted `seasonTeamRecords` cache: one indexed read for the
+ * teams, one for the records.
+ *
+ * Ranking is unchanged. `recordsToRankableStats` produces exactly the counters
+ * `computeStandingsPure` used to derive, and `rankTeamStats` applies the same
+ * `compareStandings` tiebreak chain, so there is still only one implementation
+ * of the rules and its existing tests still cover it.
+ */
+async function standingsFromRecords(
+  ctx: QueryCtx,
+  args: {
+    leagueId: Id<"leagues">;
+    seasonId: Id<"seasons">;
+    divisionFilter?: string | null;
+  },
+) {
+  const [teamRows, recordRows] = await Promise.all([
+    ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect(),
+    ctx.db
+      .query("seasonTeamRecords")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect(),
+  ]);
+
+  const stats = recordsToRankableStats(
+    teamRows.map((t) => ({
+      _id: t._id,
+      name: t.name,
+      divisionId: t.divisionId,
+    })),
+    recordRows.map((r) => ({
+      teamId: r.teamId,
+      wins: r.wins,
+      losses: r.losses,
+      ties: r.ties,
+      pointsFor: r.pointsFor,
+      pointsAgainst: r.pointsAgainst,
+      divisionWins: r.divisionWins,
+      divisionLosses: r.divisionLosses,
+      divisionTies: r.divisionTies,
+      headToHeadJson: r.headToHeadJson,
+    })),
+  );
+
+  return rankTeamStats(stats, args.divisionFilter);
+}
+
 export const computeStandings = query({
   args: { seasonId: v.id("seasons") },
   returns: v.array(standingValidator),
@@ -5670,51 +5986,9 @@ export const computeStandings = query({
     const season = await ctx.db.get(args.seasonId);
     if (!season) return [];
 
-    const teamRows = await ctx.db
-      .query("teams")
-      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
-      .collect();
-
-    const fixtureRows = await ctx.db
-      .query("fixtures")
-      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
-      .collect();
-
-    const finalFixtureIds = fixtureRows
-      .filter((f) => f.status === "final" && f.stage !== "playoff")
-      .map((f) => f._id);
-
-    const resultRows = (
-      await Promise.all(
-        finalFixtureIds.map((fid) =>
-          ctx.db
-            .query("gameResults")
-            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fid))
-            .first(),
-        ),
-      )
-    ).filter((r): r is NonNullable<typeof r> => r !== null);
-
-    return computeStandingsPure({
-      teams: teamRows.map((t) => ({
-        _id: t._id,
-        name: t.name,
-        divisionId: t.divisionId,
-      })),
-      fixtures: fixtureRows
-        .filter((f) => f.stage !== "playoff")
-        .map((f) => ({
-          _id: f._id,
-          seasonId: f.seasonId,
-          homeTeamId: f.homeTeamId,
-          awayTeamId: f.awayTeamId,
-          status: f.status,
-        })),
-      results: resultRows.map((r) => ({
-        fixtureId: r.fixtureId,
-        homeScore: r.homeScore,
-        awayScore: r.awayScore,
-      })),
+    return standingsFromRecords(ctx, {
+      leagueId: season.leagueId,
+      seasonId: args.seasonId,
     });
   },
 });
@@ -5729,51 +6003,9 @@ export const computeDivisionStandings = query({
     const season = await ctx.db.get(args.seasonId);
     if (!season) return [];
 
-    const teamRows = await ctx.db
-      .query("teams")
-      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
-      .collect();
-
-    const fixtureRows = await ctx.db
-      .query("fixtures")
-      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
-      .collect();
-
-    const finalFixtureIds = fixtureRows
-      .filter((f) => f.status === "final" && f.stage !== "playoff")
-      .map((f) => f._id);
-
-    const resultRows = (
-      await Promise.all(
-        finalFixtureIds.map((fid) =>
-          ctx.db
-            .query("gameResults")
-            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fid))
-            .first(),
-        ),
-      )
-    ).filter((r): r is NonNullable<typeof r> => r !== null);
-
-    return computeStandingsPure({
-      teams: teamRows.map((t) => ({
-        _id: t._id,
-        name: t.name,
-        divisionId: t.divisionId,
-      })),
-      fixtures: fixtureRows
-        .filter((f) => f.stage !== "playoff")
-        .map((f) => ({
-          _id: f._id,
-          seasonId: f.seasonId,
-          homeTeamId: f.homeTeamId,
-          awayTeamId: f.awayTeamId,
-          status: f.status,
-        })),
-      results: resultRows.map((r) => ({
-        fixtureId: r.fixtureId,
-        homeScore: r.homeScore,
-        awayScore: r.awayScore,
-      })),
+    return standingsFromRecords(ctx, {
+      leagueId: season.leagueId,
+      seasonId: args.seasonId,
       divisionFilter: args.divisionId,
     });
   },
@@ -5808,51 +6040,9 @@ export const computeStandingsPublic = query({
     const activeSeason = selectLifecycleSeason(seasonRows);
     if (!activeSeason) return null;
 
-    const teamRows = await ctx.db
-      .query("teams")
-      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
-      .collect();
-
-    const fixtureRows = await ctx.db
-      .query("fixtures")
-      .withIndex("by_seasonId", (q) => q.eq("seasonId", activeSeason._id))
-      .collect();
-
-    const finalFixtureIds = fixtureRows
-      .filter((f) => f.status === "final" && f.stage !== "playoff")
-      .map((f) => f._id);
-
-    const resultRows = (
-      await Promise.all(
-        finalFixtureIds.map((fid) =>
-          ctx.db
-            .query("gameResults")
-            .withIndex("by_fixtureId", (q) => q.eq("fixtureId", fid))
-            .first(),
-        ),
-      )
-    ).filter((r): r is NonNullable<typeof r> => r !== null);
-
-    const rows = computeStandingsPure({
-      teams: teamRows.map((t) => ({
-        _id: t._id,
-        name: t.name,
-        divisionId: t.divisionId,
-      })),
-      fixtures: fixtureRows
-        .filter((f) => f.stage !== "playoff")
-        .map((f) => ({
-          _id: f._id,
-          seasonId: f.seasonId,
-          homeTeamId: f.homeTeamId,
-          awayTeamId: f.awayTeamId,
-          status: f.status,
-        })),
-      results: resultRows.map((r) => ({
-        fixtureId: r.fixtureId,
-        homeScore: r.homeScore,
-        awayScore: r.awayScore,
-      })),
+    const rows = await standingsFromRecords(ctx, {
+      leagueId: args.leagueId,
+      seasonId: activeSeason._id,
     });
 
     return { seasonName: activeSeason.name, rows };
@@ -6867,6 +7057,10 @@ export const endLiveGame = internalMutation({
     if (fixture.status !== "final") {
       await ctx.db.patch(args.fixtureId, { status: "final" });
     }
+
+    // Same cache refresh as recordGameResult — this path writes gameResults
+    // directly, so it has to maintain the record too (F2).
+    await syncTeamRecordsForFixture(ctx, fixture);
 
     return toLiveDto({ ...row, status: "final", updatedAt: now });
   },

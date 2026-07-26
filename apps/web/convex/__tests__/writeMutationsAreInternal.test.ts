@@ -47,6 +47,7 @@ void internal.sports.updateDivision;
 void internal.sports.deleteDivision;
 void internal.sports.setLeaguePublic;
 void internal.sports.recordGameResult;
+void internal.sports.rebuildSeasonTeamRecords;
 void internal.sports.assignPlayerToRoster;
 void internal.sports.forkTeamToWorkspace;
 void internal.sports.forkDivisionToWorkspace;
@@ -283,6 +284,8 @@ void internal.migrations["20260422_seasonsRosterLocked"]
 void internal.migrations["20260428_playersPositionGroup"]
   .backfillPlayersPositionGroup;
 void internal.migrations["20260428_depthChartToRoster"].migrateDepthChartToRoster;
+void internal.migrations["20260801_seasonTeamRecords"]
+  .backfillSeasonTeamRecords;
 // @ts-expect-error backfillSeasonsRosterLocked is internal, not public
 void api.migrations["20260422_seasonsRosterLocked"].backfillSeasonsRosterLocked;
 // @ts-expect-error backfillPlayersPositionGroup is internal, not public
