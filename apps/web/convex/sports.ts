@@ -10,6 +10,12 @@ import type { Id } from "./_generated/dataModel";
 import { writeAuditLog } from "./lib/auditLog";
 import { computeStandingsPure, rankTeamStats } from "./lib/standings";
 import {
+  clearLeagueEvents,
+  clearSeasonEvents,
+  emitDynastyEvent,
+} from "./lib/events";
+import { gameFinalDedupeKey } from "./lib/narrative";
+import {
   buildTeamRecord,
   recordsToRankableStats,
   serializeHeadToHead,
@@ -1018,6 +1024,7 @@ export const deleteLeagueBatch = internalMutationGeneric({
         await ctx.db.delete(pa._id);
       await clearSeasonTeamRecords(ctx as MutationCtx, season._id);
       await clearSeasonPlayerAggregates(ctx as MutationCtx, season._id);
+      await clearSeasonEvents(ctx as MutationCtx, season._id);
       await ctx.db.delete(season._id);
     }
 
@@ -1026,6 +1033,10 @@ export const deleteLeagueBatch = internalMutationGeneric({
       .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
       .collect())
       await ctx.db.delete(d._id);
+
+    // League-scoped events (F4) have no season to hang off; clear them with
+    // the league itself.
+    await clearLeagueEvents(ctx as MutationCtx, args.leagueId);
 
     await ctx.db.delete(args.leagueId);
     return { done: true, teamsDeleted: 0 };
@@ -1095,6 +1106,7 @@ export const deleteLeague = internalMutationGeneric({
         await ctx.db.delete(pa._id);
       await clearSeasonTeamRecords(ctx as MutationCtx, season._id);
       await clearSeasonPlayerAggregates(ctx as MutationCtx, season._id);
+      await clearSeasonEvents(ctx as MutationCtx, season._id);
       await ctx.db.delete(season._id);
     }
 
@@ -1103,6 +1115,10 @@ export const deleteLeague = internalMutationGeneric({
       .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
       .collect())
       await ctx.db.delete(d._id);
+
+    // League-scoped events (F4) have no season to hang off; clear them with
+    // the league itself.
+    await clearLeagueEvents(ctx as MutationCtx, args.leagueId);
 
     await ctx.db.delete(args.leagueId);
     return null;
@@ -2581,9 +2597,11 @@ export const deleteSeason = internalMutationGeneric({
     const season = await ctx.db.get(args.seasonId);
     if (!season) return null;
 
-    // Cached season aggregates go with the season they summarize (F2, F3).
+    // Cached season aggregates and its feed go with the season they
+    // summarize (F2, F3, F4).
     await clearSeasonTeamRecords(ctx as MutationCtx, args.seasonId);
     await clearSeasonPlayerAggregates(ctx as MutationCtx, args.seasonId);
+    await clearSeasonEvents(ctx as MutationCtx, args.seasonId);
 
     const fixtures = await ctx.db
       .query("fixtures")
@@ -5782,6 +5800,135 @@ export const rebuildSeasonTeamRecords = internalMutation({
   },
 });
 
+/**
+ * Emit the game-final story for a fixture (F4).
+ *
+ * Reads both team names so the headline is human-readable at write time —
+ * two `db.get`s per recorded result, which is the price of copy having one
+ * source of truth rather than being re-derived on every feed render.
+ */
+async function emitGameFinalEvent(
+  ctx: MutationCtx,
+  args: {
+    fixture: {
+      _id: Id<"fixtures">;
+      seasonId: Id<"seasons">;
+      homeTeamId: Id<"teams">;
+      awayTeamId: Id<"teams">;
+      week: number | null;
+      stage?: string;
+    };
+    homeScore: number;
+    awayScore: number;
+  },
+): Promise<void> {
+  const [season, homeTeam, awayTeam] = await Promise.all([
+    ctx.db.get(args.fixture.seasonId),
+    ctx.db.get(args.fixture.homeTeamId),
+    ctx.db.get(args.fixture.awayTeamId),
+  ]);
+  if (!season || !homeTeam || !awayTeam) return;
+
+  const tie = args.homeScore === args.awayScore;
+  const homeWon = args.homeScore > args.awayScore;
+  const winner = homeWon ? homeTeam : awayTeam;
+  const loser = homeWon ? awayTeam : homeTeam;
+  const winnerScore = Math.max(args.homeScore, args.awayScore);
+  const loserScore = Math.min(args.homeScore, args.awayScore);
+
+  await emitDynastyEvent(ctx, {
+    leagueId: season.leagueId,
+    seasonId: args.fixture.seasonId,
+    week: args.fixture.week,
+    teamId: winner._id,
+    fixtureId: args.fixture._id,
+    dedupeKey: gameFinalDedupeKey(args.fixture._id as string),
+    // A playoff result is a bigger story than a Week 3 game.
+    severity: args.fixture.stage === "playoff" ? "notable" : "info",
+    narrative: {
+      type: "game_final",
+      winnerName: winner.name,
+      loserName: loser.name,
+      winnerScore,
+      loserScore,
+      tie,
+      week: args.fixture.week,
+    },
+    detail: {
+      homeTeamId: args.fixture.homeTeamId,
+      awayTeamId: args.fixture.awayTeamId,
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+      stage: args.fixture.stage ?? "regular",
+    },
+  });
+}
+
+const dynastyEventDtoValidator = v.object({
+  id: v.string(),
+  seasonId: v.union(v.string(), v.null()),
+  week: v.union(v.number(), v.null()),
+  category: v.string(),
+  eventType: v.string(),
+  severity: v.string(),
+  teamId: v.union(v.string(), v.null()),
+  playerId: v.union(v.string(), v.null()),
+  fixtureId: v.union(v.string(), v.null()),
+  headline: v.string(),
+  detailJson: v.union(v.string(), v.null()),
+  createdAt: v.string(),
+});
+
+/**
+ * The dynasty news feed (F4). Newest first, capped — a feed is a window on
+ * recent history, not a full export, and an unbounded read would grow without
+ * limit across a long dynasty.
+ *
+ * `dedupeKey` is deliberately NOT projected: it is an internal write-time
+ * concern and exposing it would invite callers to depend on its shape.
+ */
+export const listDynastyEvents = query({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.optional(v.id("seasons")),
+    category: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(dynastyEventDtoValidator),
+  handler: async (ctx, args) => {
+    const limit = Math.max(1, Math.min(args.limit ?? 50, 200));
+
+    const rows = await ctx.db
+      .query("dynastyEvents")
+      .withIndex("by_leagueId_createdAt", (q) =>
+        q.eq("leagueId", args.leagueId),
+      )
+      .order("desc")
+      .collect();
+
+    const filtered = rows.filter((row) => {
+      if (args.seasonId && row.seasonId !== args.seasonId) return false;
+      if (args.category && row.category !== args.category) return false;
+      return true;
+    });
+
+    return filtered.slice(0, limit).map((row) => ({
+      id: row._id as string,
+      seasonId: (row.seasonId as string | null) ?? null,
+      week: row.week,
+      category: row.category,
+      eventType: row.eventType,
+      severity: row.severity,
+      teamId: (row.teamId as string | null) ?? null,
+      playerId: (row.playerId as string | null) ?? null,
+      fixtureId: (row.fixtureId as string | null) ?? null,
+      headline: row.headline,
+      detailJson: row.detailJson,
+      createdAt: row.createdAt,
+    }));
+  },
+});
+
 export const recordGameResult = internalMutationGeneric({
   args: {
     fixtureId: v.id("fixtures"),
@@ -5826,6 +5973,15 @@ export const recordGameResult = internalMutationGeneric({
     // transaction (F2). Standings read the cache, so letting it lag would
     // surface a stale table immediately after a game is recorded.
     await syncTeamRecordsForFixture(ctx as MutationCtx, fixture);
+
+    // Append the game to the dynasty feed (F4). Deduped on fixture, so a
+    // re-sim under a new engine version refreshes the scoreline rather than
+    // adding a second story.
+    await emitGameFinalEvent(ctx as MutationCtx, {
+      fixture,
+      homeScore: args.homeScore,
+      awayScore: args.awayScore,
+    });
 
     // Playoff games advance the winner up the bracket atomically with the
     // result (WSM-000164). Idempotent: re-recording recomputes the same tree.

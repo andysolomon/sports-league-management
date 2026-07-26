@@ -179,6 +179,7 @@ type AllowedPublicSportsReads =
   | "healthSummary"
   | "listClipsByFixture"
   | "listConferences"
+  | "listDynastyEvents"
   | "listDivisions"
   | "listFixturesBySeason"
   | "listFreeAgents"

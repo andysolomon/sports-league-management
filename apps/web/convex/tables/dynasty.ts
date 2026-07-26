@@ -97,4 +97,51 @@ export const dynastyTables = {
     // Career totals (D1): a HS player has at most four rows here.
     .index("by_playerId", ["playerId"])
     .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
+
+  /*
+   * Dynasty event log (F4) — the single source of "what happened".
+   *
+   * Every narrative surface reads this: the news feed and season recap (D4),
+   * record-broken notices (D1), award announcements (D2). Producers span every
+   * epic — injuries (A4), transfers (B4), hire/fire and goals (C2) — which is
+   * exactly why it is ONE table with a `category`/`type` pair rather than a
+   * table per feature. A new event type is a new string, not a migration.
+   *
+   * `headline` is PRE-RENDERED at write time by `lib/narrative.ts`, inside
+   * Convex, so user-facing copy has one source of truth and stays
+   * unit-testable. Templates are deterministic; nothing here is generated.
+   *
+   * `dedupeKey` is what makes re-simulation safe. It deliberately EXCLUDES the
+   * engine version, so re-running a fixture under a new engine updates the
+   * existing row rather than adding a second one — a dynasty replayed twice
+   * must not produce a doubled newspaper.
+   */
+  dynastyEvents: defineTable({
+    leagueId: v.id("leagues"),
+    seasonId: v.union(v.id("seasons"), v.null()),
+    /** Regular-season week, when the event belongs to one. */
+    week: v.union(v.number(), v.null()),
+    /** "game" | "injury" | "roster" | "award" | "program" | "offseason" | "poll" | "record" */
+    category: v.string(),
+    /** Specific event, e.g. "game_final" | "player_injured" | "record_broken". */
+    eventType: v.string(),
+    /** "info" | "notable" | "headline" — drives feed prominence. */
+    severity: v.string(),
+    teamId: v.union(v.id("teams"), v.null()),
+    playerId: v.union(v.id("players"), v.null()),
+    fixtureId: v.union(v.id("fixtures"), v.null()),
+    /** Rendered copy. See `lib/narrative.ts`. */
+    headline: v.string(),
+    /** Structured payload for surfaces that want more than the headline. */
+    detailJson: v.union(v.string(), v.null()),
+    /** Stable identity for this happening — see the note above. */
+    dedupeKey: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_leagueId_createdAt", ["leagueId", "createdAt"])
+    .index("by_seasonId_week", ["seasonId", "week"])
+    .index("by_dedupeKey", ["dedupeKey"])
+    .index("by_playerId", ["playerId"])
+    .index("by_teamId", ["teamId"]),
 };

@@ -91,19 +91,32 @@ playerSeasonAggregates: defineTable({
   .index("by_playerId", ["playerId"])
   .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
 
+// AS SHIPPED in F4 (#610). `week` and `updatedAt` were added, plus team/player/
+// fixture references so a feed card can link its subject. Emission is an UPSERT
+// on `dedupeKey`, not a pure no-op: re-simulating a fixture must not double the
+// newspaper, but must also not leave the old scoreline asserted. `createdAt` is
+// preserved on refresh so copy updates never reorder the feed.
 dynastyEvents: defineTable({
   leagueId: v.id("leagues"),
-  seasonId: v.optional(v.id("seasons")),
+  seasonId: v.union(v.id("seasons"), v.null()),
+  week: v.union(v.number(), v.null()),
   category: v.string(),
   eventType: v.string(),
   severity: v.string(),
+  teamId: v.union(v.id("teams"), v.null()),
+  playerId: v.union(v.id("players"), v.null()),
+  fixtureId: v.union(v.id("fixtures"), v.null()),
   headline: v.string(),
-  bodyJson: v.optional(v.string()),
+  detailJson: v.union(v.string(), v.null()),
   dedupeKey: v.string(),
   createdAt: v.string(),
+  updatedAt: v.string(),
 })
-  .index("by_league_created", ["leagueId", "createdAt"])
-  .index("by_dedupeKey", ["dedupeKey"]),
+  .index("by_leagueId_createdAt", ["leagueId", "createdAt"])
+  .index("by_seasonId_week", ["seasonId", "week"])
+  .index("by_dedupeKey", ["dedupeKey"])
+  .index("by_playerId", ["playerId"])
+  .index("by_teamId", ["teamId"]),
 
 dynastyConfig: defineTable({
   leagueId: v.id("leagues"),
