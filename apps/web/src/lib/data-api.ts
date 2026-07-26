@@ -29,6 +29,7 @@ import { resolveLifecycleSeason } from "@/lib/season-view";
 import type { api, internal } from "../../convex/_generated/api";
 import type { LeagueImportPayload } from "@sports-management/api-contracts";
 import { getConvexClient } from "./convex-client";
+import type { DynastyConfig } from "./dynasty-config";
 import type { OrgContext } from "./org-context";
 
 async function getClerkServerClient() {
@@ -2788,4 +2789,32 @@ export async function getPublicLeagueSchedule(leagueId: string): Promise<{
   );
 
   return { seasonName: season.name, rows };
+}
+
+/*
+ * Dynasty per-league settings (F5).
+ *
+ * Reached through the compile-checked `dynastyRef` helpers from F1 rather than
+ * raw strings: a typo in the function name fails `tsc`, which CI runs, instead
+ * of 404ing at runtime where vitest would not catch it.
+ */
+export async function getDynastyConfig(
+  leagueId: string,
+): Promise<DynastyConfig> {
+  const client = getConvexClient();
+  return client.query(dynastyRef.query<DynastyConfig>("getDynastyConfig"), {
+    leagueId,
+  });
+}
+
+export async function setDynastyConfig(input: {
+  leagueId: string;
+  actorUserId: string;
+  patch: Partial<DynastyConfig>;
+}): Promise<DynastyConfig> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<DynastyConfig>("setDynastyConfig"),
+    input,
+  );
 }

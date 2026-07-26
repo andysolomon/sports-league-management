@@ -49,6 +49,7 @@ void internal.sports.setLeaguePublic;
 void internal.sports.recordGameResult;
 void internal.sports.rebuildSeasonTeamRecords;
 void internal.sports.rebuildSeasonPlayerAggregates;
+void internal.dynasty.setDynastyConfig;
 void internal.sports.assignPlayerToRoster;
 void internal.sports.forkTeamToWorkspace;
 void internal.sports.forkDivisionToWorkspace;
@@ -225,7 +226,7 @@ void api.sim.moduleStatus;
 void api.program.moduleStatus;
 void api.history.moduleStatus;
 
-type AllowedPublicDynastyReads = "moduleStatus";
+type AllowedPublicDynastyReads = "moduleStatus" | "getDynastyConfig";
 type AllowedPublicSimReads = "moduleStatus";
 type AllowedPublicProgramReads = "moduleStatus";
 type AllowedPublicHistoryReads = "moduleStatus";

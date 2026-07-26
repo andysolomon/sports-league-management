@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import {
+  getDynastyConfig,
   getLeagueVisibility,
   getLeagueClaimable,
   getSeasons,
@@ -12,6 +13,7 @@ import { isSeasonStarted } from "@/lib/season-started";
 import type { OrgContext } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { DynastySettingsCard } from "@/components/dynasty/DynastySettingsCard";
 import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import InviteForm from "@/app/dashboard/leagues/[id]/invite-form";
 import InvitationList from "@/app/dashboard/leagues/[id]/invitation-list";
@@ -67,6 +69,8 @@ export async function LeagueSettingsView({
 }) {
   const id = league.id;
   const visibility = await getLeagueVisibility(id);
+  // Always resolves — a league with no stored row uses defaults (F5).
+  const dynastyConfig = await getDynastyConfig(id).catch(() => null);
   const claimable = await getLeagueClaimable(id);
   const canGenerateRosters = await syntheticRostersV1();
 
@@ -105,6 +109,15 @@ export async function LeagueSettingsView({
             <SettingsRow title="League name" description="Rename this league.">
               <RenameLeagueForm leagueId={id} currentName={league.name} />
             </SettingsRow>
+
+            {dynastyConfig ? (
+              <div className="py-4">
+                <DynastySettingsCard
+                  leagueId={id}
+                  initialConfig={dynastyConfig}
+                />
+              </div>
+            ) : null}
 
             <div className="space-y-4 py-4">
               <div className="flex flex-wrap items-center justify-between gap-3">

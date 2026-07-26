@@ -15,6 +15,7 @@ import type * as lib_auditLog from "../lib/auditLog.js";
 import type * as lib_bracket from "../lib/bracket.js";
 import type * as lib_draft from "../lib/draft.js";
 import type * as lib_dynasty from "../lib/dynasty.js";
+import type * as lib_dynastyConfig from "../lib/dynastyConfig.js";
 import type * as lib_events from "../lib/events.js";
 import type * as lib_hsSprt from "../lib/hsSprt.js";
 import type * as lib_liveScore from "../lib/liveScore.js";
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   "lib/bracket": typeof lib_bracket;
   "lib/draft": typeof lib_draft;
   "lib/dynasty": typeof lib_dynasty;
+  "lib/dynastyConfig": typeof lib_dynastyConfig;
   "lib/events": typeof lib_events;
   "lib/hsSprt": typeof lib_hsSprt;
   "lib/liveScore": typeof lib_liveScore;

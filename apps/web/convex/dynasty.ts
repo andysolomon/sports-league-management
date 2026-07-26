@@ -1,5 +1,11 @@
-import { query } from "./_generated/server";
+import { v } from "convex/values";
+import { internalMutation, query } from "./_generated/server";
 import { DYNASTY_MODULES, moduleStatusValidator } from "./lib/moduleStatus";
+import {
+  normalizeDynastyConfigPatch,
+  resolveDynastyConfig,
+  type DynastyConfig,
+} from "./lib/dynastyConfig";
 
 /*
  * Dynasty Mode — offseason pipeline (Epic B).
@@ -36,4 +42,99 @@ export const moduleStatus = query({
     epic: "B",
     ready: true,
   }),
+});
+
+/*
+ * ── Per-league Dynasty settings (F5) ────────────────────────────────────────
+ */
+
+const dynastyConfigValidator = v.object({
+  penaltiesEnabled: v.boolean(),
+  injuriesEnabled: v.boolean(),
+  weatherEnabled: v.boolean(),
+  injurySeverityScale: v.number(),
+  transfersEnabled: v.boolean(),
+  transferVolume: v.string(),
+  scoutingPointsPerOffseason: v.number(),
+  trainingPointsPerOffseason: v.number(),
+  targetRosterSize: v.number(),
+  jobSecurityEnabled: v.boolean(),
+  pollsEnabled: v.boolean(),
+});
+
+/**
+ * A league's effective settings — always fully populated.
+ *
+ * Returns defaults for a league with no stored row rather than null, so every
+ * caller gets a usable config and no call site has to remember to default.
+ * That is the whole reason absence is legal.
+ */
+export const getDynastyConfig = query({
+  args: { leagueId: v.id("leagues") },
+  returns: dynastyConfigValidator,
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("dynastyConfig")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .first();
+    return resolveDynastyConfig(row);
+  },
+});
+
+/**
+ * Patch a league's settings. Partial by design — the UI saves one section at a
+ * time, and an omitted knob keeps its current value rather than resetting.
+ *
+ * `internalMutation` (WSM-000096): the admin gate lives in the server action.
+ */
+export const setDynastyConfig = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    actorUserId: v.string(),
+    patch: v.object({
+      penaltiesEnabled: v.optional(v.boolean()),
+      injuriesEnabled: v.optional(v.boolean()),
+      weatherEnabled: v.optional(v.boolean()),
+      injurySeverityScale: v.optional(v.number()),
+      transfersEnabled: v.optional(v.boolean()),
+      transferVolume: v.optional(v.string()),
+      scoutingPointsPerOffseason: v.optional(v.number()),
+      trainingPointsPerOffseason: v.optional(v.number()),
+      targetRosterSize: v.optional(v.number()),
+      jobSecurityEnabled: v.optional(v.boolean()),
+      pollsEnabled: v.optional(v.boolean()),
+    }),
+  },
+  returns: dynastyConfigValidator,
+  handler: async (ctx, args) => {
+    const league = await ctx.db.get(args.leagueId);
+    if (!league) throw new Error("league_not_found");
+
+    const existing = await ctx.db
+      .query("dynastyConfig")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .first();
+
+    // Clamp and drop unknown keys before they reach storage, so an
+    // out-of-range value can never be persisted and re-read later.
+    const patch = normalizeDynastyConfigPatch(
+      args.patch as Partial<DynastyConfig>,
+    );
+    const merged = resolveDynastyConfig({ ...(existing ?? {}), ...patch });
+
+    const payload = {
+      leagueId: args.leagueId,
+      ...merged,
+      updatedAt: new Date().toISOString(),
+      updatedBy: args.actorUserId,
+    };
+
+    if (existing) {
+      await ctx.db.replace(existing._id, payload);
+    } else {
+      await ctx.db.insert("dynastyConfig", payload);
+    }
+
+    return merged;
+  },
 });
