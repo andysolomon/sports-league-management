@@ -1,8 +1,25 @@
 # Offseason: Free Agents + Optional Draft
 
-Status: DRAFT for review (2026-07-06). Net-new feature slice on top of the dynasty
-rollover (docs/design/dynasty-mode.md). Nothing here is built; no code ships until
-this doc is signed off.
+Status: **SHIPPED** (2026-07-25). Built on top of the dynasty rollover
+(docs/design/dynasty-mode.md). All four phases (O1–O4) landed; the "Open questions
+for sign-off" below are resolved and recorded against the shipped behavior.
+
+Extended by `docs/design/offseason-pipeline.md`, which turns this fixed
+Rollover → Draft → Free agency → Activate sequence into a persisted, multi-phase
+offseason machine (scouting, transfers, promotions, training). The free-agency and
+draft mechanics described here are **reused, not replaced**.
+
+As built:
+
+- `drafts` + `draftPicks` tables — `apps/web/convex/schema.ts:496,511`
+- `startDraft` / `makeDraftPick` / `endDraft` — `apps/web/convex/sports.ts:5300,5358,5451`
+- `releasePlayerToFreeAgency` / `signFreeAgent` / `listFreeAgents` — `sports.ts:5050,5086,5163`
+- Pick-order helper — `apps/web/convex/lib/draft.ts`; roster-size helper — `convex/lib/offseason.ts`
+- UI — `apps/web/src/components/offseason/` (OffseasonHub, OffseasonPhaseStepper,
+  DraftBoard, DraftStartToggle, FreeAgencyPanel, FreeAgencyTableView,
+  ReleasePlayerButton, ActivateSeasonWarningDialog)
+- Server actions — `apps/web/src/app/dashboard/_actions/{offseason,draft}.ts`
+- e2e — `apps/web/e2e/tests/offseason-{draft,free-agency}.spec.ts`
 
 ## Context
 
@@ -116,12 +133,25 @@ panes stack.
 Each phase is one PR through the standard pipeline. O1+O2 deliver user value
 without the draft; O3+O4 are cleanly additive.
 
-## Open questions for sign-off
+## Open questions — resolved as built
 
-1. Roster cap on signing: hard block at target size, or allow overflow with a
-   warning (real HS rosters vary)?
-2. Coach permissions: may coaches release/sign for their own team during FA, or is
-   the whole offseason admin-only in v1?
-3. Draft rounds: fixed small number (3?) or `ceil(pool/teams)` uncapped?
-4. Should "send freshmen to draft pool" be remembered per league as the default for
-   future offseasons?
+1. **Roster cap on signing: soft, not hard.** `signFreeAgent` (`sports.ts:5086`)
+   computes `overCap = activeCount >= targetRosterSize()` and returns it to the
+   caller, but signs anyway — it passes `enforceRosterLimit: false` to
+   `assignPlayerToRosterCore`. The UI warns; nothing blocks. Real HS rosters vary.
+   Target is 48, clamped to 60 (`convex/lib/offseason.ts`).
+2. **Coaches may release and sign for their own team.** The offseason is *not*
+   admin-only. `canAdminOrManageTeam` (`_actions/offseason.ts:18`) grants access to
+   an org admin **or** anyone `canManageTeam(teamId, userId)` — i.e. a coach scoped
+   to that team, resolved through `resolveTeamRole` across both the league org and a
+   forking org (WSM-000121). This per-`teamId` gate is the precedent
+   `offseason-pipeline.md` follows for every new per-team offseason action, and it is
+   what keeps multi-coach online dynasty open without a rewrite.
+3. **Draft rounds are a fixed 3**, not `ceil(pool/teams)` — `DRAFT_ROUNDS = 3`
+   (`sports.ts:5202`). Undrafted players remain in free agency.
+4. **"Send freshmen to draft pool" is not remembered.** It is a per-invocation
+   `freshmenToPool?: boolean` argument on `startNextSeasonAction`
+   (`_actions/dynasty.ts:151`), defaulting to `false` (auto-assign to teams), which
+   preserves the pre-draft behavior exactly. Per-league persistence of this and other
+   knobs is picked up by the `dynastyConfig` table in
+   `docs/design/dynasty-foundations.md`.
