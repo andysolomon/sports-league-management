@@ -132,14 +132,23 @@ async function cascadeDeleteLeague(
     await ctx.db.delete(row._id);
     deleted += 1;
   }
-  // Cached season records (F2). A table left behind here leaks state between
-  // e2e runs and produces order-dependent, flaky standings assertions.
+  // Cached season aggregates (F2, F3). A table left behind here leaks state
+  // between e2e runs and produces order-dependent, flaky standings and stat
+  // leader assertions.
   for (const season of seasons as Array<{ _id: Id<"seasons"> }>) {
     const records = (await ctx.db
       .query("seasonTeamRecords")
       .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
       .collect()) as Array<{ _id: Id<"seasonTeamRecords"> }>;
     for (const row of records) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+    const aggregates = (await ctx.db
+      .query("playerSeasonAggregates")
+      .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
+      .collect()) as Array<{ _id: Id<"playerSeasonAggregates"> }>;
+    for (const row of aggregates) {
       await ctx.db.delete(row._id);
       deleted += 1;
     }

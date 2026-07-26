@@ -14,7 +14,11 @@ import {
   recordsToRankableStats,
   serializeHeadToHead,
 } from "./lib/teamRecords";
-import { aggregateStatLines, parseStatLine } from "./lib/playerStats";
+import {
+  aggregateStatLines,
+  parseStatLine,
+  summarizeStatLines,
+} from "./lib/playerStats";
 import {
   categoryValues,
   computeStatLeaders,
@@ -1013,6 +1017,7 @@ export const deleteLeagueBatch = internalMutationGeneric({
         .collect())
         await ctx.db.delete(pa._id);
       await clearSeasonTeamRecords(ctx as MutationCtx, season._id);
+      await clearSeasonPlayerAggregates(ctx as MutationCtx, season._id);
       await ctx.db.delete(season._id);
     }
 
@@ -1089,6 +1094,7 @@ export const deleteLeague = internalMutationGeneric({
         .collect())
         await ctx.db.delete(pa._id);
       await clearSeasonTeamRecords(ctx as MutationCtx, season._id);
+      await clearSeasonPlayerAggregates(ctx as MutationCtx, season._id);
       await ctx.db.delete(season._id);
     }
 
@@ -2575,8 +2581,9 @@ export const deleteSeason = internalMutationGeneric({
     const season = await ctx.db.get(args.seasonId);
     if (!season) return null;
 
-    // Cached season records go with the season they summarize (F2).
+    // Cached season aggregates go with the season they summarize (F2, F3).
     await clearSeasonTeamRecords(ctx as MutationCtx, args.seasonId);
+    await clearSeasonPlayerAggregates(ctx as MutationCtx, args.seasonId);
 
     const fixtures = await ctx.db
       .query("fixtures")
@@ -6427,6 +6434,121 @@ const playerGameStatsRowValidator = v.object({
   updatedAt: v.string(),
 });
 
+/*
+ * ── Persisted player season aggregates (Dynasty Mode F3) ────────────────────
+ *
+ * Same cache discipline as `seasonTeamRecords` (F2): the row is exactly what
+ * `aggregateStatLines` produces over a player's game rows, and it is kept
+ * correct by REBUILDING the affected player rather than applying deltas.
+ *
+ * Deltas are unsound here because "long" fields reduce with MAX, not sum, and a
+ * max cannot be inverted when a game line is overwritten or deleted — see the
+ * long-form note in `lib/playerStats.ts`. The rebuild is a single indexed read
+ * (`by_playerId_seasonId`, ~10–16 rows), cheaper than the season-wide scan it
+ * replaces.
+ */
+async function rebuildPlayerSeasonAggregate(
+  ctx: MutationCtx,
+  args: { playerId: Id<"players">; seasonId: Id<"seasons"> },
+): Promise<void> {
+  const rows = await ctx.db
+    .query("playerGameStats")
+    .withIndex("by_playerId_seasonId", (q) =>
+      q.eq("playerId", args.playerId).eq("seasonId", args.seasonId),
+    )
+    .collect();
+
+  const existing = await ctx.db
+    .query("playerSeasonAggregates")
+    .withIndex("by_playerId_seasonId", (q) =>
+      q.eq("playerId", args.playerId).eq("seasonId", args.seasonId),
+    )
+    .first();
+
+  // No entered lines means no aggregate. Keeping the table minimal makes a
+  // rebuild produce exactly the row set incremental maintenance would, and
+  // lets a fully-deleted box score return the season to empty (F2 precedent).
+  if (rows.length === 0) {
+    if (existing) await ctx.db.delete(existing._id);
+    return;
+  }
+
+  const player = await ctx.db.get(args.playerId);
+  if (!player) return;
+
+  const { totals, gamesPlayed } = summarizeStatLines(
+    rows.map((r) => parseStatLine(r.statsJson)),
+  );
+
+  const payload = {
+    leagueId: player.leagueId,
+    seasonId: args.seasonId,
+    // The team the player's most recent line was entered under, so a
+    // mid-season transfer attributes the aggregate to where they finished.
+    teamId: rows[rows.length - 1]!.teamId,
+    playerId: args.playerId,
+    position: player.position,
+    positionGroup: player.positionGroup ?? null,
+    gamesPlayed,
+    totalsJson: JSON.stringify(totals),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (existing) {
+    await ctx.db.replace(existing._id, payload);
+  } else {
+    await ctx.db.insert("playerSeasonAggregates", payload);
+  }
+}
+
+/** Rebuild every player with entered stats in a season. Repair + backfill. */
+async function rebuildSeasonPlayerAggregatesCore(
+  ctx: MutationCtx,
+  seasonId: Id<"seasons">,
+): Promise<number> {
+  const rows = await ctx.db
+    .query("playerGameStats")
+    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+    .collect();
+
+  const playerIds = new Set(rows.map((r) => r.playerId as string));
+  for (const playerId of playerIds) {
+    await rebuildPlayerSeasonAggregate(ctx, {
+      playerId: playerId as Id<"players">,
+      seasonId,
+    });
+  }
+  return playerIds.size;
+}
+
+/** Drop a season's cached aggregates (season delete, schedule wipe). */
+async function clearSeasonPlayerAggregates(
+  ctx: MutationCtx,
+  seasonId: Id<"seasons">,
+): Promise<void> {
+  const rows = await ctx.db
+    .query("playerSeasonAggregates")
+    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+    .collect();
+  for (const row of rows) await ctx.db.delete(row._id);
+}
+
+/**
+ * Repair entry point, mirroring `rebuildSeasonTeamRecords`. Also the fix for a
+ * stale denormalized `position` after an offseason position change (Epic B5).
+ */
+export const rebuildSeasonPlayerAggregates = internalMutation({
+  args: { seasonId: v.id("seasons") },
+  returns: v.object({ playersRebuilt: v.number() }),
+  handler: async (ctx, args) => {
+    const playersRebuilt = await rebuildSeasonPlayerAggregatesCore(
+      ctx,
+      args.seasonId,
+    );
+    return { playersRebuilt };
+  },
+});
+
 export const upsertPlayerGameStats = internalMutation({
   args: {
     fixtureId: v.id("fixtures"),
@@ -6468,6 +6590,13 @@ export const upsertPlayerGameStats = internalMutation({
     } else {
       id = await ctx.db.insert("playerGameStats", payload);
     }
+
+    // Keep the season aggregate in step, in the same transaction (F3).
+    await rebuildPlayerSeasonAggregate(ctx, {
+      playerId: args.playerId,
+      seasonId: args.seasonId,
+    });
+
     return { id };
   },
 });
@@ -6519,6 +6648,17 @@ export const bulkUpsertPlayerGameStats = internalMutation({
         await ctx.db.insert("playerGameStats", payload);
       }
       upserted += 1;
+    }
+
+    // Rebuild each affected player once, after all lines are written — a
+    // per-line rebuild would redo the same read for a player appearing twice
+    // and would observe a half-written box score (F3).
+    const touchedPlayers = new Set(args.lines.map((l) => l.playerId as string));
+    for (const playerId of touchedPlayers) {
+      await rebuildPlayerSeasonAggregate(ctx, {
+        playerId: playerId as Id<"players">,
+        seasonId: args.seasonId,
+      });
     }
 
     return { upserted };
@@ -6607,7 +6747,12 @@ export const deletePlayerGameStats = internalMutation({
       )
       .first();
     if (!row) return false;
+    const { playerId, seasonId } = row;
     await ctx.db.delete(row._id);
+
+    // Deleting the player's only line removes the aggregate entirely (F3).
+    await rebuildPlayerSeasonAggregate(ctx, { playerId, seasonId });
+
     return true;
   },
 });
@@ -6695,29 +6840,44 @@ export const computeSeasonSprt = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query("playerGameStats")
-      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
-      .collect();
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) return [];
 
-    const byPlayer = new Map<string, string[]>();
-    for (const r of rows) {
-      const arr = byPlayer.get(r.playerId) ?? [];
-      arr.push(r.statsJson);
-      byPlayer.set(r.playerId, arr);
-    }
+    /*
+     * F3: reads the persisted aggregates plus ONE batch read of the league's
+     * players, joined in memory. Previously this collected every game-stat row
+     * in the season, re-aggregated on each read, and issued a `ctx.db.get` PER
+     * PLAYER inside the loop.
+     *
+     * Position is taken from the live `players` row rather than the
+     * aggregate's denormalized snapshot: a stale position would silently place
+     * a player in the wrong rating group, which is a wrong number rather than a
+     * missing one.
+     */
+    const [aggregates, players] = await Promise.all([
+      ctx.db
+        .query("playerSeasonAggregates")
+        .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+        .collect(),
+      ctx.db
+        .query("players")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+        .collect(),
+    ]);
+
+    const playerById = new Map(players.map((p) => [p._id as string, p]));
 
     const inputs: HsRatingInput[] = [];
-    for (const [playerId, jsons] of byPlayer) {
-      const player = await ctx.db.get(playerId as Id<"players">);
+    for (const agg of aggregates) {
+      const player = playerById.get(agg.playerId as string);
       if (!player) continue;
       const group = positionToRatingGroup(player.position);
       if (!group) continue;
       inputs.push({
-        id: playerId,
+        id: agg.playerId as string,
         group,
-        totals: aggregateStatLines(jsons.map(parseStatLine)),
-        games: jsons.length,
+        totals: parseStatLine(agg.totalsJson),
+        games: agg.gamesPlayed,
       });
     }
 
@@ -6767,29 +6927,46 @@ async function seasonStatLeaders(
   ctx: QueryCtx,
   seasonId: Id<"seasons">,
 ): Promise<ReturnType<typeof computeStatLeaders>> {
-  const rows = await ctx.db
-    .query("playerGameStats")
-    .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
-    .collect();
+  const season = await ctx.db.get(seasonId);
+  if (!season) return computeStatLeaders([], 5);
 
-  const byPlayer = new Map<string, string[]>();
-  for (const r of rows) {
-    const arr = byPlayer.get(r.playerId) ?? [];
-    arr.push(r.statsJson);
-    byPlayer.set(r.playerId, arr);
-  }
+  /*
+   * F3: aggregates + ONE batch read each of the league's players and teams,
+   * joined in memory. Previously this issued TWO `ctx.db.get` calls per player
+   * inside the loop (the player, then their team) on top of re-aggregating
+   * every game-stat row in the season on each read.
+   *
+   * Names and jersey numbers come from the live rows, not the aggregate, so a
+   * renamed player or team is reflected immediately.
+   */
+  const [aggregates, playerRows, teamRows] = await Promise.all([
+    ctx.db
+      .query("playerSeasonAggregates")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+      .collect(),
+    ctx.db
+      .query("players")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .collect(),
+    ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .collect(),
+  ]);
+
+  const playerById = new Map(playerRows.map((p) => [p._id as string, p]));
+  const teamById = new Map(teamRows.map((tm) => [tm._id as string, tm]));
 
   const players: LeaderInput[] = [];
-  for (const [playerId, jsons] of byPlayer) {
-    const totals = aggregateStatLines(jsons.map(parseStatLine));
-    const values = categoryValues(totals);
+  for (const agg of aggregates) {
+    const values = categoryValues(parseStatLine(agg.totalsJson));
     // Skip players with no leaderboard-relevant stats this season.
     if (Object.values(values).every((v2) => v2 === 0)) continue;
-    const player = await ctx.db.get(playerId as Id<"players">);
+    const player = playerById.get(agg.playerId as string);
     if (!player) continue;
-    const team = await ctx.db.get(player.teamId);
+    const team = teamById.get(player.teamId as string);
     players.push({
-      playerId,
+      playerId: agg.playerId as string,
       playerName: player.name,
       teamName: team?.name ?? "(unknown)",
       jerseyNumber: player.jerseyNumber ?? null,

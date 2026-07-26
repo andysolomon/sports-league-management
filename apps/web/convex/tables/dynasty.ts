@@ -56,4 +56,45 @@ export const dynastyTables = {
     // Program history across seasons (Epics C and D read this).
     .index("by_teamId", ["teamId"])
     .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
+
+  /*
+   * Persisted per-player season totals (F3).
+   *
+   * `computeSeasonSprt` and the `seasonStatLeaders` helper both collected every
+   * `playerGameStats` row in a season, grouped by player, re-aggregated on each
+   * read, and then issued a `ctx.db.get` PER PLAYER inside the loop (stat
+   * leaders did two — player and team). This row is the pre-aggregated result,
+   * so those reads become one indexed scan plus in-memory joins.
+   *
+   * It is also the layer career totals are built from in D1: never scan
+   * `playerGameStats` for history — go
+   * playerGameStats → playerSeasonAggregates → playerCareerTotals.
+   *
+   * Like `seasonTeamRecords`, this is a CACHE with a repair path
+   * (`rebuildSeasonPlayerAggregates`); `totalsJson` is exactly what
+   * `aggregateStatLines` produces over the player's game rows.
+   *
+   * `position` / `positionGroup` are a snapshot for downstream consumers. The
+   * SPRT read path deliberately does NOT trust them for grouping — it joins
+   * against live `players` rows — so an offseason position change (Epic B5)
+   * cannot silently mis-rate a player before a rebuild runs.
+   */
+  playerSeasonAggregates: defineTable({
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    playerId: v.id("players"),
+    position: v.string(),
+    positionGroup: v.union(v.string(), v.null()),
+    /** Games with an entered stat line. Feeds SPRT's per-game rates. */
+    gamesPlayed: v.number(),
+    /** `aggregateStatLines` output — sums, with "long" fields taking the max. */
+    totalsJson: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_seasonId", ["seasonId"])
+    .index("by_playerId_seasonId", ["playerId", "seasonId"])
+    // Career totals (D1): a HS player has at most four rows here.
+    .index("by_playerId", ["playerId"])
+    .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
 };
