@@ -24,6 +24,9 @@ import type {
   UpdateTeamInput,
 } from "@sports-management/shared-types";
 import { resolveLifecycleSeason } from "@/lib/season-view";
+// Type-only: erased at compile time, so nothing from the generated Convex API
+// reaches a bundle. Constrains the Dynasty Mode refs below (F1).
+import type { api, internal } from "../../convex/_generated/api";
 import type { LeagueImportPayload } from "@sports-management/api-contracts";
 import { getConvexClient } from "./convex-client";
 import type { OrgContext } from "./org-context";
@@ -67,6 +70,57 @@ function queryRef<Args extends object, Return>(name: string) {
 function mutationRef<Args extends object, Return>(name: string) {
   return makeFunctionReference<"mutation", any, Return>(name);
 }
+
+/*
+ * Compile-checked function references for the Dynasty Mode modules (F1).
+ *
+ * The `queryRef`/`mutationRef` helpers above take a bare `string`, so
+ * `"sports:getTaem"` compiles fine and 404s at runtime. That is tolerable for
+ * the ~200 existing call sites (they are exercised constantly) but not for new
+ * surface area — especially because vitest does NOT run in CI, so a typo would
+ * reach production. `tsc` DOES run in CI, which is what these helpers exploit.
+ *
+ * The module prefix is applied here rather than typed into the string, so the
+ * whole `"<module>:"` half of the name cannot be wrong, and the function half is
+ * constrained to names that actually exist on the generated API.
+ *
+ * The import below is `import type` — fully erased at compile time, so nothing
+ * from `convex/_generated` reaches a bundle. (`data-api.ts` is server-only
+ * regardless; this keeps it true by construction.)
+ */
+type DynastyModule = "dynasty" | "sim" | "program" | "history";
+
+/** Public query names on a module, or `never` if it exposes none. */
+type PublicQueryName<M extends DynastyModule> = M extends keyof typeof api
+  ? Extract<keyof (typeof api)[M], string>
+  : never;
+
+/** Internal mutation names on a module, or `never` if it exposes none. */
+type InternalMutationName<M extends DynastyModule> =
+  M extends keyof typeof internal
+    ? Extract<keyof (typeof internal)[M], string>
+    : never;
+
+function moduleRefs<M extends DynastyModule>(module: M) {
+  return {
+    /** Reference a PUBLIC query. Unknown names fail `tsc`. */
+    query: <Return>(name: PublicQueryName<M>) =>
+      makeFunctionReference<"query", any, Return>(`${module}:${name}`),
+    /**
+     * Reference an INTERNAL mutation. Unknown names fail `tsc`. Every Dynasty
+     * Mode write is an `internalMutation` (WSM-000096), so there is
+     * deliberately no public-mutation variant here — one would only ever
+     * reference a function that should not exist.
+     */
+    mutation: <Return>(name: InternalMutationName<M>) =>
+      makeFunctionReference<"mutation", any, Return>(`${module}:${name}`),
+  };
+}
+
+export const dynastyRef = moduleRefs("dynasty");
+export const simRef = moduleRefs("sim");
+export const programRef = moduleRefs("program");
+export const historyRef = moduleRefs("history");
 
 /** A single bracket node (WSM-000164). Team/score fields are null until played. */
 export interface PlayoffMatchupDto {
