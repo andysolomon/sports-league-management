@@ -144,4 +144,44 @@ export const dynastyTables = {
     .index("by_dedupeKey", ["dedupeKey"])
     .index("by_playerId", ["playerId"])
     .index("by_teamId", ["teamId"]),
+
+  /*
+   * Per-league Dynasty Mode settings (F5).
+   *
+   * A feature flag is the wrong tool for a game mechanic: flags are per-deploy
+   * and per-environment, but "this league finds injuries too punishing" is
+   * per-league and needs changing at runtime. The roadmap therefore spends only
+   * four flags total, and gates individual mechanics through these knobs — so a
+   * live league can back out a mechanic without a deploy.
+   *
+   * EVERY field is optional and an absent document is legal. That is what makes
+   * this table migration-free forever: adding a knob never requires a backfill,
+   * because `resolveDynastyConfig` fills defaults for anything missing. Read it
+   * through that resolver, never off the raw document.
+   */
+  dynastyConfig: defineTable({
+    leagueId: v.id("leagues"),
+
+    // Sim mechanics (Epic A). Kill switches for a live league.
+    penaltiesEnabled: v.optional(v.boolean()),
+    injuriesEnabled: v.optional(v.boolean()),
+    weatherEnabled: v.optional(v.boolean()),
+    /** 0 = none, 1 = normal, 2 = brutal. Scales injury roll severity. */
+    injurySeverityScale: v.optional(v.number()),
+
+    // Offseason economy (Epic B).
+    transfersEnabled: v.optional(v.boolean()),
+    /** "low" | "normal" | "high" — how much roster churn a offseason produces. */
+    transferVolume: v.optional(v.string()),
+    scoutingPointsPerOffseason: v.optional(v.number()),
+    trainingPointsPerOffseason: v.optional(v.number()),
+    targetRosterSize: v.optional(v.number()),
+
+    // Program and narrative (Epics C, D).
+    jobSecurityEnabled: v.optional(v.boolean()),
+    pollsEnabled: v.optional(v.boolean()),
+
+    updatedAt: v.string(),
+    updatedBy: v.string(),
+  }).index("by_leagueId", ["leagueId"]),
 };

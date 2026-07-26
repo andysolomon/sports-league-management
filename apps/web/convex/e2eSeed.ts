@@ -162,6 +162,16 @@ async function cascadeDeleteLeague(
     await ctx.db.delete(row._id);
     deleted += 1;
   }
+  // Per-league Dynasty settings (F5). A row left behind would carry one spec's
+  // toggles into the next run.
+  const configRows = (await ctx.db
+    .query("dynastyConfig")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"dynastyConfig"> }>;
+  for (const row of configRows) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
   for (const team of teams as Array<{ _id: Id<"teams"> }>) {
     const teamDepth = (await ctx.db
       .query("depthChartEntries")
