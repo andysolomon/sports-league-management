@@ -57,7 +57,16 @@ export interface StandingRow {
   leagueRank: number;
 }
 
-interface TeamStats {
+/*
+ * The counters the tiebreaker chain needs, independent of where they came from.
+ *
+ * Two producers exist: `computeStandingsPure` derives them by folding
+ * fixtures + results (the original path, still used by tests and the rebuild),
+ * and `lib/teamRecords.ts` hydrates them from the persisted `seasonTeamRecords`
+ * table (F2, the read path). Both then rank through `rankTeamStats`, so
+ * `compareStandings` stays the single implementation of the tiebreak rules.
+ */
+export interface TeamStats {
   teamId: string;
   teamName: string;
   divisionId: string | null;
@@ -100,6 +109,55 @@ function compareStandings(a: TeamStats, b: TeamStats): number {
   if (aDiff !== bDiff) return bDiff - aDiff;
 
   return a.teamName.localeCompare(b.teamName);
+}
+
+/**
+ * Rank pre-computed team counters into standings rows.
+ *
+ * This is the second half of `computeStandingsPure`, split out (F2) so the
+ * persisted `seasonTeamRecords` path can rank through the SAME comparator
+ * rather than growing a second copy of the tiebreak chain. League rank is
+ * always computed across every team passed in; `divisionFilter` only narrows
+ * the returned rows, so a division view still reflects league-wide ordering.
+ */
+export function rankTeamStats(
+  stats: TeamStats[],
+  divisionFilter?: string | null,
+): StandingRow[] {
+  // League-wide sort first; this drives leagueRank.
+  const allSorted = [...stats].sort(compareStandings);
+  const leagueRankByTeam = new Map<string, number>();
+  allSorted.forEach((s, i) => leagueRankByTeam.set(s.teamId, i + 1));
+
+  // Per-division ordering uses the same comparator.
+  const divisionGroups = new Map<string | null, TeamStats[]>();
+  for (const s of allSorted) {
+    const key = s.divisionId;
+    const group = divisionGroups.get(key) ?? [];
+    group.push(s);
+    divisionGroups.set(key, group);
+  }
+  const divisionRankByTeam = new Map<string, number>();
+  for (const group of divisionGroups.values()) {
+    group.forEach((s, i) => divisionRankByTeam.set(s.teamId, i + 1));
+  }
+
+  const filtered =
+    divisionFilter === undefined
+      ? allSorted
+      : allSorted.filter((s) => s.divisionId === divisionFilter);
+
+  return filtered.map((s) => ({
+    teamId: s.teamId,
+    teamName: s.teamName,
+    wins: s.wins,
+    losses: s.losses,
+    ties: s.ties,
+    pointsFor: s.pointsFor,
+    pointsAgainst: s.pointsAgainst,
+    leagueRank: leagueRankByTeam.get(s.teamId) ?? 0,
+    divisionRank: divisionRankByTeam.get(s.teamId) ?? 0,
+  }));
 }
 
 export function computeStandingsPure({
@@ -176,38 +234,5 @@ export function computeStandingsPure({
     }
   }
 
-  // League-wide sort first; this drives leagueRank.
-  const allSorted = Array.from(stats.values()).sort(compareStandings);
-  const leagueRankByTeam = new Map<string, number>();
-  allSorted.forEach((s, i) => leagueRankByTeam.set(s.teamId, i + 1));
-
-  // Per-division ordering uses the same comparator.
-  const divisionGroups = new Map<string | null, TeamStats[]>();
-  for (const s of allSorted) {
-    const key = s.divisionId;
-    const group = divisionGroups.get(key) ?? [];
-    group.push(s);
-    divisionGroups.set(key, group);
-  }
-  const divisionRankByTeam = new Map<string, number>();
-  for (const group of divisionGroups.values()) {
-    group.forEach((s, i) => divisionRankByTeam.set(s.teamId, i + 1));
-  }
-
-  const filtered =
-    divisionFilter === undefined
-      ? allSorted
-      : allSorted.filter((s) => s.divisionId === divisionFilter);
-
-  return filtered.map((s) => ({
-    teamId: s.teamId,
-    teamName: s.teamName,
-    wins: s.wins,
-    losses: s.losses,
-    ties: s.ties,
-    pointsFor: s.pointsFor,
-    pointsAgainst: s.pointsAgainst,
-    leagueRank: leagueRankByTeam.get(s.teamId) ?? 0,
-    divisionRank: divisionRankByTeam.get(s.teamId) ?? 0,
-  }));
+  return rankTeamStats(Array.from(stats.values()), divisionFilter);
 }

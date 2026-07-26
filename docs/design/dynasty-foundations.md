@@ -39,24 +39,35 @@ Compose from `apps/web/convex/tables/dynasty.ts` (new) and spread into `schema.t
 All new fields on existing tables remain `v.optional` elsewhere; these tables are new.
 
 ```ts
+// AS SHIPPED in F2 (#614). Divisional splits and head-to-head are required,
+// not optional: the tiebreak chain reads them on every standings render, so an
+// absent value would be a silent wrong answer rather than a missing nicety.
+// `streak` is a signed number (+n win streak, -n loss streak) rather than JSON,
+// and `lastResults` / `gamesCounted` were added for recent form and to make
+// playoff exclusion assertable.
 seasonTeamRecords: defineTable({
   leagueId: v.id("leagues"),
   seasonId: v.id("seasons"),
   teamId: v.id("teams"),
+  divisionId: v.union(v.id("divisions"), v.null()),
   wins: v.number(),
   losses: v.number(),
   ties: v.number(),
   pointsFor: v.number(),
   pointsAgainst: v.number(),
-  divisionWins: v.optional(v.number()),
-  divisionLosses: v.optional(v.number()),
-  divisionTies: v.optional(v.number()),
-  headToHeadJson: v.optional(v.string()),
-  streakJson: v.optional(v.string()),
+  divisionWins: v.number(),
+  divisionLosses: v.number(),
+  divisionTies: v.number(),
+  headToHeadJson: v.string(),
+  streak: v.number(),
+  lastResults: v.array(v.string()),
+  gamesCounted: v.number(),
   updatedAt: v.string(),
 })
-  .index("by_season_team", ["seasonId", "teamId"])
-  .index("by_teamId", ["teamId"]),
+  .index("by_seasonId", ["seasonId"])
+  .index("by_seasonId_teamId", ["seasonId", "teamId"])
+  .index("by_teamId", ["teamId"])
+  .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
 
 playerSeasonAggregates: defineTable({
   leagueId: v.id("leagues"),
@@ -160,7 +171,17 @@ Every slice that adds rows must add cleanup to `resetCanonicalFixture` in the sa
 
 1. `computeStandingsPure` output deep-equals pre-F2 standings for the canonical e2e
    fixture (golden test).
-2. Record → re-record → delete game leaves `seasonTeamRecords` identical to a full
+2. **As implemented in F2**, the cache is kept correct by REBUILDING the two teams a
+   result touches from their own games (`fixtures` is indexed
+   `by_homeTeamId`/`by_awayTeamId`, so that is ~10–16 rows, not a scan), rather than
+   by applying arithmetic deltas in place. Wins, points and head-to-head are
+   commutative and would survive a true delta, but `streak` and `lastResults` are
+   order-dependent: re-recording an EARLIER game (a re-sim under a new engine
+   version) cannot be corrected by adding and subtracting counters. Rebuild-from-source
+   is equal to a full rebuild by construction. A team with zero counted games is
+   stored as NO row, so a rebuild yields exactly the row set incremental maintenance
+   would, and standings default a missing row to 0-0-0.
+3. Record → re-record → delete game leaves `seasonTeamRecords` identical to a full
    rebuild (property test).
 3. `computeSeasonSprt` and `seasonStatLeaders` perform zero `ctx.db.get` inside player
    loops (read-spy on ctx).
