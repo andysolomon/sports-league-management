@@ -1,7 +1,15 @@
 # Play-by-Play Simulation Engine
 
-Status: approved design (2026-07-05). Decision record: stats derive from plays — no
-score-derived stat synthesizer. Class-year dynasty and Gamecast UI build on this later.
+Status: **SHIPPED** (2026-07-25). All three slices landed — A (engine lib), B (persistence +
+wiring), C (Gamecast UI). Decision record: stats derive from plays — no score-derived stat
+synthesizer. Class-year dynasty and Gamecast UI build on this later.
+
+Extended by `docs/design/sim-engine-v2.md`, which adds penalties, injuries, fatigue, weather,
+situational/clock AI, and schemes on top of this engine. That extension is **strictly additive**:
+new `PbpPlay`/`PbpGameLog` fields are optional, `PBP_ENGINE_VERSION` (`src/lib/pbp/index.ts:16`)
+bumps per slice, stored logs are never rewritten, and a golden-log parity test asserts that with
+v2 features disabled the engine still reproduces the v1 log byte-for-byte for a fixed seed. The
+Slice A contract below remains the v1 baseline that parity test pins against.
 
 ## Context
 

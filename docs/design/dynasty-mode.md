@@ -1,9 +1,20 @@
 # Dynasty Mode
 
-Status: approved design (2026-07-05). Decisions confirmed: graduates are archived (never
+Status: **SHIPPED** (2026-07-25). Both slices landed — D1 (rollover backend) and D2 (dynasty
+panel + FR/SO/JR/SR labels). Decisions confirmed: graduates are archived (never
 deleted); class year reuses the existing `grade` field (9–12 ↔ FR/SO/JR/SR); progression is
 seeded and position-weighted (~+2–4 OVR/year mean with variance, larger FR→SO jumps);
 freshman generation tops rosters back to the existing target size.
+
+Extended by `docs/design/offseason-pipeline.md` — the six mechanical stages below become the
+*prologue* to a persisted, user-driven multi-phase offseason (scouting, transfers, JV→Varsity
+promotions, position changes, cuts, training). Nothing here is replaced; `seasonRollovers` keeps
+owning the automatic, lease-protected stages.
+
+As built: `startNextSeasonAction` (`apps/web/src/app/dashboard/_actions/dynasty.ts:149`),
+`seasonRollovers` table (`apps/web/convex/schema.ts:141`), `computeProgressedAttributes`
+(`apps/web/src/lib/dynasty-progression.ts:72`), `DynastyPanel`
+(`apps/web/src/components/dynasty/DynastyPanel.tsx`).
 
 ## Context
 
