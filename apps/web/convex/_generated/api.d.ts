@@ -28,6 +28,7 @@ import type * as lib_teamRecords from "../lib/teamRecords.js";
 import type * as migrations_20260422_seasonsRosterLocked from "../migrations/20260422_seasonsRosterLocked.js";
 import type * as migrations_20260428_depthChartToRoster from "../migrations/20260428_depthChartToRoster.js";
 import type * as migrations_20260428_playersPositionGroup from "../migrations/20260428_playersPositionGroup.js";
+import type * as migrations_20260801_playerSeasonAggregates from "../migrations/20260801_playerSeasonAggregates.js";
 import type * as migrations_20260801_seasonTeamRecords from "../migrations/20260801_seasonTeamRecords.js";
 import type * as program from "../program.js";
 import type * as sim from "../sim.js";
@@ -68,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/20260422_seasonsRosterLocked": typeof migrations_20260422_seasonsRosterLocked;
   "migrations/20260428_depthChartToRoster": typeof migrations_20260428_depthChartToRoster;
   "migrations/20260428_playersPositionGroup": typeof migrations_20260428_playersPositionGroup;
+  "migrations/20260801_playerSeasonAggregates": typeof migrations_20260801_playerSeasonAggregates;
   "migrations/20260801_seasonTeamRecords": typeof migrations_20260801_seasonTeamRecords;
   program: typeof program;
   sim: typeof sim;

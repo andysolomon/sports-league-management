@@ -69,18 +69,27 @@ seasonTeamRecords: defineTable({
   .index("by_teamId", ["teamId"])
   .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
 
+// AS SHIPPED in F3 (#615). `gamesPlayed` is required — SPRT rates per-game,
+// so deriving it would mean re-reading the rows this table exists to avoid.
+// `position` is stored alongside `positionGroup`, but the SPRT read path
+// deliberately does NOT trust either for grouping: it joins live `players`
+// rows, so an offseason position change (B5) cannot silently mis-rate a player
+// before a rebuild runs.
 playerSeasonAggregates: defineTable({
   leagueId: v.id("leagues"),
   seasonId: v.id("seasons"),
   teamId: v.id("teams"),
   playerId: v.id("players"),
-  positionGroup: v.string(),
-  statsJson: v.string(),
+  position: v.string(),
+  positionGroup: v.union(v.string(), v.null()),
+  gamesPlayed: v.number(),
+  totalsJson: v.string(),
   updatedAt: v.string(),
 })
-  .index("by_season_player", ["seasonId", "playerId"])
+  .index("by_seasonId", ["seasonId"])
+  .index("by_playerId_seasonId", ["playerId", "seasonId"])
   .index("by_playerId", ["playerId"])
-  .index("by_season_team", ["seasonId", "teamId"]),
+  .index("by_leagueId_seasonId", ["leagueId", "seasonId"]),
 
 dynastyEvents: defineTable({
   leagueId: v.id("leagues"),
