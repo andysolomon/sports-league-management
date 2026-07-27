@@ -1,0 +1,3688 @@
+{
+  "engineVersion": "1.0.0",
+  "note": "Captured from the v1 engine before Epic A. Every A slice must reproduce these logs byte-for-byte with v2 features disabled. Regenerate with scripts/gen-v1-golden.ts ONLY when a v1 behavior change is intended.",
+  "cases": [
+    {
+      "name": "even-balanced",
+      "seed": 123456,
+      "decisive": false,
+      "flavor": "balanced",
+      "homeStrength": 70,
+      "awayStrength": 70,
+      "homeScore": 31,
+      "awayScore": 0,
+      "driveCount": 23,
+      "playCount": 115,
+      "sha256": "4e8af47a5005815d1bf3923c7240cbc9b5120f71a096c4b649718c7d3be2e9e7",
+      "log": {
+        "seed": 123456,
+        "decisive": false,
+        "homeTeamId": "home",
+        "awayTeamId": "away",
+        "homeScore": 31,
+        "awayScore": 0,
+        "drives": [
+          {
+            "driveId": 1,
+            "teamId": "away",
+            "startQuarter": 1,
+            "startClockSeconds": 720,
+            "startFieldPosition": 35,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 1,
+                "driveId": 1,
+                "quarter": 1,
+                "clockSeconds": 720,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "kickoff",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 35,
+                "yardsGained": 36,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "away-K-1",
+                    "teamId": "away",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 2,
+            "teamId": "home",
+            "startQuarter": 1,
+            "startClockSeconds": 714,
+            "startFieldPosition": 36,
+            "endReason": "touchdown",
+            "plays": [
+              {
+                "playId": 2,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 714,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 36,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-OLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-MLB-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 3,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 685,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 6,
+                "fieldPosition": 40,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 4,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 654,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 47,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DT-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 5,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 624,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 52,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-4",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-DE-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-DE-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 6,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 598,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 59,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-2",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 7,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 573,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 10,
+                "fieldPosition": 59,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DE-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-OLB-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 8,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 545,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 3,
+                "distance": 5,
+                "fieldPosition": 64,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-2",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 9,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 513,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 71,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DT-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-S-2",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 10,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 475,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 76,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 11,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 440,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 81,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 12,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 404,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 7,
+                "fieldPosition": 84,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-OLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-S-2",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 13,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 372,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 3,
+                "distance": 1,
+                "fieldPosition": 90,
+                "yardsGained": 26,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DE-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 14,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 344,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DE-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 15,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 307,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 16,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 278,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-CB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-OLB-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 17,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 247,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 18,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 229,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 2,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-1",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 19,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 206,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 3,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 29,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DT-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 20,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 177,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 1,
+                "isScoring": true,
+                "pointsScored": 6,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-1",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-CB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 21,
+                "driveId": 2,
+                "quarter": 1,
+                "clockSeconds": 153,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "extra_point",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 98,
+                "yardsGained": 0,
+                "isScoring": true,
+                "pointsScored": 1,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 3,
+            "teamId": "home",
+            "startQuarter": 1,
+            "startClockSeconds": 149,
+            "startFieldPosition": 35,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 22,
+                "driveId": 3,
+                "quarter": 1,
+                "clockSeconds": 149,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kickoff",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 35,
+                "yardsGained": 31,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "away-RB-1",
+                    "teamId": "away",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 4,
+            "teamId": "away",
+            "startQuarter": 1,
+            "startClockSeconds": 143,
+            "startFieldPosition": 31,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 23,
+                "driveId": 4,
+                "quarter": 1,
+                "clockSeconds": 143,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 31,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-3",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 24,
+                "driveId": 4,
+                "quarter": 1,
+                "clockSeconds": 125,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 2,
+                "distance": 10,
+                "fieldPosition": 31,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "away-RB-3",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-OLB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-RB-3",
+                    "teamId": "away",
+                    "role": "fumbler"
+                  },
+                  {
+                    "playerId": "home-DT-1",
+                    "teamId": "home",
+                    "role": "recoverer"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 5,
+            "teamId": "home",
+            "startQuarter": 1,
+            "startClockSeconds": 98,
+            "startFieldPosition": 69,
+            "endReason": "end_of_half",
+            "plays": [
+              {
+                "playId": 25,
+                "driveId": 5,
+                "quarter": 1,
+                "clockSeconds": 98,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 69,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 26,
+                "driveId": 5,
+                "quarter": 1,
+                "clockSeconds": 61,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 7,
+                "fieldPosition": 72,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 27,
+                "driveId": 5,
+                "quarter": 1,
+                "clockSeconds": 22,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 3,
+                "distance": 3,
+                "fieldPosition": 76,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 6,
+            "teamId": "home",
+            "startQuarter": 2,
+            "startClockSeconds": 720,
+            "startFieldPosition": 76,
+            "endReason": "touchdown",
+            "plays": [
+              {
+                "playId": 28,
+                "driveId": 6,
+                "quarter": 2,
+                "clockSeconds": 720,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 76,
+                "yardsGained": 18,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 29,
+                "driveId": 6,
+                "quarter": 2,
+                "clockSeconds": 692,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 6,
+                "fieldPosition": 94,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DT-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-DE-2",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 30,
+                "driveId": 6,
+                "quarter": 2,
+                "clockSeconds": 664,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-CB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-CB-2",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 31,
+                "driveId": 6,
+                "quarter": 2,
+                "clockSeconds": 638,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-DT-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 32,
+                "driveId": 6,
+                "quarter": 2,
+                "clockSeconds": 603,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 33,
+                "driveId": 6,
+                "quarter": 2,
+                "clockSeconds": 573,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 1,
+                "isScoring": true,
+                "pointsScored": 6,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-OLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-DT-2",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 34,
+                "driveId": 6,
+                "quarter": 2,
+                "clockSeconds": 537,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "extra_point",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 98,
+                "yardsGained": 0,
+                "isScoring": true,
+                "pointsScored": 1,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 7,
+            "teamId": "home",
+            "startQuarter": 2,
+            "startClockSeconds": 533,
+            "startFieldPosition": 35,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 35,
+                "driveId": 7,
+                "quarter": 2,
+                "clockSeconds": 533,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kickoff",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 35,
+                "yardsGained": 28,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "away-RB-1",
+                    "teamId": "away",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 8,
+            "teamId": "away",
+            "startQuarter": 2,
+            "startClockSeconds": 527,
+            "startFieldPosition": 28,
+            "endReason": "punt",
+            "plays": [
+              {
+                "playId": 36,
+                "driveId": 8,
+                "quarter": 2,
+                "clockSeconds": 527,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 28,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-1",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-DE-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 37,
+                "driveId": 8,
+                "quarter": 2,
+                "clockSeconds": 497,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 2,
+                "distance": 6,
+                "fieldPosition": 32,
+                "yardsGained": 27,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-1",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-S-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 38,
+                "driveId": 8,
+                "quarter": 2,
+                "clockSeconds": 463,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 59,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-3",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 39,
+                "driveId": 8,
+                "quarter": 2,
+                "clockSeconds": 443,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 2,
+                "distance": 10,
+                "fieldPosition": 59,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-4",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-CB-1",
+                    "teamId": "home",
+                    "role": "pass_defender"
+                  }
+                ]
+              },
+              {
+                "playId": 40,
+                "driveId": 8,
+                "quarter": 2,
+                "clockSeconds": 425,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 3,
+                "distance": 10,
+                "fieldPosition": 59,
+                "yardsGained": 2,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-DE-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 41,
+                "driveId": 8,
+                "quarter": 2,
+                "clockSeconds": 387,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "punt",
+                "down": 4,
+                "distance": 8,
+                "fieldPosition": 61,
+                "yardsGained": 50,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "away-P-1",
+                    "teamId": "away",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 9,
+            "teamId": "home",
+            "startQuarter": 2,
+            "startClockSeconds": 380,
+            "startFieldPosition": 15,
+            "endReason": "touchdown",
+            "plays": [
+              {
+                "playId": 42,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 380,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 15,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-4",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 43,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 362,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 10,
+                "fieldPosition": 15,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DE-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 44,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 326,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 3,
+                "distance": 6,
+                "fieldPosition": 19,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-OLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 45,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 294,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 25,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-OLB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 46,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 266,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 30,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 47,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 242,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 37,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-CB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-DT-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 48,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 202,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 42,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-DE-2",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 49,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 177,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 49,
+                "yardsGained": 12,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-4",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-CB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 50,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 150,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "sack",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 61,
+                "yardsGained": -8,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-DT-2",
+                    "teamId": "away",
+                    "role": "sacker"
+                  }
+                ]
+              },
+              {
+                "playId": 51,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 122,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 18,
+                "fieldPosition": 53,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DT-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 52,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 98,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 3,
+                "distance": 15,
+                "fieldPosition": 56,
+                "yardsGained": 26,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-CB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-MLB-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 53,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 69,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 82,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-OLB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 54,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 45,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 87,
+                "yardsGained": 13,
+                "isScoring": true,
+                "pointsScored": 6,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-2",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-OLB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-OLB-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 55,
+                "driveId": 9,
+                "quarter": 2,
+                "clockSeconds": 17,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "extra_point",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 98,
+                "yardsGained": 0,
+                "isScoring": true,
+                "pointsScored": 1,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 10,
+            "teamId": "home",
+            "startQuarter": 2,
+            "startClockSeconds": 13,
+            "startFieldPosition": 35,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 56,
+                "driveId": 10,
+                "quarter": 2,
+                "clockSeconds": 13,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kickoff",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 35,
+                "yardsGained": 37,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 11,
+            "teamId": "away",
+            "startQuarter": 2,
+            "startClockSeconds": 7,
+            "startFieldPosition": 37,
+            "endReason": "end_of_half",
+            "plays": [
+              {
+                "playId": 57,
+                "driveId": 11,
+                "quarter": 2,
+                "clockSeconds": 7,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 37,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-1",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-S-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 12,
+            "teamId": "home",
+            "startQuarter": 3,
+            "startClockSeconds": 720,
+            "startFieldPosition": 35,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 58,
+                "driveId": 12,
+                "quarter": 3,
+                "clockSeconds": 720,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kickoff",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 35,
+                "yardsGained": 24,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 13,
+            "teamId": "away",
+            "startQuarter": 3,
+            "startClockSeconds": 714,
+            "startFieldPosition": 24,
+            "endReason": "punt",
+            "plays": [
+              {
+                "playId": 59,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 714,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 24,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-3",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-DE-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "home-DT-1",
+                    "teamId": "home",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 60,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 684,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "sack",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 29,
+                "yardsGained": -4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-MLB-1",
+                    "teamId": "home",
+                    "role": "sacker"
+                  }
+                ]
+              },
+              {
+                "playId": 61,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 659,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 3,
+                "distance": 9,
+                "fieldPosition": 25,
+                "yardsGained": 19,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-3",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-MLB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 62,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 625,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 44,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-3",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-OLB-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 63,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 596,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 2,
+                "distance": 6,
+                "fieldPosition": 48,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-3",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-S-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 64,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 558,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_complete",
+                "down": 3,
+                "distance": 2,
+                "fieldPosition": 52,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-1",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-CB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 65,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 525,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 57,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-1",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-DE-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 66,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 485,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 2,
+                "distance": 6,
+                "fieldPosition": 61,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-2",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 67,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 465,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 3,
+                "distance": 6,
+                "fieldPosition": 61,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-2",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 68,
+                "driveId": 13,
+                "quarter": 3,
+                "clockSeconds": 437,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "punt",
+                "down": 4,
+                "distance": 6,
+                "fieldPosition": 61,
+                "yardsGained": 39,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "away-P-1",
+                    "teamId": "away",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 14,
+            "teamId": "home",
+            "startQuarter": 3,
+            "startClockSeconds": 430,
+            "startFieldPosition": 15,
+            "endReason": "punt",
+            "plays": [
+              {
+                "playId": 69,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 430,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 15,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-4",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 70,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 410,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 10,
+                "fieldPosition": 15,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 71,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 382,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 3,
+                "distance": 5,
+                "fieldPosition": 20,
+                "yardsGained": 17,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-S-2",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 72,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 344,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 37,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 73,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 319,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 42,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 74,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 287,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 48,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-3",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-OLB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 75,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 262,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 2,
+                "distance": 7,
+                "fieldPosition": 51,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-4",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 76,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 239,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 3,
+                "distance": 7,
+                "fieldPosition": 51,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-2",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 77,
+                "driveId": 14,
+                "quarter": 3,
+                "clockSeconds": 217,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "punt",
+                "down": 4,
+                "distance": 7,
+                "fieldPosition": 51,
+                "yardsGained": 42,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "home-P-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "away-WR-2",
+                    "teamId": "away",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 15,
+            "teamId": "away",
+            "startQuarter": 3,
+            "startClockSeconds": 210,
+            "startFieldPosition": 15,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 78,
+                "driveId": 15,
+                "quarter": 3,
+                "clockSeconds": 210,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 15,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-1",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 79,
+                "driveId": 15,
+                "quarter": 3,
+                "clockSeconds": 184,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 2,
+                "distance": 10,
+                "fieldPosition": 15,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-CB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 80,
+                "driveId": 15,
+                "quarter": 3,
+                "clockSeconds": 151,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 3,
+                "distance": 4,
+                "fieldPosition": 21,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-CB-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 81,
+                "driveId": 15,
+                "quarter": 3,
+                "clockSeconds": 128,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 26,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-1",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-S-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 82,
+                "driveId": 15,
+                "quarter": 3,
+                "clockSeconds": 100,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 2,
+                "distance": 3,
+                "fieldPosition": 33,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-3",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 83,
+                "driveId": 15,
+                "quarter": 3,
+                "clockSeconds": 73,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_complete",
+                "down": 3,
+                "distance": 3,
+                "fieldPosition": 33,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-2",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-CB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "home-DT-2",
+                    "teamId": "home",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 84,
+                "driveId": 15,
+                "quarter": 3,
+                "clockSeconds": 50,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "interception",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 38,
+                "yardsGained": 17,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-2",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-S-1",
+                    "teamId": "home",
+                    "role": "interceptor"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 16,
+            "teamId": "home",
+            "startQuarter": 3,
+            "startClockSeconds": 27,
+            "startFieldPosition": 79,
+            "endReason": "end_of_half",
+            "plays": [
+              {
+                "playId": 85,
+                "driveId": 16,
+                "quarter": 3,
+                "clockSeconds": 27,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 79,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-4",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-CB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 17,
+            "teamId": "home",
+            "startQuarter": 4,
+            "startClockSeconds": 720,
+            "startFieldPosition": 84,
+            "endReason": "touchdown",
+            "plays": [
+              {
+                "playId": 86,
+                "driveId": 17,
+                "quarter": 4,
+                "clockSeconds": 720,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 84,
+                "yardsGained": 2,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DT-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 87,
+                "driveId": 17,
+                "quarter": 4,
+                "clockSeconds": 698,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 2,
+                "distance": 8,
+                "fieldPosition": 86,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-4",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-DE-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 88,
+                "driveId": 17,
+                "quarter": 4,
+                "clockSeconds": 675,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 3,
+                "distance": 1,
+                "fieldPosition": 93,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 89,
+                "driveId": 17,
+                "quarter": 4,
+                "clockSeconds": 652,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 1,
+                "fieldPosition": 99,
+                "yardsGained": 1,
+                "isScoring": true,
+                "pointsScored": 6,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-OLB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 90,
+                "driveId": 17,
+                "quarter": 4,
+                "clockSeconds": 625,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "extra_point",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 98,
+                "yardsGained": 0,
+                "isScoring": true,
+                "pointsScored": 1,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 18,
+            "teamId": "home",
+            "startQuarter": 4,
+            "startClockSeconds": 621,
+            "startFieldPosition": 35,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 91,
+                "driveId": 18,
+                "quarter": 4,
+                "clockSeconds": 621,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kickoff",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 35,
+                "yardsGained": 22,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 19,
+            "teamId": "away",
+            "startQuarter": 4,
+            "startClockSeconds": 615,
+            "startFieldPosition": 22,
+            "endReason": "punt",
+            "plays": [
+              {
+                "playId": 92,
+                "driveId": 19,
+                "quarter": 4,
+                "clockSeconds": 615,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "sack",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 22,
+                "yardsGained": -9,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-CB-2",
+                    "teamId": "home",
+                    "role": "sacker"
+                  }
+                ]
+              },
+              {
+                "playId": 93,
+                "driveId": 19,
+                "quarter": 4,
+                "clockSeconds": 580,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 2,
+                "distance": 19,
+                "fieldPosition": 13,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-OLB-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 94,
+                "driveId": 19,
+                "quarter": 4,
+                "clockSeconds": 549,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 3,
+                "distance": 15,
+                "fieldPosition": 17,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-OLB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 95,
+                "driveId": 19,
+                "quarter": 4,
+                "clockSeconds": 521,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "punt",
+                "down": 4,
+                "distance": 10,
+                "fieldPosition": 22,
+                "yardsGained": 34,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "away-P-1",
+                    "teamId": "away",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "home-WR-1",
+                    "teamId": "home",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 20,
+            "teamId": "home",
+            "startQuarter": 4,
+            "startClockSeconds": 514,
+            "startFieldPosition": 44,
+            "endReason": "field_goal",
+            "plays": [
+              {
+                "playId": 96,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 514,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 44,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-CB-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 97,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 484,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_complete",
+                "down": 2,
+                "distance": 6,
+                "fieldPosition": 48,
+                "yardsGained": 9,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-2",
+                    "teamId": "home",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "away-DT-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 98,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 460,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 57,
+                "yardsGained": 6,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-MLB-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 99,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 423,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 4,
+                "fieldPosition": 63,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-2",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-DT-2",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "away-CB-1",
+                    "teamId": "away",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 100,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 388,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 68,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 101,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 362,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 2,
+                "distance": 10,
+                "fieldPosition": 68,
+                "yardsGained": 4,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 102,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 326,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "pass_incomplete",
+                "down": 3,
+                "distance": 6,
+                "fieldPosition": 72,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 103,
+                "driveId": 20,
+                "quarter": 4,
+                "clockSeconds": 306,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "field_goal",
+                "down": 4,
+                "distance": 6,
+                "fieldPosition": 72,
+                "yardsGained": 0,
+                "isScoring": true,
+                "pointsScored": 3,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 21,
+            "teamId": "home",
+            "startQuarter": 4,
+            "startClockSeconds": 301,
+            "startFieldPosition": 35,
+            "endReason": "turnover",
+            "plays": [
+              {
+                "playId": 104,
+                "driveId": 21,
+                "quarter": 4,
+                "clockSeconds": 301,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kickoff",
+                "down": 0,
+                "distance": 0,
+                "fieldPosition": 35,
+                "yardsGained": 35,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "home-K-1",
+                    "teamId": "home",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "away-RB-1",
+                    "teamId": "away",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 22,
+            "teamId": "away",
+            "startQuarter": 4,
+            "startClockSeconds": 295,
+            "startFieldPosition": 35,
+            "endReason": "punt",
+            "plays": [
+              {
+                "playId": 105,
+                "driveId": 22,
+                "quarter": 4,
+                "clockSeconds": 295,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 35,
+                "yardsGained": 3,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-2",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-OLB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 106,
+                "driveId": 22,
+                "quarter": 4,
+                "clockSeconds": 265,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_complete",
+                "down": 2,
+                "distance": 7,
+                "fieldPosition": 38,
+                "yardsGained": 8,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-4",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-CB-1",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 107,
+                "driveId": 22,
+                "quarter": 4,
+                "clockSeconds": 243,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_complete",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 46,
+                "yardsGained": 40,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-1",
+                    "teamId": "away",
+                    "role": "receiver"
+                  },
+                  {
+                    "playerId": "home-S-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "home-DT-1",
+                    "teamId": "home",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 108,
+                "driveId": 22,
+                "quarter": 4,
+                "clockSeconds": 221,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 86,
+                "yardsGained": 7,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-RB-1",
+                    "teamId": "away",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "home-OLB-2",
+                    "teamId": "home",
+                    "role": "tackler_solo"
+                  },
+                  {
+                    "playerId": "home-DT-1",
+                    "teamId": "home",
+                    "role": "tackler_ast"
+                  }
+                ]
+              },
+              {
+                "playId": 109,
+                "driveId": 22,
+                "quarter": 4,
+                "clockSeconds": 182,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 2,
+                "distance": 3,
+                "fieldPosition": 93,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-3",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 110,
+                "driveId": 22,
+                "quarter": 4,
+                "clockSeconds": 162,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "pass_incomplete",
+                "down": 3,
+                "distance": 3,
+                "fieldPosition": 93,
+                "yardsGained": 0,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "away-QB-1",
+                    "teamId": "away",
+                    "role": "passer"
+                  },
+                  {
+                    "playerId": "away-WR-3",
+                    "teamId": "away",
+                    "role": "receiver"
+                  }
+                ]
+              },
+              {
+                "playId": 111,
+                "driveId": 22,
+                "quarter": 4,
+                "clockSeconds": 136,
+                "offenseTeamId": "away",
+                "defenseTeamId": "home",
+                "playType": "punt",
+                "down": 4,
+                "distance": 3,
+                "fieldPosition": 93,
+                "yardsGained": 38,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": true,
+                "participants": [
+                  {
+                    "playerId": "away-P-1",
+                    "teamId": "away",
+                    "role": "kicker"
+                  },
+                  {
+                    "playerId": "home-WR-3",
+                    "teamId": "home",
+                    "role": "returner"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "driveId": 23,
+            "teamId": "home",
+            "startQuarter": 4,
+            "startClockSeconds": 129,
+            "startFieldPosition": 15,
+            "endReason": "downs",
+            "plays": [
+              {
+                "playId": 112,
+                "driveId": 23,
+                "quarter": 4,
+                "clockSeconds": 129,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "rush",
+                "down": 1,
+                "distance": 10,
+                "fieldPosition": 15,
+                "yardsGained": 5,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-RB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  },
+                  {
+                    "playerId": "away-S-1",
+                    "teamId": "away",
+                    "role": "tackler_solo"
+                  }
+                ]
+              },
+              {
+                "playId": 113,
+                "driveId": 23,
+                "quarter": 4,
+                "clockSeconds": 99,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kneel",
+                "down": 2,
+                "distance": 5,
+                "fieldPosition": 20,
+                "yardsGained": -1,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  }
+                ]
+              },
+              {
+                "playId": 114,
+                "driveId": 23,
+                "quarter": 4,
+                "clockSeconds": 61,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kneel",
+                "down": 3,
+                "distance": 6,
+                "fieldPosition": 19,
+                "yardsGained": -1,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  }
+                ]
+              },
+              {
+                "playId": 115,
+                "driveId": 23,
+                "quarter": 4,
+                "clockSeconds": 23,
+                "offenseTeamId": "home",
+                "defenseTeamId": "away",
+                "playType": "kneel",
+                "down": 4,
+                "distance": 7,
+                "fieldPosition": 18,
+                "yardsGained": -1,
+                "isScoring": false,
+                "pointsScored": 0,
+                "isTurnover": false,
+                "participants": [
+                  {
+                    "playerId": "home-QB-1",
+                    "teamId": "home",
+                    "role": "rusher"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "mismatch-chalk",
+      "seed": 987654,
+      "decisive": false,
+      "flavor": "chalk",
+      "homeStrength": 85,
+      "awayStrength": 55,
+      "homeScore": 35,
+      "awayScore": 0,
+      "driveCount": 23,
+      "playCount": 114,
+      "sha256": "a41f793ba6e3e8ef19eca9194af696fcf242ffc4309c772fe244aead47cf051f"
+    },
+    {
+      "name": "upsets-flavor",
+      "seed": 246810,
+      "decisive": false,
+      "flavor": "upsets",
+      "homeStrength": 60,
+      "awayStrength": 75,
+      "homeScore": 14,
+      "awayScore": 14,
+      "driveCount": 23,
+      "playCount": 115,
+      "sha256": "9bb2d6637b68010ad7a08f89a06fecce8f663070815c57a4b9e19ce44f896422"
+    },
+    {
+      "name": "decisive-playoff",
+      "seed": 555001,
+      "decisive": true,
+      "flavor": "balanced",
+      "homeStrength": 68,
+      "awayStrength": 68,
+      "homeScore": 20,
+      "awayScore": 3,
+      "driveCount": 24,
+      "playCount": 117,
+      "sha256": "04f4e62c2234046d55285e9d12b1c609de6fe38d6d711aeb961a531d5ac688f5"
+    }
+  ]
+}
