@@ -5,6 +5,7 @@ import {
   weightsForFlavor,
 } from "@/lib/simulation-flavor";
 import type {
+  PbpFeatureGates,
   PbpDrive,
   PbpDriveEndReason,
   PbpGameInput,
@@ -51,6 +52,13 @@ const POSITION_TO_GROUP: Record<string, SimPositionGroup> = {
 
 interface GameState {
   rand: () => number;
+  /*
+   * v2 mechanics (Epic A). EVERY branch guarded by one of these must consume
+   * ZERO random draws when the gate is off — the PRNG is a sequence, so one
+   * stray `rand()` shifts every later draw and the log diverges from v1. The
+   * golden-parity test exists to catch exactly that.
+   */
+  features: Required<PbpFeatureGates>;
   home: TeamSimProfile;
   away: TeamSimProfile;
   strengthWeight: number;
@@ -440,7 +448,16 @@ function doPunt(state: GameState): void {
   const returner = selectPlayer(def, "WR", state.rand, true);
   const gross = Math.round(38 + state.rand() * 12 - matchupEdge(state) * 10);
   const net = clamp(gross - Math.round(state.rand() * 8), 25, 55);
-  const newField = clamp(100 - (state.fieldPosition + net), 15, 75);
+  /*
+   * Where the receiving team starts (v2 widens the floor).
+   *
+   * v1 clamped this to the 15, which meant a team could never be pinned deep —
+   * and therefore a safety was geometrically impossible no matter how the rest
+   * of the engine behaved. Real punts are downed inside the 5 regularly, so v2
+   * lowers the floor to the 1. Costs no random draw, so v1 parity is unaffected.
+   */
+  const pinFloor = state.features.scoringV2 ? 1 : 15;
+  const newField = clamp(100 - (state.fieldPosition + net), pinFloor, 75);
 
   const play: PbpPlay = {
     playId: state.playId,
@@ -563,6 +580,24 @@ function doPass(state: GameState): void {
         participant(sacker, def.teamId, "sacker"),
       ],
     };
+
+    /*
+     * Strip-sack (v2). v1 modelled fumbles on rushes only, so a quarterback
+     * could never lose the ball while being sacked — the single most common
+     * non-rush fumble in the sport. Gated, and the draw happens ONLY inside
+     * the gate so v1's PRNG sequence is untouched.
+     */
+    if (state.features.scoringV2 && state.rand() < 0.12) {
+      const recoverer = selectDefender(def, state.rand, "tackle");
+      play.isTurnover = true;
+      play.participants.push(participant(passer, off.teamId, "fumbler"));
+      play.participants.push(participant(recoverer, def.teamId, "recoverer"));
+      recordPlay(state, play);
+      tickClock(state, Math.round(24 + state.rand() * 12));
+      applyPlayResult(state, yards, false, 0, true);
+      return;
+    }
+
     recordPlay(state, play);
     tickClock(state, Math.round(24 + state.rand() * 12));
     applyPlayResult(state, yards, false, 0, false);
@@ -593,6 +628,25 @@ function doPass(state: GameState): void {
         participant(interceptor, def.teamId, "interceptor"),
       ],
     };
+    /*
+     * Pick-six (v2). v1 always spotted the ball after an interception, so a
+     * defense could never score. The return distance already exists; this only
+     * decides whether it reached the end zone.
+     */
+    if (state.features.scoringV2 && rollReturnTouchdown(state, 0.06)) {
+      play.returnYards = returnYards;
+      play.isReturnTd = true;
+      play.defensivePoints = 6;
+      awardDefensivePoints(state, 6);
+      recordPlay(state, play);
+      tickClock(state, Math.round(20 + state.rand() * 10));
+      endDrive(state, "turnover");
+      // The scoring defense now kicks off to the team that threw it.
+      doKickoff(state, state.possession === "home" ? "away" : "home");
+      return;
+    }
+
+    if (state.features.scoringV2) play.returnYards = returnYards;
     recordPlay(state, play);
     tickClock(state, Math.round(20 + state.rand() * 10));
     endDrive(state, "turnover");
@@ -706,6 +760,120 @@ function doKneel(state: GameState): void {
   applyPlayResult(state, -1, false, 0, false);
 }
 
+
+/*
+ * ── v2 scoring plays (Epic A1) ────────────────────────────────────────────
+ * Reached only when `features.scoringV2` is on, so v1 logs are untouched.
+ */
+
+/** Points the DEFENSE just scored go to the other side of the ledger. */
+function awardDefensivePoints(state: GameState, points: number): void {
+  if (state.possession === "home") state.awayScore += points;
+  else state.homeScore += points;
+}
+
+/**
+ * Tackled in your own end zone: two points to the defense, then a free kick
+ * from the 20 by the team that conceded.
+ */
+function doSafety(state: GameState): void {
+  const off = offenseTeam(state);
+  const def = defenseTeam(state);
+  const tackler = selectDefender(def, state.rand, "tackle");
+
+  awardDefensivePoints(state, 2);
+
+  recordPlay(state, {
+    playId: state.playId,
+    driveId: state.driveId,
+    quarter: state.quarter,
+    clockSeconds: state.clockSeconds,
+    offenseTeamId: off.teamId,
+    defenseTeamId: def.teamId,
+    playType: "safety",
+    down: state.down,
+    distance: state.distance,
+    fieldPosition: state.fieldPosition,
+    yardsGained: 0,
+    // The scoring side is the DEFENSE, so `pointsScored` (an offense-relative
+    // field in v1) stays 0 and `defensivePoints` carries the 2. Readers that
+    // sum `pointsScored` for a team must add `defensivePoints` for the other.
+    isScoring: false,
+    pointsScored: 0,
+    defensivePoints: 2,
+    isTurnover: true,
+    participants: [participant(tackler, def.teamId, "tackler_solo")],
+  });
+
+  tickClock(state, 6);
+  endDrive(state, "turnover");
+  // The conceding team free-kicks, so possession passes to the scoring side.
+  flipPossession(state);
+  startDrive(state, offenseTeamId(state), 35);
+}
+
+/**
+ * Whether to go for two rather than kick.
+ *
+ * Deliberately deterministic — no random draw. The classic chart: down 2, 5 or
+ * 8 late, a two-point try changes the number of scores needed. Anything else
+ * kicks. A3 can widen this once it owns situational decisions.
+ */
+function shouldGoForTwo(state: GameState): boolean {
+  if (state.quarter < 4 && !state.inOvertime) return false;
+  const scoring = state.possession === "home" ? state.homeScore : state.awayScore;
+  const opposing = state.possession === "home" ? state.awayScore : state.homeScore;
+  const deficit = opposing - scoring;
+  return deficit === 2 || deficit === 5 || deficit === 8;
+}
+
+/** Two-point try from the 2. Succeeds a shade under half the time. */
+function doTwoPointConversion(state: GameState): void {
+  const off = offenseTeam(state);
+  const def = defenseTeam(state);
+  const passer = selectPlayer(off, "QB", state.rand);
+  const target = selectPlayer(off, "WR", state.rand, true);
+  const edge = matchupEdge(state);
+  const success = state.rand() < clamp(0.45 + edge * 0.1, 0.3, 0.62);
+
+  if (success) {
+    if (state.possession === "home") state.homeScore += 2;
+    else state.awayScore += 2;
+  }
+
+  recordPlay(state, {
+    playId: state.playId,
+    driveId: state.driveId,
+    quarter: state.quarter,
+    clockSeconds: state.clockSeconds,
+    offenseTeamId: off.teamId,
+    defenseTeamId: def.teamId,
+    playType: success ? "two_point_convert" : "two_point_fail",
+    down: 0,
+    distance: 2,
+    fieldPosition: 98,
+    yardsGained: success ? 2 : 0,
+    isScoring: success,
+    pointsScored: success ? 2 : 0,
+    isTurnover: false,
+    participants: [
+      participant(passer, off.teamId, "passer"),
+      participant(target, off.teamId, "receiver"),
+    ],
+  });
+  tickClock(state, 5);
+}
+
+/**
+ * Did a return reach the end zone?
+ *
+ * Called ONLY inside a `scoringV2` branch — it draws, so calling it while the
+ * gate is off would desynchronize the PRNG.
+ */
+function rollReturnTouchdown(state: GameState, baseProb: number): boolean {
+  return state.rand() < baseProb;
+}
+
 function applyPlayResult(
   state: GameState,
   yards: number,
@@ -721,13 +889,29 @@ function applyPlayResult(
     return;
   }
 
+  /*
+   * Safety (v2). v1 clamped field position to a floor of 1, so being tackled
+   * in your own end zone was silently impossible. Detect it BEFORE the clamp.
+   *
+   * Costs no random draw — it is pure geometry — but it is still gated,
+   * because emitting the play at all would change the log.
+   */
+  if (state.features.scoringV2 && !isScoring && state.fieldPosition + yards <= 0) {
+    doSafety(state);
+    return;
+  }
+
   state.fieldPosition = clamp(state.fieldPosition + yards, 1, 99);
 
   if (isScoring) {
     if (state.possession === "home") state.homeScore += points;
     else state.awayScore += points;
     if (points === 6) {
-      doExtraPoint(state);
+      if (state.features.scoringV2 && shouldGoForTwo(state)) {
+        doTwoPointConversion(state);
+      } else {
+        doExtraPoint(state);
+      }
     }
     endDrive(state, points === 6 ? "touchdown" : "field_goal");
     if (state.inOvertime && points === 6) {
@@ -792,6 +976,7 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
   const rand = mulberry32(input.seed >>> 0);
   const state: GameState = {
     rand,
+    features: { scoringV2: input.features?.scoringV2 === true },
     home: input.home,
     away: input.away,
     strengthWeight: weights.strengthWeight,
