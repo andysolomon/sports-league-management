@@ -163,6 +163,33 @@ export default function PlayList({
                           </span>
                         ) : null}
                       </p>
+                      {play.penalty ? (
+                        <p
+                          className="mt-1 flex flex-wrap items-center gap-1.5"
+                          data-testid="play-penalty"
+                        >
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-control px-1.5 py-0.5 font-mono text-caption-12",
+                              // A declined flag had no effect on the game, so
+                              // it reads as muted rather than as a penalty the
+                              // viewer should attribute to the result.
+                              play.penalty.accepted
+                                ? "bg-danger/10 text-danger"
+                                : "bg-surface-3 text-text-subtle line-through",
+                            )}
+                          >
+                            {play.penalty.label} {play.penalty.yards}
+                          </span>
+                          <span className="text-caption-12 text-text-subtle">
+                            {play.penalty.accepted
+                              ? play.penalty.negatesPlay
+                                ? "accepted — play negated"
+                                : "accepted"
+                              : "declined"}
+                          </span>
+                        </p>
+                      ) : null}
                       {contributors ? (
                         <p className="mt-0.5 truncate text-caption-12 text-text-subtle">
                           {contributors}
