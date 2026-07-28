@@ -98,9 +98,14 @@ test.describe("Offseason phase machine (B1)", () => {
     await offseasonLink.click();
     await expect(page).toHaveURL(/\/dashboard\/seasons\/[^/]+\/offseason$/);
 
-    // A freshly opened offseason sits at `draft` with the rollover recorded.
+    /*
+     * A freshly opened offseason sits at `recruiting` with the rollover
+     * recorded. B3 inserted that phase ahead of `draft`; the opening phase is
+     * whatever `INITIAL_OFFSEASON_PHASE` says, so this assertion moves with the
+     * machine rather than pinning a phase that later slices will displace.
+     */
     const stepper = page.getByTestId("offseason-phase-stepper");
-    await expect(stepper).toHaveAttribute("data-phase", "draft");
+    await expect(stepper).toHaveAttribute("data-phase", "recruiting");
     await expect(page.getByTestId("offseason-phase-rollover")).toHaveAttribute(
       "data-state",
       "complete",
@@ -108,7 +113,7 @@ test.describe("Offseason phase machine (B1)", () => {
 
     await page.getByTestId("offseason-advance").click();
     await expect(page.getByTestId("offseason-phase-message")).toContainText(
-      "Free agency",
+      "Draft",
       { timeout: 30_000 },
     );
 
@@ -116,12 +121,11 @@ test.describe("Offseason phase machine (B1)", () => {
     await page.reload();
     await expect(page.getByTestId("offseason-phase-stepper")).toHaveAttribute(
       "data-phase",
-      "free_agency",
+      "draft",
     );
-    await expect(page.getByTestId("offseason-phase-draft")).toHaveAttribute(
-      "data-state",
-      "complete",
-    );
+    await expect(
+      page.getByTestId("offseason-phase-recruiting"),
+    ).toHaveAttribute("data-state", "complete");
   });
 
   test("an active season has no Offseason link and no hub page", async ({

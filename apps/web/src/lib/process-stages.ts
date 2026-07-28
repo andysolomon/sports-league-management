@@ -202,6 +202,15 @@ export function dynastyRolloverProcessStages(
         ? "No lingering injuries"
         : `${players(healedInjuries)} cleared`;
 
+  /* Same optional read, same reason — see the note above (B3). */
+  const prospectCount = withSummary?.recruiting?.prospects;
+  const prospectDetail =
+    prospectCount === undefined
+      ? undefined
+      : prospectCount === 0
+        ? "No recruiting class"
+        : `${prospectCount} prospect${prospectCount === 1 ? "" : "s"}`;
+
   return [
     stage("rollover", "Start next season", outcome, rolloverDetail),
     terminalStage("graduate", "Graduate seniors", terminalOutcome, graduateDetail),
@@ -229,6 +238,12 @@ export function dynastyRolloverProcessStages(
       "Heal lingering injuries",
       terminalOutcome,
       healingDetail,
+    ),
+    terminalStage(
+      "prospects",
+      "Build recruiting class",
+      terminalOutcome,
+      prospectDetail,
     ),
   ];
 }

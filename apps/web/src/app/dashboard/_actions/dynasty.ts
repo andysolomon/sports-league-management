@@ -21,8 +21,14 @@ import {
   removePlayersFromSeasonRoster,
   createRolloverFreshmenForTeam,
   healSeasonInjuries,
+  createProspectClass,
+  getDynastyConfig,
 } from "@/lib/data-api";
 import { activeNonGraduatedNames } from "@/lib/dynasty";
+import {
+  generateProspectClass,
+  prospectClassSize,
+} from "@/lib/dynasty/prospects";
 import { computeProgressedAttributes } from "@/lib/dynasty-progression";
 import { resolveLifecycleSeason } from "@/lib/season-view";
 import {
@@ -45,6 +51,7 @@ const ROLLOVER_STAGES = [
   "rosters_copied",
   "freshmen_created",
   "injuries_healed",
+  "prospects_generated",
   "completed",
 ] as const;
 
@@ -74,7 +81,7 @@ function createRolloverSummary(input: {
       removedAssignments: 0,
       removedDepthEntries: 0,
     },
-    recruiting: { freshmen: 0, toPool: input.freshmenToPool },
+    recruiting: { freshmen: 0, toPool: input.freshmenToPool, prospects: 0 },
     healing: { injuries: 0 },
   };
 }
@@ -93,7 +100,14 @@ function parseRolloverSummary(
       advancement: parsed.advancement ?? fallback.advancement,
       progression: parsed.progression ?? fallback.progression,
       carryover: parsed.carryover ?? fallback.carryover,
-      recruiting: parsed.recruiting ?? fallback.recruiting,
+      /*
+       * MERGED, not substituted. A summary persisted before B3 has a
+       * `recruiting` object without `prospects`, and taking it wholesale would
+       * hand the renderer a field the type says is always a number — the exact
+       * shape of the crash B2 caused with `healing`. Spreading the fallback
+       * underneath fills the gap without overwriting what was really recorded.
+       */
+      recruiting: { ...fallback.recruiting, ...(parsed.recruiting ?? {}) },
       // Summaries persisted before B2 have no `healing` key. Falling back keeps
       // a rollover that started on the old code renderable on the new.
       healing: parsed.healing ?? fallback.healing,
@@ -492,6 +506,68 @@ export async function startNextSeasonAction(input: {
           summary = parseRolloverSummary(checkpoint.summaryJson, summary);
         } catch (err) {
           await releaseClaimedStage("injuries_healed", err);
+          throw err;
+        }
+      }
+    }
+
+    /*
+     * Generate the incoming freshman class (B3).
+     *
+     * After the backfill, not instead of it. `freshmen_created` still tops
+     * every roster up to the target size, so a league that never enters the
+     * recruiting phase keeps playable rosters — a phase nobody visits must not
+     * be able to produce a broken season. Prospects are the talent on top of
+     * that floor, and a team that recruits well displaces walk-ons with them.
+     *
+     * Same failure posture as healing: by this point the next season exists
+     * with full rosters, and a league with no recruiting board is strictly
+     * better than a rollover stuck short of `completed`. Both the generation
+     * and the persist fall back to zero rather than throwing.
+     */
+    if (!hasReachedRolloverStage(stage, "prospects_generated")) {
+      const acquired = await claimStage("prospects_generated");
+      if (acquired) {
+        try {
+          const config = await getDynastyConfig(input.leagueId).catch(
+            () => null,
+          );
+          if (config?.recruitingEnabled !== false) {
+            const teams = await getTeamsByLeague(
+              input.leagueId,
+              orgContext,
+            ).catch(() => []);
+            const prospects = generateProspectClass({
+              seasonId: nextSeasonId,
+              count: prospectClassSize(teams.length),
+              excludeNames: activeNonGraduatedNames(leaguePlayers),
+            });
+            const created = await createProspectClass({
+              leagueId: input.leagueId,
+              seasonId: nextSeasonId,
+              prospects: prospects.map((p) => ({
+                name: p.name,
+                position: p.position,
+                positionGroup: p.positionGroup,
+                archetype: p.archetype,
+                hometown: p.hometown,
+                trueAttributesJson: JSON.stringify(p.trueAttributes),
+                trueOverall: p.trueOverall,
+                potentialTier: p.potentialTier,
+              })),
+            }).catch(() => null);
+            if (created) summary.recruiting.prospects = created.created;
+          }
+          const checkpoint = await advanceSeasonRollover({
+            rolloverId: rollover.rolloverId,
+            stage: "prospects_generated",
+            summaryJson: serializeRolloverSummary(summary),
+            ownerId,
+          });
+          stage = checkpoint.stage;
+          summary = parseRolloverSummary(checkpoint.summaryJson, summary);
+        } catch (err) {
+          await releaseClaimedStage("prospects_generated", err);
           throw err;
         }
       }

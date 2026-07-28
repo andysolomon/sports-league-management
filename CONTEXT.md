@@ -81,8 +81,12 @@ The single Season currently in progress for a League and the primary seasonal de
 _Avoid_: Viewed season, selected year
 
 **Offseason Hub**:
-The phase-machine surface for one upcoming Season at `/dashboard/seasons/[seasonId]/offseason`, where an administrator moves the league through Rollover, Draft, Free agency and Activate.
+The phase-machine surface for one upcoming Season at `/dashboard/seasons/[seasonId]/offseason`, where an administrator moves the league through Rollover, Recruiting, Draft, Free agency and Activate.
 _Avoid_: Offseason page, preseason, transfer window
+
+**Prospect**:
+An incoming ninth-grader on the Recruiting class for one upcoming Season, shown as a projected range rather than a rating until a Team signs him. Scouting narrows the range and never removes it.
+_Avoid_: Recruit rating, star rating, draft prospect, blue-chip
 
 **Resource Header**:
 The orientation and sibling-navigation surface shared by a Home and its child pages without using breadcrumb trails.
@@ -110,6 +114,8 @@ _Avoid_: Playbook, formation, strategy, system
 - **League Settings** is exposed only when the operator is an Org Admin for the **Active League**
 - Coaches manage a Team from **Team Home**, not **League Settings**
 - A Team has at most one **Scheme** per Season, set from **Team Home** because a Scheme changes only that Team's own games
+- An upcoming **Season** has at most one recruiting class, and every **Prospect** in it belongs to exactly one Team once signed
+- A **Prospect** is scouted and signed from the **Offseason Hub**, because the class is shared by the whole League rather than owned by one Team
 - **Account Settings** contains cross-league **Import** and **Account Billing**
 - A successful **Import** may set the imported League as the **Active League** and offer navigation to its **League Home**
 - The **League Directory** provides access to **Discover**

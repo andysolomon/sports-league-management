@@ -48,14 +48,14 @@ describe("offseason phase machine — one definition, two import paths", () => {
 });
 
 describe("beginOffseason", () => {
-  it("opens at draft with the rollover already recorded", async () => {
+  it("opens at recruiting with the rollover already recorded", async () => {
     const t = convexTest(schema, modules);
     const { seasonId } = await seed(t);
     const opened = await t.mutation(internal.dynasty.beginOffseason, {
       seasonId,
       actorUserId: ACTOR,
     });
-    expect(opened.phase).toBe("draft");
+    expect(opened.phase).toBe("recruiting");
     expect(opened.completedPhases).toEqual(["rollover"]);
   });
 
@@ -146,19 +146,31 @@ describe("advanceOffseasonPhase", () => {
   ) =>
     t.mutation(internal.dynasty.advanceOffseasonPhase, {
       seasonId,
-      expectedPhase: args.expectedPhase ?? "draft",
-      to: args.to ?? "free_agency",
+      // Defaults are the FIRST advance a fresh offseason can make. B3 inserted
+      // `recruiting` ahead of `draft`, so that is now recruiting → draft.
+      expectedPhase: args.expectedPhase ?? "recruiting",
+      to: args.to ?? "draft",
       ownerId: args.ownerId ?? "owner_a",
       actorUserId: ACTOR,
       draftStatus: args.draftStatus ?? "none",
     });
 
+  /** An offseason moved forward to the draft phase, for the draft-only gates. */
+  async function atDraft() {
+    const { t, seasonId } = await opened();
+    await advance(t, seasonId as never);
+    return { t, seasonId };
+  }
+
   it("moves forward and records the phase it left", async () => {
     const { t, seasonId } = await opened();
     const result = await advance(t, seasonId as never);
     expect(result.changed).toBe(true);
-    expect(result.offseason.phase).toBe("free_agency");
-    expect(result.offseason.completedPhases).toEqual(["rollover", "draft"]);
+    expect(result.offseason.phase).toBe("draft");
+    expect(result.offseason.completedPhases).toEqual([
+      "rollover",
+      "recruiting",
+    ]);
   });
 
   it("advancing twice with the same payload produces one state change", async () => {
@@ -170,16 +182,15 @@ describe("advanceOffseasonPhase", () => {
     expect(second.offseason.completedPhases).toEqual(
       first.offseason.completedPhases,
     );
-    expect(second.offseason.phase).toBe("free_agency");
+    expect(second.offseason.phase).toBe("draft");
   });
 
   it("rejects a backward request as phase_regression", async () => {
-    const { t, seasonId } = await opened();
-    await advance(t, seasonId as never);
+    const { t, seasonId } = await atDraft();
     await expect(
       advance(t, seasonId as never, {
-        expectedPhase: "free_agency",
-        to: "draft",
+        expectedPhase: "draft",
+        to: "recruiting",
       }),
     ).rejects.toThrow(/phase_regression/);
   });
@@ -187,7 +198,7 @@ describe("advanceOffseasonPhase", () => {
   it("resolves two concurrent advances to one winner and one phase_busy", async () => {
     const { t, seasonId } = await opened();
     /*
-     * Both callers read phase `draft` and both send `expectedPhase: "draft"`.
+     * Both callers read the opening phase and send the same `expectedPhase`.
      * Convex serializes them, so the loser finds its expectation stale — it
      * asked to move an offseason that someone else already moved.
      */
@@ -205,15 +216,31 @@ describe("advanceOffseasonPhase", () => {
     );
 
     const final = await t.query(api.dynasty.getOffseason, { seasonId });
-    expect(final?.phase).toBe("free_agency");
-    expect(final?.completedPhases).toEqual(["rollover", "draft"]);
+    expect(final?.phase).toBe("draft");
+    expect(final?.completedPhases).toEqual(["rollover", "recruiting"]);
   });
 
   it("refuses to leave the draft phase while a draft is mid-pick", async () => {
-    const { t, seasonId } = await opened();
+    const { t, seasonId } = await atDraft();
     await expect(
-      advance(t, seasonId as never, { draftStatus: "active" }),
+      advance(t, seasonId as never, {
+        expectedPhase: "draft",
+        to: "free_agency",
+        draftStatus: "active",
+      }),
     ).rejects.toThrow(/draft_in_progress/);
+  });
+
+  it("lets an offseason leave recruiting with nothing signed (B3)", async () => {
+    /*
+     * The recruiting phase is optional in the same sense the draft is: a
+     * league that ignores the class still has to get past it. A gate here
+     * would let an unsigned prospect trap an entire offseason.
+     */
+    const { t, seasonId } = await opened();
+    const result = await advance(t, seasonId as never);
+    expect(result.changed).toBe(true);
+    expect(result.offseason.phase).toBe("draft");
   });
 
   it("reports an invalid request as invalid rather than as a conflict", async () => {
@@ -241,6 +268,7 @@ describe("advanceOffseasonPhase", () => {
     expect(final?.phase).toBe("activate");
     expect(final?.completedPhases).toEqual([
       "rollover",
+      "recruiting",
       "draft",
       "free_agency",
     ]);

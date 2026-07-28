@@ -46,9 +46,20 @@ describe("phase ordering", () => {
     expect(isOffseasonPhase("nonsense")).toBe(false);
   });
 
-  it("opens at draft, because the rollover has already happened", () => {
-    expect(INITIAL_OFFSEASON_PHASE).toBe("draft");
+  it("opens at recruiting, because the rollover has already happened", () => {
+    expect(INITIAL_OFFSEASON_PHASE).toBe("recruiting");
     expect(resolveOffseasonState(null).completedPhases).toContain("rollover");
+  });
+
+  it("puts recruiting between the rollover and the draft (B3)", () => {
+    /*
+     * Order is the contract, not the membership. Recruiting has to run before
+     * the draft because a prospect a team signs is a roster spot the draft can
+     * no longer fill — the other order would let a coach draft into a class he
+     * has not chosen yet.
+     */
+    expect(nextPhase("rollover")).toBe("recruiting");
+    expect(nextPhase("recruiting")).toBe("draft");
   });
 });
 
@@ -94,7 +105,7 @@ describe("phaseGate", () => {
   });
 
   it("rejects a phase name it does not know", () => {
-    expect(gate("draft", "recruiting")).toEqual({
+    expect(gate("draft", "bowl_season")).toEqual({
       ok: false,
       reason: "unknown_phase",
     });
@@ -118,7 +129,7 @@ describe("completePhase", () => {
   });
 
   it("drops names that are not phases instead of persisting them", () => {
-    expect(completePhase(["rollover", "recruiting"], "draft")).toEqual([
+    expect(completePhase(["rollover", "bowl_season"], "draft")).toEqual([
       "rollover",
       "draft",
     ]);
@@ -136,6 +147,21 @@ describe("buildPhaseSteps", () => {
     expect(byId.draft).toBe("optional");
     expect(byId.free_agency).toBe("complete");
     expect(byId.activate).toBe("active");
+  });
+
+  it("shows a skipped recruiting phase as optional, not as missing (B3)", () => {
+    /*
+     * A league that signed nobody must be able to leave the phase, and the
+     * stepper has to say so. Rendering it as `upcoming` behind the current
+     * phase would read as "you still have to do this" for something already
+     * passed.
+     */
+    const steps = buildPhaseSteps({
+      phase: "draft",
+      completedPhases: ["rollover"],
+    });
+    const byId = Object.fromEntries(steps.map((s) => [s.id, s.state]));
+    expect(byId.recruiting).toBe("optional");
   });
 
   it("labels every phase in the machine exactly once", () => {
@@ -163,7 +189,7 @@ describe("resolveOffseasonState", () => {
     // A row written by a future version must not put the stepper into a state
     // with no active phase.
     const state = resolveOffseasonState(
-      { phase: "recruiting", completedPhases: ["rollover"] },
+      { phase: "bowl_season", completedPhases: ["rollover"] },
       { draftStatus: "none" },
     );
     expect(state.phase).toBe(INITIAL_OFFSEASON_PHASE);
@@ -172,7 +198,7 @@ describe("resolveOffseasonState", () => {
   it("filters unknown names out of the completed set", () => {
     const state = resolveOffseasonState({
       phase: "free_agency",
-      completedPhases: ["rollover", "recruiting"],
+      completedPhases: ["rollover", "bowl_season"],
     });
     expect(state.completedPhases).toEqual(["rollover"]);
   });

@@ -211,6 +211,8 @@ export const dynastyTables = {
     injurySeverityScale: v.optional(v.number()),
 
     // Offseason economy (Epic B).
+    /** An incoming freshman class is generated and recruited (Epic B3). */
+    recruitingEnabled: v.optional(v.boolean()),
     transfersEnabled: v.optional(v.boolean()),
     /** "low" | "normal" | "high" — how much roster churn a offseason produces. */
     transferVolume: v.optional(v.string()),

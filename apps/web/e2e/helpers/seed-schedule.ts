@@ -106,3 +106,27 @@ export async function withScheduleFixture(
     },
   };
 }
+
+const seedProspectClassRef = makeFunctionReference<
+  "mutation",
+  any,
+  { created: number; alreadyExisted: boolean }
+>("e2eSeed:seedProspectClass");
+
+/**
+ * Put a recruiting class on a season (B3).
+ *
+ * The production path builds one in the `prospects_generated` rollover stage,
+ * which needs a completed season to roll over from. Simulating one to a
+ * champion just to render a board would make the recruiting spec the slowest
+ * in the suite and couple it to every earlier slice; the seed routes through
+ * the same Convex mutation the rollover calls, so what it produces is the real
+ * thing.
+ */
+export async function seedProspectClass(
+  seasonId: string,
+  count = 4,
+): Promise<{ created: number; alreadyExisted: boolean }> {
+  const client = getSeedClient();
+  return client.mutation(seedProspectClassRef, { seasonId, count });
+}

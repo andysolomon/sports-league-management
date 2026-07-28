@@ -229,7 +229,14 @@ void api.history.moduleStatus;
 type AllowedPublicDynastyReads =
   | "moduleStatus"
   | "getDynastyConfig"
-  | "getOffseason";
+  | "getOffseason"
+  /*
+   * B3. Public, and safe to be public, because the hidden three
+   * (`trueAttributesJson`, `trueOverall`, `potentialTier`) are absent from its
+   * `returns:` validator — see `prospectsHideTruth.test.ts`, which is the test
+   * that makes this line reviewable rather than trusting.
+   */
+  | "listProspects";
 type AllowedPublicSimReads =
   | "moduleStatus"
   | "listRivalries"

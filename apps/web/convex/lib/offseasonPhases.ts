@@ -26,6 +26,7 @@
 
 export const OFFSEASON_PHASES = [
   "rollover",
+  "recruiting",
   "draft",
   "free_agency",
   "activate",
@@ -35,6 +36,7 @@ export type OffseasonPhase = (typeof OFFSEASON_PHASES)[number];
 
 export const OFFSEASON_PHASE_LABELS: Record<OffseasonPhase, string> = {
   rollover: "Rollover",
+  recruiting: "Recruiting",
   draft: "Draft",
   free_agency: "Free agency",
   activate: "Activate",
@@ -46,8 +48,15 @@ export const OFFSEASON_PHASE_LABELS: Record<OffseasonPhase, string> = {
  * The draft is genuinely optional — a league that does not run one still has
  * to leave the phase, so "optional" means "advanceable while empty", not
  * "skippable in the ordering".
+ *
+ * Recruiting joined it in B3 for a stronger reason than convenience: a class
+ * left entirely unsigned must not be able to trap an offseason. The cost of
+ * skipping it is a roster of walk-ons, which is a consequence, not a block.
  */
-const OPTIONAL_PHASES: ReadonlySet<OffseasonPhase> = new Set(["draft"]);
+const OPTIONAL_PHASES: ReadonlySet<OffseasonPhase> = new Set([
+  "recruiting",
+  "draft",
+]);
 
 /*
  * A new offseason opens at `draft`, not at `rollover`.
@@ -57,8 +66,14 @@ const OPTIONAL_PHASES: ReadonlySet<OffseasonPhase> = new Set(["draft"]);
  * created the target season — and it is owned by `seasonRollovers`, not by
  * this machine. Opening at `rollover` would show an admin a phase they cannot
  * act on and have already finished.
+ *
+ * B3 moved the opening phase from `draft` to `recruiting` by inserting one in
+ * front of it. That is the migration-free insert this file's header describes:
+ * an offseason already sitting in `draft` when B3 deployed keeps its phase, and
+ * simply never has `recruiting` in its `completedPhases` set. The stepper reads
+ * that as skipped, which is exactly what happened to it.
  */
-export const INITIAL_OFFSEASON_PHASE: OffseasonPhase = "draft";
+export const INITIAL_OFFSEASON_PHASE: OffseasonPhase = "recruiting";
 
 export type DraftPhaseStatus = "none" | "active" | "complete";
 

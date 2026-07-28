@@ -64,6 +64,12 @@ const TOGGLES: Array<{
       "Each team's offense, defense and coaching dials shape how it plays.",
   },
   {
+    key: "recruitingEnabled",
+    label: "Recruiting",
+    description:
+      "Each offseason generates a freshman class programs scout and sign.",
+  },
+  {
     key: "transfersEnabled",
     label: "Transfers",
     description: "Players move between programs in the offseason.",
