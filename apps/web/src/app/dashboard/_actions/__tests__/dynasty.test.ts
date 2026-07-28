@@ -20,6 +20,8 @@ const {
   mockGetPlayersByTeam,
   mockCreateRolloverFreshmenForTeam,
   mockHealSeasonInjuries,
+  mockCreateProspectClass,
+  mockGetDynastyConfig,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockResolveOrgContext: vi.fn(),
@@ -40,6 +42,8 @@ const {
   mockGetPlayersByTeam: vi.fn(),
   mockCreateRolloverFreshmenForTeam: vi.fn(),
   mockHealSeasonInjuries: vi.fn(),
+  mockCreateProspectClass: vi.fn(),
+  mockGetDynastyConfig: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
@@ -64,6 +68,8 @@ vi.mock("@/lib/data-api", () => ({
   getPlayersByTeam: mockGetPlayersByTeam,
   createRolloverFreshmenForTeam: mockCreateRolloverFreshmenForTeam,
   healSeasonInjuries: mockHealSeasonInjuries,
+  createProspectClass: mockCreateProspectClass,
+  getDynastyConfig: mockGetDynastyConfig,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -96,7 +102,7 @@ const completedSummary = {
     removedAssignments: 1,
     removedDepthEntries: 1,
   },
-  recruiting: { freshmen: 47, toPool: false },
+  recruiting: { freshmen: 47, toPool: false, prospects: 12 },
   healing: { injuries: 3 },
 };
 
@@ -154,7 +160,9 @@ beforeEach(() => {
                   ? "rosters_copied"
                   : stage === "injuries_healed"
                     ? "freshmen_created"
-                    : "injuries_healed",
+                    : stage === "prospects_generated"
+                      ? "injuries_healed"
+                      : "prospects_generated",
         status: "in_progress",
         graduatedPlayerIds: [],
         advancedPlayerIds: ["p1"],
@@ -164,6 +172,11 @@ beforeEach(() => {
   );
   mockReleaseSeasonRolloverStage.mockResolvedValue(null);
   mockHealSeasonInjuries.mockResolvedValue({ healed: 0 });
+  mockGetDynastyConfig.mockResolvedValue({ recruitingEnabled: true });
+  mockCreateProspectClass.mockResolvedValue({
+    created: 12,
+    alreadyExisted: false,
+  });
   mockRollover.mockResolvedValue({
     graduatedPlayerIds: [],
     advancedPlayerIds: ["p1"],
@@ -669,6 +682,85 @@ describe("startNextSeasonAction success path", () => {
       const res = await startNextSeasonAction({ leagueId: LEAGUE });
 
       expect(mockHealSeasonInjuries).not.toHaveBeenCalled();
+      expect(res).toMatchObject({ ok: true });
+    });
+  });
+
+  /*
+   * Recruiting class generation (B3, #621). The stage runs LAST, after the
+   * backfill has already filled every roster — the class is talent on top of a
+   * playable floor, not a replacement for one.
+   */
+  describe("prospects_generated stage", () => {
+    it("builds a class for the TARGET season and records the count", async () => {
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(mockCreateProspectClass).toHaveBeenCalledWith(
+        expect.objectContaining({
+          leagueId: LEAGUE,
+          // The season being BUILT. A class on the closing season would be
+          // recruits for a year that has already been played.
+          seasonId: "season_next",
+        }),
+      );
+      const call = mockCreateProspectClass.mock.calls[0]?.[0] as {
+        prospects: Array<{ trueAttributesJson: string; potentialTier: string }>;
+      };
+      expect(call.prospects.length).toBeGreaterThan(0);
+      // Truth is generated on this side and handed over once. If a prospect
+      // arrived without it there would be nothing for scouting to blur.
+      expect(call.prospects[0].trueAttributesJson).toContain("SPD");
+      expect(call.prospects[0].potentialTier.length).toBeGreaterThan(0);
+      expect(res).toMatchObject({ ok: true });
+    });
+
+    it("still fills rosters when recruiting is switched off", async () => {
+      /*
+       * The kill switch removes a MECHANIC, not the players. A league with
+       * recruiting off must still get a full roster out of the rollover, or
+       * the switch would be a way to break a season rather than to simplify
+       * one.
+       */
+      mockGetDynastyConfig.mockResolvedValue({ recruitingEnabled: false });
+
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(mockCreateProspectClass).not.toHaveBeenCalled();
+      expect(mockCreateRolloverFreshmenForTeam).toHaveBeenCalled();
+      expect(res).toMatchObject({ ok: true, seasonId: "season_next" });
+    });
+
+    it("still completes the rollover when class generation fails", async () => {
+      // Same posture as healing: the next season already exists, and a league
+      // with no board beats a rollover stuck short of `completed`.
+      mockCreateProspectClass.mockRejectedValue(new Error("convex_down"));
+
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(res).toMatchObject({ ok: true, seasonId: "season_next" });
+      expect(mockAdvanceSeasonRollover).toHaveBeenLastCalledWith(
+        expect.objectContaining({ stage: "completed" }),
+      );
+    });
+
+    it("does not rebuild the class on a rollover resumed past the stage", async () => {
+      mockBeginSeasonRollover.mockResolvedValue({
+        rolloverId: "rollover_1",
+        sourceSeasonId: ACTIVE.id,
+        sourceSeasonName: ACTIVE.name,
+        targetSeasonId: "season_next",
+        targetSeasonName: "2027",
+        resumed: true,
+        stage: "prospects_generated",
+        status: "in_progress",
+        graduatedPlayerIds: [],
+        advancedPlayerIds: ["p1"],
+        summaryJson: JSON.stringify(completedSummary),
+      });
+
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(mockCreateProspectClass).not.toHaveBeenCalled();
       expect(res).toMatchObject({ ok: true });
     });
   });

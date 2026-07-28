@@ -62,6 +62,15 @@ export interface DynastyConfig {
   weatherEnabled: boolean;
   /** 0 = none, 1 = normal, 2 = brutal. Scales injury severity. */
   injurySeverityScale: number;
+  /**
+   * An incoming freshman class is generated and must be recruited (Epic B3).
+   *
+   * With this off the rollover skips the class entirely and the offseason's
+   * recruiting phase has nothing in it. Rosters are unaffected either way — the
+   * rollover's backfill still tops every team up to `targetRosterSize`, so this
+   * switch removes a mechanic rather than the players.
+   */
+  recruitingEnabled: boolean;
   /** Players may transfer in and out during the offseason (Epic B4). */
   transfersEnabled: boolean;
   /** How much roster churn an offseason produces. */
@@ -95,6 +104,7 @@ export const DYNASTY_CONFIG_DEFAULTS: Readonly<DynastyConfig> = Object.freeze({
   schemesEnabled: true,
   weatherEnabled: true,
   injurySeverityScale: 1,
+  recruitingEnabled: true,
   transfersEnabled: true,
   transferVolume: "normal",
   scoutingPointsPerOffseason: 100,
@@ -169,6 +179,7 @@ export function resolveDynastyConfig(
     schemesEnabled: bool("schemesEnabled"),
     weatherEnabled: bool("weatherEnabled"),
     injurySeverityScale: num("injurySeverityScale"),
+    recruitingEnabled: bool("recruitingEnabled"),
     transfersEnabled: bool("transfersEnabled"),
     transferVolume: volume,
     scoutingPointsPerOffseason: num("scoutingPointsPerOffseason"),

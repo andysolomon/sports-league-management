@@ -2363,6 +2363,7 @@ const rolloverStageOrder = [
   "rosters_copied",
   "freshmen_created",
   "injuries_healed",
+  "prospects_generated",
   "completed",
 ] as const;
 

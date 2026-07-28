@@ -60,6 +60,66 @@ export const offseasonTables = {
     .index("by_leagueId", ["leagueId"]),
 
   /*
+   * Incoming freshman class (Dynasty Mode B3). One row per prospect, one class
+   * per target season, shared by every team in the league.
+   *
+   * ## The hidden/shown split is the table's whole reason for existing
+   *
+   * `trueAttributesJson`, `trueOverall` and `potentialTier` are the prospect.
+   * `scoutedAttributesJson`, `projectedLow` and `projectedHigh` are what a coach
+   * has earned the right to see. They are stored side by side rather than
+   * derived on read so that the shown numbers are STABLE — a range that
+   * recomputed on every page load would drift under the coach even though the
+   * generator is deterministic, and any future change to the noise function
+   * would silently rewrite history for classes already scouted.
+   *
+   * Nothing outside `convex/dynasty.ts` may read the hidden three. `listProspects`
+   * has no validator entry for them, and `__tests__/prospectsHideTruth.test.ts`
+   * fails if one is added — a leak here is not a cosmetic bug, it deletes the
+   * entire mechanic.
+   *
+   * ## Signing
+   *
+   * `playerId` is the record that a prospect became a player, and it is what
+   * makes signing idempotent: a set `playerId` means the work is done, so a
+   * retried request returns the existing player instead of creating a second
+   * one. `signedTeamId` is stored alongside rather than read back through the
+   * player because a signed player can later be released or traded, and the
+   * class should keep saying who actually recruited him.
+   */
+  recruitProspects: defineTable({
+    leagueId: v.id("leagues"),
+    /** The UPCOMING season this class signs into. */
+    seasonId: v.id("seasons"),
+    name: v.string(),
+    position: v.string(),
+    positionGroup: v.string(),
+    /** Shown at every scout level — the read a coach gets from film. */
+    archetype: v.string(),
+    hometown: v.union(v.string(), v.null()),
+
+    /** HIDDEN. Never in a `returns:` validator reachable from the Next layer. */
+    trueAttributesJson: v.string(),
+    /** HIDDEN. The number the projected band is built around. */
+    trueOverall: v.number(),
+    /** HIDDEN at every level, including 3 — this is where bust risk lives. */
+    potentialTier: v.string(),
+
+    /** 0–3. Higher is a narrower `projectedLow`..`projectedHigh` window. */
+    scoutLevel: v.number(),
+    scoutedAttributesJson: v.string(),
+    projectedLow: v.number(),
+    projectedHigh: v.number(),
+
+    signedTeamId: v.optional(v.id("teams")),
+    playerId: v.optional(v.id("players")),
+    signedAt: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_seasonId", ["seasonId"])
+    .index("by_leagueId", ["leagueId"]),
+
+  /*
    * Offseason snake draft (WSM-000233). One draft per target season; order is
    * reverse final standings. Writes are internalMutation only.
    */

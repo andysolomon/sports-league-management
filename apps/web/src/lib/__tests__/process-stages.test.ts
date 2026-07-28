@@ -60,6 +60,7 @@ describe("process stage builders", () => {
       "carryover",
       "freshmen",
       "healing",
+      "prospects",
     ]);
     expect(pending[0]?.status).toBe("in_progress");
     // Stage list stays stable (identical ids/order) across outcomes.
@@ -79,7 +80,7 @@ describe("process stage builders", () => {
         removedAssignments: 12,
         removedDepthEntries: 6,
       },
-      recruiting: { freshmen: 48, toPool: true },
+      recruiting: { freshmen: 48, toPool: true, prospects: 72 },
       healing: { injuries: 3 },
     });
     expect(success.map((stage) => stage.id)).toEqual([
@@ -90,6 +91,7 @@ describe("process stage builders", () => {
       "carryover",
       "freshmen",
       "healing",
+      "prospects",
     ]);
     expect(success.find((stage) => stage.id === "rollover")?.detail).toBe(
       "2026 → 2027",

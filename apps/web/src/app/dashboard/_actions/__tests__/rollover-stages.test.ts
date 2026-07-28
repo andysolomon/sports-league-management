@@ -61,6 +61,21 @@ describe("rollover stage order", () => {
     );
   });
 
+  it("builds the recruiting class last, after the roster is settled (B3)", () => {
+    /*
+     * The class is generated once and never regenerated, so it has to be built
+     * against the roster the season actually starts with. Running it before
+     * the backfill would size a board against a roster that is about to change
+     * underneath it.
+     */
+    expect(clientStages.indexOf("prospects_generated")).toBeGreaterThan(
+      clientStages.indexOf("freshmen_created"),
+    );
+    expect(clientStages.indexOf("prospects_generated")).toBeLessThan(
+      clientStages.indexOf("completed"),
+    );
+  });
+
   it("keeps `completed` terminal", () => {
     expect(clientStages.at(-1)).toBe("completed");
     expect(serverStages.at(-1)).toBe("completed");

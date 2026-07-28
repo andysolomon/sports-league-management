@@ -3042,3 +3042,99 @@ export async function advanceOffseasonPhase(input: {
     input,
   );
 }
+
+/*
+ * Incoming freshman class (B3).
+ *
+ * `ProspectDto` is deliberately the SHOWN prospect and nothing more. There is
+ * no DTO for the hidden fields because there is no caller on this side of the
+ * boundary entitled to them — the true ratings exist only inside
+ * `convex/dynasty.ts`, and the type here is the second lock on that.
+ */
+
+export interface ProspectDto {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  name: string;
+  position: string;
+  positionGroup: string;
+  archetype: string;
+  hometown: string | null;
+  scoutLevel: number;
+  projectedLow: number;
+  projectedHigh: number;
+  scoutedAttributesJson: string;
+  signedTeamId: string | null;
+  playerId: string | null;
+}
+
+export async function listProspects(seasonId: string): Promise<ProspectDto[]> {
+  const client = getConvexClient();
+  return client.query(dynastyRef.query<ProspectDto[]>("listProspects"), {
+    seasonId,
+  });
+}
+
+export async function createProspectClass(input: {
+  leagueId: string;
+  seasonId: string;
+  prospects: Array<{
+    name: string;
+    position: string;
+    positionGroup: string;
+    archetype: string;
+    hometown: string | null;
+    trueAttributesJson: string;
+    trueOverall: number;
+    potentialTier: string;
+  }>;
+}): Promise<{ created: number; alreadyExisted: boolean }> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{ created: number; alreadyExisted: boolean }>(
+      "createProspectClass",
+    ),
+    input,
+  );
+}
+
+export async function scoutProspect(input: {
+  prospectId: string;
+  teamId: string;
+  actorUserId: string;
+}): Promise<{
+  prospect: ProspectDto;
+  scoutingPointsSpent: number;
+  scoutingPointsTotal: number;
+}> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{
+      prospect: ProspectDto;
+      scoutingPointsSpent: number;
+      scoutingPointsTotal: number;
+    }>("scoutProspect"),
+    input,
+  );
+}
+
+export async function signProspect(input: {
+  prospectId: string;
+  teamId: string;
+  actorUserId: string;
+}): Promise<{
+  prospect: ProspectDto;
+  playerId: string;
+  alreadySigned: boolean;
+}> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{
+      prospect: ProspectDto;
+      playerId: string;
+      alreadySigned: boolean;
+    }>("signProspect"),
+    input,
+  );
+}

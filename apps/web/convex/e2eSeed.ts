@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
 /*
@@ -160,6 +161,18 @@ async function cascadeDeleteLeague(
     .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
     .collect()) as Array<{ _id: Id<"offseasons"> }>;
   for (const row of offseasonRows) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  // Recruiting classes (B3). A prospect left behind is worse than stale data:
+  // the class is generated once per season and then never regenerated, so a
+  // leaked row would make a later run's board a mix of two classes, and a
+  // prospect already signed by a deleted team would show as taken by nobody.
+  const prospectRows = (await ctx.db
+    .query("recruitProspects")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"recruitProspects"> }>;
+  for (const row of prospectRows) {
     await ctx.db.delete(row._id);
     deleted += 1;
   }
@@ -631,5 +644,62 @@ export const resetCanonicalFixture = internalMutation({
       deleted += await cascadeDeleteLeague(ctx, league._id);
     }
     return { deleted };
+  },
+});
+
+/*
+ * Seed a recruiting class onto an existing season (B3).
+ *
+ * Recruiting classes are normally built by the `prospects_generated` rollover
+ * stage, which needs a completed season to roll over FROM. Simulating one to a
+ * champion just to see a board would make the recruiting spec the slowest in
+ * the suite and would couple it to every earlier slice's behaviour.
+ *
+ * Routed through `internal.dynasty.createProspectClass` rather than inserting
+ * rows here, so the seeded board is built by the SAME code path production
+ * uses — including the level-0 band. A fixture that wrote its own rows could
+ * drift from the real one and quietly make the spec assert nothing.
+ */
+export const seedProspectClass = internalMutation({
+  args: {
+    seasonId: v.id("seasons"),
+    count: v.optional(v.number()),
+  },
+  returns: v.object({ created: v.number(), alreadyExisted: v.boolean() }),
+  handler: async (ctx, args): Promise<{ created: number; alreadyExisted: boolean }> => {
+    assertSeedEnabled();
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+
+    const count = Math.max(1, Math.min(args.count ?? 4, 20));
+    const positions = ["QB", "RB", "WR", "OL", "DL", "LB", "DB"];
+    const prospects = Array.from({ length: count }, (_, i) => {
+      const position = positions[i % positions.length] ?? "WR";
+      // Fixed ratings: a spec that asserted on a range needs the range to be
+      // the same on every run.
+      const base = 55 + ((i * 7) % 30);
+      return {
+        name: `E2E Prospect ${i + 1}`,
+        position,
+        positionGroup: position,
+        archetype: "Athlete",
+        hometown: "Acworth, GA",
+        trueAttributesJson: JSON.stringify({
+          SPD: base + 4,
+          STR: base - 3,
+          AWR: base,
+          ACC: base + 1,
+          AGI: base - 1,
+        }),
+        trueOverall: base,
+        potentialTier: "steady",
+      };
+    });
+
+    return ctx.runMutation(internal.dynasty.createProspectClass, {
+      leagueId: season.leagueId,
+      seasonId: args.seasonId,
+      prospects,
+    });
   },
 });
