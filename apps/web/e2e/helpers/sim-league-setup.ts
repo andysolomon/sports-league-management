@@ -66,7 +66,11 @@ export async function addTeamsToLeague(
   for (const name of names) {
     await page.getByRole("button", { name: "Add team" }).click();
     await page.getByPlaceholder("Team name").fill(name);
-    await page.getByRole("button", { name: "Add" }).click();
+    // `exact` matters: accessible-name matching is a substring match by
+    // default, so a bare "Add" also matches any other "Add …" button that
+    // League Settings grows later. This is the submit inside the add-team
+    // dialog and nothing else.
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.getByText(`Added ${name}.`)).toBeVisible({
       timeout: 30_000,
     });
