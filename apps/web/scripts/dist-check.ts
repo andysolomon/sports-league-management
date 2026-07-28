@@ -13,6 +13,7 @@
  * row moves, golden parity broke.
  */
 import { simulateGameLog } from "../src/lib/pbp/engine";
+import { deriveWeather } from "../src/lib/pbp/weather";
 import type {
   PbpFeatureGates,
   PlayerSimProfile,
@@ -50,7 +51,16 @@ const team = (t: string, s: number): TeamSimProfile => ({
 
 const GAMES = 300;
 
-function report(label: string, features: PbpFeatureGates | undefined): void {
+/*
+ * When `withWeather` is set, each game gets conditions derived the way
+ * `fixtureSimConditions` derives them in production — a different week per
+ * game, so the sample spans a season's climate rather than one nice afternoon.
+ */
+function report(
+  label: string,
+  features: PbpFeatureGates | undefined,
+  withWeather = false,
+): void {
   let homeWins = 0;
   let awayWins = 0;
   let ties = 0;
@@ -66,6 +76,15 @@ function report(label: string, features: PbpFeatureGates | undefined): void {
       seed: 1000 + i,
       flavor: "balanced",
       features,
+      ...(withWeather
+        ? {
+            weather: deriveWeather({
+              seasonId: "dist-check",
+              week: (i % 14) + 1,
+              venueId: `venue_${i % 24}`,
+            }),
+          }
+        : {}),
     });
     homePoints += log.homeScore;
     awayPoints += log.awayScore;
@@ -121,3 +140,19 @@ report("all A gates", {
   scoringV2: true,
   penalties: true,
 });
+/*
+ * What a real league actually plays under once the flag is on and the league
+ * keeps the default settings. This is the row that matters for activation —
+ * the others isolate one mechanic at a time.
+ */
+report(
+  "PRODUCTION DEFAULT — all gates + derived weather",
+  {
+    situational: true,
+    balance: true,
+    scoringV2: true,
+    penalties: true,
+    weather: true,
+  },
+  true,
+);

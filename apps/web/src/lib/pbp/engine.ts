@@ -1620,7 +1620,32 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
     ...(state.features.weather && input.weather
       ? { weather: input.weather }
       : {}),
+    /*
+     * Record which gates were live, so a reader never has to infer it from the
+     * engine version. Omitted entirely when nothing was on — that absence is
+     * what keeps a fully-gated-off log byte-identical to v1, which the golden
+     * parity fixture pins.
+     */
+    ...(activeFeatures(state.features) ?? {}),
   };
+}
+
+/**
+ * `{ features }` when at least one gate is on, otherwise `null`.
+ *
+ * Only the gates that were ON are recorded. Writing `penalties: false` would
+ * claim the engine considered penalties and declined, which is indistinguishable
+ * in the data from a build that never had them — and Epic D's record book would
+ * later read that claim as history.
+ */
+function activeFeatures(
+  features: Required<PbpFeatureGates>,
+): { features: PbpFeatureGates } | null {
+  const active: PbpFeatureGates = {};
+  for (const [key, value] of Object.entries(features)) {
+    if (value === true) active[key as keyof PbpFeatureGates] = true;
+  }
+  return Object.keys(active).length > 0 ? { features: active } : null;
 }
 
 export { simulateGameLog, positionGroup, POSITION_TO_GROUP };

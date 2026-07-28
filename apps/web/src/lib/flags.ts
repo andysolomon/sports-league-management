@@ -193,6 +193,34 @@ export const playoffsV1 = flag<boolean>({
   },
 });
 
+/*
+ * Dynasty Mode Epic A — the sim-engine v2 mechanics (A1, A2, A3, A5).
+ *
+ * The OUTER gate. With this off, no league gets v2 mechanics regardless of its
+ * `dynastyConfig`; with it on, each league's own settings decide. That ordering
+ * makes this a real kill switch — one env var backs the whole epic out for
+ * everyone without touching a single league's preferences, and turning it back
+ * on restores exactly what each had chosen.
+ *
+ * Already-simulated games are unaffected in either direction: `gamePlayLogs`
+ * rows are immutable and a final fixture cannot be re-simulated.
+ */
+export const dynastySimV2 = flag<boolean>({
+  key: "dynasty_sim_v2",
+  description:
+    "Dynasty Mode Epic A: scoring depth, penalties, situational AI and weather in the play-by-play engine",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_DYNASTY_SIM_V2");
+    void trackFlagExposure("dynasty_sim_v2", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {

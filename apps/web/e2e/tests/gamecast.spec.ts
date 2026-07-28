@@ -249,6 +249,14 @@ test.describe("Gamecast replay (WSM gamecast)", () => {
     await expect(page.getByText(awayName).first()).toBeVisible();
     await expect(page.locator('[aria-label="Drive chart"]')).toBeVisible();
 
+    /*
+     * Sim activation, end to end: this fixture was simulated through the real
+     * action, so the weather strip appearing proves the league's settings
+     * reached the engine and the log recorded the conditions it played in.
+     * Before activation the sim passed no gates and this was always absent.
+     */
+    await expect(page.getByTestId("gamecast-weather")).toBeVisible();
+
     await expect(
       page.getByText("Final", { exact: true }).first(),
     ).toBeVisible();

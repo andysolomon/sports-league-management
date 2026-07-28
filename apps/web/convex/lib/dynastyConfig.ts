@@ -27,8 +27,27 @@
 export type TransferVolume = "low" | "normal" | "high";
 
 export interface DynastyConfig {
+  /**
+   * Full scoring and turnover model (Epic A1): safeties, two-point tries,
+   * return touchdowns, and fumbles on plays other than a rush.
+   */
+  scoringDepthEnabled: boolean;
   /** Penalties are rolled during simulation (Epic A2). */
   penaltiesEnabled: boolean;
+  /**
+   * Situational AI and clock management (Epic A3): a real fourth-down chart,
+   * timeouts, the two-minute drill, spikes and kneels.
+   */
+  situationalAiEnabled: boolean;
+  /**
+   * Corrected home-field advantage (Epic A3, #642).
+   *
+   * A tuning fix rather than a mechanic — the original edge produced a home
+   * win rate above the target band. It is a separate knob only so a league
+   * that has already played under the old value can keep it; there is no
+   * reason to turn it off otherwise.
+   */
+  balanceTuningEnabled: boolean;
   /** Injuries can occur during simulation (Epic A4). */
   injuriesEnabled: boolean;
   /** Weather affects play outcomes (Epic A5). */
@@ -60,7 +79,10 @@ export interface DynastyConfig {
  * `convex/lib/offseason.ts` — the generator and this knob must agree.
  */
 export const DYNASTY_CONFIG_DEFAULTS: Readonly<DynastyConfig> = Object.freeze({
+  scoringDepthEnabled: true,
   penaltiesEnabled: true,
+  situationalAiEnabled: true,
+  balanceTuningEnabled: true,
   injuriesEnabled: true,
   weatherEnabled: true,
   injurySeverityScale: 1,
@@ -130,7 +152,10 @@ export function resolveDynastyConfig(
       : DYNASTY_CONFIG_DEFAULTS.transferVolume;
 
   return {
+    scoringDepthEnabled: bool("scoringDepthEnabled"),
     penaltiesEnabled: bool("penaltiesEnabled"),
+    situationalAiEnabled: bool("situationalAiEnabled"),
+    balanceTuningEnabled: bool("balanceTuningEnabled"),
     injuriesEnabled: bool("injuriesEnabled"),
     weatherEnabled: bool("weatherEnabled"),
     injurySeverityScale: num("injurySeverityScale"),

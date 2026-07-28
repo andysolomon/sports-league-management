@@ -175,7 +175,16 @@ export function weatherModifiers(weather: Weather): WeatherModifiers {
    * throw in, which only happens if the factors multiply rather than the model
    * picking whichever is worst.
    */
-  const wind = clamp((weather.windMph - 8) / 22, 0, 1);
+  /*
+   * Wind starts mattering at 12 mph, not 8.
+   *
+   * The 8 mph threshold taxed the MEDIAN late-season game (median week-14 wind
+   * is 15 mph), which pulled season-long scoring below the balance band once
+   * weather was switched on for real. A steady 8 mph breeze does not measurably
+   * affect a high-school passing game; 12 starts to, and a 30 mph gale still
+   * saturates this at nearly 1.
+   */
+  const wind = clamp((weather.windMph - 12) / 24, 0, 1);
   const wet =
     weather.precipitation === "heavy"
       ? 1
@@ -187,8 +196,13 @@ export function weatherModifiers(weather: Weather): WeatherModifiers {
 
   return {
     passAccuracy: clamp(1 - wind * 0.16 - wet * 0.12 - cold * 0.08, 0.6, 1),
-    // Wind dominates kicking, and it is the one place cold barely matters.
-    kickDistance: clamp(1 - wind * 0.2 - wet * 0.05, 0.7, 1),
+    /*
+     * Wind dominates kicking, and it is the one place cold barely matters.
+     * The coefficient rose with the threshold above so a real gale still costs
+     * a kicker what it did — the change was meant to spare ordinary breezes,
+     * not to make 30 mph easier to kick in.
+     */
+    kickDistance: clamp(1 - wind * 0.28 - wet * 0.05, 0.7, 1),
     fumbleRate: clamp(1 + wet * 0.7 + cold * 0.5, 1, 2.5),
     explosiveRate: clamp(1 - wind * 0.15 - wet * 0.2 - cold * 0.1, 0.55, 1),
   };

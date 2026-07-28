@@ -25,9 +25,27 @@ const TOGGLES: Array<{
   description: string;
 }> = [
   {
+    key: "scoringDepthEnabled",
+    label: "Scoring depth",
+    description:
+      "Safeties, two-point tries, return touchdowns and fumbles on any play.",
+  },
+  {
     key: "penaltiesEnabled",
     label: "Penalties",
     description: "Flags are thrown during simulated games.",
+  },
+  {
+    key: "situationalAiEnabled",
+    label: "Situational AI",
+    description:
+      "Fourth-down decisions, timeouts, the two-minute drill and clock management.",
+  },
+  {
+    key: "balanceTuningEnabled",
+    label: "Balance tuning",
+    description:
+      "Corrected home-field advantage. Turn off only to match games played before it.",
   },
   {
     key: "injuriesEnabled",

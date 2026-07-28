@@ -55,10 +55,17 @@ function emptyLine(modelsPenalties: boolean): TeamBoxScoreLine {
 /**
  * Did this log's engine model penalties at all?
  *
- * Presence of any `penalty` field is the signal. A v2 game that happened to
- * draw no flags still reports 0 rather than "—", because it was counted.
+ * The recorded gate is the answer when the log has one. That distinction is
+ * the whole point: a game played WITH penalties enabled that happened to draw
+ * no flags is a clean game — it reports 0, not "—". Scanning for a `penalty`
+ * field cannot tell those apart, and got that case wrong in the direction that
+ * hides a real result behind "unknown".
+ *
+ * Logs written before gates were recorded fall back to the scan, which is
+ * still right whenever a flag was actually thrown.
  */
 export function logModelsPenalties(log: PbpGameLog): boolean {
+  if (log.features !== undefined) return log.features.penalties === true;
   return log.drives.some((drive) =>
     drive.plays.some((play) => play.penalty !== undefined),
   );
