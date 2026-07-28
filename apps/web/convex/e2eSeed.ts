@@ -153,6 +153,16 @@ async function cascadeDeleteLeague(
       deleted += 1;
     }
   }
+  // Persisted offseason phase machine (B1). Left behind, a row would carry one
+  // run's phase into the next and make the stepper assertions order-dependent.
+  const offseasonRows = (await ctx.db
+    .query("offseasons")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"offseasons"> }>;
+  for (const row of offseasonRows) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
   // Dynasty feed (F4) — league-scoped, so cleared once rather than per season.
   const events = (await ctx.db
     .query("dynastyEvents")

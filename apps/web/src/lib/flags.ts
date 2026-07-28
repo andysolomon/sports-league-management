@@ -221,6 +221,22 @@ export const dynastySimV2 = flag<boolean>({
   },
 });
 
+export const dynastyOffseasonV2 = flag<boolean>({
+  key: "dynasty_offseason_v2",
+  description:
+    "Dynasty Mode Epic B: persisted offseason phase machine and the Season offseason route (#618)",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_DYNASTY_OFFSEASON_V2");
+    void trackFlagExposure("dynasty_offseason_v2", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {

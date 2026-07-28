@@ -6,6 +6,7 @@ import {
   schedulesStandingsV1,
   playoffsV1,
   statKeepingV1,
+  dynastyOffseasonV2,
 } from "@/lib/flags";
 import {
   computeStandings,
@@ -18,6 +19,7 @@ import {
   listFixturesBySeason,
   listFreeAgents,
   getDraft,
+  getOffseason,
 } from "@/lib/data-api";
 import { canManageTeam } from "@/lib/authorization";
 import { resolveOrgContext, requireOrgAdmin, resolveOrgRole } from "@/lib/org-context";
@@ -85,7 +87,7 @@ export default async function SeasonHubPage({
     seasons.filter((s) => s.status === "completed"),
   );
 
-  const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled, dynastyFixtures, dynastyBracket, leaguePlayers, teams] =
+  const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled, offseasonEnabled, dynastyFixtures, dynastyBracket, leaguePlayers, teams] =
     await Promise.all([
       listFixturesBySeason(season.id),
       computeStandings(season.id),
@@ -93,6 +95,7 @@ export default async function SeasonHubPage({
       schedulesStandingsV1(),
       playoffsV1(),
       statKeepingV1(),
+      dynastyOffseasonV2(),
       activeSeason
         ? listFixturesBySeason(activeSeason.id).catch(() => [])
         : Promise.resolve([]),
@@ -159,17 +162,20 @@ export default async function SeasonHubPage({
   let offseasonOrgRole: Awaited<ReturnType<typeof resolveOrgRole>> | null =
     null;
   let draft: Awaited<ReturnType<typeof getDraft>> = null;
+  let offseason: Awaited<ReturnType<typeof getOffseason>> = null;
   let playerNames: Record<string, string> = {};
 
   if (isUpcomingSeason) {
-    [freeAgents, offseasonTeams, offseasonOrgRole, draft] = await Promise.all([
-      listFreeAgents(league.id).catch(() => []),
-      getTeamsByLeague(league.id, orgContext).catch(() => []),
-      league.orgId
-        ? resolveOrgRole(league.orgId, userId).catch(() => null)
-        : Promise.resolve(null),
-      getDraft(season.id).catch(() => null),
-    ]);
+    [freeAgents, offseasonTeams, offseasonOrgRole, draft, offseason] =
+      await Promise.all([
+        listFreeAgents(league.id).catch(() => []),
+        getTeamsByLeague(league.id, orgContext).catch(() => []),
+        league.orgId
+          ? resolveOrgRole(league.orgId, userId).catch(() => null)
+          : Promise.resolve(null),
+        getDraft(season.id).catch(() => null),
+        getOffseason(season.id).catch(() => null),
+      ]);
 
     const leaguePlayers = await getPlayers([league.id]).catch(() => []);
     playerNames = Object.fromEntries(
@@ -227,6 +233,8 @@ export default async function SeasonHubPage({
           scheduleEnabled,
           playoffsEnabled,
           statsEnabled,
+          // Only an upcoming season has an offseason to prepare.
+          offseasonEnabled: offseasonEnabled && isUpcomingSeason,
         })}
       />
       <WorkspaceNav links={links} />
@@ -243,6 +251,7 @@ export default async function SeasonHubPage({
           coachTeam={coachTeam}
           draft={draft}
           playerNames={playerNames}
+          offseason={offseason}
         />
       )}
 
