@@ -8,6 +8,8 @@ import type { GameDrawerProjection } from "@/lib/game-drawer-projection";
 import { gameDrawerMatchupLabel } from "@/lib/game-drawer-projection";
 import { GameContextDrawer } from "@/components/games/GameContextDrawer";
 import { StatusBadge } from "@/components/status-badge";
+import { WeatherChip } from "@/components/dynasty/WeatherChip";
+import { deriveWeather } from "@/lib/pbp/weather";
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
 import GoLiveControl from "@/components/schedule/GoLiveControl";
@@ -89,6 +91,24 @@ export function ScheduleFixtureRow({
   const scoreDisplay =
     result != null ? `${result.homeScore} – ${result.awayScore}` : "—";
 
+  /*
+   * Forecast conditions for a game that has not been played (A5).
+   *
+   * Deliberately NOT shown once a fixture is final. The derived forecast is a
+   * prediction about a scheduled game; a completed game was played in whatever
+   * its stored log recorded, and showing the forecast next to a final score
+   * would assert conditions the engine may never have modelled. The Gamecast
+   * reads the real thing off the log.
+   */
+  const forecast =
+    fixture.status !== "final" && fixture.week !== null
+      ? deriveWeather({
+          seasonId: fixture.seasonId,
+          week: fixture.week,
+          venueId: fixture.homeTeamId,
+        })
+      : null;
+
   return (
     <tr
       data-testid={`schedule-fixture-${fixture.id}`}
@@ -98,6 +118,9 @@ export function ScheduleFixtureRow({
           <MatchupCell onOpen={openDrawer} ariaLabel={drawerLabel}>
             {formatFixtureWhen(fixture.scheduledAt)}
           </MatchupCell>
+          {forecast ? (
+            <WeatherChip weather={forecast} className="mt-0.5" />
+          ) : null}
         </td>
         <td className="px-4 py-2 text-foreground">
           <MatchupCell onOpen={openDrawer} ariaLabel={drawerLabel}>

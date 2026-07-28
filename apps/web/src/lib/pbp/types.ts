@@ -48,6 +48,7 @@ export interface TeamSimProfile {
 }
 
 import type { SimulationFlavor } from "@/lib/simulation-flavor";
+import type { Weather } from "./weather";
 
 export interface PbpGameInput {
   home: TeamSimProfile;
@@ -63,6 +64,23 @@ export interface PbpGameInput {
    * byte-for-byte for the same seed — see `PbpFeatureGates`.
    */
   features?: PbpFeatureGates;
+  /**
+   * Conditions this game is played in (A5), derived by the caller from season,
+   * week and venue. The engine does not compute it, because the engine does not
+   * know what week it is.
+   *
+   * Read only under `features.weather`. Passing it with the gate off changes
+   * nothing — which is what lets a caller derive conditions for display without
+   * committing to simulating under them.
+   */
+  weather?: Weather;
+  /**
+   * Crowd context (A5). Both fields optional and neutral by default, so a
+   * league that has declared no rivalries and has no program data behaves
+   * exactly as it did before this slice.
+   */
+  venuePrestige?: number;
+  rivalryIntensity?: number;
 }
 
 export type PbpPlayType =
@@ -218,6 +236,17 @@ export interface PbpGameLog {
   awayScore: number;
   drives: PbpDrive[];
 
+  /**
+   * Conditions the game was actually played in (A5).
+   *
+   * Written only when the `weather` gate was on. Its ABSENCE means the game was
+   * not simulated under modelled conditions — which is not the same as fair
+   * weather, and a reader must not substitute the derived forecast for it. The
+   * forecast is what the schedule shows for a game nobody has played; this is
+   * what history reads.
+   */
+  weather?: Weather;
+
   /*
    * ── v2 additions (engine 2.0.0) ───────────────────────────────────────
    *
@@ -245,6 +274,14 @@ export interface PbpFeatureGates {
   scoringV2?: boolean;
   /** A2 — penalties, with accept/decline. */
   penalties?: boolean;
+  /**
+   * A5 — weather, venue prestige and rivalry.
+   *
+   * Maps to `dynastyConfig.weatherEnabled` once the gates are wired. With it
+   * off the engine ignores `PbpGameInput.weather` entirely and consumes no
+   * extra draws, so the pre-A5 log reproduces byte-for-byte.
+   */
+  weather?: boolean;
   /**
    * A3 — situational decisions and clock management: a 4th-down chart in place
    * of a coin flip, timeouts, the two-minute drill, spikes and onside kicks.

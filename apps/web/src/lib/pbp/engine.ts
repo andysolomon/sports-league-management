@@ -17,6 +17,12 @@ import {
   shouldUseTimeout,
   type ClockStrategy,
 } from "./situational";
+import { homeFieldEdge as crowdHomeFieldEdge } from "./crowd";
+import {
+  NEUTRAL_MODIFIERS,
+  weatherModifiers,
+  type WeatherModifiers,
+} from "./weather";
 import type {
   PbpFeatureGates,
   PbpDrive,
@@ -96,6 +102,15 @@ interface GameState {
   edgeScale: number;
   /** `HOME_FIELD_EDGE`, or the recalibrated value under `features.balance`. */
   homeFieldEdge: number;
+  /**
+   * Weather multipliers (A5), or `NEUTRAL_MODIFIERS` when the gate is off.
+   *
+   * Held as resolved multipliers rather than as the `Weather` itself so the
+   * play functions multiply unconditionally instead of branching. Every neutral
+   * value is exactly 1, and multiplying by 1 is exact in floating point, so the
+   * gate-off path is bit-identical to v1 without a single `if`.
+   */
+  weatherMods: WeatherModifiers;
   decisive: boolean;
   quarter: number;
   clockSeconds: number;
@@ -618,7 +633,17 @@ function doFieldGoalAttempt(state: GameState): void {
   const kicker = selectPlayer(off, "K", state.rand);
   const dist = yardsToGoal(state) + 17;
   const edge = matchupEdge(state);
-  const makeProb = clamp(0.92 - (dist - 30) * 0.02 + edge * 0.08, 0.35, 0.95);
+  /*
+   * Wind and wet do not move the uprights, they shorten the leg — so a 40-yard
+   * try into a gale is modelled as a longer kick rather than as a flat accuracy
+   * penalty. Dividing by a neutral 1 is exact, so v1 is untouched.
+   */
+  const effectiveDist = dist / state.weatherMods.kickDistance;
+  const makeProb = clamp(
+    0.92 - (effectiveDist - 30) * 0.02 + edge * 0.08,
+    0.35,
+    0.95,
+  );
   const made = state.rand() < makeProb;
   const playType: PbpPlayType = made ? "field_goal" : "field_goal_miss";
 
@@ -664,7 +689,10 @@ function doPunt(state: GameState): void {
   const def = defenseTeam(state);
   const punter = selectPlayer(off, "P", state.rand);
   const returner = selectPlayer(def, "WR", state.rand, true);
-  const gross = Math.round(38 + state.rand() * 12 - matchupEdge(state) * 10);
+  const gross = Math.round(
+    (38 + state.rand() * 12 - matchupEdge(state) * 10) *
+      state.weatherMods.kickDistance,
+  );
   const net = clamp(gross - Math.round(state.rand() * 8), 25, 55);
   /*
    * Where the receiving team starts (v2 widens the floor).
@@ -709,9 +737,11 @@ function doRush(state: GameState): void {
   const def = defenseTeam(state);
   const rusher = selectPlayer(off, "RB", state.rand, true);
   const edge = matchupEdge(state);
-  const fumbleProb = clamp(0.01 - edge * 0.003, 0.003, 0.015);
+  const fumbleProb =
+    clamp(0.01 - edge * 0.003, 0.003, 0.015) * state.weatherMods.fumbleRate;
   const tdProb = clamp(0.055 + edge * 0.08, 0.02, 0.15);
-  const explosive = state.rand() < 0.08 + edge * 0.05;
+  const explosive =
+    state.rand() < (0.08 + edge * 0.05) * state.weatherMods.explosiveRate;
   let yards = explosive
     ? Math.round(12 + state.rand() * 18)
     : Math.round(2 + state.rand() * 5 + edge * 4);
@@ -805,7 +835,10 @@ function doPass(state: GameState): void {
      * non-rush fumble in the sport. Gated, and the draw happens ONLY inside
      * the gate so v1's PRNG sequence is untouched.
      */
-    if (state.features.scoringV2 && state.rand() < 0.12) {
+    if (
+      state.features.scoringV2 &&
+      state.rand() < 0.12 * state.weatherMods.fumbleRate
+    ) {
       const recoverer = selectDefender(def, state.rand, "tackle");
       play.isTurnover = true;
       play.participants.push(participant(passer, off.teamId, "fumbler"));
@@ -874,7 +907,13 @@ function doPass(state: GameState): void {
     return;
   }
 
-  const completeProb = clamp(0.6 + edge * 0.14, 0.45, 0.8);
+  /*
+   * Weather is applied AFTER the clamp on purpose. The 0.45 floor is a v1
+   * balance guard, not a law of physics — a sleet game should be allowed to
+   * push completion percentage below it.
+   */
+  const completeProb =
+    clamp(0.6 + edge * 0.14, 0.45, 0.8) * state.weatherMods.passAccuracy;
   const complete = state.rand() < completeProb;
   if (!complete) {
     const pd = state.rand() < 0.12 ? selectDefender(def, state.rand, "coverage") : null;
@@ -906,7 +945,8 @@ function doPass(state: GameState): void {
     return;
   }
 
-  const explosive = state.rand() < 0.1 + edge * 0.06;
+  const explosive =
+    state.rand() < (0.1 + edge * 0.06) * state.weatherMods.explosiveRate;
   let yards = explosive
     ? Math.round(15 + state.rand() * 25)
     : Math.round(4 + state.rand() * 9 + edge * 5);
@@ -1487,13 +1527,34 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
       penalties: input.features?.penalties === true,
       situational: input.features?.situational === true,
       balance: input.features?.balance === true,
+      weather: input.features?.weather === true,
     },
     home: input.home,
     away: input.away,
     strengthWeight: weights.strengthWeight,
     edgeScale: weights.edgeScale,
+    /*
+     * Crowd blending is a no-op with neutral inputs: `crowdHomeFieldEdge`
+     * multiplies by exactly 1 when prestige is 50 and rivalry is 0, which is
+     * every matchup nobody has configured.
+     */
     homeFieldEdge:
-      input.features?.balance === true ? HOME_FIELD_EDGE_V2 : HOME_FIELD_EDGE,
+      input.features?.weather === true
+        ? crowdHomeFieldEdge({
+            base:
+              input.features?.balance === true
+                ? HOME_FIELD_EDGE_V2
+                : HOME_FIELD_EDGE,
+            venuePrestige: input.venuePrestige,
+            rivalryIntensity: input.rivalryIntensity,
+          })
+        : input.features?.balance === true
+          ? HOME_FIELD_EDGE_V2
+          : HOME_FIELD_EDGE,
+    weatherMods:
+      input.features?.weather === true && input.weather
+        ? weatherModifiers(input.weather)
+        : NEUTRAL_MODIFIERS,
     decisive: input.decisive ?? false,
     quarter: 1,
     clockSeconds: QUARTER_SECONDS,
@@ -1550,6 +1611,15 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
     homeScore: state.homeScore,
     awayScore: state.awayScore,
     drives: state.drives,
+    /*
+     * Record the conditions the game was ACTUALLY played under — only when the
+     * gate was on. Absence means "not modelled", and a reader must not fill it
+     * in from the derived forecast: the forecast is what a scheduled game shows,
+     * not evidence about a game that has already happened.
+     */
+    ...(state.features.weather && input.weather
+      ? { weather: input.weather }
+      : {}),
   };
 }
 

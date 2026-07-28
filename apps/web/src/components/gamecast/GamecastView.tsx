@@ -45,6 +45,7 @@ import type { GamecastPanelSlots } from "./layouts/GamecastPanelSlots";
 import type { GamecastMode } from "./gamecast-transport-logic";
 import type { GamecastSpeed } from "./useAutoAdvance";
 import GamecastDynastyBanner from "./GamecastDynastyBanner";
+import { WeatherStrip } from "@/components/dynasty/WeatherChip";
 
 export interface GamecastDynastyCta {
   leagueId: string;
@@ -400,9 +401,27 @@ export default function GamecastView({
     </GamecastPlayByPlayCard>
   );
 
-  const postScoreboardBanner = dynastyCta ? (
-    <GamecastDynastyBanner leagueId={dynastyCta.leagueId} />
+  /*
+   * Conditions the game was ACTUALLY played in (A5).
+   *
+   * Read straight off the stored log, and rendered only when it is there. A v1
+   * log — or a v2 log simulated with the weather gate off — has no `weather`,
+   * and the strip stays hidden rather than falling back to the schedule's
+   * derived forecast. Absence means "not modelled", not "clear and mild".
+   */
+  const weatherStrip = log.weather ? (
+    <WeatherStrip weather={log.weather} />
   ) : null;
+
+  const postScoreboardBanner =
+    weatherStrip || dynastyCta ? (
+      <div className="space-y-2">
+        {weatherStrip}
+        {dynastyCta ? (
+          <GamecastDynastyBanner leagueId={dynastyCta.leagueId} />
+        ) : null}
+      </div>
+    ) : null;
 
   const panels: GamecastPanelSlots = {
       scoreboard: <GamecastScoreboard {...scoreboardProps} />,

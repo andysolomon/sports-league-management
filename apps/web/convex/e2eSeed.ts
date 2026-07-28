@@ -172,6 +172,17 @@ async function cascadeDeleteLeague(
     await ctx.db.delete(row._id);
     deleted += 1;
   }
+  // Declared rivalries (A5). A rivalry left behind changes how later runs
+  // simulate that matchup, and would make the rivalry admin spec pass on a
+  // second run purely because the first run's row was still there.
+  const rivalryRows = (await ctx.db
+    .query("rivalries")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"rivalries"> }>;
+  for (const row of rivalryRows) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
   for (const team of teams as Array<{ _id: Id<"teams"> }>) {
     const teamDepth = (await ctx.db
       .query("depthChartEntries")
