@@ -19,4 +19,9 @@ export interface RolloverOperationSummary {
     removedDepthEntries: number;
   };
   recruiting: { freshmen: number; toPool: boolean };
+  /**
+   * Injuries closed out by the `injuries_healed` stage (B2). Zero is a real
+   * answer — a season nobody got hurt in — and is why this is not optional.
+   */
+  healing: { injuries: number };
 }

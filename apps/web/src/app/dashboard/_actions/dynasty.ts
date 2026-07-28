@@ -20,6 +20,7 @@ import {
   copySeasonRosters,
   removePlayersFromSeasonRoster,
   createRolloverFreshmenForTeam,
+  healSeasonInjuries,
 } from "@/lib/data-api";
 import { activeNonGraduatedNames } from "@/lib/dynasty";
 import { computeProgressedAttributes } from "@/lib/dynasty-progression";
@@ -43,6 +44,7 @@ const ROLLOVER_STAGES = [
   "attributes_copied",
   "rosters_copied",
   "freshmen_created",
+  "injuries_healed",
   "completed",
 ] as const;
 
@@ -73,6 +75,7 @@ function createRolloverSummary(input: {
       removedDepthEntries: 0,
     },
     recruiting: { freshmen: 0, toPool: input.freshmenToPool },
+    healing: { injuries: 0 },
   };
 }
 
@@ -91,6 +94,9 @@ function parseRolloverSummary(
       progression: parsed.progression ?? fallback.progression,
       carryover: parsed.carryover ?? fallback.carryover,
       recruiting: parsed.recruiting ?? fallback.recruiting,
+      // Summaries persisted before B2 have no `healing` key. Falling back keeps
+      // a rollover that started on the old code renderable on the new.
+      healing: parsed.healing ?? fallback.healing,
     };
   } catch {
     return fallback;
@@ -449,6 +455,43 @@ export async function startNextSeasonAction(input: {
           summary = parseRolloverSummary(checkpoint.summaryJson, summary);
         } catch (err) {
           await releaseClaimedStage("freshmen_created", err);
+          throw err;
+        }
+      }
+    }
+
+    /*
+     * Heal the SOURCE season's open injuries (B2).
+     *
+     * Last before `completed` on purpose: it is the only stage that reaches
+     * back into the season being closed rather than forward into the one being
+     * built, so running it after the new roster exists keeps the "everything
+     * that touches the target season" block contiguous.
+     *
+     * `healSeasonInjuries` is idempotent, so unlike the freshmen stage this
+     * needs no per-item progress record — a retry after a lost response finds
+     * zero open rows and reports zero. A failure to heal must not abort a
+     * rollover that has already built the next season, so the count falls back
+     * to whatever the summary already held rather than throwing.
+     */
+    if (!hasReachedRolloverStage(stage, "injuries_healed")) {
+      const acquired = await claimStage("injuries_healed");
+      if (acquired) {
+        try {
+          const healed = await healSeasonInjuries({
+            seasonId: summary.sourceSeason.id,
+          }).catch(() => null);
+          if (healed) summary.healing.injuries = healed.healed;
+          const checkpoint = await advanceSeasonRollover({
+            rolloverId: rollover.rolloverId,
+            stage: "injuries_healed",
+            summaryJson: serializeRolloverSummary(summary),
+            ownerId,
+          });
+          stage = checkpoint.stage;
+          summary = parseRolloverSummary(checkpoint.summaryJson, summary);
+        } catch (err) {
+          await releaseClaimedStage("injuries_healed", err);
           throw err;
         }
       }
