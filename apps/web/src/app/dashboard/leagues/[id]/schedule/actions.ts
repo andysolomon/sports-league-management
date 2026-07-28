@@ -291,6 +291,7 @@ async function resolveSeasonSimRun(
     simulationFlavor: normalizeSimulationFlavor(season.simulationFlavor),
     simContext: await loadSeasonSimContext({
       leagueId: season.leagueId,
+      seasonId,
       flagEnabled,
     }),
   };

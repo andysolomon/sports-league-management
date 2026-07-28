@@ -31,6 +31,8 @@ interface PositionColumnProps {
   positionSlot: string;
   players: PlayerDto[];
   disabled: boolean;
+  /** Player ids serving an injury (A4), with games remaining. */
+  outPlayers?: ReadonlyMap<string, number>;
 }
 
 export default function PositionColumn({
@@ -40,6 +42,7 @@ export default function PositionColumn({
   positionSlot,
   players,
   disabled,
+  outPlayers,
 }: PositionColumnProps) {
   const [items, setItems] = useState<PlayerDto[]>(players);
   const [pending, startTransition] = useTransition();
@@ -124,6 +127,7 @@ export default function PositionColumn({
                   player={player}
                   rank={index + 1}
                   disabled={disabled || pending}
+                  gamesOut={outPlayers?.get(player.id)}
                 />
               ))}
             </ol>
@@ -138,10 +142,13 @@ function SortableRow({
   player,
   rank,
   disabled,
+  gamesOut,
 }: {
   player: PlayerDto;
   rank: number;
   disabled: boolean;
+  /** Games still to miss (A4). Undefined means available. */
+  gamesOut?: number;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: player.id, disabled });
@@ -174,6 +181,20 @@ function SortableRow({
       </button>
       <span className="w-6 font-mono text-xs text-muted-foreground">{rank}</span>
       <span className="flex-1 text-sm text-foreground">{player.name}</span>
+      {gamesOut !== undefined && (
+        /*
+         * The depth chart is where a coach decides who plays, so an injured
+         * starter has to be visible AT the decision rather than on a separate
+         * report they might not open.
+         */
+        <span
+          className="shrink-0 rounded-control border border-destructive/40 bg-destructive/10 px-1.5 py-0.5 font-mono text-[10px] uppercase text-destructive"
+          data-testid="depth-chart-out-badge"
+          title={`Out ${gamesOut} more game${gamesOut === 1 ? "" : "s"}`}
+        >
+          Out
+        </span>
+      )}
       {player.jerseyNumber !== null && (
         <span className="font-mono text-xs text-muted-foreground">
           #{player.jerseyNumber}

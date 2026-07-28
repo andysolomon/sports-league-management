@@ -18,6 +18,11 @@ export interface PlayerSimProfile {
   overall: number;
   /** From depthChartEntries/rosterAssignments when available. */
   positionSlot?: string;
+  /**
+   * Endurance rating, when the player has an attribute snapshot (A4). Absent
+   * means average — never zero, which would gas an unrated player instantly.
+   */
+  endurance?: number;
   depthRank?: number;
   /**
    * Awareness (AWR) 0-99, when the player has an attribute snapshot. Drives
@@ -81,6 +86,22 @@ export interface PbpGameInput {
    */
   venuePrestige?: number;
   rivalryIntensity?: number;
+  /**
+   * League injury dial (A4), 0–2. Read only under `features.injuries`.
+   * Defaults to 1 (normal) when the gate is on and this is absent — a caller
+   * that enabled injuries wants them at the usual rate.
+   */
+  injurySeverityScale?: number;
+}
+
+/** An injury sustained during a simulated game (A4). */
+export interface GameInjury {
+  playerId: string;
+  teamId: string;
+  severity: string;
+  gamesOut: number;
+  label: string;
+  quarter: number;
 }
 
 export type PbpPlayType =
@@ -180,6 +201,21 @@ export interface PbpPlay {
   defensivePoints?: number;
 
   /**
+   * Someone was hurt on this play (A4).
+   *
+   * Absent means nobody was — which, on a log whose `features.injuries` is
+   * unset, is indistinguishable from "this engine did not model injuries". The
+   * recorded gate is what tells those apart.
+   */
+  injury?: {
+    playerId: string;
+    teamId: string;
+    severity: string;
+    gamesOut: number;
+    label: string;
+  };
+
+  /**
    * The flag on this play (A2), if any.
    *
    * A play carrying `negatesPlay: true` is KEPT in the log — you want to see
@@ -261,6 +297,14 @@ export interface PbpGameLog {
    */
   features?: PbpFeatureGates;
 
+  /**
+   * Everyone hurt in this game (A4), in the order it happened.
+   *
+   * Absent when the gate was off. An EMPTY array is different and meaningful:
+   * injuries were modelled and nobody got hurt.
+   */
+  injuries?: GameInjury[];
+
   /*
    * ── v2 additions (engine 2.0.0) ───────────────────────────────────────
    *
@@ -288,6 +332,14 @@ export interface PbpFeatureGates {
   scoringV2?: boolean;
   /** A2 — penalties, with accept/decline. */
   penalties?: boolean;
+  /**
+   * A4 — fatigue, durability and injuries.
+   *
+   * One gate for both halves on purpose: fatigue with no injury risk is a
+   * rating tweak nobody would notice, and injuries with no fatigue lose the
+   * link that makes riding a starter cost something.
+   */
+  injuries?: boolean;
   /**
    * A5 — weather, venue prestige and rivalry.
    *

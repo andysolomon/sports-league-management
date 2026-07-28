@@ -21,6 +21,8 @@ interface DepthChartBoardProps {
   /** Admin or coach: can reorder the depth chart. Viewers are read-only
    *  (WSM-000121). Defaults true to preserve existing callers. */
   canEdit?: boolean;
+  /** Player ids serving an injury (A4) → games remaining. */
+  outPlayers?: ReadonlyMap<string, number>;
 }
 
 export default function DepthChartBoard({
@@ -32,6 +34,7 @@ export default function DepthChartBoard({
   entries,
   isAdmin,
   canEdit = true,
+  outPlayers,
 }: DepthChartBoardProps) {
   const [rosterLocked, setRosterLocked] = useState(season.rosterLocked);
 
@@ -108,6 +111,7 @@ export default function DepthChartBoard({
               positionSlot={positionSlot}
               players={slotPlayers}
               disabled={rosterLocked || !canEdit}
+              outPlayers={outPlayers}
             />
           ))}
         </div>

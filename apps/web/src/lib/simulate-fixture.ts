@@ -1,6 +1,7 @@
 import type { FixtureDto } from "@sports-management/shared-types";
 import {
   bulkUpsertPlayerGameStats,
+  recordGameInjuries,
   recordGameResult,
   upsertGamePlayLog,
   upsertPlayerGameStats,
@@ -77,12 +78,29 @@ export async function simulateAndPersistFixture(
     buildTeamSimProfile(fixture.awayTeamId, fixture.seasonId, orgContext, profileCache),
   ]);
 
-  const rosterEmpty = home.players.length === 0 || away.players.length === 0;
+  /*
+   * Bench anyone still serving an injury (A4).
+   *
+   * Filtered HERE rather than inside `buildTeamSimProfile` because that is
+   * cached per (team, season) and the unavailable set belongs to the run. A
+   * cached profile that had already dropped an injured player would keep
+   * dropping him after he healed.
+   */
+  const unavailable = input.simContext.unavailablePlayerIds;
+  const fit = (team: typeof home) =>
+    unavailable.size === 0
+      ? team
+      : { ...team, players: team.players.filter((p) => !unavailable.has(p.playerId)) };
+  const homeFit = fit(home);
+  const awayFit = fit(away);
+
+  const rosterEmpty =
+    homeFit.players.length === 0 || awayFit.players.length === 0;
 
   if (rosterEmpty) {
     const { homeScore, awayScore } = simulateScore({
-      homeStrength: home.strength,
-      awayStrength: away.strength,
+      homeStrength: homeFit.strength,
+      awayStrength: awayFit.strength,
       seed,
       decisive,
       flavor,
@@ -103,12 +121,13 @@ export async function simulateAndPersistFixture(
    */
   const conditions = fixtureSimConditions(input.simContext, fixture);
   const log = simulateGameLog({
-    home,
-    away,
+    home: homeFit,
+    away: awayFit,
     seed,
     decisive,
     flavor,
     features: input.simContext.features,
+    injurySeverityScale: input.simContext.injurySeverityScale,
     ...conditions,
   });
   const homeScore = log.homeScore;
@@ -122,7 +141,30 @@ export async function simulateAndPersistFixture(
     actorUserId,
   });
 
-  const rosterIds = knownPlayerIds(home.players, away.players);
+  /*
+   * Injuries are persisted BEFORE the result is recorded, so a failure leaves a
+   * game that has not been marked final — which the sim will retry — rather
+   * than a final game whose injuries were lost.
+   */
+  if (log.injuries !== undefined) {
+    await recordGameInjuries({
+      fixtureId: fixture.id,
+      seasonId: fixture.seasonId,
+      leagueId: input.simContext.leagueId,
+      week: fixture.week,
+      homeTeamId: fixture.homeTeamId,
+      awayTeamId: fixture.awayTeamId,
+      injuries: log.injuries.map((injury) => ({
+        playerId: injury.playerId,
+        teamId: injury.teamId,
+        severity: injury.severity,
+        label: injury.label,
+        gamesOut: injury.gamesOut,
+      })),
+    }).catch(() => null);
+  }
+
+  const rosterIds = knownPlayerIds(homeFit.players, awayFit.players);
   const statLines = deriveStatLines(log).filter((line) =>
     rosterIds.has(line.playerId),
   );

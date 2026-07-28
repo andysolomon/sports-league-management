@@ -21,6 +21,7 @@ const {
   mockDynastySimV2,
   mockGetDynastyConfig,
   mockListRivalries,
+  mockListActiveInjuries,
 } = vi.hoisted(() => ({
   mockSchedulesStandingsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -40,6 +41,7 @@ const {
   mockDynastySimV2: vi.fn(),
   mockGetDynastyConfig: vi.fn(),
   mockListRivalries: vi.fn(),
+  mockListActiveInjuries: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({
@@ -50,6 +52,7 @@ vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
 vi.mock("@/lib/data-api", () => ({
   getDynastyConfig: mockGetDynastyConfig,
   listRivalries: mockListRivalries,
+  listActiveInjuries: mockListActiveInjuries,
   getFixture: mockGetFixture,
   recordGameResult: mockRecordGameResult,
   upsertGamePlayLog: mockUpsertGamePlayLog,
@@ -130,6 +133,7 @@ function authorize() {
   mockDynastySimV2.mockResolvedValue(true);
   mockGetDynastyConfig.mockResolvedValue(DYNASTY_CONFIG_DEFAULTS);
   mockListRivalries.mockResolvedValue([]);
+  mockListActiveInjuries.mockResolvedValue([]);
   mockAuth.mockResolvedValue({ userId: USER });
   mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [LEAGUE] });
   mockGetLeague.mockResolvedValue({ id: LEAGUE, name: "League" });
@@ -185,8 +189,11 @@ describe("simulateGameAction (PBP Slice B)", () => {
           situational: true,
           balance: true,
           weather: true,
+          injuries: true,
         },
         rivalries: expect.any(Map),
+        injurySeverityScale: 1,
+        unavailablePlayerIds: expect.any(Set),
       },
     });
   });

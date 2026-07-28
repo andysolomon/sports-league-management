@@ -2857,3 +2857,64 @@ export async function deleteRivalry(rivalryId: string): Promise<null> {
   const client = getConvexClient();
   return client.mutation(simRef.mutation<null>("deleteRivalry"), { rivalryId });
 }
+
+/*
+ * Player injuries (A4). Same typed-ref discipline as the config functions.
+ */
+
+export interface InjuryDto {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  teamId: string;
+  playerId: string;
+  fixtureId: string;
+  severity: string;
+  label: string;
+  gamesOut: number;
+  initialGamesOut: number;
+  weekOccurred: number | null;
+  returnsAfterWeek: number | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listActiveInjuries(
+  seasonId: string,
+): Promise<InjuryDto[]> {
+  const client = getConvexClient();
+  return client.query(simRef.query<InjuryDto[]>("listActiveInjuries"), {
+    seasonId,
+  });
+}
+
+export async function listTeamInjuries(input: {
+  teamId: string;
+  seasonId: string;
+}): Promise<InjuryDto[]> {
+  const client = getConvexClient();
+  return client.query(simRef.query<InjuryDto[]>("listTeamInjuries"), input);
+}
+
+export async function recordGameInjuries(input: {
+  fixtureId: string;
+  seasonId: string;
+  leagueId: string;
+  week: number | null;
+  homeTeamId: string;
+  awayTeamId: string;
+  injuries: Array<{
+    playerId: string;
+    teamId: string;
+    severity: string;
+    label: string;
+    gamesOut: number;
+  }>;
+}): Promise<{ recorded: number; healed: number }> {
+  const client = getConvexClient();
+  return client.mutation(
+    simRef.mutation<{ recorded: number; healed: number }>("recordGameInjuries"),
+    input,
+  );
+}

@@ -99,6 +99,9 @@ export async function buildTeamSimProfile(
       // no attribute snapshot, in which case `meanAwareness` falls back to
       // overall rather than assuming a value.
       awareness: snaps.get(p.id)?.attributes?.AWR,
+      // Stamina and injury resistance (A4). Absent means average — never zero,
+      // which would gas an unrated player inside a quarter.
+      endurance: snaps.get(p.id)?.attributes?.STA,
     };
   });
 

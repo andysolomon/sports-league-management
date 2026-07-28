@@ -27,6 +27,7 @@ describe("resolveSimFeatures", () => {
       situational: true,
       balance: true,
       weather: true,
+      injuries: true,
     });
   });
 
@@ -51,6 +52,7 @@ describe("resolveSimFeatures", () => {
       scoringV2: true,
       situational: true,
       balance: true,
+      injuries: true,
     });
   });
 
@@ -65,20 +67,28 @@ describe("resolveSimFeatures", () => {
     expect("penalties" in features).toBe(false);
   });
 
-  it("ignores knobs that belong to other epics", () => {
-    // Injuries (A4) and polls (D3) have no engine gate yet. Reading them here
+  it("ignores knobs that belong to epics with no engine gate", () => {
+    // Polls (D3) and transfers (B4) have no engine gate. Reading them here
     // would silently enable something that does not exist.
     const features = resolveSimFeatures(
       true,
-      config({ injuriesEnabled: true, pollsEnabled: true }),
+      config({ pollsEnabled: true, transfersEnabled: true }),
     );
     expect(Object.keys(features).sort()).toEqual([
       "balance",
+      "injuries",
       "penalties",
       "scoringV2",
       "situational",
       "weather",
     ]);
+  });
+
+  it("carries the injury dial without letting it enable the gate", () => {
+    // The dial scales severity; the knob decides whether injuries happen at
+    // all. A brutal dial on a league that disabled injuries changes nothing.
+    expect(resolveSimFeatures(true, config({ injuriesEnabled: false })))
+      .not.toHaveProperty("injuries");
   });
 });
 
