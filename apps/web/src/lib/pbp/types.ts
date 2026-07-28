@@ -19,12 +19,22 @@ export interface PlayerSimProfile {
   /** From depthChartEntries/rosterAssignments when available. */
   positionSlot?: string;
   depthRank?: number;
+  /**
+   * Awareness (AWR) 0-99, when the player has an attribute snapshot. Drives
+   * penalty discipline (A2); absent falls back to `overall`.
+   */
+  awareness?: number;
 }
 
 export interface TeamSimProfile {
   teamId: string;
   strength: number;
   players: PlayerSimProfile[];
+  /**
+   * Mean roster awareness 0-99 (A2). Lower means more flags. Absent falls back
+   * to `strength`, so a team with no attribute snapshots still simulates.
+   */
+  discipline?: number;
 }
 
 import type { SimulationFlavor } from "@/lib/simulation-flavor";
@@ -140,6 +150,23 @@ export interface PbpPlay {
   isReturnTd?: boolean;
   /** Points scored by the DEFENSE on this play — a safety, or a return TD. */
   defensivePoints?: number;
+
+  /**
+   * The flag on this play (A2), if any.
+   *
+   * A play carrying `negatesPlay: true` is KEPT in the log — you want to see
+   * the run that holding wiped out — but `deriveStatLines` skips it, so no
+   * player is credited for a play that officially did not happen.
+   */
+  penalty?: {
+    code: string;
+    label: string;
+    yards: number;
+    onOffense: boolean;
+    accepted: boolean;
+    negatesPlay: boolean;
+    reason: string;
+  };
 }
 
 export interface PbpDrive {
@@ -186,4 +213,6 @@ export interface PbpFeatureGates {
    * plays other than a rush.
    */
   scoringV2?: boolean;
+  /** A2 — penalties, with accept/decline. */
+  penalties?: boolean;
 }

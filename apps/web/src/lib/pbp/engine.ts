@@ -4,6 +4,7 @@ import {
   normalizeSimulationFlavor,
   weightsForFlavor,
 } from "@/lib/simulation-flavor";
+import { acceptOrDecline, meanAwareness, rollPenalty } from "./penalties";
 import type {
   PbpFeatureGates,
   PbpDrive,
@@ -545,7 +546,7 @@ function doRush(state: GameState): void {
   };
   recordPlay(state, play);
   tickClock(state, Math.round(22 + state.rand() * 18));
-  applyPlayResult(state, yards, isScoring, points, isTurnover);
+  applyPlayResult(state, yards, isScoring, points, isTurnover, play);
 }
 
 function doPass(state: GameState): void {
@@ -594,13 +595,13 @@ function doPass(state: GameState): void {
       play.participants.push(participant(recoverer, def.teamId, "recoverer"));
       recordPlay(state, play);
       tickClock(state, Math.round(24 + state.rand() * 12));
-      applyPlayResult(state, yards, false, 0, true);
+      applyPlayResult(state, yards, false, 0, true, play);
       return;
     }
 
     recordPlay(state, play);
     tickClock(state, Math.round(24 + state.rand() * 12));
-    applyPlayResult(state, yards, false, 0, false);
+    applyPlayResult(state, yards, false, 0, false, play);
     return;
   }
 
@@ -731,7 +732,7 @@ function doPass(state: GameState): void {
   };
   recordPlay(state, play);
   tickClock(state, Math.round(20 + state.rand() * 18));
-  applyPlayResult(state, yards, isScoring, points, false);
+  applyPlayResult(state, yards, isScoring, points, false, play);
 }
 
 function doKneel(state: GameState): void {
@@ -874,13 +875,111 @@ function rollReturnTouchdown(state: GameState, baseProb: number): boolean {
   return state.rand() < baseProb;
 }
 
+
+/*
+ * ── Penalties (Epic A2) ───────────────────────────────────────────────────
+ */
+
+/** Mean roster awareness, or `strength` when no attribute data exists. */
+function teamDiscipline(team: TeamSimProfile): number {
+  if (typeof team.discipline === "number") return team.discipline;
+  return meanAwareness(team.players, team.strength);
+}
+
+/**
+ * Roll a flag for the play just built, and apply the accept/decline outcome.
+ *
+ * Returns the yardage adjustment to apply INSTEAD of the play result when the
+ * penalty is accepted and negates the play, or `null` when the play stands.
+ *
+ * Draws from the PRNG, so it is called ONLY inside the `penalties` gate — a
+ * draw while disabled would desynchronize every later play.
+ */
+function applyPenalty(
+  state: GameState,
+  play: PbpPlay,
+  context: { playYards: number; isScoring: boolean; isTurnover: boolean },
+): { negated: boolean; penaltyYards: number } | null {
+  const rolled = rollPenalty({
+    rand: state.rand,
+    playType: play.playType,
+    offenseDiscipline: teamDiscipline(offenseTeam(state)),
+    defenseDiscipline: teamDiscipline(defenseTeam(state)),
+  });
+  if (!rolled) return null;
+
+  const decision = acceptOrDecline({
+    penalty: rolled.def,
+    playYards: context.playYards,
+    playIsScoring: context.isScoring,
+    playIsTurnover: context.isTurnover,
+    distance: state.distance,
+  });
+
+  play.penalty = {
+    code: rolled.def.code,
+    label: rolled.def.label,
+    yards: rolled.yards,
+    onOffense: rolled.def.onOffense,
+    accepted: decision.accepted,
+    negatesPlay: decision.accepted && rolled.def.negatesPlay,
+    reason: decision.reason,
+  };
+
+  // Declined: the flag is recorded for the play-by-play, but nothing changes.
+  if (!decision.accepted) return null;
+
+  // Accepted but not play-negating (defensive holding, PI): the play is wiped
+  // and the ball moves by the penalty yardage from the previous spot.
+  const signed = rolled.def.onOffense ? -rolled.yards : rolled.yards;
+  return {
+    negated: rolled.def.negatesPlay || !rolled.def.onOffense,
+    penaltyYards: signed,
+  };
+}
+
 function applyPlayResult(
   state: GameState,
   yards: number,
   isScoring: boolean,
   points: number,
   isTurnover: boolean,
+  /*
+   * The play just recorded, passed explicitly so the penalty roll can attach
+   * its flag to it. Optional because non-scrimmage plays (kickoff, punt, field
+   * goal) do not draw flags in A2.
+   */
+  play?: PbpPlay,
 ): void {
+  if (state.features.penalties && play) {
+    const outcome = applyPenalty(state, play, {
+      playYards: yards,
+      isScoring,
+      isTurnover,
+    });
+    if (outcome) {
+      /*
+       * An accepted flag replaces the play entirely: yardage is assessed from
+       * the previous spot and the down replays (or resets on an automatic
+       * first down). The play stays in the log so the drive chart can show
+       * what was wiped, but `negatesPlay` keeps it out of the stat lines.
+       */
+      state.fieldPosition = clamp(
+        state.fieldPosition + outcome.penaltyYards,
+        1,
+        99,
+      );
+      const auto = !play.penalty?.onOffense && outcome.penaltyYards > 0;
+      if (auto) {
+        state.down = 1;
+        state.distance = Math.min(10, 100 - state.fieldPosition) || 1;
+      } else {
+        state.distance = Math.max(1, state.distance - outcome.penaltyYards);
+      }
+      return;
+    }
+  }
+
   if (isTurnover) {
     endDrive(state, "turnover");
     flipPossession(state);
@@ -976,7 +1075,10 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
   const rand = mulberry32(input.seed >>> 0);
   const state: GameState = {
     rand,
-    features: { scoringV2: input.features?.scoringV2 === true },
+    features: {
+      scoringV2: input.features?.scoringV2 === true,
+      penalties: input.features?.penalties === true,
+    },
     home: input.home,
     away: input.away,
     strengthWeight: weights.strengthWeight,

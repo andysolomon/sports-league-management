@@ -6,6 +6,7 @@ import {
   getTeamAttributeSnapshots,
   getTeamMaddenOveralls,
 } from "@/lib/data-api";
+import { meanAwareness } from "@/lib/pbp/penalties";
 import type { OrgContext } from "@/lib/org-context";
 import type { PlayerSimProfile, TeamSimProfile } from "@/lib/pbp";
 
@@ -94,13 +95,21 @@ export async function buildTeamSimProfile(
       overall: resolvePlayerOverall(p.id, snaps, madden),
       positionSlot: depth?.positionSlot,
       depthRank: depth?.depthRank,
+      // Awareness drives penalty discipline (A2). Absent when the player has
+      // no attribute snapshot, in which case `meanAwareness` falls back to
+      // overall rather than assuming a value.
+      awareness: snaps.get(p.id)?.attributes?.AWR,
     };
   });
 
+  const strength = teamStrengthFromMaps(snaps, madden);
   const profile: TeamSimProfile = {
     teamId,
-    strength: teamStrengthFromMaps(snaps, madden),
+    strength,
     players: simPlayers,
+    // Mean roster awareness; falls back to strength for rosters with no
+    // attribute data, so an unrated league still simulates sensibly.
+    discipline: meanAwareness(simPlayers, strength),
   };
   cache.set(key, profile);
   return profile;

@@ -270,6 +270,14 @@ export function deriveStatLines(log: PbpGameLog): DerivedPlayerStatLine[] {
 
   for (const drive of log.drives) {
     for (const play of drive.plays) {
+      /*
+       * A play wiped out by an accepted penalty officially did not happen (A2).
+       * It stays in the log so the drive chart can show what the flag erased,
+       * but nobody is credited for it — a 40-yard run negated by holding must
+       * not appear in a rushing total, and Epic D's record book reads these
+       * totals as history.
+       */
+      if (play.penalty?.negatesPlay) continue;
       for (const p of play.participants) {
         teamByPlayer.set(p.playerId, p.teamId);
       }
