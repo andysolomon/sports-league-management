@@ -1,4 +1,8 @@
-import { getDynastyConfig, listRivalries } from "@/lib/data-api";
+import {
+  getDynastyConfig,
+  listActiveInjuries,
+  listRivalries,
+} from "@/lib/data-api";
 import type { DynastyConfig } from "@/lib/dynasty-config";
 import type { PbpFeatureGates } from "@/lib/pbp";
 import { deriveWeather, type Weather } from "@/lib/pbp/weather";
@@ -28,6 +32,15 @@ export interface SeasonSimContext {
   features: PbpFeatureGates;
   /** `pairKey` → intensity, for the rivalry lookup (A5). */
   rivalries: ReadonlyMap<string, number>;
+  /** League injury dial, 0–2 (A4). */
+  injurySeverityScale: number;
+  /**
+   * Players who cannot play (A4), resolved once for the run.
+   *
+   * Read per season rather than per team: one indexed query answers for every
+   * fixture in the run, where a per-team read would be two more reads a game.
+   */
+  unavailablePlayerIds: ReadonlySet<string>;
 }
 
 /**
@@ -55,6 +68,7 @@ export function resolveSimFeatures(
   if (config.situationalAiEnabled) features.situational = true;
   if (config.balanceTuningEnabled) features.balance = true;
   if (config.weatherEnabled) features.weather = true;
+  if (config.injuriesEnabled) features.injuries = true;
   return features;
 }
 
@@ -71,25 +85,43 @@ export function resolveSimFeatures(
  */
 export async function loadSeasonSimContext(input: {
   leagueId: string;
+  seasonId: string;
   flagEnabled: boolean;
 }): Promise<SeasonSimContext> {
-  const [config, rivalries] = await Promise.all([
+  const [config, rivalries, injuries] = await Promise.all([
     getDynastyConfig(input.leagueId).catch(() => null),
     listRivalries(input.leagueId).catch(() => []),
+    listActiveInjuries(input.seasonId).catch(() => []),
   ]);
 
+  const features = config ? resolveSimFeatures(input.flagEnabled, config) : {};
   return {
     leagueId: input.leagueId,
-    features: config ? resolveSimFeatures(input.flagEnabled, config) : {},
+    features,
+    injurySeverityScale: config?.injurySeverityScale ?? 1,
     rivalries: new Map(
       rivalries.map((r) => [rivalryPairKey(r.teamAId, r.teamBId), r.intensity]),
+    ),
+    /*
+     * Only benches anyone when the gate is on. With injuries disabled a stored
+     * injury is history, not a rule — a league that switches the mechanic off
+     * mid-season gets everyone back rather than carrying invisible absences.
+     */
+    unavailablePlayerIds: new Set(
+      features.injuries === true ? injuries.map((i) => i.playerId) : [],
     ),
   };
 }
 
 /** A context that models nothing — for callers with no league in hand. */
 export function emptySimContext(leagueId: string): SeasonSimContext {
-  return { leagueId, features: {}, rivalries: new Map() };
+  return {
+    leagueId,
+    features: {},
+    rivalries: new Map(),
+    injurySeverityScale: 1,
+    unavailablePlayerIds: new Set(),
+  };
 }
 
 export interface FixtureSimConditions {

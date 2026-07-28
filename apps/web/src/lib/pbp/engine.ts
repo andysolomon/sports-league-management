@@ -6,6 +6,15 @@ import {
 } from "@/lib/simulation-flavor";
 import { acceptOrDecline, meanAwareness, rollPenalty } from "./penalties";
 import {
+  chargeSnap,
+  snapCost,
+  staminaDecay,
+  staminaFor,
+  substitutionCandidate,
+  type SnapLedger,
+} from "./fatigue";
+import { contactFactor, rollInjury } from "./injuries";
+import {
   NEUTRAL_AGGRESSION,
   clockStrategy,
   fourthDownDecision,
@@ -24,6 +33,7 @@ import {
   type WeatherModifiers,
 } from "./weather";
 import type {
+  GameInjury,
   PbpFeatureGates,
   PbpDrive,
   PbpDriveEndReason,
@@ -96,6 +106,14 @@ interface GameState {
    * golden-parity test exists to catch exactly that.
    */
   features: Required<PbpFeatureGates>;
+  /** Accumulated snap cost per player for this game (A4). */
+  snaps: SnapLedger;
+  /** Players whose game ended through injury (A4). */
+  unavailable: Set<string>;
+  /** Injuries sustained in this game, in order (A4). */
+  injuries: GameInjury[];
+  /** League severity dial, 0 disables injuries entirely (A4). */
+  injurySeverityScale: number;
   home: TeamSimProfile;
   away: TeamSimProfile;
   strengthWeight: number;
@@ -307,9 +325,12 @@ function weightedPick(
 function playersInGroup(
   team: TeamSimProfile,
   group: SimPositionGroup,
+  unavailable?: ReadonlySet<string>,
 ): PlayerSimProfile[] {
   return team.players
     .filter((p) => positionGroup(p.position) === group)
+    // A player whose game ended cannot take another snap (A4).
+    .filter((p) => !unavailable?.has(p.playerId))
     .sort((a, b) => {
       const da = a.depthRank ?? 99;
       const db = b.depthRank ?? 99;
@@ -318,13 +339,22 @@ function playersInGroup(
     });
 }
 
+/*
+ * Takes the whole `state`, not just `rand` (A4).
+ *
+ * Selection now depends on who is still standing and how tired they are, both
+ * of which live on the state. Threading them as extra optional arguments left
+ * every existing call site silently opting out — which is exactly what happened
+ * on the first attempt, and injured players kept taking snaps.
+ */
 function selectPlayer(
   team: TeamSimProfile,
   group: SimPositionGroup,
-  rand: () => number,
+  state: GameState,
   distribute = false,
 ): PlayerSimProfile {
-  const candidates = playersInGroup(team, group);
+  const rand = state.rand;
+  const candidates = playersInGroup(team, group, state.unavailable);
   if (candidates.length === 0) {
     return {
       playerId: `${team.teamId}-unknown-${group}`,
@@ -335,12 +365,27 @@ function selectPlayer(
   if (distribute && candidates.length > 1) {
     return weightedPick(candidates.slice(0, Math.min(4, candidates.length)), rand);
   }
+
+  /*
+   * A tired starter gets spelled — but only by someone who is actually better
+   * right now (A4). `substitutionCandidate` returns null when the bench is
+   * worse, so a team with no depth plays its exhausted starter, which is the
+   * consequence this mechanic exists to create.
+   *
+   * Consumes no randomness, so it cannot shift the draw sequence.
+   */
+  if (state.features.injuries) {
+    const relief = substitutionCandidate(candidates, (player) =>
+      staminaFor(state.snaps, player),
+    );
+    if (relief) return relief;
+  }
   return candidates[0];
 }
 
 function selectDefender(
   team: TeamSimProfile,
-  rand: () => number,
+  state: GameState,
   kind: "tackle" | "sack" | "coverage",
 ): PlayerSimProfile {
   const weights =
@@ -349,12 +394,12 @@ function selectDefender(
       : kind === "coverage"
         ? { DL: 0.1, LB: 0.25, DB: 0.65 }
         : { DL: 0.35, LB: 0.35, DB: 0.3 };
-  const r = rand();
+  const r = state.rand();
   let group: SimPositionGroup = "LB";
   if (r < weights.DL) group = "DL";
   else if (r < weights.DL + weights.LB) group = "LB";
   else group = "DB";
-  return selectPlayer(team, group, rand, true);
+  return selectPlayer(team, group, state, true);
 }
 
 function participant(
@@ -396,6 +441,84 @@ function endDrive(state: GameState, reason: PbpDriveEndReason): void {
   state.currentDrivePlays = [];
 }
 
+/*
+ * Fatigue and injury both hang off `recordPlay` (A4).
+ *
+ * It is the one choke point every play passes through, so charging snaps here
+ * means no play type can be forgotten. The PRNG cost is a function of the play
+ * TYPE only — three draws on a contact play, none otherwise — so the number of
+ * draws depends on the sequence of plays and never on their outcomes. A roll
+ * that cost draws only when someone got hurt would make every later play
+ * depend on whether anyone did.
+ */
+function applyAttrition(state: GameState, play: PbpPlay): void {
+  if (!state.features.injuries) return;
+
+  const cost = snapCost(play.playType);
+  for (const participant of play.participants) {
+    chargeSnap(state.snaps, participant.playerId, cost);
+  }
+
+  if (contactFactor(play.playType) <= 0) return;
+  if (play.participants.length === 0) return;
+
+  const whoRoll = state.rand();
+  const whetherRoll = state.rand();
+  const severityRoll = state.rand();
+
+  const victim =
+    play.participants[
+      Math.min(
+        play.participants.length - 1,
+        Math.floor(whoRoll * play.participants.length),
+      )
+    ];
+  const profile = profileFor(state, victim.teamId, victim.playerId);
+
+  const outcome = rollInjury({
+    playType: play.playType,
+    stamina: staminaDecay(
+      state.snaps.get(victim.playerId) ?? 0,
+      profile?.endurance,
+    ),
+    severityScale: state.injurySeverityScale,
+    rolls: [whetherRoll, severityRoll],
+  });
+  if (!outcome) return;
+
+  play.injury = {
+    playerId: victim.playerId,
+    teamId: victim.teamId,
+    severity: outcome.severity,
+    gamesOut: outcome.gamesOut,
+    label: outcome.label,
+  };
+  state.injuries.push({
+    playerId: victim.playerId,
+    teamId: victim.teamId,
+    severity: outcome.severity,
+    gamesOut: outcome.gamesOut,
+    label: outcome.label,
+    quarter: play.quarter,
+  });
+
+  /*
+   * Anything worse than a knock ends this player's game. That is what forces
+   * the next man up and makes roster depth matter WITHIN a game, not only in
+   * the weeks after it. A `minor` injury does not — he is shaken up and returns.
+   */
+  if (outcome.gamesOut > 0) state.unavailable.add(victim.playerId);
+}
+
+function profileFor(
+  state: GameState,
+  teamId: string,
+  playerId: string,
+): PlayerSimProfile | undefined {
+  const team = state.home.teamId === teamId ? state.home : state.away;
+  return team.players.find((p) => p.playerId === playerId);
+}
+
 function recordPlay(state: GameState, play: PbpPlay): void {
   if (state.pendingTempo) {
     play.tempo = state.pendingTempo;
@@ -403,6 +526,7 @@ function recordPlay(state: GameState, play: PbpPlay): void {
     // pulls in behind it.
     state.pendingTempo = null;
   }
+  applyAttrition(state, play);
   state.currentDrivePlays.push(play);
   state.playId += 1;
 }
@@ -499,7 +623,7 @@ function checkPeriodEnd(state: GameState): void {
 function doOnsideKick(state: GameState, kicking: "home" | "away"): void {
   const kickingTeam = kicking === "home" ? state.home : state.away;
   const receiving = kicking === "home" ? state.away : state.home;
-  const kicker = selectPlayer(kickingTeam, "K", state.rand);
+  const kicker = selectPlayer(kickingTeam, "K", state);
   const recovered = state.rand() < 0.15;
 
   startDrive(state, kickingTeam.teamId, 35);
@@ -556,8 +680,8 @@ function doKickoff(state: GameState, kicking: "home" | "away"): void {
 
   const kickingTeam = kicking === "home" ? state.home : state.away;
   const receiving = kicking === "home" ? state.away : state.home;
-  const kicker = selectPlayer(kickingTeam, "K", state.rand);
-  const returner = selectPlayer(receiving, "RB", state.rand, true);
+  const kicker = selectPlayer(kickingTeam, "K", state);
+  const returner = selectPlayer(receiving, "RB", state, true);
   const edge = matchupEdge(state);
   const returnYards = Math.round(18 + state.rand() * 22 + edge * 8);
   const startField = clamp(returnYards, 15, 40);
@@ -595,7 +719,7 @@ function doKickoff(state: GameState, kicking: "home" | "away"): void {
 function doExtraPoint(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const kicker = selectPlayer(off, "K", state.rand);
+  const kicker = selectPlayer(off, "K", state);
   const edge = matchupEdge(state);
   const makeProb = clamp(0.94 + edge * 0.03, 0.88, 0.99);
   const made = state.rand() < makeProb;
@@ -630,7 +754,7 @@ function doExtraPoint(state: GameState): void {
 function doFieldGoalAttempt(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const kicker = selectPlayer(off, "K", state.rand);
+  const kicker = selectPlayer(off, "K", state);
   const dist = yardsToGoal(state) + 17;
   const edge = matchupEdge(state);
   /*
@@ -687,8 +811,8 @@ function doFieldGoalAttempt(state: GameState): void {
 function doPunt(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const punter = selectPlayer(off, "P", state.rand);
-  const returner = selectPlayer(def, "WR", state.rand, true);
+  const punter = selectPlayer(off, "P", state);
+  const returner = selectPlayer(def, "WR", state, true);
   const gross = Math.round(
     (38 + state.rand() * 12 - matchupEdge(state) * 10) *
       state.weatherMods.kickDistance,
@@ -735,7 +859,7 @@ function doPunt(state: GameState): void {
 function doRush(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const rusher = selectPlayer(off, "RB", state.rand, true);
+  const rusher = selectPlayer(off, "RB", state, true);
   const edge = matchupEdge(state);
   const fumbleProb =
     clamp(0.01 - edge * 0.003, 0.003, 0.015) * state.weatherMods.fumbleRate;
@@ -750,10 +874,10 @@ function doRush(state: GameState): void {
   const participants: PbpParticipant[] = [
     participant(rusher, off.teamId, "rusher"),
   ];
-  const tackler = selectDefender(def, state.rand, "tackle");
+  const tackler = selectDefender(def, state, "tackle");
   participants.push(participant(tackler, def.teamId, "tackler_solo"));
   if (state.rand() < 0.35) {
-    const ast = selectDefender(def, state.rand, "tackle");
+    const ast = selectDefender(def, state, "tackle");
     participants.push(participant(ast, def.teamId, "tackler_ast"));
   }
 
@@ -765,7 +889,7 @@ function doRush(state: GameState): void {
     isTurnover = true;
     yards = 0;
     const fumbler = rusher;
-    const recoverer = selectDefender(def, state.rand, "tackle");
+    const recoverer = selectDefender(def, state, "tackle");
     participants.push(participant(fumbler, off.teamId, "fumbler"));
     participants.push(participant(recoverer, def.teamId, "recoverer"));
   } else if (state.fieldPosition + yards >= 100 && state.rand() < tdProb + (yards >= 15 ? 0.15 : 0)) {
@@ -799,14 +923,14 @@ function doRush(state: GameState): void {
 function doPass(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const passer = selectPlayer(off, "QB", state.rand);
-  const receiver = selectPlayer(off, "WR", state.rand, true);
+  const passer = selectPlayer(off, "QB", state);
+  const receiver = selectPlayer(off, "WR", state, true);
   const edge = matchupEdge(state);
   const sackProb = clamp(0.07 - edge * 0.03, 0.03, 0.12);
   const intProb = clamp(0.025 - edge * 0.01, 0.008, 0.04);
 
   if (state.rand() < sackProb) {
-    const sacker = selectDefender(def, state.rand, "sack");
+    const sacker = selectDefender(def, state, "sack");
     const yards = -Math.round(3 + state.rand() * 6);
     const play: PbpPlay = {
       playId: state.playId,
@@ -839,7 +963,7 @@ function doPass(state: GameState): void {
       state.features.scoringV2 &&
       state.rand() < 0.12 * state.weatherMods.fumbleRate
     ) {
-      const recoverer = selectDefender(def, state.rand, "tackle");
+      const recoverer = selectDefender(def, state, "tackle");
       play.isTurnover = true;
       play.participants.push(participant(passer, off.teamId, "fumbler"));
       play.participants.push(participant(recoverer, def.teamId, "recoverer"));
@@ -856,7 +980,7 @@ function doPass(state: GameState): void {
   }
 
   if (state.rand() < intProb) {
-    const interceptor = selectDefender(def, state.rand, "coverage");
+    const interceptor = selectDefender(def, state, "coverage");
     const returnYards = Math.round(state.rand() * 20);
     const play: PbpPlay = {
       playId: state.playId,
@@ -916,7 +1040,7 @@ function doPass(state: GameState): void {
     clamp(0.6 + edge * 0.14, 0.45, 0.8) * state.weatherMods.passAccuracy;
   const complete = state.rand() < completeProb;
   if (!complete) {
-    const pd = state.rand() < 0.12 ? selectDefender(def, state.rand, "coverage") : null;
+    const pd = state.rand() < 0.12 ? selectDefender(def, state, "coverage") : null;
     const participants: PbpParticipant[] = [
       participant(passer, off.teamId, "passer"),
       participant(receiver, off.teamId, "receiver"),
@@ -956,11 +1080,11 @@ function doPass(state: GameState): void {
     participant(passer, off.teamId, "passer"),
     participant(receiver, off.teamId, "receiver"),
   ];
-  const tackler = selectDefender(def, state.rand, "tackle");
+  const tackler = selectDefender(def, state, "tackle");
   participants.push(participant(tackler, def.teamId, "tackler_solo"));
   if (state.rand() < 0.3) {
     participants.push(
-      participant(selectDefender(def, state.rand, "tackle"), def.teamId, "tackler_ast"),
+      participant(selectDefender(def, state, "tackle"), def.teamId, "tackler_ast"),
     );
   }
 
@@ -995,7 +1119,7 @@ function doPass(state: GameState): void {
 function doKneel(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const rusher = selectPlayer(off, "QB", state.rand);
+  const rusher = selectPlayer(off, "QB", state);
   const play: PbpPlay = {
     playId: state.playId,
     driveId: state.driveId,
@@ -1037,7 +1161,7 @@ function awardDefensivePoints(state: GameState, points: number): void {
 function doSafety(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const tackler = selectDefender(def, state.rand, "tackle");
+  const tackler = selectDefender(def, state, "tackle");
 
   awardDefensivePoints(state, 2);
 
@@ -1089,8 +1213,8 @@ function shouldGoForTwo(state: GameState): boolean {
 function doTwoPointConversion(state: GameState): void {
   const off = offenseTeam(state);
   const def = defenseTeam(state);
-  const passer = selectPlayer(off, "QB", state.rand);
-  const target = selectPlayer(off, "WR", state.rand, true);
+  const passer = selectPlayer(off, "QB", state);
+  const target = selectPlayer(off, "WR", state, true);
   const edge = matchupEdge(state);
   const success = state.rand() < clamp(0.45 + edge * 0.1, 0.3, 0.62);
 
@@ -1528,7 +1652,17 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
       situational: input.features?.situational === true,
       balance: input.features?.balance === true,
       weather: input.features?.weather === true,
+      injuries: input.features?.injuries === true,
     },
+    snaps: new Map(),
+    unavailable: new Set(),
+    injuries: [],
+    /*
+     * Default 1 (normal) rather than 0. A caller that enabled the gate but did
+     * not pass a dial wants injuries at the usual rate — reading absence as
+     * "off" would make the gate silently do nothing.
+     */
+    injurySeverityScale: input.injurySeverityScale ?? 1,
     home: input.home,
     away: input.away,
     strengthWeight: weights.strengthWeight,
@@ -1627,6 +1761,12 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
      * parity fixture pins.
      */
     ...(activeFeatures(state.features) ?? {}),
+    /*
+     * An empty array is not the same as absence here: it says injuries WERE
+     * modelled and nobody got hurt, which a reader must be able to distinguish
+     * from a game that never rolled for them.
+     */
+    ...(state.features.injuries ? { injuries: state.injuries } : {}),
   };
 }
 

@@ -8,6 +8,7 @@ import {
   getTeamMaddenOveralls,
   getLeagueClaimable,
   getSeasons,
+  listTeamInjuries,
   listFixturesBySeason,
 } from "@/lib/data-api";
 import { isSeasonStarted } from "@/lib/season-started";
@@ -23,6 +24,7 @@ import type { PlayerSnapshot } from "@/lib/attributes/headline-columns";
 import TeamManagement from "./team-management";
 import { ClaimTeamButton } from "./claim-team-button";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
+import { InjuryReportCard } from "@/components/dynasty/InjuryReportCard";
 import {
   buildTeamSiblingLinks,
   teamHomeHref,
@@ -83,6 +85,17 @@ export default async function TeamDetailPage({
       )
     : false;
 
+  /*
+   * Injury report (A4). Season-scoped, and only when there is a season — a
+   * team with no season has no games to be out of. Failure must never take
+   * down Team Home, so the card simply does not render.
+   */
+  const injuries = activeSeason
+    ? await listTeamInjuries({ teamId: id, seasonId: activeSeason.id }).catch(
+        () => [],
+      )
+    : [];
+
   // WSM-000090: attribute snapshots feed the SPRT stat columns. Phase 2-gated;
   // the season is resolved server-side — including workspace forks, which read
   // their source league's current season (WSM-000122). Failure here must never
@@ -113,6 +126,15 @@ export default async function TeamDetailPage({
         homeHref={teamHomeHref(id)}
         siblings={siblingLinks}
       />
+
+      {injuries.length > 0 && (
+        <InjuryReportCard
+          injuries={injuries}
+          playerNames={Object.fromEntries(
+            players.map((player) => [player.id, player.name]),
+          )}
+        />
+      )}
 
       {offerFork && (
         <div className="mb-4 rounded-md border border-primary/40 bg-primary/5 p-4">

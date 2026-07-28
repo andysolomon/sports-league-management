@@ -6,6 +6,7 @@ import {
   getTeamLeagueId,
   getPlayersByTeam,
   getSeasons,
+  listTeamInjuries,
   getDepthChartByTeamSeason,
   getLeagueOrgId,
 } from "@/lib/data-api";
@@ -83,6 +84,20 @@ export default async function DepthChartPage({
     );
   }
 
+  /*
+   * Injured players are marked ON the depth chart (A4), because that is where
+   * a coach decides who starts — a separate report is easy to miss.
+   */
+  const injuries = await listTeamInjuries({
+    teamId: teamId,
+    seasonId: activeSeason.id,
+  }).catch(() => []);
+  const outPlayers = new Map(
+    injuries
+      .filter((injury) => injury.status === "out" && injury.gamesOut > 0)
+      .map((injury) => [injury.playerId, injury.gamesOut] as const),
+  );
+
   const [players, entries] = await Promise.all([
     getPlayersByTeam(teamId, {
       userId,
@@ -108,6 +123,7 @@ export default async function DepthChartPage({
         })}
       />
       <DepthChartBoard
+        outPlayers={outPlayers}
         teamId={teamId}
         teamName={team.name}
         leagueId={team.leagueId}

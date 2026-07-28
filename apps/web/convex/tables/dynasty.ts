@@ -159,6 +159,39 @@ export const dynastyTables = {
    * because `resolveDynastyConfig` fills defaults for anything missing. Read it
    * through that resolver, never off the raw document.
    */
+  /*
+   * Player injuries (A4).
+   *
+   * `gamesOut` is the AUTHORITATIVE countdown, decremented once per team game
+   * played. `returnsAfterWeek` is the projection shown in the UI — a bye or a
+   * rescheduled fixture moves the real return date, and the countdown follows
+   * while the projection does not.
+   */
+  playerInjuries: defineTable({
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    playerId: v.id("players"),
+    /** The fixture the injury happened in — also the dedupe key for a re-sim. */
+    fixtureId: v.id("fixtures"),
+    severity: v.string(),
+    label: v.string(),
+    /** Team games still to miss. 0 means available. */
+    gamesOut: v.number(),
+    /** What it was when it happened, so the UI can say "a 4-game injury". */
+    initialGamesOut: v.number(),
+    weekOccurred: v.union(v.number(), v.null()),
+    returnsAfterWeek: v.union(v.number(), v.null()),
+    /** "out" | "healed" */
+    status: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_seasonId_status", ["seasonId", "status"])
+    .index("by_playerId_seasonId", ["playerId", "seasonId"])
+    .index("by_teamId_seasonId", ["teamId", "seasonId"])
+    .index("by_fixtureId", ["fixtureId"]),
+
   dynastyConfig: defineTable({
     leagueId: v.id("leagues"),
 

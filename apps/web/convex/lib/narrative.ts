@@ -44,6 +44,14 @@ export type NarrativeInput =
       type: "season_completed";
       seasonName: string;
       championName: string | null;
+    }
+  | {
+      type: "player_injured";
+      playerName: string;
+      teamName: string;
+      label: string;
+      gamesOut: number;
+      week: number | null;
     };
 
 export type NarrativeEventType = NarrativeInput["type"];
@@ -74,6 +82,13 @@ export function renderHeadline(input: NarrativeInput): string {
         ? `${input.seasonName}: ${input.championName} wins the championship`
         : `${input.seasonName} is in the books`;
     }
+    case "player_injured": {
+      const duration =
+        input.gamesOut <= 0
+          ? "and is day to day"
+          : `and is out ${input.gamesOut} game${input.gamesOut === 1 ? "" : "s"}`;
+      return `${weekPrefix(input.week)}${input.teamName}'s ${input.playerName} was hurt ${duration}`;
+    }
     default: {
       // Exhaustiveness guard: adding a NarrativeInput variant without a case
       // here fails `tsc`, so a new event type cannot ship copy-less.
@@ -91,6 +106,9 @@ export function defaultSeverity(type: NarrativeEventType): EventSeverity {
       return "info";
     case "season_completed":
       return "headline";
+    case "player_injured":
+      // A knock is background; anything costing games is worth surfacing.
+      return "info";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;
@@ -106,6 +124,8 @@ export function categoryFor(type: NarrativeEventType): EventCategory {
       return "game";
     case "season_completed":
       return "program";
+    case "player_injured":
+      return "game";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;

@@ -1,12 +1,13 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import { DYNASTY_MODULES, moduleStatusValidator } from "./lib/moduleStatus";
+import { emitDynastyEvent } from "./lib/events";
 import {
   normalizeIntensity,
   rivalryPairKey,
   sortRivalryTeams,
 } from "./lib/rivalries";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 
 /*
  * Dynasty Mode — simulation persistence (Epic A).
@@ -184,5 +185,200 @@ export const deleteRivalry = internalMutation({
     const existing = await ctx.db.get(args.rivalryId);
     if (existing) await ctx.db.delete(args.rivalryId);
     return null;
+  },
+});
+
+/*
+ * ── Player injuries (A4) ────────────────────────────────────────────────────
+ */
+
+const injuryValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  seasonId: v.string(),
+  teamId: v.string(),
+  playerId: v.string(),
+  fixtureId: v.string(),
+  severity: v.string(),
+  label: v.string(),
+  gamesOut: v.number(),
+  initialGamesOut: v.number(),
+  weekOccurred: v.union(v.number(), v.null()),
+  returnsAfterWeek: v.union(v.number(), v.null()),
+  status: v.string(),
+  createdAt: v.string(),
+  updatedAt: v.string(),
+});
+
+function toInjuryDto(
+  row: Doc<"playerInjuries">,
+): Infer<typeof injuryValidator> {
+  return {
+    id: row._id as string,
+    leagueId: row.leagueId as string,
+    seasonId: row.seasonId as string,
+    teamId: row.teamId as string,
+    playerId: row.playerId as string,
+    fixtureId: row.fixtureId as string,
+    severity: row.severity,
+    label: row.label,
+    gamesOut: row.gamesOut,
+    initialGamesOut: row.initialGamesOut,
+    weekOccurred: row.weekOccurred,
+    returnsAfterWeek: row.returnsAfterWeek,
+    status: row.status,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/** Every injury still costing a player games, for one season. */
+export const listActiveInjuries = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(injuryValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerInjuries")
+      .withIndex("by_seasonId_status", (q) =>
+        q.eq("seasonId", args.seasonId).eq("status", "out"),
+      )
+      .collect();
+    return rows.map(toInjuryDto);
+  },
+});
+
+/** Injuries for one team's season, healed ones included, newest first. */
+export const listTeamInjuries = query({
+  args: { teamId: v.id("teams"), seasonId: v.id("seasons") },
+  returns: v.array(injuryValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerInjuries")
+      .withIndex("by_teamId_seasonId", (q) =>
+        q.eq("teamId", args.teamId).eq("seasonId", args.seasonId),
+      )
+      .collect();
+    return rows
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(toInjuryDto);
+  },
+});
+
+/**
+ * Record a game's injuries and tick everyone else's countdown.
+ *
+ * Both halves belong in ONE mutation because they are one event: a game was
+ * played. Splitting them would let a crash between the two leave a season where
+ * an injury was recorded but nobody healed, and re-running would then
+ * double-decrement.
+ *
+ * Idempotent on `fixtureId`: re-simulating a game replaces its injuries rather
+ * than adding a second set, and does not tick the countdown twice.
+ */
+export const recordGameInjuries = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    seasonId: v.id("seasons"),
+    leagueId: v.id("leagues"),
+    week: v.union(v.number(), v.null()),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+    injuries: v.array(
+      v.object({
+        playerId: v.id("players"),
+        teamId: v.id("teams"),
+        severity: v.string(),
+        label: v.string(),
+        gamesOut: v.number(),
+      }),
+    ),
+  },
+  returns: v.object({ recorded: v.number(), healed: v.number() }),
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+
+    const already = await ctx.db
+      .query("playerInjuries")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .collect();
+    const isResim = already.length > 0;
+    for (const row of already) await ctx.db.delete(row._id);
+
+    /*
+     * Only the two teams that just played tick down. A league-wide decrement
+     * would heal players on teams with a bye, which is precisely the case the
+     * games-not-weeks rule exists to get right.
+     */
+    let healed = 0;
+    if (!isResim) {
+      for (const teamId of [args.homeTeamId, args.awayTeamId]) {
+        const open = await ctx.db
+          .query("playerInjuries")
+          .withIndex("by_teamId_seasonId", (q) =>
+            q.eq("teamId", teamId).eq("seasonId", args.seasonId),
+          )
+          .collect();
+        for (const row of open) {
+          if (row.status !== "out" || row.gamesOut <= 0) continue;
+          const remaining = row.gamesOut - 1;
+          await ctx.db.patch(row._id, {
+            gamesOut: remaining,
+            status: remaining <= 0 ? "healed" : "out",
+            updatedAt: now,
+          });
+          if (remaining <= 0) healed += 1;
+        }
+      }
+    }
+
+    for (const injury of args.injuries) {
+      /*
+       * One event per injury, deduped on the fixture and player rather than on
+       * anything version-derived. Re-simulating a game must not republish the
+       * news — `emitDynastyEvent` no-ops on a key it has already seen.
+       */
+      const [player, team] = await Promise.all([
+        ctx.db.get(injury.playerId),
+        ctx.db.get(injury.teamId),
+      ]);
+      await emitDynastyEvent(ctx, {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        week: args.week,
+        teamId: injury.teamId,
+        playerId: injury.playerId,
+        fixtureId: args.fixtureId,
+        dedupeKey: `injury:${args.fixtureId}:${injury.playerId}`,
+        narrative: {
+          type: "player_injured",
+          playerName: player?.name ?? "A player",
+          teamName: team?.name ?? "A team",
+          label: injury.label,
+          gamesOut: injury.gamesOut,
+          week: args.week,
+        },
+        severity: injury.gamesOut >= 3 ? "notable" : "info",
+      });
+
+      await ctx.db.insert("playerInjuries", {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        teamId: injury.teamId,
+        playerId: injury.playerId,
+        fixtureId: args.fixtureId,
+        severity: injury.severity,
+        label: injury.label,
+        gamesOut: injury.gamesOut,
+        initialGamesOut: injury.gamesOut,
+        weekOccurred: args.week,
+        returnsAfterWeek:
+          args.week === null ? null : args.week + Math.max(0, injury.gamesOut),
+        status: injury.gamesOut > 0 ? "out" : "healed",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { recorded: args.injuries.length, healed };
   },
 });
