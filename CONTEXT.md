@@ -80,6 +80,10 @@ _Avoid_: Seasons Home, league schedule
 The single Season currently in progress for a League and the primary seasonal destination linked from League Home.
 _Avoid_: Viewed season, selected year
 
+**Offseason Hub**:
+The phase-machine surface for one upcoming Season at `/dashboard/seasons/[seasonId]/offseason`, where an administrator moves the league through Rollover, Draft, Free agency and Activate.
+_Avoid_: Offseason page, preseason, transfer window
+
 **Resource Header**:
 The orientation and sibling-navigation surface shared by a Home and its child pages without using breadcrumb trails.
 _Avoid_: Breadcrumb, back-link row
@@ -97,6 +101,7 @@ _Avoid_: Playbook, formation, strategy, system
 - Opening an accessible Team, Player, Season, or child deep link makes its owning League the **Active League** before rendering
 - Selecting an **Active League** from the switcher or **League Directory** navigates directly to its **League Home**
 - Global league switching replaces the current history entry so Back does not reopen a page implicitly scoped to the previous **Active League**
+- An upcoming **Season** has at most one **Offseason Hub**, and a Season that is active or completed has none
 - The league switcher links to the **League Directory** for cross-league administration
 - **League Home** is the root of the Active League workspace; desktop and mobile sidebar destinations Overview, Teams, Players, Seasons, and Settings are its primary branches
 - **League Home** does not duplicate those branches in a local tab bar; its header exposes only contextual actions

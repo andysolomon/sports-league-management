@@ -2,7 +2,11 @@ import { CalendarClock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { DraftDto } from "@/lib/data-api";
 import type { FreeAgentRow } from "@/lib/offseason-free-agency";
-import type { DraftPhaseStatus } from "./OffseasonPhaseStepper";
+import type { OffseasonDto } from "@/lib/data-api";
+import {
+  resolveOffseasonState,
+  type DraftPhaseStatus,
+} from "@/lib/dynasty/offseason-phases";
 import { DraftBoard } from "./DraftBoard";
 import { DraftStartToggle } from "./DraftStartToggle";
 import { FreeAgencyPanel } from "./FreeAgencyPanel";
@@ -25,6 +29,8 @@ export interface OffseasonHubProps {
   coachTeam: { id: string; name: string } | null;
   draft: DraftDto | null;
   playerNames: Record<string, string>;
+  /** Persisted phase state (B1); `null` for a season opened before the table. */
+  offseason?: OffseasonDto | null;
 }
 
 export function OffseasonHub({
@@ -38,8 +44,10 @@ export function OffseasonHub({
   coachTeam,
   draft,
   playerNames,
+  offseason = null,
 }: OffseasonHubProps) {
   const draftStatus = draftPhaseStatus(draft);
+  const phaseState = resolveOffseasonState(offseason, { draftStatus });
 
   return (
     <Card className="mb-6" data-testid="offseason-hub">
@@ -54,7 +62,7 @@ export function OffseasonHub({
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        <OffseasonPhaseStepper draftStatus={draftStatus} />
+        <OffseasonPhaseStepper state={phaseState} />
 
         {isAdmin && !draft && (
           <DraftStartToggle leagueId={leagueId} seasonId={seasonId} />

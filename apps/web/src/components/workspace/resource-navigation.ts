@@ -104,7 +104,7 @@ export function seasonHomeHref(seasonId: string): string {
  */
 export function seasonSubpageHref(
   seasonId: string,
-  subpage: "schedule" | "standings" | "playoffs" | "stats",
+  subpage: "schedule" | "standings" | "playoffs" | "stats" | "offseason",
 ): string {
   return `/dashboard/seasons/${seasonId}/${subpage}`;
 }
@@ -186,14 +186,25 @@ export function buildSeasonSiblingLinks({
   scheduleEnabled,
   playoffsEnabled,
   statsEnabled,
+  offseasonEnabled = false,
 }: {
   seasonId: string;
   scheduleEnabled: boolean;
   playoffsEnabled: boolean;
   statsEnabled: boolean;
+  /**
+   * Offseason Hub (B1). The caller passes `flag && season.status === "upcoming"`
+   * — the hub prepares a season that has not started, so on an active or
+   * completed season the link would lead to a page with nothing to do.
+   */
+  offseasonEnabled?: boolean;
 }): ResourceSiblingLink[] {
   const links: (ResourceSiblingLink | false)[] = [
     { label: "Overview", href: seasonHomeHref(seasonId) },
+    offseasonEnabled && {
+      label: "Offseason",
+      href: seasonSubpageHref(seasonId, "offseason"),
+    },
     scheduleEnabled && {
       label: "Schedule",
       href: seasonSubpageHref(seasonId, "schedule"),

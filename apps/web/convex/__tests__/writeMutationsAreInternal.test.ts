@@ -226,7 +226,10 @@ void api.sim.moduleStatus;
 void api.program.moduleStatus;
 void api.history.moduleStatus;
 
-type AllowedPublicDynastyReads = "moduleStatus" | "getDynastyConfig";
+type AllowedPublicDynastyReads =
+  | "moduleStatus"
+  | "getDynastyConfig"
+  | "getOffseason";
 type AllowedPublicSimReads =
   | "moduleStatus"
   | "listRivalries"

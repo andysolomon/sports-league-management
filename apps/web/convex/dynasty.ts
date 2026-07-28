@@ -1,4 +1,5 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { internalMutation, query } from "./_generated/server";
 import { DYNASTY_MODULES, moduleStatusValidator } from "./lib/moduleStatus";
 import {
@@ -6,6 +7,12 @@ import {
   resolveDynastyConfig,
   type DynastyConfig,
 } from "./lib/dynastyConfig";
+import {
+  INITIAL_OFFSEASON_PHASE,
+  completePhase,
+  phaseGate,
+  type DraftPhaseStatus,
+} from "./lib/offseasonPhases";
 
 /*
  * Dynasty Mode — offseason pipeline (Epic B).
@@ -144,5 +151,214 @@ export const setDynastyConfig = internalMutation({
     }
 
     return merged;
+  },
+});
+
+/*
+ * ── Persisted offseason phase machine (B1) ──────────────────────────────────
+ */
+
+const offseasonValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  seasonId: v.string(),
+  phase: v.string(),
+  completedPhases: v.array(v.string()),
+  scoutingPointsTotal: v.number(),
+  scoutingPointsSpent: v.number(),
+  trainingPointsTotal: v.number(),
+  trainingPointsSpent: v.number(),
+  createdAt: v.string(),
+  updatedAt: v.string(),
+});
+
+type OffseasonDoc = Doc<"offseasons">;
+
+/**
+ * `Infer` pins the mapper's return to the validator (WSM-000166). If a field
+ * is added to one and not the other this stops compiling, rather than throwing
+ * a data-dependent 500 the first time a row happens to carry the new field.
+ */
+function toOffseasonDto(row: OffseasonDoc): Infer<typeof offseasonValidator> {
+  return {
+    id: row._id as string,
+    leagueId: row.leagueId as string,
+    seasonId: row.seasonId as string,
+    phase: row.phase,
+    completedPhases: row.completedPhases,
+    scoutingPointsTotal: row.scoutingPointsTotal,
+    scoutingPointsSpent: row.scoutingPointsSpent,
+    trainingPointsTotal: row.trainingPointsTotal,
+    trainingPointsSpent: row.trainingPointsSpent,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * The stored offseason for a season, or `null` if one was never opened.
+ *
+ * Null is honest here and the caller must handle it: a league that entered its
+ * offseason before this table existed has no row, and `resolveOffseasonState`
+ * in `lib/offseasonPhases.ts` is where that absence is turned into something
+ * renderable. Defaulting here would hide which leagues still need opening.
+ */
+export const getOffseason = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.union(offseasonValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("offseasons")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .first();
+    return row ? toOffseasonDto(row) : null;
+  },
+});
+
+/**
+ * Open the offseason for a season, or return the one already open.
+ *
+ * Idempotent by design — it is safe to call on every admin page load, which is
+ * what makes the row's existence something the UI never has to orchestrate.
+ */
+export const beginOffseason = internalMutation({
+  args: { seasonId: v.id("seasons"), actorUserId: v.string() },
+  returns: offseasonValidator,
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("offseasons")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .first();
+    if (existing) return toOffseasonDto(existing);
+
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    /*
+     * An offseason prepares a season that has not started. Opening one on an
+     * active or completed season would let phase actions mutate rosters that
+     * results have already been recorded against.
+     */
+    if (season.status !== "upcoming") throw new Error("season_not_upcoming");
+
+    const configRow = await ctx.db
+      .query("dynastyConfig")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .first();
+    const config = resolveDynastyConfig(configRow);
+
+    const now = new Date().toISOString();
+    const id = await ctx.db.insert("offseasons", {
+      leagueId: season.leagueId,
+      seasonId: args.seasonId,
+      phase: INITIAL_OFFSEASON_PHASE,
+      completedPhases: ["rollover"],
+      scoutingPointsTotal: config.scoutingPointsPerOffseason,
+      scoutingPointsSpent: 0,
+      trainingPointsTotal: config.trainingPointsPerOffseason,
+      trainingPointsSpent: 0,
+      configJson: JSON.stringify(config),
+      createdAt: now,
+      updatedAt: now,
+      updatedBy: args.actorUserId,
+    });
+    const row = await ctx.db.get(id);
+    if (!row) throw new Error("offseason_not_found");
+    return toOffseasonDto(row);
+  },
+});
+
+const OFFSEASON_LEASE_MS = 30_000;
+
+/**
+ * Move an offseason to its next phase.
+ *
+ * Compare-and-set on `expectedPhase`. Convex serializes concurrent mutations,
+ * so two admins who both read phase `draft` and both click Advance arrive here
+ * one after the other: the first commits, and the second finds its
+ * `expectedPhase` stale. That second caller is told `phase_busy` rather than
+ * being silently no-opped, because it did not get what it asked for — someone
+ * else moved the offseason underneath it.
+ *
+ * The exception is a caller whose target is already the current phase. That is
+ * a retry of a request that landed, so it returns `changed: false` instead of
+ * erroring, and `completedPhases` behaves as a set either way.
+ */
+export const advanceOffseasonPhase = internalMutation({
+  args: {
+    seasonId: v.id("seasons"),
+    expectedPhase: v.string(),
+    to: v.string(),
+    ownerId: v.string(),
+    actorUserId: v.string(),
+    draftStatus: v.string(),
+  },
+  returns: v.object({
+    changed: v.boolean(),
+    offseason: offseasonValidator,
+  }),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("offseasons")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .first();
+    if (!row) throw new Error("offseason_not_found");
+
+    /*
+     * Already where the caller wants to be. A retry and a lost race send
+     * BYTE-IDENTICAL payloads — same `expectedPhase`, same `to` — so the only
+     * thing that separates them is who asked. `leaseOwnerId` records who made
+     * the move, which is what earns the lease its place on the row today
+     * rather than only in B2+.
+     *
+     * No recorded owner means nobody claims to have moved it (a fresh row
+     * asked to stay where it is), which is a no-op, not a conflict.
+     */
+    if (row.phase === args.to) {
+      if (
+        row.leaseOwnerId === undefined ||
+        row.leaseOwnerId === args.ownerId
+      ) {
+        return { changed: false, offseason: toOffseasonDto(row) };
+      }
+      throw new Error("phase_busy");
+    }
+
+    const decision = phaseGate({
+      from: row.phase,
+      to: args.to,
+      draftStatus: args.draftStatus as DraftPhaseStatus,
+    });
+    if (!decision.ok) throw new Error(decision.reason);
+
+    /*
+     * The CAS. Checked AFTER the gate so a genuinely invalid request (a
+     * backward phase, a skipped phase) reports what is wrong with it rather
+     * than being masked as a concurrency loss.
+     */
+    if (row.phase !== args.expectedPhase) throw new Error("phase_busy");
+
+    const now = Date.now();
+    const leaseExpiresAt = row.leaseExpiresAt
+      ? Date.parse(row.leaseExpiresAt)
+      : 0;
+    const foreignLease =
+      row.leaseOwnerId !== undefined &&
+      row.leaseOwnerId !== args.ownerId &&
+      Number.isFinite(leaseExpiresAt) &&
+      leaseExpiresAt > now;
+    if (foreignLease) throw new Error("phase_busy");
+
+    await ctx.db.patch(row._id, {
+      phase: args.to,
+      completedPhases: completePhase(row.completedPhases, row.phase),
+      leasePhase: args.to,
+      leaseOwnerId: args.ownerId,
+      leaseExpiresAt: new Date(now + OFFSEASON_LEASE_MS).toISOString(),
+      updatedAt: new Date(now).toISOString(),
+      updatedBy: args.actorUserId,
+    });
+    const updated = await ctx.db.get(row._id);
+    if (!updated) throw new Error("offseason_not_found");
+    return { changed: true, offseason: toOffseasonDto(updated) };
   },
 });

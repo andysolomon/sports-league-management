@@ -2,30 +2,62 @@ import { createElement } from "react";
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { OffseasonPhaseStepper } from "@/components/offseason/OffseasonPhaseStepper";
+import { resolveOffseasonState } from "@/lib/dynasty/offseason-phases";
 
+/*
+ * These assertions moved from draft status to persisted state in B1. The
+ * stepper no longer infers anything — it renders the row.
+ */
 describe("OffseasonPhaseStepper", () => {
-  it("renders free agency active when no draft exists", () => {
+  it("renders the persisted phase as active and completed phases as complete", () => {
     const html = renderToStaticMarkup(
-      createElement(OffseasonPhaseStepper, { draftStatus: "none" }),
+      createElement(OffseasonPhaseStepper, {
+        state: {
+          phase: "free_agency",
+          completedPhases: ["rollover", "draft"],
+        },
+      }),
     );
     expect(html).toContain('data-testid="offseason-phase-stepper"');
-    expect(html).toContain("Free agency");
-    expect(html).toContain("Draft");
-    expect(html).toContain("Optional");
+    expect(html).toContain('data-phase="free_agency"');
+    expect(html).toContain('data-testid="offseason-phase-draft" data-state="complete"');
+    expect(html).toContain(
+      'data-testid="offseason-phase-free_agency" data-state="active"',
+    );
+    expect(html).toContain(
+      'data-testid="offseason-phase-activate" data-state="upcoming"',
+    );
   });
 
-  it("marks draft active when a draft is in progress", () => {
+  it("marks a passed-over draft as skipped rather than complete", () => {
+    // The distinction is real: a league that never ran a draft did not
+    // complete that phase, it declined it.
     const html = renderToStaticMarkup(
-      createElement(OffseasonPhaseStepper, { draftStatus: "active" }),
+      createElement(OffseasonPhaseStepper, {
+        state: { phase: "free_agency", completedPhases: ["rollover"] },
+      }),
     );
-    expect(html).toContain("border-primary bg-primary/10");
-    expect(html).not.toContain("Optional");
+    expect(html).toContain(
+      'data-testid="offseason-phase-draft" data-state="optional"',
+    );
+    expect(html).toContain("Skipped");
   });
 
-  it("marks draft complete when the draft has finished", () => {
+  it("renders a season with no stored row from the draft-status bridge", () => {
     const html = renderToStaticMarkup(
-      createElement(OffseasonPhaseStepper, { draftStatus: "complete" }),
+      createElement(OffseasonPhaseStepper, {
+        state: resolveOffseasonState(null, { draftStatus: "active" }),
+      }),
     );
-    expect(html).toContain("border-primary/30 bg-primary/5");
+    expect(html).toContain('data-phase="draft"');
+  });
+
+  it("prefers the stored row over the bridge when both are available", () => {
+    // The bridge is a migration path, not a parallel source of truth.
+    const state = resolveOffseasonState(
+      { phase: "activate", completedPhases: ["rollover", "draft", "free_agency"] },
+      { draftStatus: "active" },
+    );
+    expect(state.phase).toBe("activate");
   });
 });

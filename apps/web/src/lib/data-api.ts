@@ -2974,3 +2974,60 @@ export async function setTeamProgram(input: {
     input,
   );
 }
+
+/*
+ * Persisted offseason phase machine (B1). Same typed-ref discipline as the
+ * config functions above.
+ */
+
+export interface OffseasonDto {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  phase: string;
+  completedPhases: string[];
+  scoutingPointsTotal: number;
+  scoutingPointsSpent: number;
+  trainingPointsTotal: number;
+  trainingPointsSpent: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `null` when no offseason was ever opened for the season — see the query. */
+export async function getOffseason(
+  seasonId: string,
+): Promise<OffseasonDto | null> {
+  const client = getConvexClient();
+  return client.query(dynastyRef.query<OffseasonDto | null>("getOffseason"), {
+    seasonId,
+  });
+}
+
+export async function beginOffseason(input: {
+  seasonId: string;
+  actorUserId: string;
+}): Promise<OffseasonDto> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<OffseasonDto>("beginOffseason"),
+    input,
+  );
+}
+
+export async function advanceOffseasonPhase(input: {
+  seasonId: string;
+  expectedPhase: string;
+  to: string;
+  ownerId: string;
+  actorUserId: string;
+  draftStatus: string;
+}): Promise<{ changed: boolean; offseason: OffseasonDto }> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{ changed: boolean; offseason: OffseasonDto }>(
+      "advanceOffseasonPhase",
+    ),
+    input,
+  );
+}
