@@ -33,6 +33,9 @@ const SCRIMMAGE_PLAY_TYPES = new Set<PbpPlayType>([
   "sack",
   "interception",
   "kneel",
+  // A spike is a snap that used a down, so it counts like a kneel does. A
+  // timeout is not a play and an onside kick is not from scrimmage.
+  "spike",
 ]);
 
 function emptyLine(modelsPenalties: boolean): TeamBoxScoreLine {
