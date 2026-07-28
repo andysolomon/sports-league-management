@@ -103,6 +103,7 @@ const summary: RolloverOperationSummary = {
     removedDepthEntries: 4,
   },
   recruiting: { freshmen: 47, toPool: false },
+  healing: { injuries: 2 },
 };
 
 const baseProps = {

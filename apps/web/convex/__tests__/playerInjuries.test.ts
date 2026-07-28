@@ -299,3 +299,238 @@ describe("recordGameInjuries", () => {
     ).toHaveLength(1);
   });
 });
+
+describe("healSeasonInjuries (B2)", () => {
+  /** Put one open injury on the board for `teamId`, owing `gamesOut` games. */
+  async function openInjury(
+    t: ReturnType<typeof convexTest>,
+    s: Awaited<ReturnType<typeof seed>>,
+    input: {
+      teamId: typeof s.homeTeamId;
+      playerId: typeof s.playerId;
+      fixtureId: typeof s.fixtures[number];
+      gamesOut: number;
+      seasonId?: typeof s.seasonId;
+    },
+  ) {
+    await t.run(async (ctx) => {
+      const now = new Date().toISOString();
+      await ctx.db.insert("playerInjuries", {
+        leagueId: s.leagueId,
+        seasonId: input.seasonId ?? s.seasonId,
+        teamId: input.teamId,
+        playerId: input.playerId,
+        fixtureId: input.fixtureId,
+        severity: "major",
+        label: "Season ending",
+        gamesOut: input.gamesOut,
+        initialGamesOut: input.gamesOut,
+        weekOccurred: 9,
+        returnsAfterWeek: 9 + input.gamesOut,
+        status: "out",
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+  }
+
+  it("closes every open injury for the season and leaves none out", async () => {
+    const t = convexTest(schema, modules);
+    const s = await seed(t);
+    await openInjury(t, s, {
+      teamId: s.homeTeamId,
+      playerId: s.playerId,
+      fixtureId: s.fixtures[0],
+      gamesOut: 6,
+    });
+    await openInjury(t, s, {
+      teamId: s.thirdTeamId,
+      playerId: s.byePlayerId,
+      fixtureId: s.fixtures[1],
+      gamesOut: 2,
+    });
+
+    const result = await t.mutation(internal.sim.healSeasonInjuries, {
+      seasonId: s.seasonId,
+    });
+
+    expect(result.healed).toBe(2);
+    expect(
+      await t.query(api.sim.listActiveInjuries, { seasonId: s.seasonId }),
+    ).toHaveLength(0);
+  });
+
+  it("preserves gamesOut so an offseason heal stays distinguishable", async () => {
+    /*
+     * The whole audit trail. A row healed by PLAYING reaches zero games owed;
+     * a row healed by the OFFSEASON still owes six. Zeroing the countdown would
+     * erase the difference and make a season-ending injury indistinguishable
+     * from one the player came back from in Week 12.
+     */
+    const t = convexTest(schema, modules);
+    const s = await seed(t);
+    await openInjury(t, s, {
+      teamId: s.homeTeamId,
+      playerId: s.playerId,
+      fixtureId: s.fixtures[0],
+      gamesOut: 6,
+    });
+
+    await t.mutation(internal.sim.healSeasonInjuries, { seasonId: s.seasonId });
+
+    const rows = await t.query(api.sim.listTeamInjuries, {
+      teamId: s.homeTeamId,
+      seasonId: s.seasonId,
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].status).toBe("healed");
+    expect(rows[0].gamesOut).toBe(6);
+    expect(rows[0].initialGamesOut).toBe(6);
+  });
+
+  it("is idempotent — a second run heals nothing and changes nothing", async () => {
+    /*
+     * The stage runs under a 60-second lease, so a lost response is retried.
+     * Re-running must be a no-op rather than a second pass that re-stamps
+     * `updatedAt` on rows it already closed.
+     */
+    const t = convexTest(schema, modules);
+    const s = await seed(t);
+    await openInjury(t, s, {
+      teamId: s.homeTeamId,
+      playerId: s.playerId,
+      fixtureId: s.fixtures[0],
+      gamesOut: 4,
+    });
+
+    const first = await t.mutation(internal.sim.healSeasonInjuries, {
+      seasonId: s.seasonId,
+    });
+    const afterFirst = await t.query(api.sim.listTeamInjuries, {
+      teamId: s.homeTeamId,
+      seasonId: s.seasonId,
+    });
+
+    const second = await t.mutation(internal.sim.healSeasonInjuries, {
+      seasonId: s.seasonId,
+    });
+    const afterSecond = await t.query(api.sim.listTeamInjuries, {
+      teamId: s.homeTeamId,
+      seasonId: s.seasonId,
+    });
+
+    expect(first.healed).toBe(1);
+    expect(second.healed).toBe(0);
+    expect(afterSecond).toEqual(afterFirst);
+  });
+
+  it("leaves another season's open injuries alone", async () => {
+    /*
+     * Healing is scoped to the season being closed. A league mid-rollover on
+     * its 2027 season must not clear injuries a 2028 season already carries.
+     */
+    const t = convexTest(schema, modules);
+    const s = await seed(t);
+    const otherSeasonId = await t.run(async (ctx) =>
+      ctx.db.insert("seasons", {
+        leagueId: s.leagueId,
+        name: "2028",
+        status: "upcoming",
+        startDate: null,
+        endDate: null,
+        rosterLocked: false,
+      }),
+    );
+    await openInjury(t, s, {
+      teamId: s.homeTeamId,
+      playerId: s.playerId,
+      fixtureId: s.fixtures[0],
+      gamesOut: 3,
+    });
+    await openInjury(t, s, {
+      teamId: s.homeTeamId,
+      playerId: s.playerId,
+      fixtureId: s.fixtures[1],
+      gamesOut: 5,
+      seasonId: otherSeasonId,
+    });
+
+    const result = await t.mutation(internal.sim.healSeasonInjuries, {
+      seasonId: s.seasonId,
+    });
+
+    expect(result.healed).toBe(1);
+    expect(
+      await t.query(api.sim.listActiveInjuries, { seasonId: otherSeasonId }),
+    ).toHaveLength(1);
+  });
+
+  it("leaves a season-ending injury rostered and available in the new season", async () => {
+    /*
+     * The claim the stage exists to make. A player who tore an ACL in Week 3
+     * carries a six-game debt into an archive that will never play those games;
+     * next season he is on the roster and the sim sees nobody owing anything.
+     *
+     * Availability is read from the TARGET season's open injuries, which is why
+     * this asserts on `listActiveInjuries(next)` rather than on the row itself:
+     * that query is exactly what `loadSeasonSimContext` calls before it picks
+     * participants.
+     */
+    const t = convexTest(schema, modules);
+    const s = await seed(t);
+    await openInjury(t, s, {
+      teamId: s.homeTeamId,
+      playerId: s.playerId,
+      fixtureId: s.fixtures[0],
+      gamesOut: 6,
+    });
+
+    const nextSeasonId = await t.run(async (ctx) => {
+      const next = await ctx.db.insert("seasons", {
+        leagueId: s.leagueId,
+        name: "2028",
+        status: "upcoming",
+        startDate: null,
+        endDate: null,
+        rosterLocked: false,
+      });
+      // What the `rosters_copied` stage produces: the player carried forward.
+      await ctx.db.insert("rosterAssignments", {
+        seasonId: next,
+        teamId: s.homeTeamId,
+        playerId: s.playerId,
+        leagueId: s.leagueId,
+        depthRank: 1,
+        positionSlot: "RB",
+        status: "active",
+        assignedAt: new Date().toISOString(),
+        assignedBy: "test",
+      });
+      return next;
+    });
+
+    await t.mutation(internal.sim.healSeasonInjuries, { seasonId: s.seasonId });
+
+    expect(
+      await t.query(api.sim.listActiveInjuries, { seasonId: nextSeasonId }),
+    ).toHaveLength(0);
+    const roster = await t.run(async (ctx) =>
+      ctx.db
+        .query("rosterAssignments")
+        .withIndex("by_seasonId_teamId", (q) =>
+          q.eq("seasonId", nextSeasonId).eq("teamId", s.homeTeamId),
+        )
+        .collect(),
+    );
+    expect(roster.map((row) => row.playerId)).toContain(s.playerId);
+  });
+
+  it("heals nothing when a season had no injuries", async () => {
+    const t = convexTest(schema, modules);
+    const s = await seed(t);
+    const result = await t.mutation(internal.sim.healSeasonInjuries, {
+      seasonId: s.seasonId,
+    });
+    expect(result.healed).toBe(0);
+  });
+});

@@ -188,6 +188,20 @@ export function dynastyRolloverProcessStages(
       }`
     : undefined;
 
+  /*
+   * Read through optionally. `healing` is required on the type, but a summary
+   * persisted before B2 predates the field, and a display builder that throws
+   * on a missing count would take the whole panel down over a stage detail.
+   * No count is honest absence — better than inventing a zero.
+   */
+  const healedInjuries = withSummary?.healing?.injuries;
+  const healingDetail =
+    healedInjuries === undefined
+      ? undefined
+      : healedInjuries === 0
+        ? "No lingering injuries"
+        : `${players(healedInjuries)} cleared`;
+
   return [
     stage("rollover", "Start next season", outcome, rolloverDetail),
     terminalStage("graduate", "Graduate seniors", terminalOutcome, graduateDetail),
@@ -210,5 +224,11 @@ export function dynastyRolloverProcessStages(
       carryoverDetail,
     ),
     terminalStage("freshmen", "Generate freshmen", terminalOutcome, freshmanDetail),
+    terminalStage(
+      "healing",
+      "Heal lingering injuries",
+      terminalOutcome,
+      healingDetail,
+    ),
   ];
 }

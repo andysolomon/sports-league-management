@@ -382,3 +382,45 @@ export const recordGameInjuries = internalMutation({
     return { recorded: args.injuries.length, healed };
   },
 });
+
+/**
+ * Close out every open injury for a season (B2).
+ *
+ * Runs as the `injuries_healed` rollover stage, against the SOURCE season. A
+ * season's injuries belong to that season — the new season's roster starts with
+ * no rows at all — so this is not what makes a player available next year. It
+ * is what stops the year that just ended from being archived with players still
+ * listed as owing games they will now never miss.
+ *
+ * `gamesOut` is deliberately PRESERVED rather than zeroed. The row then reads
+ * "healed with three games still owed", which is the only record that this
+ * injury was ended by the offseason rather than by playing through it. Nothing
+ * decides availability from the countdown alone — `isAvailable` in
+ * `pbp/injuries.ts` returns early on any status but "out", and every UI filter
+ * is an AND on both fields — so keeping it costs nothing and buys the audit.
+ *
+ * NOT gated on `injuriesEnabled`. A league that switches injuries off mid-
+ * dynasty still has rows on the board, and leaving them open would make the
+ * kill switch a way to strand data rather than a way to stop generating it.
+ *
+ * Idempotent by construction: it only touches rows the `by_seasonId_status`
+ * index still reports as "out", so a second run finds none and heals zero.
+ * That is what makes it safe to retry under the rollover's stage lease.
+ */
+export const healSeasonInjuries = internalMutation({
+  args: { seasonId: v.id("seasons") },
+  returns: v.object({ healed: v.number() }),
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    const open = await ctx.db
+      .query("playerInjuries")
+      .withIndex("by_seasonId_status", (q) =>
+        q.eq("seasonId", args.seasonId).eq("status", "out"),
+      )
+      .collect();
+    for (const row of open) {
+      await ctx.db.patch(row._id, { status: "healed", updatedAt: now });
+    }
+    return { healed: open.length };
+  },
+});

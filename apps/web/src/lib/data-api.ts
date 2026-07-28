@@ -2919,6 +2919,17 @@ export async function recordGameInjuries(input: {
   );
 }
 
+/** Close out a finished season's open injuries — the B2 rollover stage. */
+export async function healSeasonInjuries(input: {
+  seasonId: string;
+}): Promise<{ healed: number }> {
+  const client = getConvexClient();
+  return client.mutation(
+    simRef.mutation<{ healed: number }>("healSeasonInjuries"),
+    input,
+  );
+}
+
 /*
  * Team programs (A6, extended by C3). Same compile-checked-ref discipline as
  * the dynasty settings above.

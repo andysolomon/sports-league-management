@@ -2346,12 +2346,23 @@ export const beginSeasonRollover = internalMutationGeneric({
   },
 });
 
+/*
+ * Rollover stage order — the SERVER half of the contract.
+ *
+ * `advanceSeasonRollover` enforces `requested === current + 1`, so this list
+ * and `ROLLOVER_STAGES` in `_actions/dynasty.ts` must stay identical and in the
+ * same order. Adding a stage is safe for a rollover that has not started and
+ * for one that has already completed; the only exposed window is a rollover
+ * paused mid-flight across the deploy that adds the stage, which is documented
+ * and accepted (#620) — the affected rollover retries from its checkpoint.
+ */
 const rolloverStageOrder = [
   "target_created",
   "players_progressed",
   "attributes_copied",
   "rosters_copied",
   "freshmen_created",
+  "injuries_healed",
   "completed",
 ] as const;
 

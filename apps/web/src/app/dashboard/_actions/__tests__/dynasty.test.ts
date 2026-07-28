@@ -19,6 +19,7 @@ const {
   mockGetTeamsByLeague,
   mockGetPlayersByTeam,
   mockCreateRolloverFreshmenForTeam,
+  mockHealSeasonInjuries,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockResolveOrgContext: vi.fn(),
@@ -38,6 +39,7 @@ const {
   mockGetTeamsByLeague: vi.fn(),
   mockGetPlayersByTeam: vi.fn(),
   mockCreateRolloverFreshmenForTeam: vi.fn(),
+  mockHealSeasonInjuries: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
@@ -61,6 +63,7 @@ vi.mock("@/lib/data-api", () => ({
   getTeamsByLeague: mockGetTeamsByLeague,
   getPlayersByTeam: mockGetPlayersByTeam,
   createRolloverFreshmenForTeam: mockCreateRolloverFreshmenForTeam,
+  healSeasonInjuries: mockHealSeasonInjuries,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -94,6 +97,7 @@ const completedSummary = {
     removedDepthEntries: 1,
   },
   recruiting: { freshmen: 47, toPool: false },
+  healing: { injuries: 3 },
 };
 
 beforeEach(() => {
@@ -148,7 +152,9 @@ beforeEach(() => {
                 ? "attributes_copied"
                 : stage === "freshmen_created"
                   ? "rosters_copied"
-                  : "freshmen_created",
+                  : stage === "injuries_healed"
+                    ? "freshmen_created"
+                    : "injuries_healed",
         status: "in_progress",
         graduatedPlayerIds: [],
         advancedPlayerIds: ["p1"],
@@ -157,6 +163,7 @@ beforeEach(() => {
       }),
   );
   mockReleaseSeasonRolloverStage.mockResolvedValue(null);
+  mockHealSeasonInjuries.mockResolvedValue({ healed: 0 });
   mockRollover.mockResolvedValue({
     graduatedPlayerIds: [],
     advancedPlayerIds: ["p1"],
@@ -598,5 +605,71 @@ describe("startNextSeasonAction success path", () => {
     });
     expect(mockRollover).not.toHaveBeenCalled();
     expect(mockCopySeasonRosters).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Injury healing (B2, #620). The stage sits between freshmen and completion
+   * and reaches BACK into the season being closed, which is what these assert:
+   * the source season id, not the target's.
+   */
+  describe("injuries_healed stage", () => {
+    it("heals the source season and records the count in the summary", async () => {
+      mockHealSeasonInjuries.mockResolvedValue({ healed: 5 });
+
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(mockHealSeasonInjuries).toHaveBeenCalledWith({
+        // The season being CLOSED. Healing the target would clear injuries
+        // that have not been sustained yet.
+        seasonId: ACTIVE.id,
+      });
+      expect(mockAdvanceSeasonRollover).toHaveBeenCalledWith({
+        rolloverId: "rollover_1",
+        stage: "injuries_healed",
+        summaryJson: expect.stringContaining('"injuries":5'),
+        ownerId: expect.any(String),
+      });
+      expect(res).toMatchObject({ ok: true });
+      expect((res as { summary: { healing: { injuries: number } } }).summary
+        .healing.injuries).toBe(5);
+    });
+
+    it("still completes the rollover when healing fails", async () => {
+      /*
+       * The next season already exists by this point. Aborting here would
+       * leave a league with a built roster and no completed rollover, which is
+       * strictly worse than a season archived with a few injuries still open.
+       */
+      mockHealSeasonInjuries.mockRejectedValue(new Error("convex_down"));
+
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(res).toMatchObject({ ok: true, seasonId: "season_next" });
+      expect(mockAdvanceSeasonRollover).toHaveBeenLastCalledWith(
+        expect.objectContaining({ stage: "completed" }),
+      );
+      expect(mockReleaseSeasonRolloverStage).not.toHaveBeenCalled();
+    });
+
+    it("does not re-heal a rollover resumed past the stage", async () => {
+      mockBeginSeasonRollover.mockResolvedValue({
+        rolloverId: "rollover_1",
+        sourceSeasonId: ACTIVE.id,
+        sourceSeasonName: ACTIVE.name,
+        targetSeasonId: "season_next",
+        targetSeasonName: "2027",
+        resumed: true,
+        stage: "injuries_healed",
+        status: "in_progress",
+        graduatedPlayerIds: [],
+        advancedPlayerIds: ["p1"],
+        summaryJson: JSON.stringify(completedSummary),
+      });
+
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(mockHealSeasonInjuries).not.toHaveBeenCalled();
+      expect(res).toMatchObject({ ok: true });
+    });
   });
 });

@@ -193,6 +193,20 @@ async function cascadeDeleteLeague(
     await ctx.db.delete(row._id);
     deleted += 1;
   }
+  // Player injuries (A4). An injury left behind makes a player unavailable to
+  // every later run — the sim reads open rows for the season before it picks
+  // participants — so a spec that simulates would silently sim a short roster
+  // purely because an earlier spec's game hurt someone.
+  for (const team of teams as Array<{ _id: Id<"teams"> }>) {
+    const injuryRows = (await ctx.db
+      .query("playerInjuries")
+      .withIndex("by_teamId_seasonId", (q: any) => q.eq("teamId", team._id))
+      .collect()) as Array<{ _id: Id<"playerInjuries"> }>;
+    for (const row of injuryRows) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+  }
   // Team programs (A6). A stored scheme changes how every later run simulates
   // that team, so leaving one behind would make a distribution assertion depend
   // on which spec ran first.
