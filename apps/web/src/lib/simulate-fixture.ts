@@ -20,6 +20,7 @@ import {
   DEFAULT_SIMULATION_FLAVOR,
   type SimulationFlavor,
 } from "@/lib/simulation-flavor";
+import { fixtureSimConditions, type SeasonSimContext } from "@/lib/sim-context";
 
 export interface SimulateFixtureInput {
   fixture: FixtureDto;
@@ -31,6 +32,15 @@ export interface SimulateFixtureInput {
   bulkStats?: boolean;
   /** Season simulation flavor (defaults to balanced). */
   simulationFlavor?: SimulationFlavor;
+  /**
+   * What this run is allowed to model, resolved once by the caller.
+   *
+   * REQUIRED rather than optional on purpose. An optional field defaulting to
+   * "no mechanics" is exactly how four slices ended up shipping dark without
+   * anyone noticing — a new call site would silently simulate v1 games. Making
+   * it required means `tsc` forces every caller to decide.
+   */
+  simContext: SeasonSimContext;
 }
 
 export interface SimulateFixtureResult {
@@ -86,7 +96,21 @@ export async function simulateAndPersistFixture(
     return { homeScore, awayScore, usedScoreFallback: true };
   }
 
-  const log = simulateGameLog({ home, away, seed, decisive, flavor });
+  /*
+   * The score-only fallback above never reaches here, which matters: a game
+   * with no rosters has no plays to apply penalties or weather to, so it is
+   * correctly recorded with no gates rather than with gates that did nothing.
+   */
+  const conditions = fixtureSimConditions(input.simContext, fixture);
+  const log = simulateGameLog({
+    home,
+    away,
+    seed,
+    decisive,
+    flavor,
+    features: input.simContext.features,
+    ...conditions,
+  });
   const homeScore = log.homeScore;
   const awayScore = log.awayScore;
 

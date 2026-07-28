@@ -49,7 +49,10 @@ export const moduleStatus = query({
  */
 
 const dynastyConfigValidator = v.object({
+  scoringDepthEnabled: v.boolean(),
   penaltiesEnabled: v.boolean(),
+  situationalAiEnabled: v.boolean(),
+  balanceTuningEnabled: v.boolean(),
   injuriesEnabled: v.boolean(),
   weatherEnabled: v.boolean(),
   injurySeverityScale: v.number(),
@@ -92,7 +95,10 @@ export const setDynastyConfig = internalMutation({
     leagueId: v.id("leagues"),
     actorUserId: v.string(),
     patch: v.object({
+      scoringDepthEnabled: v.optional(v.boolean()),
       penaltiesEnabled: v.optional(v.boolean()),
+      situationalAiEnabled: v.optional(v.boolean()),
+      balanceTuningEnabled: v.optional(v.boolean()),
       injuriesEnabled: v.optional(v.boolean()),
       weatherEnabled: v.optional(v.boolean()),
       injurySeverityScale: v.optional(v.number()),

@@ -247,6 +247,20 @@ export interface PbpGameLog {
    */
   weather?: Weather;
 
+  /**
+   * The gates this game was ACTUALLY simulated under.
+   *
+   * The engine version alone cannot answer "were penalties modelled here?" —
+   * two games written by the same engine build differ if a commissioner turned
+   * penalties off between them, and a league that adopts a mechanic mid-season
+   * has both kinds of log in one season (#646).
+   *
+   * Absence means no v2 mechanic was active, which is what keeps a fully-gated-
+   * off game byte-identical to its v1 log. Written only when at least one gate
+   * is on; never defaulted to `{}`.
+   */
+  features?: PbpFeatureGates;
+
   /*
    * ── v2 additions (engine 2.0.0) ───────────────────────────────────────
    *

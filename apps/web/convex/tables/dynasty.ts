@@ -163,7 +163,13 @@ export const dynastyTables = {
     leagueId: v.id("leagues"),
 
     // Sim mechanics (Epic A). Kill switches for a live league.
+    /** A1 — safeties, two-point tries, return TDs, fumbles on any play. */
+    scoringDepthEnabled: v.optional(v.boolean()),
     penaltiesEnabled: v.optional(v.boolean()),
+    /** A3 — fourth-down chart, timeouts, two-minute drill, clock management. */
+    situationalAiEnabled: v.optional(v.boolean()),
+    /** A3 — corrected home-field advantage (#642). */
+    balanceTuningEnabled: v.optional(v.boolean()),
     injuriesEnabled: v.optional(v.boolean()),
     weatherEnabled: v.optional(v.boolean()),
     /** 0 = none, 1 = normal, 2 = brutal. Scales injury roll severity. */

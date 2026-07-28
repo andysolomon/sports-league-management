@@ -22,6 +22,11 @@ import { resolveOrgRole, resolveOrgContext } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
 import { type TeamSimProfileCache } from "@/lib/build-team-sim-profile";
 import { simulateAndPersistFixture } from "@/lib/simulate-fixture";
+import {
+  loadSeasonSimContext,
+  type SeasonSimContext,
+} from "@/lib/sim-context";
+import { dynastySimV2 } from "@/lib/flags";
 import { normalizeSimulationFlavor } from "@/lib/simulation-flavor";
 import {
   deriveChampion,
@@ -266,12 +271,29 @@ export async function deleteFixtureAction(
  * + playoff advancement flow exactly as hand-entered results do.
  */
 
-async function resolveSeasonSimulationFlavor(
+/**
+ * Everything a simulation run needs that is fixed for the whole run.
+ *
+ * Resolved ONCE per run and threaded through, the same way `profileCache` is.
+ * The alternative — reading the league's settings inside the per-fixture path —
+ * would be a pair of reads per game for data that cannot change mid-run.
+ */
+async function resolveSeasonSimRun(
   seasonId: string,
   orgContext: OrgContext,
-) {
+): Promise<{
+  simulationFlavor: ReturnType<typeof normalizeSimulationFlavor>;
+  simContext: SeasonSimContext;
+}> {
   const season = await getSeason(seasonId, orgContext);
-  return normalizeSimulationFlavor(season.simulationFlavor);
+  const flagEnabled = await dynastySimV2();
+  return {
+    simulationFlavor: normalizeSimulationFlavor(season.simulationFlavor),
+    simContext: await loadSeasonSimContext({
+      leagueId: season.leagueId,
+      flagEnabled,
+    }),
+  };
 }
 
 export async function simulateGameAction(input: {
@@ -294,7 +316,7 @@ export async function simulateGameAction(input: {
   const orgContext = await resolveOrgContext(userId);
 
   try {
-    const simulationFlavor = await resolveSeasonSimulationFlavor(
+    const { simulationFlavor, simContext } = await resolveSeasonSimRun(
       fixture.seasonId,
       orgContext,
     );
@@ -305,6 +327,7 @@ export async function simulateGameAction(input: {
       decisive: fixture.stage === "playoff",
       profileCache: new Map(),
       simulationFlavor,
+      simContext,
     });
     revalidatePath(`/dashboard/seasons/${fixture.seasonId}/schedule`);
     revalidatePath(`/dashboard/seasons/${fixture.seasonId}/standings`);
@@ -343,7 +366,10 @@ async function simulateUnplayedRegularSeason(
   orgContext: OrgContext,
   profileCache: TeamSimProfileCache,
 ): Promise<number> {
-  const simulationFlavor = await resolveSeasonSimulationFlavor(seasonId, orgContext);
+  const { simulationFlavor, simContext } = await resolveSeasonSimRun(
+    seasonId,
+    orgContext,
+  );
   const fixtures = await listFixturesBySeason(seasonId).catch(() => []);
   // Regular-season, unplayed games only — never overwrite real results, and
   // leave playoff games to the bracket flow.
@@ -359,6 +385,7 @@ async function simulateUnplayedRegularSeason(
       profileCache,
       bulkStats: true,
       simulationFlavor,
+      simContext,
     });
     simulated += 1;
   }
@@ -374,7 +401,10 @@ async function simulatePlayoffFixtureIds(
   profileCache: TeamSimProfileCache,
 ): Promise<number> {
   if (fixtureIds.length === 0) return 0;
-  const simulationFlavor = await resolveSeasonSimulationFlavor(seasonId, orgContext);
+  const { simulationFlavor, simContext } = await resolveSeasonSimRun(
+    seasonId,
+    orgContext,
+  );
   const fixtures = await listFixturesBySeason(seasonId).catch(() => []);
   const byId = new Map(fixtures.map((f) => [f.id, f]));
   let simulated = 0;
@@ -395,6 +425,7 @@ async function simulatePlayoffFixtureIds(
       profileCache,
       bulkStats: true,
       simulationFlavor,
+      simContext,
     });
     simulated += 1;
   }
@@ -558,7 +589,7 @@ export async function simulateWeekAction(input: {
   const orgContext = await resolveOrgContext(userId);
   const profileCache: TeamSimProfileCache = new Map();
   try {
-    const simulationFlavor = await resolveSeasonSimulationFlavor(
+    const { simulationFlavor, simContext } = await resolveSeasonSimRun(
       input.seasonId,
       orgContext,
     );
@@ -576,6 +607,7 @@ export async function simulateWeekAction(input: {
         profileCache,
         bulkStats: true,
         simulationFlavor,
+        simContext,
       });
       simulated += 1;
     }

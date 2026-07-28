@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { emptySimContext } from "@/lib/sim-context";
 import { seedFromString } from "@/lib/simulate-game";
 import { deriveStatLines, simulateGameLog } from "@/lib/pbp";
 import type { TeamSimProfile } from "@/lib/pbp";
@@ -100,6 +101,7 @@ describe("simulateAndPersistFixture", () => {
       orgContext: ORG_CONTEXT,
       actorUserId: USER,
       profileCache: new Map(),
+      simContext: emptySimContext("league_1"),
       bulkStats: true,
     });
 
@@ -156,6 +158,7 @@ describe("simulateAndPersistFixture", () => {
       orgContext: ORG_CONTEXT,
       actorUserId: USER,
       profileCache: new Map(),
+      simContext: emptySimContext("league_1"),
     });
     const first = [...calls].sort();
 
@@ -165,6 +168,7 @@ describe("simulateAndPersistFixture", () => {
       orgContext: ORG_CONTEXT,
       actorUserId: USER,
       profileCache: new Map(),
+      simContext: emptySimContext("league_1"),
     });
     const second = [...calls].sort();
 
@@ -185,6 +189,7 @@ describe("simulateAndPersistFixture", () => {
       orgContext: ORG_CONTEXT,
       actorUserId: USER,
       profileCache: new Map(),
+      simContext: emptySimContext("league_1"),
     });
 
     expect(res.usedScoreFallback).toBe(true);

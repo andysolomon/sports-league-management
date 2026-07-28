@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DYNASTY_CONFIG_DEFAULTS } from "@/lib/dynasty-config";
 
 const {
   mockSchedulesStandingsV1,
@@ -16,6 +17,10 @@ const {
   mockGetPlayoffBracket,
   mockGetSeason,
   mockGeneratePlayoffBracket,
+  // The sim-activation slice reads the league's settings once per run.
+  mockDynastySimV2,
+  mockGetDynastyConfig,
+  mockListRivalries,
 } = vi.hoisted(() => ({
   mockSchedulesStandingsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -32,13 +37,19 @@ const {
   mockGetPlayoffBracket: vi.fn(),
   mockGetSeason: vi.fn(),
   mockGeneratePlayoffBracket: vi.fn(),
+  mockDynastySimV2: vi.fn(),
+  mockGetDynastyConfig: vi.fn(),
+  mockListRivalries: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({
   schedulesStandingsV1: mockSchedulesStandingsV1,
+  dynastySimV2: mockDynastySimV2,
 }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
 vi.mock("@/lib/data-api", () => ({
+  getDynastyConfig: mockGetDynastyConfig,
+  listRivalries: mockListRivalries,
   getFixture: mockGetFixture,
   recordGameResult: mockRecordGameResult,
   upsertGamePlayLog: mockUpsertGamePlayLog,
@@ -111,6 +122,14 @@ function fixture(
 
 function authorize() {
   mockSchedulesStandingsV1.mockResolvedValue(true);
+  /*
+   * Sim activation reads the league's settings once per run. Defaults here so
+   * these assertions keep testing what they were written to test — WHICH
+   * fixtures get simulated, not what those games model.
+   */
+  mockDynastySimV2.mockResolvedValue(true);
+  mockGetDynastyConfig.mockResolvedValue(DYNASTY_CONFIG_DEFAULTS);
+  mockListRivalries.mockResolvedValue([]);
   mockAuth.mockResolvedValue({ userId: USER });
   mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [LEAGUE] });
   mockGetLeague.mockResolvedValue({ id: LEAGUE, name: "League" });
@@ -156,6 +175,19 @@ describe("simulateGameAction (PBP Slice B)", () => {
       decisive: false,
       profileCache: expect.any(Map),
       simulationFlavor: "balanced",
+      // Resolved once per run and threaded through. With the flag on and
+      // default settings, every Epic A mechanic is live.
+      simContext: {
+        leagueId: LEAGUE,
+        features: {
+          scoringV2: true,
+          penalties: true,
+          situational: true,
+          balance: true,
+          weather: true,
+        },
+        rivalries: expect.any(Map),
+      },
     });
   });
 });
@@ -361,6 +393,7 @@ describe("simulatePlayoffsAction", () => {
       profileCache: expect.any(Map),
       bulkStats: true,
       simulationFlavor: "balanced",
+      simContext: expect.objectContaining({ leagueId: LEAGUE }),
     });
   });
 

@@ -1,4 +1,4 @@
-import type { PbpGameLog, PbpPlay } from "./types";
+import type { PbpFeatureGates, PbpGameLog, PbpPlay } from "./types";
 
 /*
  * Stored play-log compatibility (Dynasty Mode A1).
@@ -76,27 +76,52 @@ export function normalizeGameLog(
     // optional, so a v1 play already satisfies the current `PbpPlay` type —
     // there is nothing to fill in, and filling anything in would be a lie.
     drives: drives as PbpGameLog["drives"],
+    // Gates pass through as recorded. An unreadable value is treated as
+    // "nothing was modelled", which is the conservative reading.
+    features: isRecord(raw.features)
+      ? (raw.features as PbpFeatureGates)
+      : undefined,
     version: raw.version === 2 ? 2 : undefined,
     engineVersion: version,
     upconverted: version !== "2.0.0",
   };
 }
 
+/** Which gate has to have been on for a mechanic to appear in a log. */
+const MECHANIC_GATE = {
+  returns: "scoringV2",
+  safeties: "scoringV2",
+  twoPointConversions: "scoringV2",
+  penalties: "penalties",
+  fourthDownAi: "situational",
+  timeouts: "situational",
+  weather: "weather",
+} as const satisfies Record<string, keyof PbpFeatureGates>;
+
+export type LogMechanic = keyof typeof MECHANIC_GATE;
+
 /**
- * Did this engine model the given mechanic?
+ * Did the engine model this mechanic in THIS game?
  *
  * The honest question a UI should ask before rendering a stat. Penalties on a
- * v1 log are unknown, not zero, and a box score should show "—" rather than
- * claiming a clean game.
+ * log that did not model them are unknown, not zero, and a box score should
+ * show "—" rather than claiming a clean game.
+ *
+ * The answer comes from the gates recorded on the log, not from the engine
+ * version (#646). A version number cannot answer this: the same engine build
+ * writes games with penalties on and games with penalties off depending on what
+ * the league had configured that week, and a league that adopts a mechanic
+ * mid-season ends up with both in one season.
+ *
+ * A log with no recorded gates modelled nothing — true for every v1 log, and
+ * true for a v2 log simulated with everything switched off. Those two are the
+ * same claim, so they get the same answer.
  */
 export function logModels(
-  log: Pick<NormalizedGameLog, "engineVersion">,
-  mechanic: "returns" | "safeties" | "twoPointConversions" | "penalties",
+  log: Pick<NormalizedGameLog, "engineVersion" | "features">,
+  mechanic: LogMechanic,
 ): boolean {
-  if (log.engineVersion === "1.0.0") return false;
-  // Penalties arrive in A2; everything else in this list ships with A1.
-  if (mechanic === "penalties") return false;
-  return true;
+  return log.features?.[MECHANIC_GATE[mechanic]] === true;
 }
 
 /** Flatten a normalized log's plays, in order. */
