@@ -22,6 +22,7 @@ const {
   mockGetDynastyConfig,
   mockListRivalries,
   mockListActiveInjuries,
+  mockListTeamPrograms,
 } = vi.hoisted(() => ({
   mockSchedulesStandingsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -42,6 +43,7 @@ const {
   mockGetDynastyConfig: vi.fn(),
   mockListRivalries: vi.fn(),
   mockListActiveInjuries: vi.fn(),
+  mockListTeamPrograms: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({
@@ -53,6 +55,7 @@ vi.mock("@/lib/data-api", () => ({
   getDynastyConfig: mockGetDynastyConfig,
   listRivalries: mockListRivalries,
   listActiveInjuries: mockListActiveInjuries,
+  listTeamPrograms: mockListTeamPrograms,
   getFixture: mockGetFixture,
   recordGameResult: mockRecordGameResult,
   upsertGamePlayLog: mockUpsertGamePlayLog,
@@ -134,6 +137,7 @@ function authorize() {
   mockGetDynastyConfig.mockResolvedValue(DYNASTY_CONFIG_DEFAULTS);
   mockListRivalries.mockResolvedValue([]);
   mockListActiveInjuries.mockResolvedValue([]);
+  mockListTeamPrograms.mockResolvedValue([]);
   mockAuth.mockResolvedValue({ userId: USER });
   mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [LEAGUE] });
   mockGetLeague.mockResolvedValue({ id: LEAGUE, name: "League" });
@@ -190,10 +194,12 @@ describe("simulateGameAction (PBP Slice B)", () => {
           balance: true,
           weather: true,
           injuries: true,
+          schemes: true,
         },
         rivalries: expect.any(Map),
         injurySeverityScale: 1,
         unavailablePlayerIds: expect.any(Set),
+        schemes: expect.any(Map),
       },
     });
   });

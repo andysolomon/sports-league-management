@@ -28,6 +28,11 @@ import {
 } from "./situational";
 import { homeFieldEdge as crowdHomeFieldEdge } from "./crowd";
 import {
+  NEUTRAL_SCHEME_MODIFIERS,
+  schemeModifiers,
+  type SchemeModifiers,
+} from "./schemes";
+import {
   NEUTRAL_MODIFIERS,
   weatherModifiers,
   type WeatherModifiers,
@@ -129,6 +134,21 @@ interface GameState {
    * gate-off path is bit-identical to v1 without a single `if`.
    */
   weatherMods: WeatherModifiers;
+  /**
+   * Scheme multipliers (A6), one per possession side.
+   *
+   * TWO of them, unlike weather: a matchup is asymmetric. When the home team
+   * has the ball the modifiers come from the home offense against the away
+   * defense, and vice versa — so a team can run an Air Raid and a 46 without
+   * the two interfering.
+   *
+   * Resolved once at kickoff and, like `weatherMods`, held as multipliers so
+   * the play functions apply them unconditionally. Every neutral value is
+   * exactly 1 (or 0 for the additive term), so the gate-off path is bit-
+   * identical to pre-A6 without a branch.
+   */
+  homeSchemeMods: SchemeModifiers;
+  awaySchemeMods: SchemeModifiers;
   decisive: boolean;
   quarter: number;
   clockSeconds: number;
@@ -188,6 +208,13 @@ function offenseTeam(state: GameState): TeamSimProfile {
 
 function defenseTeam(state: GameState): TeamSimProfile {
   return state.possession === "home" ? state.away : state.home;
+}
+
+/** Scheme modifiers for whoever currently has the ball (A6). */
+function schemeMods(state: GameState): SchemeModifiers {
+  return state.possession === "home"
+    ? state.homeSchemeMods
+    : state.awaySchemeMods;
 }
 
 function offenseTeamId(state: GameState): string {
@@ -861,14 +888,20 @@ function doRush(state: GameState): void {
   const def = defenseTeam(state);
   const rusher = selectPlayer(off, "RB", state, true);
   const edge = matchupEdge(state);
+  const scheme = schemeMods(state);
   const fumbleProb =
-    clamp(0.01 - edge * 0.003, 0.003, 0.015) * state.weatherMods.fumbleRate;
+    clamp(0.01 - edge * 0.003, 0.003, 0.015) *
+    state.weatherMods.fumbleRate *
+    scheme.fumbleRate;
   const tdProb = clamp(0.055 + edge * 0.08, 0.02, 0.15);
   const explosive =
-    state.rand() < (0.08 + edge * 0.05) * state.weatherMods.explosiveRate;
+    state.rand() <
+    (0.08 + edge * 0.05) *
+      state.weatherMods.explosiveRate *
+      scheme.explosiveRate;
   let yards = explosive
-    ? Math.round(12 + state.rand() * 18)
-    : Math.round(2 + state.rand() * 5 + edge * 4);
+    ? Math.round((12 + state.rand() * 18) * scheme.rushYards)
+    : Math.round((2 + state.rand() * 5 + edge * 4) * scheme.rushYards);
   yards = Math.max(-3, yards);
 
   const participants: PbpParticipant[] = [
@@ -926,8 +959,10 @@ function doPass(state: GameState): void {
   const passer = selectPlayer(off, "QB", state);
   const receiver = selectPlayer(off, "WR", state, true);
   const edge = matchupEdge(state);
-  const sackProb = clamp(0.07 - edge * 0.03, 0.03, 0.12);
-  const intProb = clamp(0.025 - edge * 0.01, 0.008, 0.04);
+  const scheme = schemeMods(state);
+  const sackProb = clamp(0.07 - edge * 0.03, 0.03, 0.12) * scheme.sackRate;
+  const intProb =
+    clamp(0.025 - edge * 0.01, 0.008, 0.04) * scheme.interceptionRate;
 
   if (state.rand() < sackProb) {
     const sacker = selectDefender(def, state, "sack");
@@ -1037,7 +1072,9 @@ function doPass(state: GameState): void {
    * push completion percentage below it.
    */
   const completeProb =
-    clamp(0.6 + edge * 0.14, 0.45, 0.8) * state.weatherMods.passAccuracy;
+    clamp(0.6 + edge * 0.14, 0.45, 0.8) *
+    state.weatherMods.passAccuracy *
+    scheme.passAccuracy;
   const complete = state.rand() < completeProb;
   if (!complete) {
     const pd = state.rand() < 0.12 ? selectDefender(def, state, "coverage") : null;
@@ -1070,7 +1107,10 @@ function doPass(state: GameState): void {
   }
 
   const explosive =
-    state.rand() < (0.1 + edge * 0.06) * state.weatherMods.explosiveRate;
+    state.rand() <
+    (0.1 + edge * 0.06) *
+      state.weatherMods.explosiveRate *
+      scheme.explosiveRate;
   let yards = explosive
     ? Math.round(15 + state.rand() * 25)
     : Math.round(4 + state.rand() * 9 + edge * 5);
@@ -1504,6 +1544,16 @@ function runNormalDownPlay(state: GameState, tempo: ClockStrategy): void {
     0.38,
     0.68,
   );
+  /*
+   * Scheme moves the split (A6), and it needs a wider band than the baseline
+   * clamp allows — a Flexbone that still throws it 38% of the time is not a
+   * Flexbone. Guarded on a non-zero delta rather than folded into the
+   * expression above so the neutral path keeps the original clamp exactly.
+   */
+  const schemeDelta = schemeMods(state).passRateDelta;
+  if (schemeDelta !== 0) {
+    passRate = clamp(passRate + schemeDelta, 0.12, 0.9);
+  }
   if (state.features.situational) {
     /*
      * Tempo changes what you call, not just how fast you snap it. A hurry-up
@@ -1601,7 +1651,16 @@ function runScrimmagePlay(state: GameState): void {
    * duration and therefore charged it even to incompletions, which is what
    * capped a game at ~96 scrimmage plays.
    */
-  tickClock(state, runoffSeconds(tempo, state.clockStopped));
+  /*
+   * Scheme tempo scales the HUDDLE, not the play (A6) — which is what tempo
+   * physically is. It therefore only has anything to scale when `situational`
+   * is on, because the v1 clock model folded the huddle into each play's
+   * duration and had no separate runoff to speed up.
+   */
+  tickClock(
+    state,
+    Math.round(runoffSeconds(tempo, state.clockStopped) * schemeMods(state).tempo),
+  );
   state.clockStopped = false;
   if (state.clockSeconds <= 0) return;
 
@@ -1653,6 +1712,7 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
       balance: input.features?.balance === true,
       weather: input.features?.weather === true,
       injuries: input.features?.injuries === true,
+      schemes: input.features?.schemes === true,
     },
     snaps: new Map(),
     unavailable: new Set(),
@@ -1689,6 +1749,21 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
       input.features?.weather === true && input.weather
         ? weatherModifiers(input.weather)
         : NEUTRAL_MODIFIERS,
+    /*
+     * Resolved once per game, not per play: a scheme is what a program runs,
+     * and re-deriving it 120 times would be the same answer at 120x the cost.
+     * Note the argument order — the modifiers describe the OFFENSE, so the
+     * home-possession set is built from the home team's offense against the
+     * away team's defense.
+     */
+    homeSchemeMods:
+      input.features?.schemes === true
+        ? schemeModifiers(input.home.scheme, input.away.scheme)
+        : NEUTRAL_SCHEME_MODIFIERS,
+    awaySchemeMods:
+      input.features?.schemes === true
+        ? schemeModifiers(input.away.scheme, input.home.scheme)
+        : NEUTRAL_SCHEME_MODIFIERS,
     decisive: input.decisive ?? false,
     quarter: 1,
     clockSeconds: QUARTER_SECONDS,

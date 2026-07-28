@@ -10,12 +10,14 @@ import {
   getSeasons,
   listTeamInjuries,
   listFixturesBySeason,
+  getTeamProgram,
 } from "@/lib/data-api";
 import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext } from "@/lib/org-context";
 import { canManageTeam, canAdministerTeam } from "@/lib/authorization";
 import {
   depthChartV1,
+  dynastySimV2,
   playerAttributesV1,
   rosterSnapshotsV1,
   syntheticRostersV1,
@@ -25,6 +27,7 @@ import TeamManagement from "./team-management";
 import { ClaimTeamButton } from "./claim-team-button";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import { InjuryReportCard } from "@/components/dynasty/InjuryReportCard";
+import { TeamSchemeCard } from "@/components/dynasty/TeamSchemeCard";
 import {
   buildTeamSiblingLinks,
   teamHomeHref,
@@ -96,6 +99,17 @@ export default async function TeamDetailPage({
       )
     : [];
 
+  /*
+   * What this team runs (A6). Flag-gated, season-scoped, and fails soft for the
+   * same reason as the injury report — a settings read must not be able to take
+   * down Team Home.
+   */
+  const schemesEnabled = await dynastySimV2();
+  const program =
+    schemesEnabled && activeSeason
+      ? await getTeamProgram(activeSeason.id, id).catch(() => null)
+      : null;
+
   // WSM-000090: attribute snapshots feed the SPRT stat columns. Phase 2-gated;
   // the season is resolved server-side — including workspace forks, which read
   // their source league's current season (WSM-000122). Failure here must never
@@ -126,6 +140,15 @@ export default async function TeamDetailPage({
         homeHref={teamHomeHref(id)}
         siblings={siblingLinks}
       />
+
+      {schemesEnabled && activeSeason && (
+        <TeamSchemeCard
+          seasonId={activeSeason.id}
+          teamId={id}
+          program={program}
+          canManage={canManage}
+        />
+      )}
 
       {injuries.length > 0 && (
         <InjuryReportCard

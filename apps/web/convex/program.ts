@@ -1,4 +1,6 @@
-import { query } from "./_generated/server";
+import { v } from "convex/values";
+import type { Infer } from "convex/values";
+import { internalMutation, query } from "./_generated/server";
 import { DYNASTY_MODULES, moduleStatusValidator } from "./lib/moduleStatus";
 
 /*
@@ -30,4 +32,174 @@ export const moduleStatus = query({
     epic: "C",
     ready: true,
   }),
+});
+
+/*
+ * ── Team programs (A6, extended by C3) ──────────────────────────────────────
+ */
+
+const teamProgramValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  seasonId: v.string(),
+  teamId: v.string(),
+  offenseScheme: v.union(v.string(), v.null()),
+  defenseScheme: v.union(v.string(), v.null()),
+  tempo: v.union(v.number(), v.null()),
+  blitzRate: v.union(v.number(), v.null()),
+  aggression: v.union(v.number(), v.null()),
+  updatedAt: v.string(),
+});
+
+/**
+ * `Infer` pins the DTO to its validator (WSM-000166).
+ *
+ * Convex validates RETURNS strictly, so a mapper that drifts from the validator
+ * is a data-dependent 500 in production rather than a compile error — unless
+ * the mapper's return type is derived from the validator, which is what this
+ * does.
+ */
+type TeamProgramDto = Infer<typeof teamProgramValidator>;
+
+function toTeamProgramDto(row: {
+  _id: string;
+  leagueId: string;
+  seasonId: string;
+  teamId: string;
+  offenseScheme?: string;
+  defenseScheme?: string;
+  tempo?: number;
+  blitzRate?: number;
+  aggression?: number;
+  updatedAt: string;
+}): TeamProgramDto {
+  return {
+    id: row._id,
+    leagueId: row.leagueId,
+    seasonId: row.seasonId,
+    teamId: row.teamId,
+    /*
+     * `null` for an unset field, never a default.
+     *
+     * "This team has not chosen an offense" and "this team runs the balanced
+     * offense" are different claims, and only the second one is a decision
+     * somebody made. The engine treats both as neutral; the UI must not show
+     * an unset team as having picked something.
+     */
+    offenseScheme: row.offenseScheme ?? null,
+    defenseScheme: row.defenseScheme ?? null,
+    tempo: row.tempo ?? null,
+    blitzRate: row.blitzRate ?? null,
+    aggression: row.aggression ?? null,
+    updatedAt: row.updatedAt,
+  };
+}
+
+/**
+ * Every team's program for a season, in one indexed read.
+ *
+ * Read once per simulation RUN, not per fixture — a season sim plays every
+ * game in a loop and a per-fixture read here would be the N+1 shape Epic F
+ * exists to remove.
+ */
+export const listTeamPrograms = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(teamProgramValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("teamSeasonPrograms")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+    return rows.map(toTeamProgramDto);
+  },
+});
+
+export const getTeamProgram = query({
+  args: { seasonId: v.id("seasons"), teamId: v.id("teams") },
+  returns: v.union(teamProgramValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("teamSeasonPrograms")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .unique();
+    return row ? toTeamProgramDto(row) : null;
+  },
+});
+
+/** 0–100 dials are clamped rather than rejected — settings never break a sim. */
+function clampDial(value: number | undefined): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+/**
+ * Set what a team runs.
+ *
+ * `internalMutation` (WSM-000096) — authorization lives in the server action,
+ * which resolves the actor's role FOR THIS TEAM rather than asking whether they
+ * are an org admin. That is deliberate: in solo mode the commissioner passes
+ * every team's id, and in the multi-coach wave the identical mutation serves a
+ * coach scoped to one team, with no rewrite.
+ *
+ * Idempotent upsert keyed on (season, team): a team has exactly one program per
+ * season, and setting it twice must correct the row rather than create a second
+ * one the simulator would have to choose between.
+ */
+export const setTeamProgram = internalMutation({
+  args: {
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    actorUserId: v.string(),
+    offenseScheme: v.optional(v.string()),
+    defenseScheme: v.optional(v.string()),
+    tempo: v.optional(v.number()),
+    blitzRate: v.optional(v.number()),
+    aggression: v.optional(v.number()),
+  },
+  returns: teamProgramValidator,
+  handler: async (ctx, args) => {
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("team_not_found");
+    if (team.leagueId !== season.leagueId) throw new Error("team_not_in_league");
+
+    const now = new Date().toISOString();
+    const patch = {
+      offenseScheme: args.offenseScheme,
+      defenseScheme: args.defenseScheme,
+      tempo: clampDial(args.tempo),
+      blitzRate: clampDial(args.blitzRate),
+      aggression: clampDial(args.aggression),
+      updatedAt: now,
+      updatedBy: args.actorUserId,
+    };
+
+    const existing = await ctx.db
+      .query("teamSeasonPrograms")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, patch);
+      const updated = await ctx.db.get(existing._id);
+      if (!updated) throw new Error("program_not_found");
+      return toTeamProgramDto(updated);
+    }
+
+    const id = await ctx.db.insert("teamSeasonPrograms", {
+      leagueId: season.leagueId,
+      seasonId: args.seasonId,
+      teamId: args.teamId,
+      createdAt: now,
+      ...patch,
+    });
+    const created = await ctx.db.get(id);
+    if (!created) throw new Error("program_not_found");
+    return toTeamProgramDto(created);
+  },
 });

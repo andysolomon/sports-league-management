@@ -2918,3 +2918,59 @@ export async function recordGameInjuries(input: {
     input,
   );
 }
+
+/*
+ * Team programs (A6, extended by C3). Same compile-checked-ref discipline as
+ * the dynasty settings above.
+ */
+
+export interface TeamProgramDto {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  teamId: string;
+  offenseScheme: string | null;
+  defenseScheme: string | null;
+  tempo: number | null;
+  blitzRate: number | null;
+  aggression: number | null;
+  updatedAt: string;
+}
+
+export async function listTeamPrograms(
+  seasonId: string,
+): Promise<TeamProgramDto[]> {
+  const client = getConvexClient();
+  return client.query(programRef.query<TeamProgramDto[]>("listTeamPrograms"), {
+    seasonId,
+  });
+}
+
+/** `null` when the team has chosen nothing — see the mapper for why not a default. */
+export async function getTeamProgram(
+  seasonId: string,
+  teamId: string,
+): Promise<TeamProgramDto | null> {
+  const client = getConvexClient();
+  return client.query(
+    programRef.query<TeamProgramDto | null>("getTeamProgram"),
+    { seasonId, teamId },
+  );
+}
+
+export async function setTeamProgram(input: {
+  seasonId: string;
+  teamId: string;
+  actorUserId: string;
+  offenseScheme?: string;
+  defenseScheme?: string;
+  tempo?: number;
+  blitzRate?: number;
+  aggression?: number;
+}): Promise<TeamProgramDto> {
+  const client = getConvexClient();
+  return client.mutation(
+    programRef.mutation<TeamProgramDto>("setTeamProgram"),
+    input,
+  );
+}

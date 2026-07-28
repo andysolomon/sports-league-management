@@ -21,7 +21,11 @@ import {
   DEFAULT_SIMULATION_FLAVOR,
   type SimulationFlavor,
 } from "@/lib/simulation-flavor";
-import { fixtureSimConditions, type SeasonSimContext } from "@/lib/sim-context";
+import {
+  applyTeamProgram,
+  fixtureSimConditions,
+  type SeasonSimContext,
+} from "@/lib/sim-context";
 
 export interface SimulateFixtureInput {
   fixture: FixtureDto;
@@ -91,8 +95,14 @@ export async function simulateAndPersistFixture(
     unavailable.size === 0
       ? team
       : { ...team, players: team.players.filter((p) => !unavailable.has(p.playerId)) };
-  const homeFit = fit(home);
-  const awayFit = fit(away);
+  /*
+   * Schemes ride on the profile for the same reason injuries do not ride in
+   * the cache: what a team runs belongs to the season, but the CACHE is keyed
+   * on (team, season) and shared across runs, and a commissioner can change a
+   * scheme between two simulations of the same season.
+   */
+  const homeFit = applyTeamProgram(fit(home), input.simContext);
+  const awayFit = applyTeamProgram(fit(away), input.simContext);
 
   const rosterEmpty =
     homeFit.players.length === 0 || awayFit.players.length === 0;

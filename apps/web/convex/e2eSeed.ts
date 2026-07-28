@@ -183,6 +183,19 @@ async function cascadeDeleteLeague(
     await ctx.db.delete(row._id);
     deleted += 1;
   }
+  // Team programs (A6). A stored scheme changes how every later run simulates
+  // that team, so leaving one behind would make a distribution assertion depend
+  // on which spec ran first.
+  for (const team of teams as Array<{ _id: Id<"teams"> }>) {
+    const programRows = (await ctx.db
+      .query("teamSeasonPrograms")
+      .withIndex("by_teamId", (q: any) => q.eq("teamId", team._id))
+      .collect()) as Array<{ _id: Id<"teamSeasonPrograms"> }>;
+    for (const row of programRows) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+  }
   for (const team of teams as Array<{ _id: Id<"teams"> }>) {
     const teamDepth = (await ctx.db
       .query("depthChartEntries")

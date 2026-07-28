@@ -204,6 +204,8 @@ export const dynastyTables = {
     /** A3 — corrected home-field advantage (#642). */
     balanceTuningEnabled: v.optional(v.boolean()),
     injuriesEnabled: v.optional(v.boolean()),
+    /** A6 — team schemes and coach tendencies shape play calling. */
+    schemesEnabled: v.optional(v.boolean()),
     weatherEnabled: v.optional(v.boolean()),
     /** 0 = none, 1 = normal, 2 = brutal. Scales injury roll severity. */
     injurySeverityScale: v.optional(v.number()),
