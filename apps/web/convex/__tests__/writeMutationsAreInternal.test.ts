@@ -227,7 +227,7 @@ void api.program.moduleStatus;
 void api.history.moduleStatus;
 
 type AllowedPublicDynastyReads = "moduleStatus" | "getDynastyConfig";
-type AllowedPublicSimReads = "moduleStatus";
+type AllowedPublicSimReads = "moduleStatus" | "listRivalries";
 type AllowedPublicProgramReads = "moduleStatus";
 type AllowedPublicHistoryReads = "moduleStatus";
 

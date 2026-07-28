@@ -184,4 +184,39 @@ export const dynastyTables = {
     updatedAt: v.string(),
     updatedBy: v.string(),
   }).index("by_leagueId", ["leagueId"]),
+
+  /*
+   * Declared rivalries (A5).
+   *
+   * A rivalry is SYMMETRIC — "A vs B" and "B vs A" are one rivalry — so the row
+   * carries a sorted `pairKey` alongside the two ids. Without it the same
+   * rivalry could be stored twice with different intensities and the two rows
+   * would disagree about how big the game is. `pairKey` is built by
+   * `rivalryPairKey` in `src/lib/pbp/crowd.ts`; it is the deduplication key,
+   * and the `by_leagueId_pairKey` index is what makes the check one read.
+   *
+   * `teamAId` / `teamBId` are also stored sorted, so a caller never has to
+   * guess which side it is looking at.
+   *
+   * Absence is the norm: almost no pairing is a rivalry, and a league with no
+   * rows here simulates exactly as it did before A5.
+   */
+  rivalries: defineTable({
+    leagueId: v.id("leagues"),
+    teamAId: v.id("teams"),
+    teamBId: v.id("teams"),
+    /** Sorted `${teamAId}|${teamBId}` — the unordered pair's primary key. */
+    pairKey: v.string(),
+    /** Display name, e.g. "The Backyard Brawl". Optional; falls back to the matchup. */
+    name: v.optional(v.string()),
+    /** 0-100. Damps home-field advantage — see `crowd.ts` for why. */
+    intensity: v.number(),
+    createdAt: v.string(),
+    createdBy: v.string(),
+  })
+    .index("by_leagueId", ["leagueId"])
+    .index("by_leagueId_pairKey", ["leagueId", "pairKey"])
+    // A fixture asks "is this matchup a rivalry" from either team's side.
+    .index("by_teamAId", ["teamAId"])
+    .index("by_teamBId", ["teamBId"]),
 };

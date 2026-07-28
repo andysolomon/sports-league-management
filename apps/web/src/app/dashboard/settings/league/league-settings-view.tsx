@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   getDynastyConfig,
   getLeagueVisibility,
+  listRivalries,
   getLeagueClaimable,
   getSeasons,
   listFixturesBySeason,
@@ -14,6 +15,7 @@ import type { OrgContext } from "@/lib/org-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import { DynastySettingsCard } from "@/components/dynasty/DynastySettingsCard";
+import { RivalriesCard } from "@/components/dynasty/RivalriesCard";
 import { leagueHomeHref } from "@/components/workspace/resource-navigation";
 import InviteForm from "@/app/dashboard/leagues/[id]/invite-form";
 import InvitationList from "@/app/dashboard/leagues/[id]/invitation-list";
@@ -72,6 +74,8 @@ export async function LeagueSettingsView({
   // Always resolves — a league with no stored row uses defaults (F5).
   const dynastyConfig = await getDynastyConfig(id).catch(() => null);
   const claimable = await getLeagueClaimable(id);
+  // Absence is the norm — most leagues declare none (A5).
+  const rivalries = await listRivalries(id).catch(() => []);
   const canGenerateRosters = await syntheticRostersV1();
 
   const seasons = await getSeasons([id]).catch(() => []);
@@ -118,6 +122,14 @@ export async function LeagueSettingsView({
                 />
               </div>
             ) : null}
+
+            <div className="py-4">
+              <RivalriesCard
+                leagueId={id}
+                teams={teams.map((team) => ({ id: team.id, name: team.name }))}
+                initialRivalries={rivalries}
+              />
+            </div>
 
             <div className="space-y-4 py-4">
               <div className="flex flex-wrap items-center justify-between gap-3">

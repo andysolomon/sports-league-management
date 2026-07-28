@@ -2818,3 +2818,42 @@ export async function setDynastyConfig(input: {
     input,
   );
 }
+
+/*
+ * Rivalries (A5). Same compile-checked-ref discipline as the settings above.
+ */
+
+export interface RivalryDto {
+  id: string;
+  leagueId: string;
+  teamAId: string;
+  teamBId: string;
+  pairKey: string;
+  name: string | null;
+  intensity: number;
+  createdAt: string;
+}
+
+export async function listRivalries(leagueId: string): Promise<RivalryDto[]> {
+  const client = getConvexClient();
+  return client.query(simRef.query<RivalryDto[]>("listRivalries"), {
+    leagueId,
+  });
+}
+
+export async function upsertRivalry(input: {
+  leagueId: string;
+  actorUserId: string;
+  teamAId: string;
+  teamBId: string;
+  name?: string;
+  intensity?: number;
+}): Promise<RivalryDto> {
+  const client = getConvexClient();
+  return client.mutation(simRef.mutation<RivalryDto>("upsertRivalry"), input);
+}
+
+export async function deleteRivalry(rivalryId: string): Promise<null> {
+  const client = getConvexClient();
+  return client.mutation(simRef.mutation<null>("deleteRivalry"), { rivalryId });
+}
