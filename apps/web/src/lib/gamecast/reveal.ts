@@ -34,9 +34,31 @@ export function scoreAtPosition(
   const end = Math.min(playIndex, plays.length);
   for (let i = 0; i < end; i++) {
     const play = plays[i];
-    if (!play.isScoring) continue;
-    if (play.offenseTeamId === log.homeTeamId) home += play.pointsScored;
-    else if (play.offenseTeamId === log.awayTeamId) away += play.pointsScored;
+
+    /*
+     * A play wiped out by a penalty is KEPT in the log — you want to see the
+     * touchdown holding took away — but it did not happen, so it scores
+     * nothing. `deriveStatLines` already skips these; the scoreboard has to
+     * agree or the Gamecast shows a final score the league never played.
+     */
+    if (play.penalty?.negatesPlay === true) continue;
+
+    if (play.isScoring) {
+      if (play.offenseTeamId === log.homeTeamId) home += play.pointsScored;
+      else if (play.offenseTeamId === log.awayTeamId) away += play.pointsScored;
+    }
+
+    /*
+     * Safeties and pick-sixes score for the DEFENSE. `pointsScored` is an
+     * offense-relative field inherited from v1, so it stays 0 on those plays
+     * and `defensivePoints` carries the value — see `doSafety` in the engine,
+     * which documents exactly this contract for readers.
+     */
+    if (play.defensivePoints) {
+      if (play.defenseTeamId === log.homeTeamId) home += play.defensivePoints;
+      else if (play.defenseTeamId === log.awayTeamId)
+        away += play.defensivePoints;
+    }
   }
   return { home, away };
 }
