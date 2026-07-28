@@ -5,6 +5,18 @@ import {
   weightsForFlavor,
 } from "@/lib/simulation-flavor";
 import { acceptOrDecline, meanAwareness, rollPenalty } from "./penalties";
+import {
+  NEUTRAL_AGGRESSION,
+  clockStrategy,
+  fourthDownDecision,
+  runoffSeconds,
+  secondsLeftInGame,
+  secondsLeftInHalf,
+  shouldOnside,
+  shouldSpike,
+  shouldUseTimeout,
+  type ClockStrategy,
+} from "./situational";
 import type {
   PbpFeatureGates,
   PbpDrive,
@@ -23,7 +35,25 @@ import type {
 const QUARTER_SECONDS = 720;
 const OT_SECONDS = 300;
 const HOME_FIELD_EDGE = 2.5;
+/*
+ * Recalibrated home-field weight (A3, gated by `features.balance`; issue #642).
+ *
+ * The 2.5 above is not "2.5 points" — it is a strength bonus that flows into
+ * `matchupEdge`, which then biases explosive-play rate, yardage, touchdown
+ * probability, completion rate, sack rate, interception rate, field-goal
+ * accuracy, kick returns and punt distance. Eight channels, every play. The
+ * measured result was a 6.2-point average margin and a 67.3% home win rate for
+ * two identical rosters, which is not a nudge, it is a decision.
+ *
+ * The constant is scaled down until the OUTPUT matches what the input claims.
+ * `scripts/dist-check.ts` is the instrument; re-run it if you touch this.
+ */
+const HOME_FIELD_EDGE_V2 = 0.75;
 const BASELINE_STRENGTH = 50;
+
+/** HS overtime: one timeout per period, not the three a half carries. */
+const TIMEOUTS_PER_HALF = 3;
+const TIMEOUTS_PER_OVERTIME = 1;
 
 const POSITION_TO_GROUP: Record<string, SimPositionGroup> = {
   QB: "QB",
@@ -64,6 +94,8 @@ interface GameState {
   away: TeamSimProfile;
   strengthWeight: number;
   edgeScale: number;
+  /** `HOME_FIELD_EDGE`, or the recalibrated value under `features.balance`. */
+  homeFieldEdge: number;
   decisive: boolean;
   quarter: number;
   clockSeconds: number;
@@ -86,6 +118,31 @@ interface GameState {
   gameOver: boolean;
   openingKickDone: boolean;
   secondHalfKickPending: boolean;
+  /*
+   * ── A3 clock and timeout state ──────────────────────────────────────────
+   *
+   * Only read inside `features.situational` branches. They are always present
+   * on the state (rather than optional) so the type stays simple; when the gate
+   * is off nothing reads them and nothing writes them except the resets.
+   */
+  homeTimeouts: number;
+  awayTimeouts: number;
+  /**
+   * Did the last play leave the clock stopped?
+   *
+   * This is what makes a timeout physical rather than a resource dump: you can
+   * only spend one while the clock is actually running, so a team cannot burn
+   * all three between two snaps.
+   */
+  clockStopped: boolean;
+  /**
+   * Tempo to stamp on the next recorded play, or null.
+   *
+   * Set just before a play runs rather than patched on afterwards, because a
+   * scoring play calls `endDrive` and moves itself out of `currentDrivePlays` —
+   * so there is no reliable index to write back to once the play has happened.
+   */
+  pendingTempo: "hurry_up" | "burn" | null;
 }
 
 function positionGroup(position: string): SimPositionGroup | null {
@@ -113,8 +170,9 @@ function effectiveStrength(
   isHome: boolean,
   oppStrength: number,
   strengthWeight: number,
+  homeFieldEdge: number,
 ): number {
-  const homeEdge = isHome ? HOME_FIELD_EDGE / strengthWeight : 0;
+  const homeEdge = isHome ? homeFieldEdge / strengthWeight : 0;
   return team.strength + (team.strength - oppStrength) * 0.15 + homeEdge;
 }
 
@@ -127,14 +185,90 @@ function matchupEdge(state: GameState): number {
     offIsHome,
     def.strength,
     state.strengthWeight,
+    state.homeFieldEdge,
   );
   const defEff = effectiveStrength(
     def,
     !offIsHome,
     off.strength,
     state.strengthWeight,
+    state.homeFieldEdge,
   );
   return ((offEff - defEff) / 99) * state.edgeScale;
+}
+
+/*
+ * ── A3 situational helpers ──────────────────────────────────────────────────
+ */
+
+/** Score from the possessing team's point of view. */
+function offenseScoreDiff(state: GameState): number {
+  return state.possession === "home"
+    ? state.homeScore - state.awayScore
+    : state.awayScore - state.homeScore;
+}
+
+function coachAggression(team: TeamSimProfile): number {
+  const value = team.coach?.aggression;
+  return typeof value === "number" ? value : NEUTRAL_AGGRESSION;
+}
+
+function timeoutsFor(state: GameState, side: "home" | "away"): number {
+  return side === "home" ? state.homeTimeouts : state.awayTimeouts;
+}
+
+function spendTimeout(state: GameState, side: "home" | "away"): void {
+  if (side === "home") state.homeTimeouts = Math.max(0, state.homeTimeouts - 1);
+  else state.awayTimeouts = Math.max(0, state.awayTimeouts - 1);
+}
+
+function currentClockStrategy(state: GameState): ClockStrategy {
+  return clockStrategy({
+    scoreDiff: offenseScoreDiff(state),
+    quarter: state.quarter,
+    clockSeconds: state.clockSeconds,
+    isOvertime: state.inOvertime,
+  });
+}
+
+/**
+ * Charge the clock for a single play.
+ *
+ * With the gate off this is v1 verbatim — one draw, same expression, same
+ * range — so parity is untouched. With it on, the SAME single draw becomes the
+ * snap-to-whistle duration only, and the huddle and play clock that follow are
+ * charged separately (and skipped entirely when the clock stops). Keeping the
+ * draw count identical either way means enabling `situational` changes how long
+ * plays take without changing which plays happen for a given sequence position.
+ */
+function tickPlayClock(
+  state: GameState,
+  base: number,
+  spread: number,
+  stopsClock: boolean,
+): void {
+  const roll = state.rand();
+  if (!state.features.situational) {
+    tickClock(state, Math.round(base + roll * spread));
+    return;
+  }
+  state.clockStopped = stopsClock;
+  tickClock(state, Math.round(4 + roll * 5));
+}
+
+/** Clock charge for a play with no random component (kicks, kneels). */
+function tickFixedClock(
+  state: GameState,
+  v1Seconds: number,
+  v2Seconds: number,
+  stopsClock: boolean,
+): void {
+  if (!state.features.situational) {
+    tickClock(state, v1Seconds);
+    return;
+  }
+  state.clockStopped = stopsClock;
+  tickClock(state, v2Seconds);
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -248,6 +382,12 @@ function endDrive(state: GameState, reason: PbpDriveEndReason): void {
 }
 
 function recordPlay(state: GameState, play: PbpPlay): void {
+  if (state.pendingTempo) {
+    play.tempo = state.pendingTempo;
+    // Stamp the snap itself, not the extra point and kickoff that a touchdown
+    // pulls in behind it.
+    state.pendingTempo = null;
+  }
   state.currentDrivePlays.push(play);
   state.playId += 1;
 }
@@ -271,14 +411,28 @@ function shouldKneel(state: GameState): boolean {
   return winning && state.clockSeconds <= 120 && state.quarter >= 4;
 }
 
+/**
+ * Refill timeouts.
+ *
+ * Called at the start of each half and each overtime period. It ASSIGNS rather
+ * than adds, so unspent timeouts do not carry over — which is both the rule and
+ * what keeps the per-half count exactly 3.
+ */
+function resetTimeouts(state: GameState, count: number): void {
+  state.homeTimeouts = count;
+  state.awayTimeouts = count;
+}
+
 function advanceQuarter(state: GameState): void {
   if (state.inOvertime) {
     state.otPeriod += 1;
     state.clockSeconds = OT_SECONDS;
+    resetTimeouts(state, TIMEOUTS_PER_OVERTIME);
     return;
   }
   if (state.quarter === 2) {
     state.secondHalfKickPending = true;
+    resetTimeouts(state, TIMEOUTS_PER_HALF);
   }
   state.quarter += 1;
   state.clockSeconds = QUARTER_SECONDS;
@@ -307,6 +461,7 @@ function checkPeriodEnd(state: GameState): void {
       state.otPeriod = 1;
       state.quarter = 5;
       state.clockSeconds = OT_SECONDS;
+      resetTimeouts(state, TIMEOUTS_PER_OVERTIME);
       doKickoff(state, state.possession === "home" ? "away" : "home");
       return;
     }
@@ -321,7 +476,69 @@ function checkPeriodEnd(state: GameState): void {
   }
 }
 
+/**
+ * Onside kick (A3). Recovered, the kicking team keeps the ball at its own 45;
+ * failed, the receiving team takes over there — a real cost, which is why
+ * `shouldOnside` only says yes when giving the ball back loses anyway.
+ */
+function doOnsideKick(state: GameState, kicking: "home" | "away"): void {
+  const kickingTeam = kicking === "home" ? state.home : state.away;
+  const receiving = kicking === "home" ? state.away : state.home;
+  const kicker = selectPlayer(kickingTeam, "K", state.rand);
+  const recovered = state.rand() < 0.15;
+
+  startDrive(state, kickingTeam.teamId, 35);
+  recordPlay(state, {
+    playId: state.playId,
+    driveId: state.driveId,
+    quarter: state.quarter,
+    clockSeconds: state.clockSeconds,
+    offenseTeamId: kickingTeam.teamId,
+    defenseTeamId: receiving.teamId,
+    playType: "onside_kick",
+    down: 0,
+    distance: 0,
+    fieldPosition: 35,
+    yardsGained: 10,
+    isScoring: false,
+    pointsScored: 0,
+    // A recovery means possession did NOT change hands, which is the whole
+    // point of the play.
+    isTurnover: !recovered,
+    participants: [participant(kicker, kickingTeam.teamId, "kicker")],
+  });
+  tickFixedClock(state, 6, 6, true);
+  endDrive(state, "turnover");
+
+  if (recovered) {
+    state.possession = kicking;
+    startDrive(state, kickingTeam.teamId, 45);
+  } else {
+    state.possession = kicking === "home" ? "away" : "home";
+    startDrive(state, receiving.teamId, 55);
+  }
+  state.openingKickDone = true;
+}
+
 function doKickoff(state: GameState, kicking: "home" | "away"): void {
+  if (state.features.situational) {
+    const kickingScore =
+      kicking === "home"
+        ? state.homeScore - state.awayScore
+        : state.awayScore - state.homeScore;
+    if (
+      shouldOnside({
+        scoreDiff: kickingScore,
+        quarter: state.quarter,
+        clockSeconds: state.clockSeconds,
+        isOvertime: state.inOvertime,
+      })
+    ) {
+      doOnsideKick(state, kicking);
+      return;
+    }
+  }
+
   const kickingTeam = kicking === "home" ? state.home : state.away;
   const receiving = kicking === "home" ? state.away : state.home;
   const kicker = selectPlayer(kickingTeam, "K", state.rand);
@@ -352,7 +569,7 @@ function doKickoff(state: GameState, kicking: "home" | "away"): void {
     ],
   };
   recordPlay(state, play);
-  tickClock(state, 6);
+  tickFixedClock(state, 6, 6, true);
   endDrive(state, "turnover");
 
   state.possession = kicking === "home" ? "away" : "home";
@@ -392,7 +609,7 @@ function doExtraPoint(state: GameState): void {
     else state.awayScore += 1;
     if (state.inOvertime) state.gameOver = true;
   }
-  tickClock(state, 4);
+  tickFixedClock(state, 4, 4, true);
 }
 
 function doFieldGoalAttempt(state: GameState): void {
@@ -423,7 +640,7 @@ function doFieldGoalAttempt(state: GameState): void {
     participants: [participant(kicker, off.teamId, "kicker")],
   };
   recordPlay(state, play);
-  tickClock(state, 5);
+  tickFixedClock(state, 5, 5, true);
 
   if (made) {
     if (state.possession === "home") state.homeScore += 3;
@@ -481,7 +698,7 @@ function doPunt(state: GameState): void {
     ],
   };
   recordPlay(state, play);
-  tickClock(state, 7);
+  tickFixedClock(state, 7, 7, true);
   endDrive(state, "punt");
   flipPossession(state);
   startDrive(state, offenseTeamId(state), newField);
@@ -545,7 +762,7 @@ function doRush(state: GameState): void {
     participants,
   };
   recordPlay(state, play);
-  tickClock(state, Math.round(22 + state.rand() * 18));
+  tickPlayClock(state, 22, 18, isTurnover || isScoring);
   applyPlayResult(state, yards, isScoring, points, isTurnover, play);
 }
 
@@ -594,13 +811,13 @@ function doPass(state: GameState): void {
       play.participants.push(participant(passer, off.teamId, "fumbler"));
       play.participants.push(participant(recoverer, def.teamId, "recoverer"));
       recordPlay(state, play);
-      tickClock(state, Math.round(24 + state.rand() * 12));
+      tickPlayClock(state, 24, 12, true);
       applyPlayResult(state, yards, false, 0, true, play);
       return;
     }
 
     recordPlay(state, play);
-    tickClock(state, Math.round(24 + state.rand() * 12));
+    tickPlayClock(state, 24, 12, false);
     applyPlayResult(state, yards, false, 0, false, play);
     return;
   }
@@ -640,7 +857,7 @@ function doPass(state: GameState): void {
       play.defensivePoints = 6;
       awardDefensivePoints(state, 6);
       recordPlay(state, play);
-      tickClock(state, Math.round(20 + state.rand() * 10));
+      tickPlayClock(state, 20, 10, true);
       endDrive(state, "turnover");
       // The scoring defense now kicks off to the team that threw it.
       doKickoff(state, state.possession === "home" ? "away" : "home");
@@ -649,7 +866,7 @@ function doPass(state: GameState): void {
 
     if (state.features.scoringV2) play.returnYards = returnYards;
     recordPlay(state, play);
-    tickClock(state, Math.round(20 + state.rand() * 10));
+    tickPlayClock(state, 20, 10, true);
     endDrive(state, "turnover");
     flipPossession(state);
     const spot = clamp(100 - state.fieldPosition + returnYards, 15, 85);
@@ -684,7 +901,7 @@ function doPass(state: GameState): void {
       participants,
     };
     recordPlay(state, play);
-    tickClock(state, Math.round(18 + state.rand() * 10));
+    tickPlayClock(state, 18, 10, true);
     applyPlayResult(state, 0, false, 0, false);
     return;
   }
@@ -731,7 +948,7 @@ function doPass(state: GameState): void {
     participants,
   };
   recordPlay(state, play);
-  tickClock(state, Math.round(20 + state.rand() * 18));
+  tickPlayClock(state, 20, 18, isScoring);
   applyPlayResult(state, yards, isScoring, points, false, play);
 }
 
@@ -757,7 +974,7 @@ function doKneel(state: GameState): void {
     participants: [participant(rusher, off.teamId, "rusher")],
   };
   recordPlay(state, play);
-  tickClock(state, 38);
+  tickFixedClock(state, 38, 2, false);
   applyPlayResult(state, -1, false, 0, false);
 }
 
@@ -806,7 +1023,7 @@ function doSafety(state: GameState): void {
     participants: [participant(tackler, def.teamId, "tackler_solo")],
   });
 
-  tickClock(state, 6);
+  tickFixedClock(state, 6, 6, true);
   endDrive(state, "turnover");
   // The conceding team free-kicks, so possession passes to the scoring side.
   flipPossession(state);
@@ -862,7 +1079,7 @@ function doTwoPointConversion(state: GameState): void {
       participant(target, off.teamId, "receiver"),
     ],
   });
-  tickClock(state, 5);
+  tickFixedClock(state, 5, 5, true);
 }
 
 /**
@@ -969,6 +1186,8 @@ function applyPlayResult(
         1,
         99,
       );
+      // A flag stops the clock, so the next snap pays no huddle runoff (A3).
+      state.clockStopped = true;
       const auto = !play.penalty?.onOffense && outcome.penaltyYards > 0;
       if (auto) {
         state.down = 1;
@@ -1037,35 +1256,223 @@ function applyPlayResult(
   }
 }
 
+/*
+ * ── Clock management plays (Epic A3) ──────────────────────────────────────
+ * Reached only when `features.situational` is on.
+ */
+
+/** A play that stops the clock and nothing else. Costs no random draw. */
+function emitClockPlay(
+  state: GameState,
+  playType: "spike" | "timeout",
+  extra: Partial<PbpPlay> = {},
+): void {
+  recordPlay(state, {
+    playId: state.playId,
+    driveId: state.driveId,
+    quarter: state.quarter,
+    clockSeconds: state.clockSeconds,
+    offenseTeamId: offenseTeamId(state),
+    defenseTeamId: defenseTeamId(state),
+    playType,
+    down: state.down,
+    distance: state.distance,
+    fieldPosition: state.fieldPosition,
+    yardsGained: 0,
+    isScoring: false,
+    pointsScored: 0,
+    isTurnover: false,
+    participants: [],
+    ...extra,
+  });
+  state.clockStopped = true;
+}
+
+/** Spend a timeout. Bounded by `spendTimeout`, so the count cannot go negative. */
+function doTimeout(state: GameState, side: "home" | "away"): void {
+  spendTimeout(state, side);
+  emitClockPlay(state, "timeout", {
+    timeoutTeamId: side === "home" ? state.home.teamId : state.away.teamId,
+  });
+  // A timeout consumes no game clock at all — that is the entire point of one.
+}
+
+/** Throw it at the turf. Stops the clock, costs a down. */
+function doSpike(state: GameState): void {
+  emitClockPlay(state, "spike", { tempo: "hurry_up" });
+  tickClock(state, 2);
+  state.down += 1;
+  if (state.down > 4) {
+    endDrive(state, "downs");
+    flipPossession(state);
+    startDrive(state, offenseTeamId(state), clamp(100 - state.fieldPosition, 20, 80));
+  }
+}
+
+/**
+ * v1's 4th-down logic: two hardcoded distance bands and a coin flip.
+ *
+ * Kept verbatim, and reached whenever `features.situational` is off, so the
+ * golden fixture still reproduces byte-for-byte.
+ */
+function runFourthDownV1(state: GameState): void {
+  const ytg = yardsToGoal(state);
+  if (ytg <= 35 && ytg >= 18) {
+    doFieldGoalAttempt(state);
+    return;
+  }
+  if (ytg > 45 || (ytg > 35 && state.rand() < 0.75)) {
+    doPunt(state);
+    return;
+  }
+  if (state.rand() < 0.35 + matchupEdge(state) * 0.2) {
+    if (state.rand() < 0.45) doRush(state);
+    else doPass(state);
+    return;
+  }
+  doPunt(state);
+}
+
+function runNormalDownPlay(state: GameState, tempo: ClockStrategy): void {
+  const edge = matchupEdge(state);
+  let passRate = clamp(
+    0.52 + edge * 0.1 - (state.down === 1 ? 0 : 0.08),
+    0.38,
+    0.68,
+  );
+  if (state.features.situational) {
+    /*
+     * Tempo changes what you call, not just how fast you snap it. A hurry-up
+     * offense throws because an incompletion stops the clock; a team protecting
+     * a lead runs because a handoff does not.
+     */
+    if (tempo === "hurry_up") passRate = clamp(passRate + 0.25, 0.38, 0.92);
+    else if (tempo === "burn") passRate = clamp(passRate - 0.25, 0.08, 0.68);
+  }
+  if (state.rand() < passRate) doPass(state);
+  else doRush(state);
+}
+
 function runScrimmagePlay(state: GameState): void {
+  if (!state.features.situational) {
+    if (shouldKneel(state)) {
+      doKneel(state);
+      return;
+    }
+    if (state.down === 4) {
+      runFourthDownV1(state);
+      return;
+    }
+    runNormalDownPlay(state, "normal");
+    return;
+  }
+
+  /*
+   * ── A3 path ─────────────────────────────────────────────────────────────
+   *
+   * Order matters and mirrors the real sequence between snaps: the clock is
+   * running, somebody may stop it, and only then does a play happen.
+   */
+  const tempo = currentClockStrategy(state);
+  const offenseSide = state.possession;
+  const defenseSide = offenseSide === "home" ? "away" : "home";
+  const halfLeft = secondsLeftInHalf(
+    state.quarter,
+    state.clockSeconds,
+    state.inOvertime,
+  );
+  const gameLeft = secondsLeftInGame(
+    state.quarter,
+    state.clockSeconds,
+    state.inOvertime,
+  );
+  const scoreDiff = offenseScoreDiff(state);
+
+  // The trailing DEFENSE stops the clock to get the ball back at all.
+  if (
+    shouldUseTimeout({
+      isOffense: false,
+      scoreDiff: -scoreDiff,
+      secondsLeftInHalf: halfLeft,
+      secondsLeftInGame: gameLeft,
+      quarter: state.quarter,
+      timeoutsRemaining: timeoutsFor(state, defenseSide),
+      clockStopped: state.clockStopped,
+    })
+  ) {
+    doTimeout(state, defenseSide);
+    return;
+  }
+
+  if (
+    shouldUseTimeout({
+      isOffense: true,
+      scoreDiff,
+      secondsLeftInHalf: halfLeft,
+      secondsLeftInGame: gameLeft,
+      quarter: state.quarter,
+      timeoutsRemaining: timeoutsFor(state, offenseSide),
+      clockStopped: state.clockStopped,
+    })
+  ) {
+    doTimeout(state, offenseSide);
+    return;
+  }
+
+  if (
+    shouldSpike({
+      strategy: tempo,
+      secondsLeftInHalf: halfLeft,
+      down: state.down,
+      timeoutsRemaining: timeoutsFor(state, offenseSide),
+      clockStopped: state.clockStopped,
+    })
+  ) {
+    doSpike(state);
+    return;
+  }
+
+  /*
+   * The huddle and play clock between snaps. v1 folded this into each play's
+   * duration and therefore charged it even to incompletions, which is what
+   * capped a game at ~96 scrimmage plays.
+   */
+  tickClock(state, runoffSeconds(tempo, state.clockStopped));
+  state.clockStopped = false;
+  if (state.clockSeconds <= 0) return;
+
   if (shouldKneel(state)) {
     doKneel(state);
     return;
   }
 
   if (state.down === 4) {
-    const ytg = yardsToGoal(state);
-    if (ytg <= 35 && ytg >= 18) {
+    const call = fourthDownDecision({
+      yardsToGo: state.distance,
+      yardsToGoal: yardsToGoal(state),
+      scoreDiff,
+      quarter: state.quarter,
+      clockSeconds: state.clockSeconds,
+      isOvertime: state.inOvertime,
+      aggression: coachAggression(offenseTeam(state)),
+    });
+    if (call === "field_goal") {
       doFieldGoalAttempt(state);
       return;
     }
-    if (ytg > 45 || (ytg > 35 && state.rand() < 0.75)) {
+    if (call === "punt") {
       doPunt(state);
       return;
     }
-    if (state.rand() < 0.35 + matchupEdge(state) * 0.2) {
-      if (state.rand() < 0.45) doRush(state);
-      else doPass(state);
-      return;
-    }
-    doPunt(state);
+    // Going for it: the chart chose to go, a draw only picks run or pass.
+    if (state.rand() < 0.45) doRush(state);
+    else doPass(state);
     return;
   }
 
-  const edge = matchupEdge(state);
-  const passRate = clamp(0.52 + edge * 0.1 - (state.down === 1 ? 0 : 0.08), 0.38, 0.68);
-  if (state.rand() < passRate) doPass(state);
-  else doRush(state);
+  state.pendingTempo = tempo === "normal" ? null : tempo;
+  runNormalDownPlay(state, tempo);
+  state.pendingTempo = null;
 }
 
 function simulateGameLog(input: PbpGameInput): PbpGameLog {
@@ -1078,11 +1485,15 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
     features: {
       scoringV2: input.features?.scoringV2 === true,
       penalties: input.features?.penalties === true,
+      situational: input.features?.situational === true,
+      balance: input.features?.balance === true,
     },
     home: input.home,
     away: input.away,
     strengthWeight: weights.strengthWeight,
     edgeScale: weights.edgeScale,
+    homeFieldEdge:
+      input.features?.balance === true ? HOME_FIELD_EDGE_V2 : HOME_FIELD_EDGE,
     decisive: input.decisive ?? false,
     quarter: 1,
     clockSeconds: QUARTER_SECONDS,
@@ -1105,6 +1516,10 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
     gameOver: false,
     openingKickDone: false,
     secondHalfKickPending: false,
+    homeTimeouts: TIMEOUTS_PER_HALF,
+    awayTimeouts: TIMEOUTS_PER_HALF,
+    clockStopped: true,
+    pendingTempo: null,
   };
 
   doKickoff(state, "away");

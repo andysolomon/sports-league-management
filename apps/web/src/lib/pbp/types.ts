@@ -35,6 +35,16 @@ export interface TeamSimProfile {
    * to `strength`, so a team with no attribute snapshots still simulates.
    */
   discipline?: number;
+  /**
+   * Coaching tendencies (A3). Absent means a neutral coach, which is why this
+   * slice does not depend on Epic C — the `coaches` table simply fills these in
+   * later. Do NOT default these to a team's strength: a bad team with a bold
+   * coach is a real thing and the model should be able to express it.
+   */
+  coach?: {
+    /** 0-100; 50 neutral. Drives 4th-down and two-point boldness. */
+    aggression?: number;
+  };
 }
 
 import type { SimulationFlavor } from "@/lib/simulation-flavor";
@@ -167,6 +177,26 @@ export interface PbpPlay {
     negatesPlay: boolean;
     reason: string;
   };
+
+  /**
+   * How the offense was treating the clock on this play (A3).
+   *
+   * Present only under the `situational` gate, and only when the tempo was not
+   * `normal` — so its absence means either "v1 log" or "nothing notable", which
+   * is fine here because tempo has no stat consequences. Anything a reader must
+   * distinguish absence from zero for gets its own honest-absence treatment
+   * (see `returnYards`).
+   */
+  tempo?: "hurry_up" | "burn";
+
+  /**
+   * Which team called this timeout (A3), for `playType === "timeout"` only.
+   *
+   * Needed because either side can call one: `offenseTeamId` identifies who has
+   * the ball, not who spent the timeout, and a defensive timeout late in a game
+   * is exactly the interesting case.
+   */
+  timeoutTeamId?: string;
 }
 
 export interface PbpDrive {
@@ -215,4 +245,23 @@ export interface PbpFeatureGates {
   scoringV2?: boolean;
   /** A2 — penalties, with accept/decline. */
   penalties?: boolean;
+  /**
+   * A3 — situational decisions and clock management: a 4th-down chart in place
+   * of a coin flip, timeouts, the two-minute drill, spikes and onside kicks.
+   *
+   * Also carries the realistic clock model. v1 charged a full ~30-second cycle
+   * to every snap including incompletions, which capped a game at roughly 96
+   * scrimmage plays and is the main reason scoring sat below the design band.
+   */
+  situational?: boolean;
+  /**
+   * A3 — the balance recalibration filed as #642.
+   *
+   * Separate from `situational` on purpose. That gate adds *mechanics*; this
+   * one only retunes constants that were already there. Keeping them apart
+   * means a league can adopt clock management without adopting the new
+   * home-field weighting, and it means the distribution report can attribute
+   * each change independently.
+   */
+  balance?: boolean;
 }
