@@ -183,19 +183,29 @@ test.describe("Recruiting class (B3)", () => {
     // The board records the signing rather than offering him again.
     await expect(row).toContainText("Signed", { timeout: 30_000 });
 
+    // And it PERSISTS — the signing is a write, not a local state change.
+    await page.reload();
+    const afterReload = page
+      .getByTestId("scouting-panel")
+      .getByTestId("prospect-row")
+      .filter({ hasText: name });
+    await expect(afterReload).toContainText("Signed", { timeout: 30_000 });
+
     /*
-     * And he is really on a roster. The signing is only meaningful if it
-     * produced a player — a board that marked prospects signed without creating
-     * anyone would pass every assertion above.
+     * And a real player exists. The signing is only meaningful if it produced
+     * one — a board that marked prospects signed without creating anybody
+     * would satisfy every assertion above.
      *
-     * The team is read off the row rather than assumed: the acting team is
-     * whichever team the viewer manages, and `getTeamsByLeague` gives no
-     * ordering guarantee to pin one.
+     * Checked on Players Home rather than the team's roster page. That page
+     * renders the ACTIVE season's `rosterAssignments`, and a recruit signs into
+     * the UPCOMING one — which is correct behaviour, not a gap: next year's
+     * class belongs on next year's roster. Players Home is league-scoped and
+     * season-independent, so it answers the question actually being asked.
+     *
+     * The fixture league is created with two teams and no players, so the
+     * signed prospect is the only name there.
      */
-    const signedTeam = (await row.innerText()).includes(fixture.homeTeamName)
-      ? fixture.homeTeamId
-      : fixture.awayTeamId;
-    await page.goto(`/dashboard/teams/${signedTeam}/roster`);
+    await page.goto("/dashboard/players");
     await expect(page.getByText(name, { exact: true }).first()).toBeVisible({
       timeout: 30_000,
     });
