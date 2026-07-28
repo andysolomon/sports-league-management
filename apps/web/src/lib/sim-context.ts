@@ -2,9 +2,10 @@ import {
   getDynastyConfig,
   listActiveInjuries,
   listRivalries,
+  listTeamPrograms,
 } from "@/lib/data-api";
 import type { DynastyConfig } from "@/lib/dynasty-config";
-import type { PbpFeatureGates } from "@/lib/pbp";
+import type { PbpFeatureGates, TeamSimProfile } from "@/lib/pbp";
 import { deriveWeather, type Weather } from "@/lib/pbp/weather";
 import { rivalryPairKey } from "@/lib/rivalries";
 
@@ -41,7 +42,24 @@ export interface SeasonSimContext {
    * fixture in the run, where a per-team read would be two more reads a game.
    */
   unavailablePlayerIds: ReadonlySet<string>;
+  /**
+   * `teamId` → what that team runs (A6), for every team with a program row.
+   *
+   * Loaded once per run for the same reason as the injuries above: a season
+   * simulation plays every fixture in a loop, and a scheme cannot change
+   * between two games in one run.
+   *
+   * A team missing from this map has stated no scheme, which the engine reads
+   * as the identity transform — not as an average.
+   */
+  schemes: ReadonlyMap<string, TeamSchemeAssignment>;
 }
+
+/** What one team runs, as the engine consumes it. */
+export type TeamSchemeAssignment = NonNullable<TeamSimProfile["scheme"]> & {
+  /** 0–100 coach 4th-down dial, when the program sets one. */
+  aggression?: number;
+};
 
 /**
  * Map a league's settings onto engine gates.
@@ -69,6 +87,7 @@ export function resolveSimFeatures(
   if (config.balanceTuningEnabled) features.balance = true;
   if (config.weatherEnabled) features.weather = true;
   if (config.injuriesEnabled) features.injuries = true;
+  if (config.schemesEnabled) features.schemes = true;
   return features;
 }
 
@@ -88,10 +107,11 @@ export async function loadSeasonSimContext(input: {
   seasonId: string;
   flagEnabled: boolean;
 }): Promise<SeasonSimContext> {
-  const [config, rivalries, injuries] = await Promise.all([
+  const [config, rivalries, injuries, programs] = await Promise.all([
     getDynastyConfig(input.leagueId).catch(() => null),
     listRivalries(input.leagueId).catch(() => []),
     listActiveInjuries(input.seasonId).catch(() => []),
+    listTeamPrograms(input.seasonId).catch(() => []),
   ]);
 
   const features = config ? resolveSimFeatures(input.flagEnabled, config) : {};
@@ -110,6 +130,30 @@ export async function loadSeasonSimContext(input: {
     unavailablePlayerIds: new Set(
       features.injuries === true ? injuries.map((i) => i.playerId) : [],
     ),
+    /*
+     * Only populated when the gate is on. With schemes disabled a stored
+     * assignment is a preference nobody is acting on — the same rule the
+     * injuries above follow, and the reason flipping the knob off restores
+     * pre-A6 play rather than leaving a hidden effect behind.
+     *
+     * `aggression` rides along here rather than in a second map: it comes from
+     * the same row and is read at the same moment, and splitting it would mean
+     * two lookups per team for one document.
+     */
+    schemes: new Map(
+      features.schemes === true
+        ? programs.map((p) => [
+            p.teamId,
+            {
+              ...(p.offenseScheme !== null ? { offense: p.offenseScheme } : {}),
+              ...(p.defenseScheme !== null ? { defense: p.defenseScheme } : {}),
+              ...(p.tempo !== null ? { tempo: p.tempo } : {}),
+              ...(p.blitzRate !== null ? { blitzRate: p.blitzRate } : {}),
+              ...(p.aggression !== null ? { aggression: p.aggression } : {}),
+            } satisfies TeamSchemeAssignment,
+          ])
+        : [],
+    ),
   };
 }
 
@@ -121,7 +165,32 @@ export function emptySimContext(leagueId: string): SeasonSimContext {
     rivalries: new Map(),
     injurySeverityScale: 1,
     unavailablePlayerIds: new Set(),
+    schemes: new Map(),
   };
+}
+
+/**
+ * Apply a team's scheme and coach dials to its sim profile.
+ *
+ * Returns the profile UNCHANGED when the team has no program — object identity
+ * included. A caller that has assigned nothing must not end up with a profile
+ * carrying an empty `scheme` object, because `{}` and absence would then have
+ * to mean the same thing in two places instead of one.
+ */
+export function applyTeamProgram(
+  profile: TeamSimProfile,
+  context: SeasonSimContext,
+): TeamSimProfile {
+  const assignment = context.schemes.get(profile.teamId);
+  if (!assignment) return profile;
+
+  const { aggression, ...scheme } = assignment;
+  const next: TeamSimProfile = { ...profile };
+  if (Object.keys(scheme).length > 0) next.scheme = scheme;
+  if (typeof aggression === "number") {
+    next.coach = { ...profile.coach, aggression };
+  }
+  return next;
 }
 
 export interface FixtureSimConditions {

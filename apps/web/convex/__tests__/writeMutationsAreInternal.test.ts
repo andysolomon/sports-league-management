@@ -232,7 +232,10 @@ type AllowedPublicSimReads =
   | "listRivalries"
   | "listActiveInjuries"
   | "listTeamInjuries";
-type AllowedPublicProgramReads = "moduleStatus";
+type AllowedPublicProgramReads =
+  | "moduleStatus"
+  | "listTeamPrograms"
+  | "getTeamProgram";
 type AllowedPublicHistoryReads = "moduleStatus";
 
 type LeakedPublicDynastyWrites = Exclude<

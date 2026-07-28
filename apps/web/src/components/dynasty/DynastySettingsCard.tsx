@@ -58,6 +58,12 @@ const TOGGLES: Array<{
     description: "Cold, wind and rain affect play outcomes.",
   },
   {
+    key: "schemesEnabled",
+    label: "Schemes",
+    description:
+      "Each team's offense, defense and coaching dials shape how it plays.",
+  },
+  {
     key: "transfersEnabled",
     label: "Transfers",
     description: "Players move between programs in the offseason.",

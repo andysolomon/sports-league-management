@@ -14,6 +14,7 @@
  */
 import { simulateGameLog } from "../src/lib/pbp/engine";
 import { deriveWeather } from "../src/lib/pbp/weather";
+import type { TeamSchemeProfile } from "../src/lib/pbp/schemes";
 import type {
   PbpFeatureGates,
   PlayerSimProfile,
@@ -43,10 +44,15 @@ function roster(t: string, s: number): PlayerSimProfile[] {
   return out;
 }
 
-const team = (t: string, s: number): TeamSimProfile => ({
+const team = (
+  t: string,
+  s: number,
+  scheme?: TeamSchemeProfile,
+): TeamSimProfile => ({
   teamId: t,
   strength: s,
   players: roster(t, s),
+  ...(scheme ? { scheme } : {}),
 });
 
 const GAMES = 300;
@@ -60,6 +66,7 @@ function report(
   label: string,
   features: PbpFeatureGates | undefined,
   withWeather = false,
+  schemes?: { home: TeamSchemeProfile; away: TeamSchemeProfile },
 ): void {
   let homeWins = 0;
   let awayWins = 0;
@@ -71,8 +78,8 @@ function report(
 
   for (let i = 0; i < GAMES; i++) {
     const log = simulateGameLog({
-      home: team("home", 70),
-      away: team("away", 70),
+      home: team("home", 70, schemes?.home),
+      away: team("away", 70, schemes?.away),
       seed: 1000 + i,
       flavor: "balanced",
       features,
@@ -156,3 +163,31 @@ report(
   },
   true,
 );
+
+/*
+ * Schemes (A6) are OPT-IN per team, so the production default above is
+ * unchanged by the slice — a league that has assigned nothing plays the same
+ * game. These two rows are what the mechanic can actually swing: the widest
+ * grind and the widest shootout the catalog allows, both teams committed.
+ *
+ * The grind row sits BELOW the 30-60 band on purpose. Two option teams playing
+ * a 16-10 game is the mechanic working, not a regression — see the balance
+ * assertions in `pbp/__tests__/schemes.test.ts`, which bound the deviation from
+ * this baseline rather than pinning every pairing inside the band.
+ */
+const ALL_GATES_WITH_SCHEMES: PbpFeatureGates = {
+  situational: true,
+  balance: true,
+  scoringV2: true,
+  penalties: true,
+  weather: true,
+  schemes: true,
+};
+report("SCHEMES — Flexbone/46 both sides (widest grind)", ALL_GATES_WITH_SCHEMES, true, {
+  home: { offense: "flexbone", defense: "forty_six" },
+  away: { offense: "flexbone", defense: "forty_six" },
+});
+report("SCHEMES — Air Raid/4-2-5 both sides (widest shootout)", ALL_GATES_WITH_SCHEMES, true, {
+  home: { offense: "air_raid", defense: "four_two_five" },
+  away: { offense: "air_raid", defense: "four_two_five" },
+});

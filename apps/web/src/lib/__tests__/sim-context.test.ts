@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  applyTeamProgram,
   emptySimContext,
   fixtureSimConditions,
   resolveSimFeatures,
@@ -28,6 +29,7 @@ describe("resolveSimFeatures", () => {
       balance: true,
       weather: true,
       injuries: true,
+      schemes: true,
     });
   });
 
@@ -53,6 +55,7 @@ describe("resolveSimFeatures", () => {
       situational: true,
       balance: true,
       injuries: true,
+      schemes: true,
     });
   });
 
@@ -78,6 +81,7 @@ describe("resolveSimFeatures", () => {
       "balance",
       "injuries",
       "penalties",
+      "schemes",
       "scoringV2",
       "situational",
       "weather",
@@ -169,5 +173,51 @@ describe("emptySimContext", () => {
     const context = emptySimContext("league_1");
     expect(context.features).toEqual({});
     expect(context.rivalries.size).toBe(0);
+  });
+});
+
+describe("applyTeamProgram", () => {
+  const baseProfile = {
+    teamId: "team_a",
+    strength: 70,
+    players: [],
+  };
+
+  const contextWith = (
+    schemes: Array<[string, Record<string, unknown>]>,
+  ): SeasonSimContext => ({
+    ...emptySimContext("league_1"),
+    schemes: new Map(schemes) as SeasonSimContext["schemes"],
+  });
+
+  it("returns the profile untouched when the team has no program", () => {
+    // Identity, not a copy carrying an empty `scheme` object — otherwise `{}`
+    // and absence would both have to mean "no scheme" in two places.
+    const context = contextWith([]);
+    expect(applyTeamProgram(baseProfile, context)).toBe(baseProfile);
+  });
+
+  it("attaches the scheme a team was assigned", () => {
+    const context = contextWith([
+      ["team_a", { offense: "flexbone", defense: "forty_six" }],
+    ]);
+    expect(applyTeamProgram(baseProfile, context).scheme).toEqual({
+      offense: "flexbone",
+      defense: "forty_six",
+    });
+  });
+
+  it("routes aggression to the coach, not the scheme", () => {
+    // Aggression rides in the same row because it is read at the same moment,
+    // but it belongs to the coach — that is where the fourth-down chart looks.
+    const context = contextWith([["team_a", { aggression: 88 }]]);
+    const applied = applyTeamProgram(baseProfile, context);
+    expect(applied.coach).toEqual({ aggression: 88 });
+    expect(applied.scheme).toBeUndefined();
+  });
+
+  it("leaves other teams alone", () => {
+    const context = contextWith([["team_b", { offense: "air_raid" }]]);
+    expect(applyTeamProgram(baseProfile, context)).toBe(baseProfile);
   });
 });

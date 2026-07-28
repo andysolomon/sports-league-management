@@ -50,10 +50,18 @@ export interface TeamSimProfile {
     /** 0-100; 50 neutral. Drives 4th-down and two-point boldness. */
     aggression?: number;
   };
+  /**
+   * What this team runs (A6). Absent means no stated scheme, which resolves to
+   * the identity transform — not to "average", and not to the team's strength.
+   *
+   * Read only under `features.schemes`.
+   */
+  scheme?: TeamSchemeProfile;
 }
 
 import type { SimulationFlavor } from "@/lib/simulation-flavor";
 import type { Weather } from "./weather";
+import type { TeamSchemeProfile } from "./schemes";
 
 export interface PbpGameInput {
   home: TeamSimProfile;
@@ -367,4 +375,13 @@ export interface PbpFeatureGates {
    * each change independently.
    */
   balance?: boolean;
+  /**
+   * A6 — team schemes and coach tendencies shape play calling and outcomes.
+   *
+   * With this off the engine holds `NEUTRAL_SCHEME_MODIFIERS` and never reads a
+   * team's `scheme`, so a league that has assigned schemes and then switched
+   * the mechanic off plays exactly as it did before A6 — the assignment becomes
+   * a preference nobody is acting on rather than a hidden effect.
+   */
+  schemes?: boolean;
 }

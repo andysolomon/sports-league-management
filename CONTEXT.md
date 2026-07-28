@@ -84,6 +84,10 @@ _Avoid_: Viewed season, selected year
 The orientation and sibling-navigation surface shared by a Home and its child pages without using breadcrumb trails.
 _Avoid_: Breadcrumb, back-link row
 
+**Scheme**:
+What a Team runs on offense and on defense for a Season, together with its tempo, blitz and aggression dials. A Team with no Scheme plays the League default rather than an average.
+_Avoid_: Playbook, formation, strategy, system
+
 ## Relationships
 
 - An operator may access zero or more **Leagues**
@@ -100,6 +104,7 @@ _Avoid_: Breadcrumb, back-link row
 - **Settings Home** is visible to every authenticated operator and always exposes **Account Settings**
 - **League Settings** is exposed only when the operator is an Org Admin for the **Active League**
 - Coaches manage a Team from **Team Home**, not **League Settings**
+- A Team has at most one **Scheme** per Season, set from **Team Home** because a Scheme changes only that Team's own games
 - **Account Settings** contains cross-league **Import** and **Account Billing**
 - A successful **Import** may set the imported League as the **Active League** and offer navigation to its **League Home**
 - The **League Directory** provides access to **Discover**

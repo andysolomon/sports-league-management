@@ -7,6 +7,7 @@ import { competitionTables } from "./tables/competition";
 import { mediaTables } from "./tables/media";
 import { offseasonTables } from "./tables/offseason";
 import { dynastyTables } from "./tables/dynasty";
+import { programTables } from "./tables/program";
 
 /*
  * The schema is composed from grouped table modules under `convex/tables/`
@@ -32,4 +33,5 @@ export default defineSchema({
   ...mediaTables,
   ...offseasonTables,
   ...dynastyTables,
+  ...programTables,
 });

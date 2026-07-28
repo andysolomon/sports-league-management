@@ -50,6 +50,14 @@ export interface DynastyConfig {
   balanceTuningEnabled: boolean;
   /** Injuries can occur during simulation (Epic A4). */
   injuriesEnabled: boolean;
+  /**
+   * Team schemes and coach tendencies shape the simulation (Epic A6).
+   *
+   * With this off a league's stored scheme assignments are a stated preference
+   * nobody acts on, rather than a hidden effect — the engine holds the neutral
+   * transform and plays exactly as it did before A6.
+   */
+  schemesEnabled: boolean;
   /** Weather affects play outcomes (Epic A5). */
   weatherEnabled: boolean;
   /** 0 = none, 1 = normal, 2 = brutal. Scales injury severity. */
@@ -84,6 +92,7 @@ export const DYNASTY_CONFIG_DEFAULTS: Readonly<DynastyConfig> = Object.freeze({
   situationalAiEnabled: true,
   balanceTuningEnabled: true,
   injuriesEnabled: true,
+  schemesEnabled: true,
   weatherEnabled: true,
   injurySeverityScale: 1,
   transfersEnabled: true,
@@ -157,6 +166,7 @@ export function resolveDynastyConfig(
     situationalAiEnabled: bool("situationalAiEnabled"),
     balanceTuningEnabled: bool("balanceTuningEnabled"),
     injuriesEnabled: bool("injuriesEnabled"),
+    schemesEnabled: bool("schemesEnabled"),
     weatherEnabled: bool("weatherEnabled"),
     injurySeverityScale: num("injurySeverityScale"),
     transfersEnabled: bool("transfersEnabled"),

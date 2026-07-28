@@ -96,6 +96,7 @@ const MECHANIC_GATE = {
   fourthDownAi: "situational",
   timeouts: "situational",
   weather: "weather",
+  schemes: "schemes",
 } as const satisfies Record<string, keyof PbpFeatureGates>;
 
 export type LogMechanic = keyof typeof MECHANIC_GATE;
