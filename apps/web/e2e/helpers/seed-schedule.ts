@@ -194,3 +194,29 @@ export async function seedAiHeadCoachesForLeague(leagueId: string): Promise<void
   const client = getSeedClient();
   await client.mutation(seedAiHeadCoachesRef, { leagueId });
 }
+
+const grantCoachSkillPointsRef = makeFunctionReference<
+  "mutation",
+  { coachId: string; skillPoints: number },
+  null
+>("e2eSeed:grantCoachSkillPoints");
+
+export async function grantCoachSkillPoints(
+  coachId: string,
+  skillPoints: number,
+): Promise<void> {
+  const client = getSeedClient();
+  await client.mutation(grantCoachSkillPointsRef, { coachId, skillPoints });
+}
+
+const listCoachesByTeamRef = makeFunctionReference<
+  "query",
+  { teamId: string },
+  Array<{ id: string }>
+>("program:listCoachesByTeam");
+
+export async function listCoachIdsForTeam(teamId: string): Promise<string[]> {
+  const client = getSeedClient();
+  const rows = await client.query(listCoachesByTeamRef, { teamId });
+  return rows.map((row) => row.id);
+}

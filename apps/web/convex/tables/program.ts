@@ -127,6 +127,7 @@ export const programTables = {
     playoffResult: v.optional(v.string()),
     goalsMetJson: v.optional(v.string()),
     prestigeDelta: v.optional(v.number()),
+    skillPointsAwarded: v.optional(v.number()),
     finalizedAt: v.optional(v.string()),
   })
     .index("by_coach_season", ["coachId", "seasonId"])

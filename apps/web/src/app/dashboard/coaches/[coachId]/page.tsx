@@ -13,6 +13,8 @@ import {
 import { resolveOrgContext } from "@/lib/org-context";
 import { dynastyProgramV1, pageGuard } from "@/lib/flags";
 import { formatCoachArchetype } from "@/lib/program/coach";
+import { CoachSkillTreeCard } from "@/components/program/CoachSkillTreeCard";
+import { canAdminOrManageTeam } from "@/lib/authorization";
 import { Card, CardContent } from "@/components/ui/card";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
 
@@ -40,6 +42,7 @@ export default async function CoachHomePage({
   await syncActiveLeagueForResource(leagueId);
 
   const siblings = buildCoachSiblingLinks(coachId);
+  const canEdit = await canAdminOrManageTeam(coach.teamId, userId);
 
   return (
     <div className="space-y-4">
@@ -99,6 +102,14 @@ export default async function CoachHomePage({
           </div>
         </CardContent>
       </Card>
+
+      <CoachSkillTreeCard
+        coachId={coachId}
+        teamId={coach.teamId}
+        skillPoints={coach.skillPoints}
+        unlockedNodesJson={coach.unlockedNodesJson}
+        canEdit={canEdit}
+      />
     </div>
   );
 }

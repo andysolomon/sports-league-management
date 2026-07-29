@@ -29,6 +29,7 @@
  * `convex/lib/rng.ts`. Re-reading a prospect never reshuffles his range.
  */
 import { rngFor } from "./rng";
+import { NEUTRAL_RATING } from "./training";
 
 /** Ratings live on the same 40–99 scale as `generateSyntheticAttributes`. */
 export const OVERALL_MIN = 40;
@@ -91,6 +92,24 @@ export function nextScoutCost(scoutLevel: number): number | null {
 export function clampScoutLevel(level: number): number {
   if (!Number.isFinite(level)) return MIN_SCOUT_LEVEL;
   return Math.max(MIN_SCOUT_LEVEL, Math.min(MAX_SCOUT_LEVEL, Math.round(level)));
+}
+
+/**
+ * Extra tilt applied when generating a recruiting class from coach investment.
+ * Absent rating is zero — pre-C4 classes are unchanged.
+ */
+export function recruitingClassTilt(
+  recruitingRating: number | null | undefined,
+): number {
+  if (
+    recruitingRating === null ||
+    recruitingRating === undefined ||
+    !Number.isFinite(recruitingRating)
+  ) {
+    return 0;
+  }
+  const clamped = Math.max(0, Math.min(100, recruitingRating));
+  return Math.round((clamped - NEUTRAL_RATING) / 5);
 }
 
 function clamp(value: number, min: number, max: number): number {

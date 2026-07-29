@@ -8,6 +8,11 @@ import {
   generateAiHeadCoachProfile,
 } from "./lib/coach";
 import { evaluateGoals, generateGoals } from "./lib/goals";
+import {
+  applySkill,
+  coachSkillsStateFromRow,
+  serializeUnlockedNodes,
+} from "./lib/coachSkills";
 import type { Id } from "./_generated/dataModel";
 
 /*
@@ -430,6 +435,7 @@ const coachSeasonDtoValidator = v.object({
   playoffResult: v.union(v.string(), v.null()),
   goalsMetJson: v.union(v.string(), v.null()),
   prestigeDelta: v.union(v.number(), v.null()),
+  skillPointsAwarded: v.union(v.number(), v.null()),
   finalizedAt: v.union(v.string(), v.null()),
 });
 
@@ -446,6 +452,7 @@ function toCoachSeasonDto(row: {
   playoffResult?: string;
   goalsMetJson?: string;
   prestigeDelta?: number;
+  skillPointsAwarded?: number;
   finalizedAt?: string;
 }): CoachSeasonDto {
   return {
@@ -459,6 +466,7 @@ function toCoachSeasonDto(row: {
     playoffResult: row.playoffResult ?? null,
     goalsMetJson: row.goalsMetJson ?? null,
     prestigeDelta: row.prestigeDelta ?? null,
+    skillPointsAwarded: row.skillPointsAwarded ?? null,
     finalizedAt: row.finalizedAt ?? null,
   };
 }
@@ -679,5 +687,52 @@ export const seedAiHeadCoachesForLeague = internalMutation({
       coachSeasonsCreated,
       teamsScanned: teams.length,
     };
+  },
+});
+
+export const spendCoachSkillPoints = internalMutation({
+  args: {
+    coachId: v.id("coaches"),
+    teamId: v.id("teams"),
+    nodeId: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: coachDtoValidator,
+  handler: async (ctx, args) => {
+    const coach = await ctx.db.get(args.coachId);
+    if (!coach) throw new Error("coach_not_found");
+    if (coach.teamId !== args.teamId) throw new Error("coach_not_on_team");
+
+    const state = coachSkillsStateFromRow(coach);
+    const result = applySkill(state, args.nodeId);
+    if (!result.ok) throw new Error(result.reason);
+
+    const now = new Date().toISOString();
+    const patch: {
+      skillPoints: number;
+      unlockedNodesJson: string;
+      updatedAt: string;
+      developmentRating?: number;
+      recruitingRating?: number;
+      gameplanRating?: number;
+    } = {
+      skillPoints: result.state.skillPoints,
+      unlockedNodesJson: serializeUnlockedNodes(result.state.unlockedNodeIds),
+      updatedAt: now,
+    };
+    if (result.ratings.developmentRating !== null) {
+      patch.developmentRating = result.ratings.developmentRating;
+    }
+    if (result.ratings.recruitingRating !== null) {
+      patch.recruitingRating = result.ratings.recruitingRating;
+    }
+    if (result.ratings.gameplanRating !== null) {
+      patch.gameplanRating = result.ratings.gameplanRating;
+    }
+
+    await ctx.db.patch(args.coachId, patch);
+    const updated = await ctx.db.get(args.coachId);
+    if (!updated) throw new Error("coach_not_found");
+    return toCoachDto(updated);
   },
 });

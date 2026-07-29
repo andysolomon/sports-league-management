@@ -963,3 +963,18 @@ export const seedAiHeadCoaches = internalMutation({
     });
   },
 });
+
+/** E2E-only: grant spendable skill points on a coach (C4). */
+export const grantCoachSkillPoints = internalMutation({
+  args: {
+    coachId: v.id("coaches"),
+    skillPoints: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+    const points = Math.max(0, Math.floor(args.skillPoints));
+    await ctx.db.patch(args.coachId, { skillPoints: points });
+    return null;
+  },
+});

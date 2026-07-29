@@ -38,6 +38,11 @@ import {
 import { MAX_TARGET_ROSTER_SIZE } from "./lib/offseason";
 import { emitDynastyEvent } from "./lib/events";
 import { transferResolvedDedupeKey } from "./lib/narrative";
+import { COACH_ROLE_HEAD } from "./lib/coach";
+import {
+  coachSkillsStateFromRow,
+  ratingsFromSkillState,
+} from "./lib/coachSkills";
 
 /*
  * Dynasty Mode — offseason pipeline (Epic B).
@@ -75,6 +80,21 @@ export const moduleStatus = query({
     ready: true,
   }),
 });
+
+async function headCoachDevelopmentRatingForTeam(
+  ctx: MutationCtx,
+  teamId: Id<"teams">,
+): Promise<number | undefined> {
+  const coach = await ctx.db
+    .query("coaches")
+    .withIndex("by_teamId_role", (q) =>
+      q.eq("teamId", teamId).eq("role", COACH_ROLE_HEAD),
+    )
+    .unique();
+  if (!coach) return undefined;
+  const ratings = ratingsFromSkillState(coachSkillsStateFromRow(coach));
+  return ratings.developmentRating ?? undefined;
+}
 
 /*
  * ── Per-league Dynasty settings (F5) ────────────────────────────────────────
@@ -1867,6 +1887,10 @@ export const applyTrainingAllocations = internalMutation({
       const attributes = parseAttributes(snapshot.attributesJson);
       const positionGroup =
         snapshot.positionGroup || attributeGroupForPosition(player.position);
+      const developmentRating = await headCoachDevelopmentRatingForTeam(
+        ctx,
+        rows[0]!.teamId,
+      );
       const result = applyTraining({
         attributes,
         positionGroup,
@@ -1874,6 +1898,7 @@ export const applyTrainingAllocations = internalMutation({
           focus: row.focus,
           points: row.points,
         })),
+        developmentRating,
       });
 
       if (result.pointsPlaced > 0) {

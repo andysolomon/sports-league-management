@@ -23,6 +23,7 @@ import {
   healSeasonInjuries,
   createProspectClass,
   getDynastyConfig,
+  listCoachesByLeague,
 } from "@/lib/data-api";
 import { activeNonGraduatedNames } from "@/lib/dynasty";
 import {
@@ -30,6 +31,10 @@ import {
   prospectClassSize,
 } from "@/lib/dynasty/prospects";
 import { computeProgressedAttributes } from "@/lib/dynasty-progression";
+import {
+  coachSkillsStateFromRow,
+  ratingsFromSkillState,
+} from "@/lib/program/coach-skills";
 import { resolveLifecycleSeason } from "@/lib/season-view";
 import {
   generateSyntheticRoster,
@@ -59,6 +64,24 @@ function hasReachedRolloverStage(stage: string, expected: string): boolean {
   return (
     ROLLOVER_STAGES.indexOf(stage as (typeof ROLLOVER_STAGES)[number]) >=
     ROLLOVER_STAGES.indexOf(expected as (typeof ROLLOVER_STAGES)[number])
+  );
+}
+
+function leagueRecruitingRatingForProspects(
+  coaches: Array<{
+    skillPoints?: number | null;
+    unlockedNodesJson?: string | null;
+  }>,
+): number | undefined {
+  const ratings = coaches
+    .map(
+      (coach) =>
+        ratingsFromSkillState(coachSkillsStateFromRow(coach)).recruitingRating,
+    )
+    .filter((rating): rating is number => rating !== null);
+  if (ratings.length === 0) return undefined;
+  return Math.round(
+    ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length,
   );
 }
 
@@ -537,10 +560,15 @@ export async function startNextSeasonAction(input: {
               input.leagueId,
               orgContext,
             ).catch(() => []);
+            const coaches = await listCoachesByLeague(input.leagueId).catch(
+              () => [],
+            );
+            const recruitingRating = leagueRecruitingRatingForProspects(coaches);
             const prospects = generateProspectClass({
               seasonId: nextSeasonId,
               count: prospectClassSize(teams.length),
               excludeNames: activeNonGraduatedNames(leaguePlayers),
+              recruitingRating,
             });
             const created = await createProspectClass({
               leagueId: input.leagueId,
