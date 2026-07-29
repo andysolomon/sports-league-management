@@ -89,7 +89,7 @@ function mutationRef<Args extends object, Return>(name: string) {
  * from `convex/_generated` reaches a bundle. (`data-api.ts` is server-only
  * regardless; this keeps it true by construction.)
  */
-type DynastyModule = "dynasty" | "sim" | "program" | "history";
+type DynastyModule = "dynasty" | "sim" | "program" | "history" | "sports";
 
 /** Public query names on a module, or `never` if it exposes none. */
 type PublicQueryName<M extends DynastyModule> = M extends keyof typeof api
@@ -122,6 +122,7 @@ export const dynastyRef = moduleRefs("dynasty");
 export const simRef = moduleRefs("sim");
 export const programRef = moduleRefs("program");
 export const historyRef = moduleRefs("history");
+export const sportsRef = moduleRefs("sports");
 
 const listProgramRecordsRef = historyRef.query<ProgramRecordDto[]>(
   "listProgramRecords",
@@ -132,6 +133,10 @@ const listCoachAwardsRef = historyRef.query<AwardDto[]>("listCoachAwards");
 const getWeeklyPollRef = historyRef.query<WeeklyPollDto | null>(
   "getWeeklyPoll",
 );
+const listSeasonRecapsRef =
+  historyRef.query<SeasonRecapDto[]>("listSeasonRecaps");
+const listDynastyEventsRef =
+  sportsRef.query<DynastyEventDto[]>("listDynastyEvents");
 
 /** A single bracket node (WSM-000164). Team/score fields are null until played. */
 export interface PlayoffMatchupDto {
@@ -241,6 +246,34 @@ export interface WeeklyPollDto {
 export interface WeeklyPollWriteResult {
   rankings: number;
   written: boolean;
+}
+
+export interface DynastyEventDto {
+  id: string;
+  seasonId: string | null;
+  week: number | null;
+  category: string;
+  eventType: string;
+  severity: string;
+  teamId: string | null;
+  playerId: string | null;
+  fixtureId: string | null;
+  headline: string;
+  detailJson: string | null;
+  createdAt: string;
+}
+
+export interface SeasonRecapDto {
+  seasonId: string;
+  generatedAt: string;
+  updatedAt: string;
+  blocks: Array<{
+    order: number;
+    key: string;
+    title: string;
+    body: string;
+    eventIds: string[];
+  }>;
 }
 
 const refs = {
@@ -1335,6 +1368,26 @@ export async function getWeeklyPoll(
     seasonId,
     ...(week !== undefined ? { week } : {}),
   });
+}
+
+export async function listDynastyEvents(
+  leagueId: string,
+  seasonId: string | undefined,
+  orgContext: OrgContext,
+): Promise<DynastyEventDto[]> {
+  requireLeagueAccessLocal(leagueId, orgContext);
+  return queryConvex(listDynastyEventsRef, {
+    leagueId,
+    ...(seasonId ? { seasonId } : {}),
+    limit: 20,
+  });
+}
+
+export async function getSeasonRecap(
+  seasonId: string,
+): Promise<SeasonRecapDto | null> {
+  const rows = await queryConvex(listSeasonRecapsRef, { seasonId });
+  return rows[0] ?? null;
 }
 
 export async function computeWeeklyPoll(input: {

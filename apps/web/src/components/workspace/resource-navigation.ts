@@ -115,7 +115,8 @@ export function seasonSubpageHref(
     | "stats"
     | "offseason"
     | "awards"
-    | "rankings",
+    | "rankings"
+    | "recap",
 ): string {
   return `/dashboard/seasons/${seasonId}/${subpage}`;
 }
@@ -226,6 +227,7 @@ export function buildSeasonSiblingLinks({
   offseasonEnabled = false,
   awardsEnabled = false,
   rankingsEnabled = false,
+  recapEnabled = false,
 }: {
   seasonId: string;
   scheduleEnabled: boolean;
@@ -241,6 +243,8 @@ export function buildSeasonSiblingLinks({
   awardsEnabled?: boolean;
   /** Epic D history flag; rankings remain a Season-owned read surface. */
   rankingsEnabled?: boolean;
+  /** A recap exists only after the season has been completed. */
+  recapEnabled?: boolean;
 }): ResourceSiblingLink[] {
   const links: (ResourceSiblingLink | false)[] = [
     { label: "Overview", href: seasonHomeHref(seasonId) },
@@ -271,6 +275,10 @@ export function buildSeasonSiblingLinks({
     awardsEnabled && {
       label: "Awards",
       href: seasonSubpageHref(seasonId, "awards"),
+    },
+    recapEnabled && {
+      label: "Recap",
+      href: seasonSubpageHref(seasonId, "recap"),
     },
   ];
   return links.filter((link): link is ResourceSiblingLink => Boolean(link));

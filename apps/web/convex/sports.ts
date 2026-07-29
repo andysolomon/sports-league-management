@@ -59,6 +59,7 @@ import {
 } from "./lib/seasonLifecycle";
 import { finalizeProgramSeason } from "./lib/programFinalize";
 import { finalizeSeasonHistoryForSeason } from "./lib/historyFinalize";
+import { finalizeSeasonRecapForSeason } from "./lib/seasonRecaps";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -2221,6 +2222,7 @@ export const completeSeason = internalMutationGeneric({
 
     await finalizeSeasonHistoryForSeason(ctx, args.seasonId);
     await finalizeProgramSeason(ctx, args.seasonId);
+    await finalizeSeasonRecapForSeason(ctx, args.seasonId);
 
     await ctx.db.patch(args.seasonId, { status: "completed" });
     return null;

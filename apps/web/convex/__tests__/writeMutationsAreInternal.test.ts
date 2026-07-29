@@ -234,8 +234,10 @@ void api.history.listSeasonAwards;
 void api.history.listPlayerAwards;
 void api.history.listCoachAwards;
 void api.history.getWeeklyPoll;
+void api.history.listSeasonRecaps;
 void internal.history.finalizeSeasonHistory;
 void internal.history.computeWeeklyPoll;
+void internal.history.finalizeSeasonRecap;
 
 type AllowedPublicDynastyReads =
   | "moduleStatus"
@@ -292,7 +294,8 @@ type AllowedPublicHistoryReads =
   | "listSeasonAwards"
   | "listPlayerAwards"
   | "listCoachAwards"
-  | "getWeeklyPoll";
+  | "getWeeklyPoll"
+  | "listSeasonRecaps";
 
 type LeakedPublicDynastyWrites = Exclude<
   keyof typeof api.dynasty,
@@ -337,6 +340,7 @@ void internal.e2eSeed.resetRosterFixture;
 void internal.e2eSeed.createScheduleFixture;
 void internal.e2eSeed.seedHistoryFixture;
 void internal.e2eSeed.seedAwardsFixture;
+void internal.e2eSeed.seedNewsRecapFixture;
 // @ts-expect-error createRosterFixture is internal, not public
 void api.e2eSeed.createRosterFixture;
 // @ts-expect-error resetRosterFixture is internal, not public
@@ -345,6 +349,8 @@ void api.e2eSeed.resetRosterFixture;
 void api.e2eSeed.createScheduleFixture;
 // @ts-expect-error seedHistoryFixture is internal, not public
 void api.e2eSeed.seedHistoryFixture;
+// @ts-expect-error seedNewsRecapFixture is internal, not public
+void api.e2eSeed.seedNewsRecapFixture;
 
 // --- Data migrations MUST be internal too (WSM-000079) ---
 // Backfills/migrations write rows; they're run manually with an admin/deploy

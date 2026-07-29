@@ -8,6 +8,15 @@ import { v } from "convex/values";
  * Season: a career and a record book only become meaningful across seasons.
  */
 export const historyTables = {
+  seasonRecaps: defineTable({
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    /** JSON `StorylineBlock[]` from `lib/recap.ts`, in display order. */
+    storylineBlocksJson: v.string(),
+    generatedAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_seasonId", ["seasonId"]),
+
   weeklyPolls: defineTable({
     leagueId: v.id("leagues"),
     seasonId: v.id("seasons"),

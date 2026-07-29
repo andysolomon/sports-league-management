@@ -4,6 +4,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { finalizeSeasonHistoryForSeason } from "./lib/historyFinalize";
 import { computeWeeklyPollForSeason } from "./lib/weeklyPolls";
+import { emitDynastyEvent } from "./lib/events";
+import { finalizeSeasonRecapForSeason } from "./lib/seasonRecaps";
 
 /*
  * e2e seed fixtures (WSM-000139, fast-follow to WSM-000096).
@@ -172,6 +174,15 @@ async function cascadeDeleteLeague(
       .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
       .collect()) as Array<{ _id: Id<"weeklyPolls"> }>;
     for (const row of weeklyPolls) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+    // D4 recap rows retain event ids in their ordered blocks.
+    const recaps = (await ctx.db
+      .query("seasonRecaps")
+      .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
+      .collect()) as Array<{ _id: Id<"seasonRecaps"> }>;
+    for (const row of recaps) {
       await ctx.db.delete(row._id);
       deleted += 1;
     }
@@ -923,6 +934,109 @@ export const seedRankingsFixture = internalMutation({
       week: 1,
     });
     return { rankingsCreated: result.rankings };
+  },
+});
+
+const seedNewsRecapFixtureResultValidator = v.object({
+  incompleteSeasonId: v.id("seasons"),
+  eventsCreated: v.number(),
+  blocksCreated: v.number(),
+});
+type SeedNewsRecapFixtureResult = Infer<
+  typeof seedNewsRecapFixtureResultValidator
+>;
+
+/**
+ * D4 route fixture: emit headlines for both schedule-fixture teams, persist the
+ * completed season's real recap, and add one active season for the link gate.
+ */
+export const seedNewsRecapFixture = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+  },
+  returns: seedNewsRecapFixtureResultValidator,
+  handler: async (
+    ctx,
+    args,
+  ): Promise<SeedNewsRecapFixtureResult> => {
+    assertSeedEnabled();
+    const [season, homeTeam, awayTeam] = await Promise.all([
+      ctx.db.get(args.seasonId),
+      ctx.db.get(args.homeTeamId),
+      ctx.db.get(args.awayTeamId),
+    ]);
+    if (
+      !season ||
+      season.leagueId !== args.leagueId ||
+      !homeTeam ||
+      homeTeam.leagueId !== args.leagueId ||
+      !awayTeam ||
+      awayTeam.leagueId !== args.leagueId
+    ) {
+      throw new Error("news_recap_fixture_scope_mismatch");
+    }
+
+    const emitted = await Promise.all([
+      emitDynastyEvent(ctx, {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        week: 2,
+        teamId: args.homeTeamId,
+        dedupeKey: `e2e_news_game:${args.seasonId}`,
+        narrative: {
+          type: "game_final",
+          winnerName: homeTeam.name,
+          loserName: awayTeam.name,
+          winnerScore: 24,
+          loserScore: 21,
+          tie: false,
+          week: 2,
+        },
+      }),
+      emitDynastyEvent(ctx, {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        teamId: args.awayTeamId,
+        dedupeKey: `e2e_news_transfer:${args.seasonId}`,
+        narrative: {
+          type: "transfer_retained",
+          playerName: "E2E News Captain",
+          teamName: awayTeam.name,
+          position: "QB",
+        },
+      }),
+      emitDynastyEvent(ctx, {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        teamId: args.homeTeamId,
+        dedupeKey: `e2e_news_award:${args.seasonId}`,
+        narrative: {
+          type: "award_won",
+          recipientName: "E2E News Star",
+          awardName: "Player of the Year",
+          positionGroup: "RB",
+        },
+      }),
+    ]);
+    const recap = await finalizeSeasonRecapForSeason(ctx, args.seasonId);
+    await ctx.db.patch(args.seasonId, { status: "completed" });
+    const incompleteSeasonId = await ctx.db.insert("seasons", {
+      name: "E2E Current Season",
+      leagueId: args.leagueId,
+      startDate: null,
+      endDate: null,
+      status: "active",
+      rosterLocked: false,
+    });
+
+    return {
+      incompleteSeasonId,
+      eventsCreated: emitted.filter((result) => result.created).length,
+      blocksCreated: recap.blocksWritten,
+    };
   },
 });
 

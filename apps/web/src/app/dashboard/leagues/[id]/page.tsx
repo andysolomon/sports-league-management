@@ -10,6 +10,7 @@ import {
   getPlayers,
   getTeamsByLeague,
   computeStandings,
+  listDynastyEvents,
 } from "@/lib/data-api";
 import { summarizeClassDistribution } from "@/lib/class-year";
 import {
@@ -24,6 +25,7 @@ import {
   schedulesStandingsV1,
   playoffsV1,
   statKeepingV1,
+  dynastyHistoryV1,
 } from "@/lib/flags";
 import { regularSeasonProgress } from "@/lib/playoffs";
 import { resolvePlayoffHandoff } from "@/lib/playoff-handoff";
@@ -44,6 +46,7 @@ import { LeagueCurrentSeasonCard } from "@/components/league/LeagueCurrentSeason
 import { LeagueStandingsCard } from "@/components/league/LeagueStandingsCard";
 import { LeagueTeamsGrid } from "@/components/league/LeagueTeamsGrid";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
+import { DynastyNewsFeed } from "@/components/dynasty/DynastyNewsFeed";
 
 /**
  * League info destination (WSM-000254): read-oriented league home with
@@ -75,13 +78,21 @@ export default async function LeagueInfoPage({
     }
   }
 
-  const [seasons, teams, scheduleEnabled, playoffsEnabled, statsEnabled] =
+  const [
+    seasons,
+    teams,
+    scheduleEnabled,
+    playoffsEnabled,
+    statsEnabled,
+    historyEnabled,
+  ] =
     await Promise.all([
       getSeasons([id]).catch(() => []),
       getTeamsByLeague(id, orgContext).catch(() => []),
       schedulesStandingsV1(),
       playoffsV1(),
       statKeepingV1(),
+      dynastyHistoryV1(),
     ]);
 
   const activeSeason = findActiveSeason(seasons);
@@ -91,7 +102,8 @@ export default async function LeagueInfoPage({
   );
   const decidedSeason = resolveLifecycleSeason(seasons);
 
-  const [fixtures, bracket, standings, leaguePlayers] = await Promise.all([
+  const [fixtures, bracket, standings, leaguePlayers, dynastyEvents] =
+    await Promise.all([
     activeSeason
       ? listFixturesBySeason(activeSeason.id).catch(() => [])
       : Promise.resolve([]),
@@ -103,6 +115,9 @@ export default async function LeagueInfoPage({
       : Promise.resolve([]),
     isAdmin && league.orgId
       ? getPlayers([id]).catch(() => [])
+      : Promise.resolve([]),
+    historyEnabled
+      ? listDynastyEvents(id, undefined, orgContext).catch(() => [])
       : Promise.resolve([]),
   ]);
 
@@ -264,6 +279,8 @@ export default async function LeagueInfoPage({
           fullStandingsHref={fullStandingsHref}
         />
       </div>
+
+      {historyEnabled ? <DynastyNewsFeed events={dynastyEvents} /> : null}
 
       <div className="mt-6">
         <LeagueTeamsGrid
