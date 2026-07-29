@@ -80,7 +80,18 @@ test.describe("Transfer window (B4)", () => {
     expect(seasonId).toBeTruthy();
     await success.getByRole("button", { name: "Done" }).click();
 
+    /*
+     * BOTH teams get a stacked depth chart, not just the home one.
+     *
+     * The hub picks the team this viewer acts for as the first one they manage
+     * in `getTeamsByLeague` order, which is not the fixture's home-first order
+     * — the first CI run proved it by resolving the AWAY team and rendering a
+     * correct, empty "Leaving" list. A spec that assumes which team the page
+     * chose is testing the ordering of a query, so seed both and let whichever
+     * one it picked have candidates.
+     */
     await seedTransferCandidates(seasonId as string, fixture.homeTeamId, 6);
+    await seedTransferCandidates(seasonId as string, fixture.awayTeamId, 6);
 
     await page.goto(`/dashboard/seasons/${seasonId}/offseason`);
     const panel = page.getByTestId("transfer-panel");
