@@ -86,6 +86,10 @@ export const dynastyTables = {
     playerId: v.id("players"),
     position: v.string(),
     positionGroup: v.union(v.string(), v.null()),
+    /** D2 tiebreak snapshot; optional for aggregates written before awards. */
+    playerName: v.optional(v.string()),
+    /** Grade 9 or zero experience at aggregate-write time. */
+    newcomerEligible: v.optional(v.boolean()),
     /** Games with an entered stat line. Feeds SPRT's per-game rates. */
     gamesPlayed: v.number(),
     /** `aggregateStatLines` output — sums, with "long" fields taking the max. */

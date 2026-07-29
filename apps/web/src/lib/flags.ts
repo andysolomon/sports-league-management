@@ -259,6 +259,22 @@ export const dynastyProgramV1 = flag<boolean>({
   },
 });
 
+export const dynastyHistoryV1 = flag<boolean>({
+  key: "dynasty_history_v1",
+  description:
+    "Dynasty Mode Epic D: career history, season awards and narrative (#608)",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_DYNASTY_HISTORY_V1");
+    void trackFlagExposure("dynasty_history_v1", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {

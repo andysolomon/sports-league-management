@@ -126,6 +126,9 @@ export const historyRef = moduleRefs("history");
 const listProgramRecordsRef = historyRef.query<ProgramRecordDto[]>(
   "listProgramRecords",
 );
+const listSeasonAwardsRef = historyRef.query<AwardDto[]>("listSeasonAwards");
+const listPlayerAwardsRef = historyRef.query<AwardDto[]>("listPlayerAwards");
+const listCoachAwardsRef = historyRef.query<AwardDto[]>("listCoachAwards");
 
 /** A single bracket node (WSM-000164). Team/score fields are null until played. */
 export interface PlayoffMatchupDto {
@@ -192,6 +195,24 @@ export interface ProgramRecordDto {
   teamName: string;
   seasonId: string;
   seasonName: string;
+}
+
+export interface AwardDto {
+  id: string;
+  seasonId: string;
+  seasonName: string;
+  type: string;
+  typeLabel: string;
+  tier: string;
+  playerId: string | null;
+  coachId: string | null;
+  recipientName: string;
+  teamId: string;
+  teamName: string;
+  divisionId: string | null;
+  divisionName: string | null;
+  positionGroup: string | null;
+  scoreValue: number;
 }
 
 const refs = {
@@ -1260,6 +1281,22 @@ export async function listProgramRecords(
     leagueId,
     ...(teamId ? { teamId } : {}),
   });
+}
+
+export async function listSeasonAwards(
+  seasonId: string,
+): Promise<AwardDto[]> {
+  return queryConvex(listSeasonAwardsRef, { seasonId });
+}
+
+export async function listPlayerAwards(
+  playerId: string,
+): Promise<AwardDto[]> {
+  return queryConvex(listPlayerAwardsRef, { playerId });
+}
+
+export async function listCoachAwards(coachId: string): Promise<AwardDto[]> {
+  return queryConvex(listCoachAwardsRef, { coachId });
 }
 
 export async function getTeam(

@@ -8,6 +8,7 @@ import {
   statKeepingV1,
   dynastyOffseasonV2,
   dynastyProgramV1,
+  dynastyHistoryV1,
 } from "@/lib/flags";
 import {
   computeStandings,
@@ -90,7 +91,10 @@ export default async function SeasonHubPage({
     seasons.filter((s) => s.status === "completed"),
   );
 
-  const programEnabled = await dynastyProgramV1();
+  const [programEnabled, historyEnabled] = await Promise.all([
+    dynastyProgramV1(),
+    dynastyHistoryV1(),
+  ]);
 
   const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled, offseasonEnabled, dynastyFixtures, dynastyBracket, leaguePlayers, teams] =
     await Promise.all([
@@ -249,6 +253,7 @@ export default async function SeasonHubPage({
           statsEnabled,
           // Only an upcoming season has an offseason to prepare.
           offseasonEnabled: offseasonEnabled && isUpcomingSeason,
+          awardsEnabled: historyEnabled,
         })}
       />
       <WorkspaceNav links={links} />

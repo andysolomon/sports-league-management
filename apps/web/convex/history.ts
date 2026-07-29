@@ -1,9 +1,11 @@
 import { v, type Infer } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
+import { internalMutation, query, type QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { DYNASTY_MODULES, moduleStatusValidator } from "./lib/moduleStatus";
 import {
   RECORD_CATEGORY_LABELS,
 } from "./lib/records";
+import { AWARD_LABELS, type AwardType } from "./lib/awards";
 import {
   finalizeSeasonHistoryForSeason,
   type FinalizeSeasonHistoryResult,
@@ -166,5 +168,129 @@ export const listProgramRecords = query({
       seasonId: row.seasonId,
       seasonName: seasonNames.get(row.seasonId as string) ?? "Unknown season",
     }));
+  },
+});
+
+const awardDtoValidator = v.object({
+  id: v.string(),
+  seasonId: v.string(),
+  seasonName: v.string(),
+  type: v.string(),
+  typeLabel: v.string(),
+  tier: v.string(),
+  playerId: v.union(v.string(), v.null()),
+  coachId: v.union(v.string(), v.null()),
+  recipientName: v.string(),
+  teamId: v.string(),
+  teamName: v.string(),
+  divisionId: v.union(v.string(), v.null()),
+  divisionName: v.union(v.string(), v.null()),
+  positionGroup: v.union(v.string(), v.null()),
+  scoreValue: v.number(),
+});
+type AwardDto = Infer<typeof awardDtoValidator>;
+
+async function hydrateAwards(
+  ctx: QueryCtx,
+  rows: Doc<"awards">[],
+): Promise<AwardDto[]> {
+  if (rows.length === 0) return [];
+  const leagueId = rows[0]!.leagueId;
+  const [players, coaches, teams, divisions, seasons] = await Promise.all([
+    ctx.db
+      .query("players")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+      .collect(),
+    ctx.db
+      .query("coaches")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+      .collect(),
+    ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+      .collect(),
+    ctx.db
+      .query("divisions")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+      .collect(),
+    ctx.db
+      .query("seasons")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+      .collect(),
+  ]);
+  const playerNames = new Map(
+    players.map((row) => [row._id as string, row.name]),
+  );
+  const coachNames = new Map(
+    coaches.map((row) => [row._id as string, row.displayName]),
+  );
+  const teamNames = new Map(
+    teams.map((row) => [row._id as string, row.name]),
+  );
+  const divisionNames = new Map(
+    divisions.map((row) => [row._id as string, row.name]),
+  );
+  const seasonNames = new Map(
+    seasons.map((row) => [row._id as string, row.name]),
+  );
+
+  return rows.map((row): AwardDto => ({
+    id: row._id,
+    seasonId: row.seasonId,
+    seasonName: seasonNames.get(row.seasonId as string) ?? "Unknown season",
+    type: row.type,
+    typeLabel: AWARD_LABELS[row.type as AwardType] ?? row.type,
+    tier: row.tier,
+    playerId: row.playerId,
+    coachId: row.coachId,
+    recipientName: row.playerId
+      ? (playerNames.get(row.playerId as string) ?? "Unknown player")
+      : row.coachId
+        ? (coachNames.get(row.coachId as string) ?? "Unknown coach")
+        : "Unknown recipient",
+    teamId: row.teamId,
+    teamName: teamNames.get(row.teamId as string) ?? "Unknown program",
+    divisionId: row.divisionId,
+    divisionName: row.divisionId
+      ? (divisionNames.get(row.divisionId as string) ?? "Unknown division")
+      : null,
+    positionGroup: row.positionGroup,
+    scoreValue: row.scoreValue,
+  }));
+}
+
+export const listSeasonAwards = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(awardDtoValidator),
+  handler: async (ctx, args): Promise<AwardDto[]> => {
+    const rows = await ctx.db
+      .query("awards")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+    return hydrateAwards(ctx, rows);
+  },
+});
+
+export const listPlayerAwards = query({
+  args: { playerId: v.id("players") },
+  returns: v.array(awardDtoValidator),
+  handler: async (ctx, args): Promise<AwardDto[]> => {
+    const rows = await ctx.db
+      .query("awards")
+      .withIndex("by_playerId", (q) => q.eq("playerId", args.playerId))
+      .collect();
+    return hydrateAwards(ctx, rows);
+  },
+});
+
+export const listCoachAwards = query({
+  args: { coachId: v.id("coaches") },
+  returns: v.array(awardDtoValidator),
+  handler: async (ctx, args): Promise<AwardDto[]> => {
+    const rows = await ctx.db
+      .query("awards")
+      .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
+      .collect();
+    return hydrateAwards(ctx, rows);
   },
 });

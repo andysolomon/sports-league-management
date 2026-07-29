@@ -62,6 +62,14 @@ export const backfillPlayerSeasonAggregates = internalMutation({
         playerId: playerId as Id<"players">,
         position: player.position,
         positionGroup: player.positionGroup ?? null,
+        playerName: player.name,
+        ...(typeof player.grade === "number" ||
+        typeof player.experienceYears === "number"
+          ? {
+              newcomerEligible:
+                player.grade === 9 || player.experienceYears === 0,
+            }
+          : {}),
         gamesPlayed,
         totalsJson: JSON.stringify(totals),
         updatedAt: now,

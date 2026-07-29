@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { finalizeSeasonHistoryForSeason } from "./lib/historyFinalize";
 
 /*
  * e2e seed fixtures (WSM-000139, fast-follow to WSM-000096).
@@ -150,6 +151,16 @@ async function cascadeDeleteLeague(
       .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
       .collect()) as Array<{ _id: Id<"playerSeasonAggregates"> }>;
     for (const row of aggregates) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+    // Season awards (D2). Clear before players/coaches so no accolade from a
+    // prior Playwright fixture can leak onto the next run's Overview pages.
+    const awards = (await ctx.db
+      .query("awards")
+      .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
+      .collect()) as Array<{ _id: Id<"awards"> }>;
+    for (const row of awards) {
       await ctx.db.delete(row._id);
       deleted += 1;
     }
@@ -666,6 +677,144 @@ export const seedHistoryFixture = internalMutation({
       created += 2;
     }
     return { created };
+  },
+});
+
+/**
+ * D2 route fixture: seed one award candidate and one head coach for BOTH
+ * schedule-fixture teams, then run the real season-history finalizer.
+ */
+export const seedAwardsFixture = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+  },
+  returns: v.object({
+    winnerPlayerId: v.id("players"),
+    awardsCreated: v.number(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    winnerPlayerId: Id<"players">;
+    awardsCreated: number;
+  }> => {
+    assertSeedEnabled();
+    const [season, homeTeam, awayTeam] = await Promise.all([
+      ctx.db.get(args.seasonId),
+      ctx.db.get(args.homeTeamId),
+      ctx.db.get(args.awayTeamId),
+    ]);
+    if (
+      !season ||
+      season.leagueId !== args.leagueId ||
+      !homeTeam ||
+      homeTeam.leagueId !== args.leagueId ||
+      !awayTeam ||
+      awayTeam.leagueId !== args.leagueId
+    ) {
+      throw new Error("awards_fixture_scope_mismatch");
+    }
+
+    const divisionId = await ctx.db.insert("divisions", {
+      name: "E2E Awards Conference",
+      leagueId: args.leagueId,
+    });
+    await Promise.all([
+      ctx.db.patch(args.homeTeamId, { divisionId }),
+      ctx.db.patch(args.awayTeamId, { divisionId }),
+    ]);
+
+    const now = new Date().toISOString();
+    const candidates = [
+      {
+        teamId: args.homeTeamId,
+        playerName: "Zed Awards",
+        coachName: "Zed Coach",
+      },
+      {
+        teamId: args.awayTeamId,
+        playerName: "Aaron Awards",
+        coachName: "Aaron Coach",
+      },
+    ];
+    let winnerPlayerId: Id<"players"> | null = null;
+
+    for (const [index, candidate] of candidates.entries()) {
+      const playerId = await ctx.db.insert("players", {
+        name: candidate.playerName,
+        leagueId: args.leagueId,
+        teamId: candidate.teamId,
+        position: "QB",
+        positionGroup: "QB",
+        jerseyNumber: index + 10,
+        dateOfBirth: null,
+        status: "active",
+        headshotUrl: null,
+        grade: 9,
+      });
+      if (candidate.playerName === "Aaron Awards") {
+        winnerPlayerId = playerId;
+      }
+      await ctx.db.insert("playerSeasonAggregates", {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        teamId: candidate.teamId,
+        playerId,
+        position: "QB",
+        positionGroup: "QB",
+        playerName: candidate.playerName,
+        newcomerEligible: true,
+        gamesPlayed: 10,
+        totalsJson: JSON.stringify({
+          passing: { yards: 2_000, td: 20, int: 5 },
+        }),
+        updatedAt: now,
+      });
+      await ctx.db.insert("seasonTeamRecords", {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        teamId: candidate.teamId,
+        divisionId,
+        wins: 8,
+        losses: 2,
+        ties: 0,
+        pointsFor: 300,
+        pointsAgainst: 200,
+        divisionWins: 4,
+        divisionLosses: 1,
+        divisionTies: 0,
+        headToHeadJson: "{}",
+        streak: 1,
+        lastResults: ["W"],
+        gamesCounted: 10,
+        updatedAt: now,
+      });
+      await ctx.db.insert("coaches", {
+        leagueId: args.leagueId,
+        teamId: candidate.teamId,
+        displayName: candidate.coachName,
+        role: "head_coach",
+        status: "ai",
+        archetype: "program_builder",
+        prestige: 50,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await finalizeSeasonHistoryForSeason(ctx, args.seasonId);
+    const awards = await ctx.db
+      .query("awards")
+      .withIndex("by_seasonId", (q: any) =>
+        q.eq("seasonId", args.seasonId),
+      )
+      .collect();
+    if (!winnerPlayerId) throw new Error("awards_fixture_winner_missing");
+    return { winnerPlayerId, awardsCreated: awards.length };
   },
 });
 
