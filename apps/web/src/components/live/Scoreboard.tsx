@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { formatPeriodLabel } from "@/lib/live/game-periods";
 
 export interface ScoreboardProps {
   homeTeamName: string;
@@ -41,7 +42,7 @@ export function Scoreboard({
         ) : (
           <div className="font-semibold text-foreground">{statusLabel}</div>
         )}
-        <div className="mt-1">Period {period}</div>
+        <div className="mt-1">{formatPeriodLabel(period)}</div>
         {clock ? (
           <div className="mt-1 font-mono tabular-nums">{clock}</div>
         ) : null}
