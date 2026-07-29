@@ -112,9 +112,22 @@ export async function advanceOffseasonPhaseAction(input: {
       seasonId: input.seasonId,
       expectedPhase: input.expectedPhase,
       to: input.to,
-      // Identifies this attempt, so a retry by the same admin is not mistaken
-      // for a second admin racing them.
-      ownerId: `${userId}:${input.expectedPhase}:${input.to}`,
+      /*
+       * The admin, not the attempt.
+       *
+       * This was `${userId}:${from}:${to}` — a different owner for every
+       * transition — which meant an admin walking their own offseason was
+       * refused by their OWN 30-second lease the moment they clicked Advance
+       * twice in a row. B6's e2e is the first thing to walk several phases back
+       * to back, and it found it; every earlier test advanced once, or advanced
+       * through the mutation with one fixed owner, so the machine looked fine.
+       *
+       * Keying the lease to the user is what the lease was always documented to
+       * do — "a second admin clicking Advance loses cleanly". A retry by the
+       * same admin still matches, so the `changed: false` path is unaffected,
+       * and a genuinely concurrent second admin is still turned away.
+       */
+      ownerId: userId,
       actorUserId: userId,
       draftStatus: draftStatusFor(draft),
     });

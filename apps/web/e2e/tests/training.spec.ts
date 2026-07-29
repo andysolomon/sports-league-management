@@ -172,11 +172,21 @@ test.describe("Training (B6)", () => {
       const phase = await stepper.getAttribute("data-phase");
       if (phase === "activate") break;
       await page.getByTestId("offseason-advance").click();
-      await expect(page.getByTestId("offseason-phase-message")).toBeVisible({
-        timeout: 30_000,
-      });
+      /*
+       * "Advanced to", not merely visible. A REFUSED advance renders its reason
+       * into the same element, so asserting the message exists passes on
+       * failure — which is exactly how this spec's first CI run walked six
+       * times, never left `transfers`, and only fell over at the end with no
+       * indication of why.
+       */
+      await expect(
+        page.getByTestId("offseason-phase-message"),
+      ).toContainText("Advanced to", { timeout: 30_000 });
       await page.reload();
       await expect(stepper).toBeVisible({ timeout: 30_000 });
+      // The stepper reads persisted state, so this is the phase that actually
+      // committed rather than what the client thinks it asked for.
+      await expect(stepper).not.toHaveAttribute("data-phase", phase as string);
     }
     await expect(stepper).toHaveAttribute("data-phase", "activate", {
       timeout: 30_000,
