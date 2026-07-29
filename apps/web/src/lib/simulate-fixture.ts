@@ -1,6 +1,7 @@
 import type { FixtureDto } from "@sports-management/shared-types";
 import {
   bulkUpsertPlayerGameStats,
+  listFixtureGameplans,
   recordGameInjuries,
   recordGameResult,
   upsertGamePlayLog,
@@ -26,6 +27,7 @@ import {
   fixtureSimConditions,
   type SeasonSimContext,
 } from "@/lib/sim-context";
+import { isGameplanFocus } from "@/lib/program/gameplan";
 
 export interface SimulateFixtureInput {
   fixture: FixtureDto;
@@ -104,13 +106,31 @@ export async function simulateAndPersistFixture(
   const homeFit = applyTeamProgram(fit(home), input.simContext);
   const awayFit = applyTeamProgram(fit(away), input.simContext);
 
+  const gameplans =
+    input.simContext.features.schemes === true
+      ? await listFixtureGameplans(fixture.id).catch(() => [])
+      : [];
+  const focusFor = (teamId: string) => {
+    const row = gameplans.find((g) => g.teamId === teamId);
+    const focus = row?.focus;
+    return focus && isGameplanFocus(focus) ? focus : undefined;
+  };
+  const homeWithPlan =
+    focusFor(fixture.homeTeamId) !== undefined
+      ? { ...homeFit, gameplan: focusFor(fixture.homeTeamId) }
+      : homeFit;
+  const awayWithPlan =
+    focusFor(fixture.awayTeamId) !== undefined
+      ? { ...awayFit, gameplan: focusFor(fixture.awayTeamId) }
+      : awayFit;
+
   const rosterEmpty =
-    homeFit.players.length === 0 || awayFit.players.length === 0;
+    homeWithPlan.players.length === 0 || awayWithPlan.players.length === 0;
 
   if (rosterEmpty) {
     const { homeScore, awayScore } = simulateScore({
-      homeStrength: homeFit.strength,
-      awayStrength: awayFit.strength,
+      homeStrength: homeWithPlan.strength,
+      awayStrength: awayWithPlan.strength,
       seed,
       decisive,
       flavor,
@@ -131,8 +151,8 @@ export async function simulateAndPersistFixture(
    */
   const conditions = fixtureSimConditions(input.simContext, fixture);
   const log = simulateGameLog({
-    home: homeFit,
-    away: awayFit,
+    home: homeWithPlan,
+    away: awayWithPlan,
     seed,
     decisive,
     flavor,

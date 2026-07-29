@@ -16,6 +16,7 @@ import GoLiveControl from "@/components/schedule/GoLiveControl";
 import ClipsControl from "@/components/schedule/ClipsControl";
 import { SimulateGameButton } from "@/components/schedule/SimulateControls";
 import type { PublicGameStream } from "@/lib/data-api";
+import type { FixtureGameplanDto } from "@/lib/data-api";
 import type { GameResultDto } from "@sports-management/shared-types";
 import type { FixtureDto } from "@sports-management/shared-types";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,10 @@ export interface ScheduleFixtureRowProps {
   statsEnabled: boolean;
   liveEnabled: boolean;
   stream: PublicGameStream | null | undefined;
+  seasonId: string;
+  gameplansEnabled?: boolean;
+  gameplansByFixtureId?: ReadonlyMap<string, FixtureGameplanDto[]>;
+  manageableTeamIds?: readonly string[];
 }
 
 function MatchupCell({
@@ -78,6 +83,10 @@ export function ScheduleFixtureRow({
   statsEnabled,
   liveEnabled,
   stream,
+  seasonId,
+  gameplansEnabled,
+  gameplansByFixtureId,
+  manageableTeamIds = [],
 }: ScheduleFixtureRowProps) {
   const [open, setOpen] = React.useState(false);
   const restoreFocusRef = React.useRef<HTMLElement | null>(null);
@@ -160,6 +169,10 @@ export function ScheduleFixtureRow({
             open={open}
             onOpenChange={setOpen}
             restoreFocusRef={restoreFocusRef}
+            seasonId={seasonId}
+            gameplansEnabled={gameplansEnabled}
+            gameplans={gameplansByFixtureId?.get(fixture.id) ?? []}
+            manageableTeamIds={manageableTeamIds}
           />
         </td>
         {isAdmin ? (

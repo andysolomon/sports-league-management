@@ -208,3 +208,20 @@ export function isNeutralScheme(mods: SchemeModifiers): boolean {
     mods.fumbleRate === 1
   );
 }
+
+/** Layer a weekly gameplan on top of season scheme modifiers (C3). */
+export function layerSchemeModifiers(
+  base: SchemeModifiers,
+  overlay: SchemeModifiers,
+): SchemeModifiers {
+  return {
+    passRateDelta: base.passRateDelta + overlay.passRateDelta,
+    tempo: base.tempo * overlay.tempo,
+    explosiveRate: base.explosiveRate * overlay.explosiveRate,
+    sackRate: base.sackRate * overlay.sackRate,
+    passAccuracy: base.passAccuracy * overlay.passAccuracy,
+    interceptionRate: base.interceptionRate * overlay.interceptionRate,
+    rushYards: base.rushYards * overlay.rushYards,
+    fumbleRate: base.fumbleRate * overlay.fumbleRate,
+  };
+}

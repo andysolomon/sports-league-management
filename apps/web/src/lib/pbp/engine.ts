@@ -29,9 +29,14 @@ import {
 import { homeFieldEdge as crowdHomeFieldEdge } from "./crowd";
 import {
   NEUTRAL_SCHEME_MODIFIERS,
+  layerSchemeModifiers,
   schemeModifiers,
   type SchemeModifiers,
 } from "./schemes";
+import {
+  gameplanModifiers,
+  isGameplanFocus,
+} from "@/lib/program/gameplan";
 import {
   NEUTRAL_MODIFIERS,
   weatherModifiers,
@@ -215,6 +220,21 @@ function schemeMods(state: GameState): SchemeModifiers {
   return state.possession === "home"
     ? state.homeSchemeMods
     : state.awaySchemeMods;
+}
+
+function possessionSchemeModifiers(
+  offense: TeamSimProfile,
+  defense: TeamSimProfile,
+  schemesEnabled: boolean,
+): SchemeModifiers {
+  if (!schemesEnabled) return NEUTRAL_SCHEME_MODIFIERS;
+  const base = schemeModifiers(offense.scheme, defense.scheme);
+  const focus = offense.gameplan;
+  if (!focus || !isGameplanFocus(focus)) return base;
+  const weekly = gameplanModifiers(focus, {
+    defenseScheme: defense.scheme?.defense,
+  });
+  return layerSchemeModifiers(base, weekly);
 }
 
 function offenseTeamId(state: GameState): string {
@@ -1758,11 +1778,11 @@ function simulateGameLog(input: PbpGameInput): PbpGameLog {
      */
     homeSchemeMods:
       input.features?.schemes === true
-        ? schemeModifiers(input.home.scheme, input.away.scheme)
+        ? possessionSchemeModifiers(input.home, input.away, true)
         : NEUTRAL_SCHEME_MODIFIERS,
     awaySchemeMods:
       input.features?.schemes === true
-        ? schemeModifiers(input.away.scheme, input.home.scheme)
+        ? possessionSchemeModifiers(input.away, input.home, true)
         : NEUTRAL_SCHEME_MODIFIERS,
     decisive: input.decisive ?? false,
     quarter: 1,

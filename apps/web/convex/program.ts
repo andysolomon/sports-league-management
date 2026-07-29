@@ -227,6 +227,124 @@ export const setTeamProgram = internalMutation({
 });
 
 /*
+ * ── Weekly gameplans (C3) ───────────────────────────────────────────────────
+ */
+
+const fixtureGameplanValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  seasonId: v.string(),
+  fixtureId: v.string(),
+  teamId: v.string(),
+  focus: v.union(v.string(), v.null()),
+  updatedAt: v.string(),
+});
+
+type FixtureGameplanDto = Infer<typeof fixtureGameplanValidator>;
+
+function toFixtureGameplanDto(row: {
+  _id: string;
+  leagueId: string;
+  seasonId: string;
+  fixtureId: string;
+  teamId: string;
+  focus?: string;
+  updatedAt: string;
+}): FixtureGameplanDto {
+  return {
+    id: row._id,
+    leagueId: row.leagueId,
+    seasonId: row.seasonId,
+    fixtureId: row.fixtureId,
+    teamId: row.teamId,
+    focus: row.focus ?? null,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export const listFixtureGameplans = query({
+  args: { fixtureId: v.id("fixtures") },
+  returns: v.array(fixtureGameplanValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("fixtureTeamGameplans")
+      .withIndex("by_fixtureId", (q) => q.eq("fixtureId", args.fixtureId))
+      .collect();
+    return rows.map(toFixtureGameplanDto);
+  },
+});
+
+export const listGameplansBySeason = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(fixtureGameplanValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("fixtureTeamGameplans")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+    return rows.map(toFixtureGameplanDto);
+  },
+});
+
+export const setFixtureGameplan = internalMutation({
+  args: {
+    fixtureId: v.id("fixtures"),
+    teamId: v.id("teams"),
+    actorUserId: v.string(),
+    focus: v.optional(v.string()),
+  },
+  returns: fixtureGameplanValidator,
+  handler: async (ctx, args) => {
+    const fixture = await ctx.db.get(args.fixtureId);
+    if (!fixture) throw new Error("fixture_not_found");
+    if (
+      fixture.homeTeamId !== args.teamId &&
+      fixture.awayTeamId !== args.teamId
+    ) {
+      throw new Error("team_not_in_fixture");
+    }
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("team_not_found");
+    const season = await ctx.db.get(fixture.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (team.leagueId !== season.leagueId) throw new Error("team_not_in_league");
+
+    const now = new Date().toISOString();
+    const existing = await ctx.db
+      .query("fixtureTeamGameplans")
+      .withIndex("by_fixtureId_teamId", (q) =>
+        q.eq("fixtureId", args.fixtureId).eq("teamId", args.teamId),
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        focus: args.focus,
+        updatedAt: now,
+        updatedBy: args.actorUserId,
+      });
+      const updated = await ctx.db.get(existing._id);
+      if (!updated) throw new Error("gameplan_not_found");
+      return toFixtureGameplanDto(updated);
+    }
+
+    const id = await ctx.db.insert("fixtureTeamGameplans", {
+      leagueId: season.leagueId,
+      seasonId: fixture.seasonId,
+      fixtureId: args.fixtureId,
+      teamId: args.teamId,
+      focus: args.focus,
+      createdAt: now,
+      updatedAt: now,
+      updatedBy: args.actorUserId,
+    });
+    const created = await ctx.db.get(id);
+    if (!created) throw new Error("gameplan_not_found");
+    return toFixtureGameplanDto(created);
+  },
+});
+
+/*
  * ── Coaches (C1) ───────────────────────────────────────────────────────────
  */
 
@@ -361,6 +479,18 @@ export const listCoachesByTeam = query({
     const rows = await ctx.db
       .query("coaches")
       .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    return rows.map(toCoachDto);
+  },
+});
+
+export const listCoachesByLeague = query({
+  args: { leagueId: v.id("leagues") },
+  returns: v.array(coachDtoValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("coaches")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
       .collect();
     return rows.map(toCoachDto);
   },

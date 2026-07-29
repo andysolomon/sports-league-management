@@ -269,8 +269,11 @@ type AllowedPublicProgramReads =
   | "moduleStatus"
   | "listTeamPrograms"
   | "getTeamProgram"
+  | "listFixtureGameplans"
+  | "listGameplansBySeason"
   | "getCoach"
   | "listCoachesByTeam"
+  | "listCoachesByLeague"
   | "listCoachSeasons"
   | "getSeasonGoalProgress";
 type AllowedPublicHistoryReads = "moduleStatus";

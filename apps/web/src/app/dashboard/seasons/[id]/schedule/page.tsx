@@ -8,6 +8,7 @@ import {
   liveScoringV1,
   playoffsV1,
   syntheticRostersV1,
+  dynastySimV2,
 } from "@/lib/flags";
 import {
   getLeague,
@@ -21,6 +22,7 @@ import {
   getTeamsByLeague,
   getPlayers,
   listFixturesBySeason,
+  listGameplansBySeason,
   computeStandings,
   type PublicGameStream,
 } from "@/lib/data-api";
@@ -142,6 +144,17 @@ export default async function SeasonSchedulePage({
     : { target: DEFAULT_TARGET_ROSTER_SIZE, teams: [] };
 
   const fixtures = await listFixturesBySeason(season.id);
+  const gameplansEnabled = await dynastySimV2();
+  const seasonGameplans = gameplansEnabled
+    ? await listGameplansBySeason(season.id).catch(() => [])
+    : [];
+  const gameplansByFixtureId = new Map<string, typeof seasonGameplans>();
+  for (const row of seasonGameplans) {
+    const list = gameplansByFixtureId.get(row.fixtureId) ?? [];
+    list.push(row);
+    gameplansByFixtureId.set(row.fixtureId, list);
+  }
+  const manageableTeamIds = isAdmin ? teams.map((t) => t.id) : [];
 
   const seasonStarted = isSeasonStarted(season, fixtures);
 
@@ -219,6 +232,10 @@ export default async function SeasonSchedulePage({
       liveEnabled={liveEnabled}
       streams={streams}
       recordByTeamId={recordByTeamId}
+      seasonId={season.id}
+      gameplansEnabled={gameplansEnabled}
+      gameplansByFixtureId={gameplansByFixtureId}
+      manageableTeamIds={manageableTeamIds}
     />
   );
   const weekViews: ScheduleWeekView[] = weekGroups.map((group) => ({
@@ -400,6 +417,10 @@ function FixtureTable({
   liveEnabled,
   streams,
   recordByTeamId,
+  seasonId,
+  gameplansEnabled,
+  gameplansByFixtureId,
+  manageableTeamIds,
 }: {
   rows: FixtureRow[];
   leagueId: string;
@@ -411,6 +432,10 @@ function FixtureTable({
   liveEnabled: boolean;
   streams: Map<string, PublicGameStream | null>;
   recordByTeamId: Map<string, string>;
+  seasonId: string;
+  gameplansEnabled: boolean;
+  gameplansByFixtureId: Map<string, import("@/lib/data-api").FixtureGameplanDto[]>;
+  manageableTeamIds: string[];
 }) {
   return (
     <div className="overflow-x-auto">
@@ -452,6 +477,10 @@ function FixtureTable({
               statsEnabled={statsEnabled}
               liveEnabled={liveEnabled}
               stream={streams.get(fixture.id)}
+              seasonId={seasonId}
+              gameplansEnabled={gameplansEnabled}
+              gameplansByFixtureId={gameplansByFixtureId}
+              manageableTeamIds={manageableTeamIds}
             />
           ))}
         </tbody>

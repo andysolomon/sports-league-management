@@ -57,6 +57,11 @@ export interface TeamSimProfile {
    * Read only under `features.schemes`.
    */
   scheme?: TeamSchemeProfile;
+  /**
+   * Weekly emphasis for this fixture (C3). Absent means no gameplan was set.
+   * Read only under `features.schemes`.
+   */
+  gameplan?: string;
 }
 
 import type { SimulationFlavor } from "@/lib/simulation-flavor";

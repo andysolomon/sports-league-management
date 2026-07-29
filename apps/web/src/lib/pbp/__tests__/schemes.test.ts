@@ -456,6 +456,27 @@ describe("scheme distribution", () => {
       expect(Math.abs(mean - baseline) / baseline).toBeLessThan(0.25);
     }
   });
+
+  it("never moves a matchup more than 25% off baseline with gameplans layered on", () => {
+    const baseline = meanPoints(undefined, undefined);
+    const focus = "attack_pass" as const;
+    let total = 0;
+    const games = 6;
+    for (let seed = 1; seed <= games; seed++) {
+      const log = simulateGameLog({
+        home: {
+          ...buildTeam("home", 70, { offense: "spread" }),
+          gameplan: focus,
+        },
+        away: buildTeam("away", 70, { defense: "three_four" }),
+        seed,
+        features: ALL_GATES,
+      });
+      total += log.homeScore + log.awayScore;
+    }
+    const meanWithPlan = total / games;
+    expect(Math.abs(meanWithPlan - baseline) / baseline).toBeLessThan(0.25);
+  });
 });
 
 describe("coach aggression", () => {

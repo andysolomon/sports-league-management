@@ -9,6 +9,8 @@ import { saveTeamProgramAction } from "@/app/dashboard/_actions/team-program";
 import {
   DEFENSE_SCHEME_LIST,
   OFFENSE_SCHEME_LIST,
+  schemeFit,
+  type SchemeFitRoster,
 } from "@/lib/program/schemes";
 import type { TeamProgramDto } from "@/lib/data-api";
 
@@ -32,6 +34,7 @@ export interface TeamSchemeCardProps {
   program: TeamProgramDto | null;
   /** False for a viewer who cannot manage this team — the card is read-only. */
   canManage: boolean;
+  rosterForFit?: SchemeFitRoster;
 }
 
 function dialLabel(value: number | null): string {
@@ -40,11 +43,16 @@ function dialLabel(value: number | null): string {
   return String(value);
 }
 
+function fitLabel(value: number): string {
+  return `${Math.round(value * 100)}% roster fit`;
+}
+
 export function TeamSchemeCard({
   seasonId,
   teamId,
   program,
   canManage,
+  rosterForFit = { players: [] },
 }: TeamSchemeCardProps) {
   const [offense, setOffense] = useState(program?.offenseScheme ?? UNSET);
   const [defense, setDefense] = useState(program?.defenseScheme ?? UNSET);
@@ -55,6 +63,11 @@ export function TeamSchemeCard({
   );
   const [saved, setSaved] = useState<TeamProgramDto | null>(program);
   const [pending, startTransition] = useTransition();
+
+  const offenseFit =
+    offense && offense !== UNSET ? schemeFit(offense, rosterForFit) : null;
+  const defenseFit =
+    defense && defense !== UNSET ? schemeFit(defense, rosterForFit) : null;
 
   function save() {
     startTransition(async () => {
@@ -201,6 +214,18 @@ export function TeamSchemeCard({
             <p className="text-caption-12 text-text-muted">
               {OFFENSE_SCHEME_LIST.find((s) => s.id === offense)?.blurb ??
                 "No offensive scheme set."}
+              {offenseFit !== null ? (
+                <span data-testid="team-scheme-offense-fit">
+                  {" "}
+                  · {fitLabel(offenseFit)}
+                </span>
+              ) : null}
+              {defenseFit !== null ? (
+                <span data-testid="team-scheme-defense-fit">
+                  {" "}
+                  · Defense {fitLabel(defenseFit)}
+                </span>
+              ) : null}
             </p>
           </>
         )}

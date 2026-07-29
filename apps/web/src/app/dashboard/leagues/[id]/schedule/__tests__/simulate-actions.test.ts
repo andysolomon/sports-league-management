@@ -23,6 +23,8 @@ const {
   mockListRivalries,
   mockListActiveInjuries,
   mockListTeamPrograms,
+  mockListCoachesByLeague,
+  mockListFixtureGameplans,
 } = vi.hoisted(() => ({
   mockSchedulesStandingsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -44,6 +46,8 @@ const {
   mockListRivalries: vi.fn(),
   mockListActiveInjuries: vi.fn(),
   mockListTeamPrograms: vi.fn(),
+  mockListCoachesByLeague: vi.fn(),
+  mockListFixtureGameplans: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({
@@ -56,6 +60,8 @@ vi.mock("@/lib/data-api", () => ({
   listRivalries: mockListRivalries,
   listActiveInjuries: mockListActiveInjuries,
   listTeamPrograms: mockListTeamPrograms,
+  listCoachesByLeague: mockListCoachesByLeague,
+  listFixtureGameplans: mockListFixtureGameplans,
   getFixture: mockGetFixture,
   recordGameResult: mockRecordGameResult,
   upsertGamePlayLog: mockUpsertGamePlayLog,
@@ -138,6 +144,8 @@ function authorize() {
   mockListRivalries.mockResolvedValue([]);
   mockListActiveInjuries.mockResolvedValue([]);
   mockListTeamPrograms.mockResolvedValue([]);
+  mockListCoachesByLeague.mockResolvedValue([]);
+  mockListFixtureGameplans.mockResolvedValue([]);
   mockAuth.mockResolvedValue({ userId: USER });
   mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [LEAGUE] });
   mockGetLeague.mockResolvedValue({ id: LEAGUE, name: "League" });

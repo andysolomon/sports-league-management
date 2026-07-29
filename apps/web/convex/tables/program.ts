@@ -131,4 +131,24 @@ export const programTables = {
   })
     .index("by_coach_season", ["coachId", "seasonId"])
     .index("by_season_team", ["seasonId", "teamId"]),
+
+  /*
+   * Weekly gameplan per (fixture, team) — C3.
+   *
+   * Lives on the fixture surface, not season program rows. A team can run the
+   * same scheme all year and still change emphasis week to week.
+   */
+  fixtureTeamGameplans: defineTable({
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    fixtureId: v.id("fixtures"),
+    teamId: v.id("teams"),
+    focus: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    updatedBy: v.string(),
+  })
+    .index("by_fixtureId", ["fixtureId"])
+    .index("by_fixtureId_teamId", ["fixtureId", "teamId"])
+    .index("by_seasonId", ["seasonId"]),
 };

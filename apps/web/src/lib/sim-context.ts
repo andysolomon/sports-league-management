@@ -1,6 +1,7 @@
 import {
   getDynastyConfig,
   listActiveInjuries,
+  listCoachesByLeague,
   listRivalries,
   listTeamPrograms,
 } from "@/lib/data-api";
@@ -8,6 +9,8 @@ import type { DynastyConfig } from "@/lib/dynasty-config";
 import type { PbpFeatureGates, TeamSimProfile } from "@/lib/pbp";
 import { deriveWeather, type Weather } from "@/lib/pbp/weather";
 import { rivalryPairKey } from "@/lib/rivalries";
+import { COACH_ROLE_HEAD } from "@/lib/program/coach";
+import { resolveAggression } from "@/lib/program/resolveProgram";
 
 /*
  * What a simulated game is allowed to model (Dynasty Mode — sim activation).
@@ -107,14 +110,20 @@ export async function loadSeasonSimContext(input: {
   seasonId: string;
   flagEnabled: boolean;
 }): Promise<SeasonSimContext> {
-  const [config, rivalries, injuries, programs] = await Promise.all([
+  const [config, rivalries, injuries, programs, coaches] = await Promise.all([
     getDynastyConfig(input.leagueId).catch(() => null),
     listRivalries(input.leagueId).catch(() => []),
     listActiveInjuries(input.seasonId).catch(() => []),
     listTeamPrograms(input.seasonId).catch(() => []),
+    listCoachesByLeague(input.leagueId).catch(() => []),
   ]);
 
   const features = config ? resolveSimFeatures(input.flagEnabled, config) : {};
+  const coachAggressionByTeam = new Map(
+    coaches
+      .filter((c) => c.teamId && c.role === COACH_ROLE_HEAD)
+      .map((c) => [c.teamId as string, c.aggression]),
+  );
   return {
     leagueId: input.leagueId,
     features,
@@ -142,16 +151,22 @@ export async function loadSeasonSimContext(input: {
      */
     schemes: new Map(
       features.schemes === true
-        ? programs.map((p) => [
-            p.teamId,
-            {
-              ...(p.offenseScheme !== null ? { offense: p.offenseScheme } : {}),
-              ...(p.defenseScheme !== null ? { defense: p.defenseScheme } : {}),
-              ...(p.tempo !== null ? { tempo: p.tempo } : {}),
-              ...(p.blitzRate !== null ? { blitzRate: p.blitzRate } : {}),
-              ...(p.aggression !== null ? { aggression: p.aggression } : {}),
-            } satisfies TeamSchemeAssignment,
-          ])
+        ? programs.map((p) => {
+            const aggression = resolveAggression(
+              coachAggressionByTeam.get(p.teamId ?? "") ?? null,
+              p.aggression,
+            );
+            return [
+              p.teamId,
+              {
+                ...(p.offenseScheme !== null ? { offense: p.offenseScheme } : {}),
+                ...(p.defenseScheme !== null ? { defense: p.defenseScheme } : {}),
+                ...(p.tempo !== null ? { tempo: p.tempo } : {}),
+                ...(p.blitzRate !== null ? { blitzRate: p.blitzRate } : {}),
+                ...(typeof aggression === "number" ? { aggression } : {}),
+              } satisfies TeamSchemeAssignment,
+            ];
+          })
         : [],
     ),
   };
