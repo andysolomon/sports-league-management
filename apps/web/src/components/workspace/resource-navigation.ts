@@ -120,10 +120,19 @@ export function seasonSubpageHref(
  */
 export function leagueSubpageHref(
   leagueId: string,
-  subpage: "schedule" | "standings" | "playoffs" | "stats" | "manage",
+  subpage:
+    | "schedule"
+    | "standings"
+    | "playoffs"
+    | "stats"
+    | "manage"
+    | "history",
   activeSeasonId: string | null,
 ): string {
-  const query = activeSeasonId ? `?season=${activeSeasonId}` : "";
+  const query =
+    subpage !== "history" && activeSeasonId
+      ? `?season=${activeSeasonId}`
+      : "";
   return `/dashboard/leagues/${leagueId}/${subpage}${query}`;
 }
 

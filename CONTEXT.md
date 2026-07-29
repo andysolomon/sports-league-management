@@ -112,6 +112,14 @@ _Avoid_: Playbook, formation, strategy, system
 The program-facing surface for one coach at `/dashboard/coaches/[coachId]`, with Overview and Career siblings, reached from Team Home Staff rather than the sidebar.
 _Avoid_: Staff page, coaching staff hub, manager profile
 
+**Program History**:
+The League-owned, cross-season history of its Teams and Players, browsed from League Home.
+_Avoid_: Season history, recap, archive
+
+**Record Book**:
+The Program History view at `/dashboard/leagues/[leagueId]/history` that ranks League-wide and per-Team season achievements.
+_Avoid_: Stat leaders, standings, season records
+
 ## Relationships
 
 - An operator may access zero or more **Leagues**
@@ -163,6 +171,7 @@ _Avoid_: Staff page, coaching staff hub, manager profile
 - An Active Season shortcut also makes its League the **Active League** before opening **Season Home**
 - An upcoming or completed Season never substitutes for a missing **Active Season**; League Home instead links to **Seasons Home** and offers valid admin lifecycle actions
 - A child page’s **Resource Header** identifies and links its parent Home and provides sibling subpage navigation
+- **Program History** and its **Record Book** are League-owned, not Season-owned: ADR 0001 moves season-scoped competition views under Season Home, while history spans Seasons, so League Home is its correct parent
 
 ## Example dialogue
 

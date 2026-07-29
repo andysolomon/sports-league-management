@@ -88,6 +88,9 @@ describe("resource-navigation helpers", () => {
     expect(leagueSubpageHref("l1", "schedule", null)).toBe(
       "/dashboard/leagues/l1/schedule",
     );
+    expect(leagueSubpageHref("l1", "history", "s1")).toBe(
+      "/dashboard/leagues/l1/history",
+    );
   });
 
   it("builds team, player, and season subpage hrefs", () => {
