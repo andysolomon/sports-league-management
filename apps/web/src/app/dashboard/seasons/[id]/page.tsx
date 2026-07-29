@@ -43,8 +43,6 @@ import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
-import { WorkspaceNav } from "@/components/workspace/WorkspaceNav";
-import { buildLeagueSeasonNavLinks } from "@/components/workspace/build-league-nav-links";
 import {
   buildSeasonSiblingLinks,
   seasonHomeHref,
@@ -229,14 +227,6 @@ export default async function SeasonHubPage({
     ? offseasonTeams.map((team) => ({ id: team.id, name: team.name }))
     : manageableTeams;
 
-  const links = buildLeagueSeasonNavLinks({
-    leagueId: league.id,
-    seasonId: season.id,
-    scheduleEnabled,
-    playoffsEnabled,
-    statsEnabled,
-  });
-
   return (
     <div className="mx-auto max-w-[960px] space-y-4">
       <ResourceHeader
@@ -263,7 +253,6 @@ export default async function SeasonHubPage({
           recapEnabled: historyEnabled && season.status === "completed",
         })}
       />
-      <WorkspaceNav links={links} />
 
       {historyEnabled ? <DynastyNewsFeed events={dynastyEvents} /> : null}
 
