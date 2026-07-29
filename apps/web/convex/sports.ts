@@ -57,6 +57,7 @@ import {
   selectLifecycleSeason,
   selectNewestSeason,
 } from "./lib/seasonLifecycle";
+import { finalizeProgramSeason } from "./lib/programFinalize";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -2216,6 +2217,8 @@ export const completeSeason = internalMutationGeneric({
         : null;
       if (!champion) throw new Error("no_champion");
     }
+
+    await finalizeProgramSeason(ctx, args.seasonId);
 
     await ctx.db.patch(args.seasonId, { status: "completed" });
     return null;

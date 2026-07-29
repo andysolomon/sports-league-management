@@ -10,6 +10,7 @@ import { mulberry32, seedFor } from "./rng";
 
 export const COACH_ROLE_HEAD = "head_coach" as const;
 export const COACH_STATUS_AI = "ai" as const;
+export const COACH_STATUS_FIRED = "fired" as const;
 
 export const COACH_ARCHETYPES = [
   "program_builder",

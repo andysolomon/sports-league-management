@@ -52,6 +52,17 @@ export const programTables = {
      */
     aggression: v.optional(v.number()),
 
+    /** Program prestige 0–100. Absent until modelled or season finalize writes it. */
+    prestige: v.optional(v.number()),
+    /** Facilities tier 1–5. */
+    facilitiesTier: v.optional(v.number()),
+    /** JSON array of `SeasonGoal` from `lib/goals.ts`. */
+    seasonGoalsJson: v.optional(v.string()),
+    /** Coach seat heat 0–100. */
+    jobSecurity: v.optional(v.number()),
+    /** Booster confidence 0–100. */
+    boosterConfidence: v.optional(v.number()),
+
     createdAt: v.string(),
     updatedAt: v.string(),
     updatedBy: v.string(),
@@ -75,7 +86,7 @@ export const programTables = {
    */
   coaches: defineTable({
     leagueId: v.id("leagues"),
-    teamId: v.id("teams"),
+    teamId: v.union(v.id("teams"), v.null()),
     userId: v.optional(v.string()),
     displayName: v.string(),
     role: v.string(),

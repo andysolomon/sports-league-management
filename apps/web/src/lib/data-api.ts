@@ -2945,6 +2945,11 @@ export interface TeamProgramDto {
   tempo: number | null;
   blitzRate: number | null;
   aggression: number | null;
+  prestige: number | null;
+  facilitiesTier: number | null;
+  seasonGoalsJson: string | null;
+  jobSecurity: number | null;
+  boosterConfidence: number | null;
   updatedAt: string;
 }
 
@@ -2993,7 +2998,7 @@ export async function setTeamProgram(input: {
 export interface CoachDto {
   id: string;
   leagueId: string;
-  teamId: string;
+  teamId: string | null;
   userId: string | null;
   displayName: string;
   role: string;
@@ -3048,6 +3053,26 @@ export async function listCoachSeasons(
   return client.query(programRef.query<CoachSeasonDto[]>("listCoachSeasons"), {
     coachId,
   });
+}
+
+export interface EvaluatedGoalDto {
+  id: string;
+  metric: string;
+  label: string;
+  target: number;
+  status: "met" | "missed" | "partial";
+  actual: number;
+}
+
+export async function getSeasonGoalProgress(
+  seasonId: string,
+  teamId: string,
+): Promise<EvaluatedGoalDto[]> {
+  const client = getConvexClient();
+  return client.query(
+    programRef.query<EvaluatedGoalDto[]>("getSeasonGoalProgress"),
+    { seasonId, teamId },
+  );
 }
 
 export async function seedAiHeadCoachesForLeague(input: {

@@ -30,7 +30,7 @@ export default async function CoachHomePage({
   const orgContext = await resolveOrgContext(userId);
 
   const coach = await getCoach(coachId).catch(() => null);
-  if (!coach) notFound();
+  if (!coach || !coach.teamId) notFound();
 
   const team = await getTeam(coach.teamId, orgContext).catch(() => null);
   if (!team) notFound();

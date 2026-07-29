@@ -65,6 +65,12 @@ export type NarrativeInput =
       playerName: string;
       teamName: string;
       position: string;
+    }
+  | {
+      type: "coach_fired";
+      coachName: string;
+      teamName: string;
+      seasonName: string;
     };
 
 export type NarrativeEventType = NarrativeInput["type"];
@@ -110,6 +116,9 @@ export function renderHeadline(input: NarrativeInput): string {
       // is exactly the kind of thing a dynasty should remember.
       return `${input.teamName} keeps ${input.playerName} (${input.position})`;
     }
+    case "coach_fired": {
+      return `${input.seasonName}: ${input.teamName} parts ways with ${input.coachName}`;
+    }
     default: {
       // Exhaustiveness guard: adding a NarrativeInput variant without a case
       // here fails `tsc`, so a new event type cannot ship copy-less.
@@ -135,6 +144,8 @@ export function defaultSeverity(type: NarrativeEventType): EventSeverity {
       return "notable";
     case "transfer_retained":
       return "info";
+    case "coach_fired":
+      return "headline";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;
@@ -155,6 +166,8 @@ export function categoryFor(type: NarrativeEventType): EventCategory {
     case "transfer_completed":
     case "transfer_retained":
       return "offseason";
+    case "coach_fired":
+      return "program";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;
