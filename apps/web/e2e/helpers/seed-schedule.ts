@@ -107,6 +107,29 @@ export async function withScheduleFixture(
   };
 }
 
+const seedHistoryFixtureRef = makeFunctionReference<
+  "mutation",
+  {
+    leagueId: string;
+    seasonId: string;
+    homeTeamId: string;
+    awayTeamId: string;
+  },
+  { created: number }
+>("e2eSeed:seedHistoryFixture");
+
+export async function seedHistoryFixture(
+  fixture: ScheduleFixtureResult,
+): Promise<{ created: number }> {
+  const client = getSeedClient();
+  return client.mutation(seedHistoryFixtureRef, {
+    leagueId: fixture.leagueId,
+    seasonId: fixture.seasonId,
+    homeTeamId: fixture.homeTeamId,
+    awayTeamId: fixture.awayTeamId,
+  });
+}
+
 const seedProspectClassRef = makeFunctionReference<
   "mutation",
   any,

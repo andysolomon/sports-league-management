@@ -211,6 +211,26 @@ async function cascadeDeleteLeague(
     await ctx.db.delete(row._id);
     deleted += 1;
   }
+  // Cross-season history (D1). Both tables are League-owned, so one indexed
+  // pass clears every career and both the League/Team record-book scopes.
+  const careerTotals = (await ctx.db
+    .query("playerCareerTotals")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"playerCareerTotals"> }>;
+  for (const row of careerTotals) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  const programRecords = (await ctx.db
+    .query("programRecords")
+    .withIndex("by_leagueId_category_rank", (q: any) =>
+      q.eq("leagueId", leagueId),
+    )
+    .collect()) as Array<{ _id: Id<"programRecords"> }>;
+  for (const row of programRecords) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
   // Per-league Dynasty settings (F5). A row left behind would carry one spec's
   // toggles into the next run.
   const configRows = (await ctx.db
@@ -564,6 +584,88 @@ export const createScheduleFixture = internalMutation({
       homeTeamName,
       awayTeamName,
     };
+  },
+});
+
+/**
+ * D1 route fixture: seed a league-wide row plus one Team-scoped row for BOTH
+ * schedule-fixture teams. The route spec can therefore prove the view switcher
+ * renders each program without completing/simulating a season.
+ */
+export const seedHistoryFixture = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+  },
+  returns: v.object({ created: v.number() }),
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+    const [season, homeTeam, awayTeam] = await Promise.all([
+      ctx.db.get(args.seasonId),
+      ctx.db.get(args.homeTeamId),
+      ctx.db.get(args.awayTeamId),
+    ]);
+    if (
+      !season ||
+      season.leagueId !== args.leagueId ||
+      !homeTeam ||
+      homeTeam.leagueId !== args.leagueId ||
+      !awayTeam ||
+      awayTeam.leagueId !== args.leagueId
+    ) {
+      throw new Error("history_fixture_scope_mismatch");
+    }
+
+    const prior = await ctx.db
+      .query("programRecords")
+      .withIndex("by_leagueId_category_rank", (q) =>
+        q.eq("leagueId", args.leagueId),
+      )
+      .collect();
+    for (const row of prior) await ctx.db.delete(row._id);
+
+    const now = new Date().toISOString();
+    const teams = [
+      { teamId: args.homeTeamId, value: 9, leagueRank: 1 },
+      { teamId: args.awayTeamId, value: 8, leagueRank: 2 },
+    ];
+    let created = 0;
+    for (const team of teams) {
+      const stableKey = [
+        "season",
+        "teamWins",
+        args.seasonId,
+        team.teamId,
+        "team",
+      ].join(":");
+      await ctx.db.insert("programRecords", {
+        leagueId: args.leagueId,
+        category: "teamWins",
+        span: "season",
+        rank: team.leagueRank,
+        value: team.value,
+        holderTeamId: team.teamId,
+        seasonId: args.seasonId,
+        stableKey,
+        updatedAt: now,
+      });
+      await ctx.db.insert("programRecords", {
+        leagueId: args.leagueId,
+        teamId: team.teamId,
+        category: "teamWins",
+        span: "season",
+        rank: 1,
+        value: team.value,
+        holderTeamId: team.teamId,
+        seasonId: args.seasonId,
+        stableKey,
+        updatedAt: now,
+      });
+      created += 2;
+    }
+    return { created };
   },
 });
 

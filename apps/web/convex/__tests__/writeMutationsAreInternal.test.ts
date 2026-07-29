@@ -228,6 +228,9 @@ void api.dynasty.moduleStatus;
 void api.sim.moduleStatus;
 void api.program.moduleStatus;
 void api.history.moduleStatus;
+void api.history.getCareerTotals;
+void api.history.listProgramRecords;
+void internal.history.finalizeSeasonHistory;
 
 type AllowedPublicDynastyReads =
   | "moduleStatus"
@@ -277,7 +280,10 @@ type AllowedPublicProgramReads =
   | "listCoachesByLeague"
   | "listCoachSeasons"
   | "getSeasonGoalProgress";
-type AllowedPublicHistoryReads = "moduleStatus";
+type AllowedPublicHistoryReads =
+  | "moduleStatus"
+  | "getCareerTotals"
+  | "listProgramRecords";
 
 type LeakedPublicDynastyWrites = Exclude<
   keyof typeof api.dynasty,
@@ -320,12 +326,15 @@ void _noLeakedPublicHistoryWrites;
 void internal.e2eSeed.createRosterFixture;
 void internal.e2eSeed.resetRosterFixture;
 void internal.e2eSeed.createScheduleFixture;
+void internal.e2eSeed.seedHistoryFixture;
 // @ts-expect-error createRosterFixture is internal, not public
 void api.e2eSeed.createRosterFixture;
 // @ts-expect-error resetRosterFixture is internal, not public
 void api.e2eSeed.resetRosterFixture;
 // @ts-expect-error createScheduleFixture is internal, not public
 void api.e2eSeed.createScheduleFixture;
+// @ts-expect-error seedHistoryFixture is internal, not public
+void api.e2eSeed.seedHistoryFixture;
 
 // --- Data migrations MUST be internal too (WSM-000079) ---
 // Backfills/migrations write rows; they're run manually with an admin/deploy

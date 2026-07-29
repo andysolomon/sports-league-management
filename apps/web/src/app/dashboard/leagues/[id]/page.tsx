@@ -34,6 +34,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import {
   leagueHomeHref,
+  leagueSubpageHref,
   leagueSettingsHref,
   seasonHomeHref,
 } from "@/components/workspace/resource-navigation";
@@ -205,6 +206,13 @@ export default async function LeagueInfoPage({
             {seasons.length} season{seasons.length === 1 ? "" : "s"}
           </>
         }
+        siblings={[
+          { label: "Overview", href: leagueHomeHref(id) },
+          {
+            label: "Record book",
+            href: leagueSubpageHref(id, "history", null),
+          },
+        ]}
         actions={
           <>
             {activeSeason ? (

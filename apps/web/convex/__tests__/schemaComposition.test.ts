@@ -9,6 +9,7 @@ import { mediaTables } from "../tables/media";
 import { offseasonTables } from "../tables/offseason";
 import { dynastyTables } from "../tables/dynasty";
 import { programTables } from "../tables/program";
+import { historyTables } from "../tables/history";
 
 /*
  * Schema composition guard (Dynasty Mode F1).
@@ -31,6 +32,7 @@ const groups = {
   offseason: offseasonTables,
   dynasty: dynastyTables,
   program: programTables,
+  history: historyTables,
 } as const;
 
 type Exportable = { export(): string };

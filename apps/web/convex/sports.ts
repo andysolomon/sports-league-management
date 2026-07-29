@@ -58,6 +58,7 @@ import {
   selectNewestSeason,
 } from "./lib/seasonLifecycle";
 import { finalizeProgramSeason } from "./lib/programFinalize";
+import { finalizeSeasonHistoryForSeason } from "./lib/historyFinalize";
 
 function uniqueById<T extends { id: string }>(items: T[]): T[] {
   const seen = new Set<string>();
@@ -2196,7 +2197,7 @@ export const setActiveSeason = internalMutationGeneric({
 export const completeSeason = internalMutationGeneric({
   args: { seasonId: v.id("seasons"), force: v.optional(v.boolean()) },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<null> => {
     const season = await ctx.db.get(args.seasonId);
     if (!season) throw new Error("season_not_found");
     if (season.status === "completed") return null;
@@ -2219,6 +2220,7 @@ export const completeSeason = internalMutationGeneric({
     }
 
     await finalizeProgramSeason(ctx, args.seasonId);
+    await finalizeSeasonHistoryForSeason(ctx, args.seasonId);
 
     await ctx.db.patch(args.seasonId, { status: "completed" });
     return null;

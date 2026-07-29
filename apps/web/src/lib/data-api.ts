@@ -123,6 +123,10 @@ export const simRef = moduleRefs("sim");
 export const programRef = moduleRefs("program");
 export const historyRef = moduleRefs("history");
 
+const listProgramRecordsRef = historyRef.query<ProgramRecordDto[]>(
+  "listProgramRecords",
+);
+
 /** A single bracket node (WSM-000164). Team/score fields are null until played. */
 export interface PlayoffMatchupDto {
   id: string;
@@ -174,6 +178,20 @@ export interface SeasonStatCategoryLeaders {
   key: string;
   label: string;
   leaders: StatLeaderEntry[];
+}
+
+export interface ProgramRecordDto {
+  id: string;
+  category: string;
+  categoryLabel: string;
+  rank: number;
+  value: number;
+  playerId: string | null;
+  playerName: string | null;
+  teamId: string;
+  teamName: string;
+  seasonId: string;
+  seasonName: string;
 }
 
 const refs = {
@@ -1230,6 +1248,18 @@ export async function getTeamsByLeague(
 ): Promise<TeamDto[]> {
   requireLeagueAccessLocal(leagueId, orgContext);
   return queryConvex(refs.listTeamsByLeague, { leagueId });
+}
+
+export async function listProgramRecords(
+  leagueId: string,
+  teamId: string | null,
+  orgContext: OrgContext,
+): Promise<ProgramRecordDto[]> {
+  requireLeagueAccessLocal(leagueId, orgContext);
+  return queryConvex(listProgramRecordsRef, {
+    leagueId,
+    ...(teamId ? { teamId } : {}),
+  });
 }
 
 export async function getTeam(
