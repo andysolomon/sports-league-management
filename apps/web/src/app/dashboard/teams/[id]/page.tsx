@@ -134,6 +134,13 @@ export default async function TeamDetailPage({
     );
   }
 
+  const rosterForFit = {
+    players: players.map((p) => ({
+      position: p.position,
+      overall: snapshots.get(p.id)?.weightedOverall ?? maddenOveralls.get(p.id) ?? null,
+    })),
+  };
+
   const siblingLinks = buildTeamSiblingLinks({
     teamId: id,
     rosterEnabled,
@@ -155,6 +162,7 @@ export default async function TeamDetailPage({
           teamId={id}
           program={program}
           canManage={canManage}
+          rosterForFit={rosterForFit}
         />
       )}
 

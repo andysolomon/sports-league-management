@@ -296,6 +296,14 @@ async function cascadeDeleteLeague(
       .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
       .collect()) as Array<{ _id: Id<"fixtures"> }>;
     for (const fixture of seasonFixtures) {
+      const gameplanRows = (await ctx.db
+        .query("fixtureTeamGameplans")
+        .withIndex("by_fixtureId", (q: any) => q.eq("fixtureId", fixture._id))
+        .collect()) as Array<{ _id: Id<"fixtureTeamGameplans"> }>;
+      for (const row of gameplanRows) {
+        await ctx.db.delete(row._id);
+        deleted += 1;
+      }
       const results = (await ctx.db
         .query("gameResults")
         .withIndex("by_fixtureId", (q: any) => q.eq("fixtureId", fixture._id))

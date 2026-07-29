@@ -3,6 +3,7 @@
  */
 
 export { resolveProgram } from "../../../convex/lib/resolveProgram";
+export { resolveAggression } from "../../../convex/lib/resolveProgram";
 
 export type {
   ResolvedProgram,

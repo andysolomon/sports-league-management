@@ -222,3 +222,187 @@ export const OFFENSE_SCHEME_LIST: readonly OffenseSchemeSpec[] = Object.freeze(
 export const DEFENSE_SCHEME_LIST: readonly DefenseSchemeSpec[] = Object.freeze(
   Object.values(DEFENSE_SCHEMES),
 );
+
+/*
+ * ── Scheme fit (C3) ───────────────────────────────────────────────────────
+ *
+ * Advisory only — surfaced in the UI, never enforced on save. Fit compares a
+ * roster's implied style to what a scheme wants, not whether the team is good.
+ */
+
+export interface SchemeFitPlayer {
+  position?: string | null;
+  /** 0–99; absent means this player does not contribute rated weight. */
+  overall?: number | null;
+  weightLbs?: number | null;
+}
+
+export interface SchemeFitRoster {
+  players: readonly SchemeFitPlayer[];
+}
+
+const PASS_POSITIONS = new Set([
+  "QB",
+  "WR",
+  "TE",
+  "SLOT",
+  "SE",
+  "FL",
+  "SL",
+  "QB/WR",
+]);
+const RUN_POSITIONS = new Set([
+  "RB",
+  "HB",
+  "FB",
+  "TB",
+  "ATH",
+  "OL",
+  "OT",
+  "OG",
+  "C",
+  "G",
+  "T",
+]);
+
+function positionGroup(position: string | null | undefined): "pass" | "run" | "other" {
+  if (!position) return "other";
+  const code = position.trim().toUpperCase().split("/")[0] ?? "";
+  if (PASS_POSITIONS.has(code) || code.startsWith("WR")) return "pass";
+  if (RUN_POSITIONS.has(code) || code.startsWith("RB") || code.startsWith("OL"))
+    return "run";
+  return "other";
+}
+
+function playerWeight(player: SchemeFitPlayer): number {
+  if (typeof player.overall === "number" && Number.isFinite(player.overall)) {
+    return Math.max(0.25, player.overall / 50);
+  }
+  return 1;
+}
+
+function rosterOffenseProfile(roster: SchemeFitRoster): OffenseTendencies {
+  let passMass = 0;
+  let runMass = 0;
+  let heavyBacks = 0;
+  let receivers = 0;
+
+  for (const player of roster.players) {
+    const w = playerWeight(player);
+    const group = positionGroup(player.position);
+    if (group === "pass") {
+      passMass += w * 1.2;
+      receivers += 1;
+    } else if (group === "run") {
+      runMass += w * 1.2;
+      if (
+        (typeof player.weightLbs === "number" && player.weightLbs >= 210) ||
+        positionGroup(player.position) === "run"
+      ) {
+        heavyBacks += w;
+      }
+    } else {
+      passMass += w * 0.2;
+      runMass += w * 0.2;
+    }
+  }
+
+  const total = passMass + runMass;
+  if (total <= 0) return { ...NEUTRAL_OFFENSE_TENDENCIES };
+
+  const passShare = passMass / total;
+  const runShare = runMass / total;
+  const sizeRunBias =
+    heavyBacks > receivers
+      ? clampTendency((heavyBacks - receivers) / Math.max(1, roster.players.length))
+      : 0;
+
+  return {
+    passBias: clampTendency((passShare - runShare) * 1.4),
+    tempo: clampTendency(receivers > heavyBacks ? 0.35 : heavyBacks > 0 ? -0.25 : 0),
+    vertical: clampTendency(passShare > 0.62 ? 0.35 : 0),
+    ballSecurity: clampTendency(runShare > 0.55 ? 0.15 : 0),
+  };
+}
+
+function rosterDefenseProfile(roster: SchemeFitRoster): DefenseTendencies {
+  let db = 0;
+  let lb = 0;
+  let dl = 0;
+  for (const player of roster.players) {
+    const w = playerWeight(player);
+    const code = (player.position ?? "").trim().toUpperCase();
+    if (code.startsWith("CB") || code.startsWith("S") || code === "DB") db += w;
+    else if (code.startsWith("LB")) lb += w;
+    else if (code.startsWith("DL") || code.startsWith("DE") || code.startsWith("DT"))
+      dl += w;
+  }
+  const total = db + lb + dl;
+  if (total <= 0) return { ...NEUTRAL_DEFENSE_TENDENCIES };
+  const dbShare = db / total;
+  const boxShare = (dl + lb) / total;
+  return {
+    blitz: clampTendency(lb / total - 0.33),
+    coverage: clampTendency(dbShare - 0.33),
+    runFit: clampTendency(boxShare - 0.45),
+  };
+}
+
+function clampTendency(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(-1, Math.min(1, value));
+}
+
+function tendencySimilarity(
+  roster: OffenseTendencies | DefenseTendencies,
+  scheme: OffenseTendencies | DefenseTendencies,
+): number {
+  const keys = Object.keys(roster) as Array<keyof typeof roster>;
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (const key of keys) {
+    const a = roster[key];
+    const b = scheme[key];
+    dot += a * b;
+    normA += a * a;
+    normB += b * b;
+  }
+  if (normA === 0 && normB === 0) return 0.5;
+  if (normA === 0 || normB === 0) return 0.5;
+  const cosine = dot / (Math.sqrt(normA) * Math.sqrt(normB));
+  if (!Number.isFinite(cosine)) return 0.5;
+  return clamp01((cosine + 1) / 2);
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0.5;
+  return Math.max(0, Math.min(1, value));
+}
+
+/**
+ * How well a roster suits a scheme id (0 = poor, 1 = excellent).
+ *
+ * Total: empty rosters and rosters with no rated players still return a finite
+ * value in [0, 1]. Unknown scheme ids use neutral tendencies.
+ */
+export function schemeFit(schemeId: string, roster: SchemeFitRoster): number {
+  const players = roster?.players ?? [];
+  const safeRoster: SchemeFitRoster = { players };
+
+  if (isOffenseSchemeId(schemeId)) {
+    const fit = tendencySimilarity(
+      rosterOffenseProfile(safeRoster),
+      OFFENSE_SCHEMES[schemeId].tendencies,
+    );
+    return clamp01(fit);
+  }
+  if (isDefenseSchemeId(schemeId)) {
+    const fit = tendencySimilarity(
+      rosterDefenseProfile(safeRoster),
+      DEFENSE_SCHEMES[schemeId].tendencies,
+    );
+    return clamp01(fit);
+  }
+  return 0.5;
+}

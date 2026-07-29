@@ -2991,6 +2991,49 @@ export async function setTeamProgram(input: {
   );
 }
 
+export interface FixtureGameplanDto {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  fixtureId: string;
+  teamId: string;
+  focus: string | null;
+  updatedAt: string;
+}
+
+export async function listFixtureGameplans(
+  fixtureId: string,
+): Promise<FixtureGameplanDto[]> {
+  const client = getConvexClient();
+  return client.query(
+    programRef.query<FixtureGameplanDto[]>("listFixtureGameplans"),
+    { fixtureId },
+  );
+}
+
+export async function listGameplansBySeason(
+  seasonId: string,
+): Promise<FixtureGameplanDto[]> {
+  const client = getConvexClient();
+  return client.query(
+    programRef.query<FixtureGameplanDto[]>("listGameplansBySeason"),
+    { seasonId },
+  );
+}
+
+export async function setFixtureGameplan(input: {
+  fixtureId: string;
+  teamId: string;
+  actorUserId: string;
+  focus?: string;
+}): Promise<FixtureGameplanDto> {
+  const client = getConvexClient();
+  return client.mutation(
+    programRef.mutation<FixtureGameplanDto>("setFixtureGameplan"),
+    input,
+  );
+}
+
 /*
  * Coaches (C1). Typed refs on the program module.
  */
@@ -3043,6 +3086,13 @@ export async function listCoachesByTeam(teamId: string): Promise<CoachDto[]> {
   const client = getConvexClient();
   return client.query(programRef.query<CoachDto[]>("listCoachesByTeam"), {
     teamId,
+  });
+}
+
+export async function listCoachesByLeague(leagueId: string): Promise<CoachDto[]> {
+  const client = getConvexClient();
+  return client.query(programRef.query<CoachDto[]>("listCoachesByLeague"), {
+    leagueId,
   });
 }
 

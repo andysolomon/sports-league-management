@@ -42,3 +42,19 @@ export function resolveProgram(
     boosterConfidence: doc.boosterConfidence ?? null,
   };
 }
+
+/**
+ * Coach aggression wins when both are set (C1 over A6 team row).
+ */
+export function resolveAggression(
+  coachAggression: number | null | undefined,
+  programAggression: number | null | undefined,
+): number | undefined {
+  if (typeof coachAggression === "number" && Number.isFinite(coachAggression)) {
+    return Math.max(0, Math.min(100, Math.round(coachAggression)));
+  }
+  if (typeof programAggression === "number" && Number.isFinite(programAggression)) {
+    return Math.max(0, Math.min(100, Math.round(programAggression)));
+  }
+  return undefined;
+}

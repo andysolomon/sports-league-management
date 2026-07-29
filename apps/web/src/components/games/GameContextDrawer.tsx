@@ -18,6 +18,8 @@ import {
   gameDrawerMatchupLabel,
 } from "@/lib/game-drawer-projection";
 import { cn } from "@/lib/utils";
+import { FixtureGameplanPanel } from "@/components/dynasty/FixtureGameplanPanel";
+import type { FixtureGameplanDto } from "@/lib/data-api";
 
 export interface GameContextDrawerProps {
   projection: GameDrawerProjection | null;
@@ -25,6 +27,10 @@ export interface GameContextDrawerProps {
   onOpenChange: (open: boolean) => void;
   /** Element to restore focus to when the drawer closes. */
   restoreFocusRef?: React.RefObject<HTMLElement | null>;
+  seasonId?: string;
+  gameplansEnabled?: boolean;
+  gameplans?: FixtureGameplanDto[];
+  manageableTeamIds?: readonly string[];
 }
 
 function TeamBlock({
@@ -89,6 +95,10 @@ export function GameContextDrawer({
   open,
   onOpenChange,
   restoreFocusRef,
+  seasonId,
+  gameplansEnabled,
+  gameplans = [],
+  manageableTeamIds = [],
 }: GameContextDrawerProps) {
   const titleId = React.useId();
   const isFinal = projection ? gameDrawerIsFinal(projection) : false;
@@ -183,6 +193,37 @@ export function GameContextDrawer({
                 </div>
               ) : null}
             </dl>
+
+            {gameplansEnabled &&
+            projection.fixtureId &&
+            seasonId &&
+            projection.home.id &&
+            projection.away.id ? (
+              <div className="space-y-2" data-testid="fixture-gameplan-section">
+                <FixtureGameplanPanel
+                  fixtureId={projection.fixtureId}
+                  seasonId={seasonId}
+                  teamId={projection.home.id}
+                  teamLabel={projection.home.name}
+                  initial={
+                    gameplans.find((g) => g.teamId === projection.home.id) ??
+                    null
+                  }
+                  canManage={manageableTeamIds.includes(projection.home.id)}
+                />
+                <FixtureGameplanPanel
+                  fixtureId={projection.fixtureId}
+                  seasonId={seasonId}
+                  teamId={projection.away.id}
+                  teamLabel={projection.away.name}
+                  initial={
+                    gameplans.find((g) => g.teamId === projection.away.id) ??
+                    null
+                  }
+                  canManage={manageableTeamIds.includes(projection.away.id)}
+                />
+              </div>
+            ) : null}
 
             {isFinal && !canOpenGamecast ? (
               <p className="text-sm text-muted-foreground">
