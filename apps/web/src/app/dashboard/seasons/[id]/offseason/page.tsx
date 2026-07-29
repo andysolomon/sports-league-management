@@ -9,6 +9,7 @@ import {
   getTeamsByLeague,
   listProspects,
   listRosterBoard,
+  listTrainingAllocations,
   listTransfers,
 } from "@/lib/data-api";
 import { canManageTeam } from "@/lib/authorization";
@@ -21,6 +22,7 @@ import { OffseasonPhaseControls } from "@/components/offseason/OffseasonPhaseCon
 import { ScoutingPanel } from "@/components/offseason/ScoutingPanel";
 import { TransferPanel } from "@/components/offseason/TransferPanel";
 import { PromotionsPanel } from "@/components/offseason/PromotionsPanel";
+import { TrainingPanel } from "@/components/offseason/TrainingPanel";
 import { resolveOffseasonState } from "@/lib/dynasty/offseason-phases";
 import { DYNASTY_CONFIG_DEFAULTS } from "@/lib/dynasty-config";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
@@ -89,9 +91,12 @@ export default async function SeasonOffseasonPage({
    * one team's roster rather than the league's. Loading it alongside the
    * others would mean fetching twelve rosters to render one.
    */
-  const rosterBoard = actingTeam
-    ? await listRosterBoard(season.id, actingTeam.id).catch(() => [])
-    : [];
+  const [rosterBoard, trainingAllocations] = actingTeam
+    ? await Promise.all([
+        listRosterBoard(season.id, actingTeam.id).catch(() => []),
+        listTrainingAllocations(season.id, actingTeam.id).catch(() => []),
+      ])
+    : [[], []];
 
   const draftStatus = !draft
     ? ("none" as const)
@@ -145,6 +150,21 @@ export default async function SeasonOffseasonPage({
             seasonId={season.id}
             players={rosterBoard}
             actingTeam={actingTeam}
+          />
+
+          <TrainingPanel
+            seasonId={season.id}
+            players={rosterBoard}
+            allocations={trainingAllocations}
+            actingTeam={actingTeam}
+            /*
+             * `trainingPointsTotal` is read as THIS TEAM's allowance, not the
+             * league's — see the note on `playerTrainingAllocations`.
+             */
+            pointsTotal={
+              offseason?.trainingPointsTotal ??
+              DYNASTY_CONFIG_DEFAULTS.trainingPointsPerOffseason
+            }
           />
         </CardContent>
       </Card>

@@ -153,6 +153,20 @@ async function cascadeDeleteLeague(
       await ctx.db.delete(row._id);
       deleted += 1;
     }
+    /*
+     * Training ledgers (B6). Season-scoped rather than league-scoped, so they
+     * are cleared here. A leaked row is doubly bad: it spends a later run's
+     * budget before the coach arrives, and if it is still unapplied it lands
+     * on whichever player inherits the id.
+     */
+    const training = (await ctx.db
+      .query("playerTrainingAllocations")
+      .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
+      .collect()) as Array<{ _id: Id<"playerTrainingAllocations"> }>;
+    for (const row of training) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
   }
   // Persisted offseason phase machine (B1). Left behind, a row would carry one
   // run's phase into the next and make the stepper assertions order-dependent.

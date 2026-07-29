@@ -6,6 +6,7 @@ import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageOrgSettings } from "@/lib/permissions";
 import {
   advanceOffseasonPhase,
+  applyTrainingAllocations,
   beginOffseason,
   getDraft,
   getLeagueOrgId,
@@ -91,13 +92,42 @@ export async function advanceOffseasonPhaseAction(input: {
      */
     const draft = await getDraft(input.seasonId).catch(() => null);
 
+    /*
+     * Leaving the training phase is when a spring lands (B6). It runs BEFORE
+     * the advance, not after, so a failure here leaves the offseason in
+     * `training` with the allocations still pending — a state an admin can
+     * retry — rather than past the phase with the points silently unspent.
+     *
+     * `applyTrainingAllocations` is idempotent through each row's `appliedAt`,
+     * so the retry that follows a lost response trains nobody twice.
+     */
+    if (input.expectedPhase === "training") {
+      await applyTrainingAllocations({
+        seasonId: input.seasonId,
+        actorUserId: userId,
+      });
+    }
+
     const result = await advanceOffseasonPhase({
       seasonId: input.seasonId,
       expectedPhase: input.expectedPhase,
       to: input.to,
-      // Identifies this attempt, so a retry by the same admin is not mistaken
-      // for a second admin racing them.
-      ownerId: `${userId}:${input.expectedPhase}:${input.to}`,
+      /*
+       * The admin, not the attempt.
+       *
+       * This was `${userId}:${from}:${to}` — a different owner for every
+       * transition — which meant an admin walking their own offseason was
+       * refused by their OWN 30-second lease the moment they clicked Advance
+       * twice in a row. B6's e2e is the first thing to walk several phases back
+       * to back, and it found it; every earlier test advanced once, or advanced
+       * through the mutation with one fixed owner, so the machine looked fine.
+       *
+       * Keying the lease to the user is what the lease was always documented to
+       * do — "a second admin clicking Advance loses cleanly". A retry by the
+       * same admin still matches, so the `changed: false` path is unaffected,
+       * and a genuinely concurrent second admin is still turned away.
+       */
+      ownerId: userId,
       actorUserId: userId,
       draftStatus: draftStatusFor(draft),
     });

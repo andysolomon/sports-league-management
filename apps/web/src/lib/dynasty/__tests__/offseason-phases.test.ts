@@ -210,3 +210,41 @@ describe("resolveOffseasonState", () => {
     expect(state.completedPhases).toEqual(["rollover"]);
   });
 });
+
+/*
+ * B6 inserted `training` between `free_agency` and `activate` — the third
+ * migration-free insert this machine has taken. The point of these is that an
+ * offseason already in flight when the phase appeared keeps working.
+ */
+describe("the training phase (B6)", () => {
+  it("sits between free agency and activation", () => {
+    expect(nextPhase("free_agency")).toBe("training");
+    expect(nextPhase("training")).toBe("activate");
+  });
+
+  it("cannot be skipped on the way to activation", () => {
+    // Activation is when a season starts. Jumping the phase would strand every
+    // allocation a coach paid for, unapplied and unspendable.
+    expect(gate("free_agency", "activate")).toEqual({
+      ok: false,
+      reason: "phase_out_of_order",
+    });
+  });
+
+  it("can be passed through empty — an unspent budget is a decision", () => {
+    expect(gate("training", "activate")).toEqual({ ok: true, kind: "advance" });
+  });
+
+  it("shows as skipped, not broken, for an offseason that predates it", () => {
+    /*
+     * The migration-free promise. A league sitting at `activate` when B6
+     * deployed never has `training` in its set; the stepper must read that as
+     * something that did not happen rather than as a phase still to come.
+     */
+    const steps = buildPhaseSteps({
+      phase: "activate",
+      completedPhases: ["rollover", "draft", "free_agency"],
+    });
+    expect(steps.find((step) => step.id === "training")?.state).toBe("optional");
+  });
+});

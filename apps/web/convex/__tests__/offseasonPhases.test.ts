@@ -294,6 +294,62 @@ describe("advanceOffseasonPhase", () => {
       "transfers",
       "draft",
       "free_agency",
+      // B6 inserted `training` in front of `activate`. The list is spelled out
+      // rather than derived from `OFFSEASON_PHASES` on purpose: a phase that
+      // silently vanished from the machine should fail this test, and a loop
+      // over the machine would agree with itself either way.
+      "training",
     ]);
+  });
+
+  /*
+   * Regression: one admin walking their own offseason (B6).
+   *
+   * Every test above advances as one fixed `ownerId`, so the lease never comes
+   * into play. The real action used to mint `${userId}:${from}:${to}` — a
+   * DIFFERENT owner for every transition — and B6's e2e is the first thing to
+   * walk several phases back to back. It found the consequence the hard way:
+   * the second advance inside the 30-second lease was refused as `phase_busy`
+   * by the admin's own previous move.
+   *
+   * This is the MUTATION half of the contract: one claimant may hold the lease
+   * across consecutive moves. The other half — that the action sends a stable
+   * claimant rather than a fresh one per transition — is asserted in
+   * `_actions/__tests__/offseason-phases.test.ts`, because that is where the
+   * bug actually lived.
+   */
+  it("lets one claimant walk several phases without fighting its own lease", async () => {
+    const { t, seasonId } = await opened();
+
+    const first = await advance(t, seasonId as never, {
+      expectedPhase: "recruiting",
+      to: "transfers",
+      ownerId: ACTOR,
+    });
+    expect(first.offseason.phase).toBe("transfers");
+
+    const second = await advance(t, seasonId as never, {
+      expectedPhase: "transfers",
+      to: "draft",
+      ownerId: ACTOR,
+    });
+    expect(second.offseason.phase).toBe("draft");
+  });
+
+  it("still refuses a second admin who arrives inside the lease", async () => {
+    // The protection the lease exists for has to survive the fix above.
+    const { t, seasonId } = await opened();
+    await advance(t, seasonId as never, {
+      expectedPhase: "recruiting",
+      to: "transfers",
+      ownerId: "user_a",
+    });
+    await expect(
+      advance(t, seasonId as never, {
+        expectedPhase: "transfers",
+        to: "draft",
+        ownerId: "user_b",
+      }),
+    ).rejects.toThrow(/phase_busy/);
   });
 });

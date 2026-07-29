@@ -249,7 +249,15 @@ type AllowedPublicDynastyReads =
    * panel can compute position fit without a round trip per candidate. The
    * MOVES are internalMutations behind the same per-`teamId` gate.
    */
-  | "listRosterBoard";
+  | "listRosterBoard"
+  /*
+   * B6. One team's own training ledger, keyed by the `teamId` the caller
+   * already had to resolve to reach the page. Nothing hidden passes through it
+   * — an allocation is a coach's stated plan, not a rating anyone can't see —
+   * and both writes (`allocateTraining`, `applyTrainingAllocations`) are
+   * internalMutations.
+   */
+  | "listTrainingAllocations";
 type AllowedPublicSimReads =
   | "moduleStatus"
   | "listRivalries"
