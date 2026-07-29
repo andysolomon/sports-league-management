@@ -108,6 +108,10 @@ _Avoid_: Breadcrumb, back-link row
 What a Team runs on offense and on defense for a Season, together with its tempo, blitz and aggression dials. A Team with no Scheme plays the League default rather than an average.
 _Avoid_: Playbook, formation, strategy, system
 
+**Coach Home**:
+The program-facing surface for one coach at `/dashboard/coaches/[coachId]`, with Overview and Career siblings, reached from Team Home Staff rather than the sidebar.
+_Avoid_: Staff page, coaching staff hub, manager profile
+
 ## Relationships
 
 - An operator may access zero or more **Leagues**

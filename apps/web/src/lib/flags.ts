@@ -237,6 +237,28 @@ export const dynastyOffseasonV2 = flag<boolean>({
   },
 });
 
+/*
+ * Dynasty Mode Epic C — program management (coaches, prestige, goals).
+ *
+ * Scheme selection on Team Home stays under `dynastySimV2` (Epic A6) so leagues
+ * that shipped with schemes are not hidden when this flag is off.
+ */
+export const dynastyProgramV1 = flag<boolean>({
+  key: "dynasty_program_v1",
+  description:
+    "Dynasty Mode Epic C: coach identity, staff, Coach Home and program cards (#625)",
+  defaultValue: defaultOn,
+  options: [
+    { label: "Off", value: false },
+    { label: "On", value: true },
+  ],
+  decide: () => {
+    const enabled = resolveFlag("FLAG_DYNASTY_PROGRAM_V1");
+    void trackFlagExposure("dynasty_program_v1", enabled);
+    return enabled;
+  },
+});
+
 export type FeatureFlag = () => Promise<boolean>;
 
 export async function pageGuard(flagFn: FeatureFlag): Promise<void> {

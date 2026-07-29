@@ -259,6 +259,24 @@ async function cascadeDeleteLeague(
       deleted += 1;
     }
   }
+  // Coaches and career rows (C1). A leaked head coach would change Staff card
+  // counts and Coach Home assertions on the next run.
+  const coachRows = (await ctx.db
+    .query("coaches")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"coaches"> }>;
+  for (const coach of coachRows) {
+    const seasonRows = (await ctx.db
+      .query("coachSeasons")
+      .withIndex("by_coach_season", (q: any) => q.eq("coachId", coach._id))
+      .collect()) as Array<{ _id: Id<"coachSeasons"> }>;
+    for (const row of seasonRows) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+    await ctx.db.delete(coach._id);
+    deleted += 1;
+  }
   for (const team of teams as Array<{ _id: Id<"teams"> }>) {
     const teamDepth = (await ctx.db
       .query("depthChartEntries")
@@ -912,5 +930,28 @@ export const seedRosterMoveCandidates = internalMutation({
     }
 
     return { created };
+  },
+});
+
+/** Seed AI head coaches for an e2e fixture league (C1). */
+export const seedAiHeadCoaches = internalMutation({
+  args: { leagueId: v.id("leagues") },
+  returns: v.object({
+    coachesCreated: v.number(),
+    coachSeasonsCreated: v.number(),
+    teamsScanned: v.number(),
+  }),
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    coachesCreated: number;
+    coachSeasonsCreated: number;
+    teamsScanned: number;
+  }> => {
+    assertSeedEnabled();
+    return ctx.runMutation(internal.program.seedAiHeadCoachesForLeague, {
+      leagueId: args.leagueId,
+    });
   },
 });

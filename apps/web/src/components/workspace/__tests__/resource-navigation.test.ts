@@ -5,8 +5,11 @@ import {
   accountSettingsHref,
   activeSeasonShortcutHref,
   buildPlayerSiblingLinks,
+  buildCoachSiblingLinks,
   buildSeasonSiblingLinks,
   buildTeamSiblingLinks,
+  coachHomeHref,
+  coachSubpageHref,
   dashboardEntryPath,
   isActiveHref,
   leagueActivationHref,
@@ -89,6 +92,10 @@ describe("resource-navigation helpers", () => {
 
   it("builds team, player, and season subpage hrefs", () => {
     expect(teamSubpageHref("t1", "roster")).toBe("/dashboard/teams/t1/roster");
+    expect(coachHomeHref("c1")).toBe("/dashboard/coaches/c1");
+    expect(coachSubpageHref("c1", "career")).toBe(
+      "/dashboard/coaches/c1/career",
+    );
     expect(teamSubpageHref("t1", "depth-chart")).toBe(
       "/dashboard/teams/t1/depth-chart",
     );
@@ -136,6 +143,17 @@ describe("buildTeamSiblingLinks", () => {
       depthChartEnabled: false,
     });
     expect(none.map((l) => l.label)).toEqual(["Overview"]);
+  });
+});
+
+describe("buildCoachSiblingLinks", () => {
+  it("includes Overview and Career", () => {
+    const links = buildCoachSiblingLinks("c1");
+    expect(links.map((l) => l.label)).toEqual(["Overview", "Career"]);
+    expect(links.map((l) => l.href)).toEqual([
+      "/dashboard/coaches/c1",
+      "/dashboard/coaches/c1/career",
+    ]);
   });
 });
 

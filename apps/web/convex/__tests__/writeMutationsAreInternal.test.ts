@@ -50,6 +50,8 @@ void internal.sports.recordGameResult;
 void internal.sports.rebuildSeasonTeamRecords;
 void internal.sports.rebuildSeasonPlayerAggregates;
 void internal.dynasty.setDynastyConfig;
+void internal.program.setTeamProgram;
+void internal.program.seedAiHeadCoachesForLeague;
 void internal.sports.assignPlayerToRoster;
 void internal.sports.forkTeamToWorkspace;
 void internal.sports.forkDivisionToWorkspace;
@@ -266,7 +268,10 @@ type AllowedPublicSimReads =
 type AllowedPublicProgramReads =
   | "moduleStatus"
   | "listTeamPrograms"
-  | "getTeamProgram";
+  | "getTeamProgram"
+  | "getCoach"
+  | "listCoachesByTeam"
+  | "listCoachSeasons";
 type AllowedPublicHistoryReads = "moduleStatus";
 
 type LeakedPublicDynastyWrites = Exclude<
