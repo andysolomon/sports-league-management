@@ -9,7 +9,6 @@ import {
   getCoach,
   getSeasons,
   getTeam,
-  getTeamLeagueId,
   listCoachSeasons,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
@@ -33,12 +32,12 @@ export default async function CoachCareerPage({
   const coach = await getCoach(coachId).catch(() => null);
   if (!coach) notFound();
 
-  const team = await getTeam(coach.teamId, orgContext).catch(() => null);
-  if (!team) notFound();
-
-  const leagueId = await getTeamLeagueId(coach.teamId).catch(() => null);
-  if (!leagueId) notFound();
+  const leagueId = coach.leagueId;
   await syncActiveLeagueForResource(leagueId);
+
+  const team = coach.teamId
+    ? await getTeam(coach.teamId, orgContext).catch(() => null)
+    : null;
 
   const [seasonRows, seasons] = await Promise.all([
     listCoachSeasons(coachId).catch(() => []),

@@ -7,6 +7,7 @@ import {
   COACH_STATUS_AI,
   generateAiHeadCoachProfile,
 } from "./lib/coach";
+import { evaluateGoals, generateGoals } from "./lib/goals";
 import type { Id } from "./_generated/dataModel";
 
 /*
@@ -48,12 +49,17 @@ const teamProgramValidator = v.object({
   id: v.string(),
   leagueId: v.string(),
   seasonId: v.string(),
-  teamId: v.string(),
+  teamId: v.union(v.string(), v.null()),
   offenseScheme: v.union(v.string(), v.null()),
   defenseScheme: v.union(v.string(), v.null()),
   tempo: v.union(v.number(), v.null()),
   blitzRate: v.union(v.number(), v.null()),
   aggression: v.union(v.number(), v.null()),
+  prestige: v.union(v.number(), v.null()),
+  facilitiesTier: v.union(v.number(), v.null()),
+  seasonGoalsJson: v.union(v.string(), v.null()),
+  jobSecurity: v.union(v.number(), v.null()),
+  boosterConfidence: v.union(v.number(), v.null()),
   updatedAt: v.string(),
 });
 
@@ -77,6 +83,11 @@ function toTeamProgramDto(row: {
   tempo?: number;
   blitzRate?: number;
   aggression?: number;
+  prestige?: number;
+  facilitiesTier?: number;
+  seasonGoalsJson?: string;
+  jobSecurity?: number;
+  boosterConfidence?: number;
   updatedAt: string;
 }): TeamProgramDto {
   return {
@@ -97,6 +108,11 @@ function toTeamProgramDto(row: {
     tempo: row.tempo ?? null,
     blitzRate: row.blitzRate ?? null,
     aggression: row.aggression ?? null,
+    prestige: row.prestige ?? null,
+    facilitiesTier: row.facilitiesTier ?? null,
+    seasonGoalsJson: row.seasonGoalsJson ?? null,
+    jobSecurity: row.jobSecurity ?? null,
+    boosterConfidence: row.boosterConfidence ?? null,
     updatedAt: row.updatedAt,
   };
 }
@@ -217,7 +233,7 @@ export const setTeamProgram = internalMutation({
 const coachDtoValidator = v.object({
   id: v.string(),
   leagueId: v.string(),
-  teamId: v.string(),
+  teamId: v.union(v.string(), v.null()),
   userId: v.union(v.string(), v.null()),
   displayName: v.string(),
   role: v.string(),
@@ -242,7 +258,7 @@ type CoachDto = Infer<typeof coachDtoValidator>;
 function toCoachDto(row: {
   _id: string;
   leagueId: string;
-  teamId: string;
+  teamId: string | null;
   userId?: string;
   displayName: string;
   role: string;
@@ -264,7 +280,7 @@ function toCoachDto(row: {
   return {
     id: row._id,
     leagueId: row.leagueId,
-    teamId: row.teamId,
+    teamId: row.teamId ?? null,
     userId: row.userId ?? null,
     displayName: row.displayName,
     role: row.role,
@@ -289,7 +305,7 @@ const coachSeasonDtoValidator = v.object({
   id: v.string(),
   coachId: v.string(),
   seasonId: v.string(),
-  teamId: v.string(),
+  teamId: v.union(v.string(), v.null()),
   wins: v.number(),
   losses: v.number(),
   ties: v.number(),
@@ -359,6 +375,75 @@ export const listCoachSeasons = query({
       .withIndex("by_coach_season", (q) => q.eq("coachId", args.coachId))
       .collect();
     return rows.map(toCoachSeasonDto);
+  },
+});
+
+const evaluatedGoalValidator = v.object({
+  id: v.string(),
+  metric: v.string(),
+  label: v.string(),
+  target: v.number(),
+  status: v.union(
+    v.literal("met"),
+    v.literal("missed"),
+    v.literal("partial"),
+  ),
+  actual: v.number(),
+});
+
+type EvaluatedGoalDto = Infer<typeof evaluatedGoalValidator>;
+
+export const getSeasonGoalProgress = query({
+  args: {
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+  },
+  returns: v.array(evaluatedGoalValidator),
+  handler: async (ctx, args): Promise<EvaluatedGoalDto[]> => {
+    const program = await ctx.db
+      .query("teamSeasonPrograms")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .unique();
+
+    const goals = program?.seasonGoalsJson
+      ? (JSON.parse(program.seasonGoalsJson) as ReturnType<typeof generateGoals>)
+      : generateGoals(args.teamId as string, args.seasonId as string);
+
+    const record = await ctx.db
+      .query("seasonTeamRecords")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .unique();
+
+    const recordInput = record
+      ? {
+          wins: record.wins,
+          losses: record.losses,
+          ties: record.ties,
+          pointsFor: record.pointsFor,
+          pointsAgainst: record.pointsAgainst,
+        }
+      : {
+          wins: 0,
+          losses: 0,
+          ties: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+        };
+
+    const aggregates = await ctx.db
+      .query("playerSeasonAggregates")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+
+    const teamAggregates = aggregates
+      .filter((row) => row.teamId === args.teamId)
+      .map((row) => ({ totalsJson: row.totalsJson }));
+
+    return evaluateGoals(goals, recordInput, teamAggregates);
   },
 });
 

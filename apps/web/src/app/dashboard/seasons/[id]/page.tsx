@@ -7,6 +7,7 @@ import {
   playoffsV1,
   statKeepingV1,
   dynastyOffseasonV2,
+  dynastyProgramV1,
 } from "@/lib/flags";
 import {
   computeStandings,
@@ -15,6 +16,7 @@ import {
   getPlayers,
   getSeason,
   getSeasons,
+  getSeasonGoalProgress,
   getTeamsByLeague,
   listFixturesBySeason,
   listFreeAgents,
@@ -32,6 +34,7 @@ import {
   seasonDecidedContext,
 } from "@/lib/dynasty-panel";
 import { DynastyPanel } from "@/components/dynasty/DynastyPanel";
+import { SeasonGoalsCard } from "@/components/program/SeasonGoalsCard";
 import { regularSeasonProgress } from "@/lib/playoffs";
 import { resolveLifecycleSeason } from "@/lib/season-view";
 import { formatDate } from "@/lib/format";
@@ -87,6 +90,8 @@ export default async function SeasonHubPage({
     seasons.filter((s) => s.status === "completed"),
   );
 
+  const programEnabled = await dynastyProgramV1();
+
   const [fixtures, standings, bracket, scheduleEnabled, playoffsEnabled, statsEnabled, offseasonEnabled, dynastyFixtures, dynastyBracket, leaguePlayers, teams] =
     await Promise.all([
       listFixturesBySeason(season.id),
@@ -105,7 +110,7 @@ export default async function SeasonHubPage({
       isAdmin && league.orgId
         ? getPlayers([league.id]).catch(() => [])
         : Promise.resolve([]),
-      isAdmin && league.orgId
+      programEnabled || (isAdmin && league.orgId)
         ? getTeamsByLeague(league.id, orgContext).catch(() => [])
         : Promise.resolve([]),
     ]);
@@ -155,6 +160,15 @@ export default async function SeasonHubPage({
   ).length;
   const champion = bracket?.champion ?? null;
   const topFive = standings.slice(0, 5);
+
+  const goalsTeam =
+    programEnabled && teams.length > 0
+      ? [...teams].sort((a, b) => a.name.localeCompare(b.name))[0]
+      : null;
+  const seasonGoals =
+    goalsTeam && programEnabled
+      ? await getSeasonGoalProgress(season.id, goalsTeam.id).catch(() => [])
+      : [];
 
   const isUpcomingSeason = season.status === "upcoming";
   let freeAgents: Awaited<ReturnType<typeof listFreeAgents>> = [];
@@ -238,6 +252,10 @@ export default async function SeasonHubPage({
         })}
       />
       <WorkspaceNav links={links} />
+
+      {programEnabled && seasonGoals.length > 0 && goalsTeam && (
+        <SeasonGoalsCard teamName={goalsTeam.name} goals={seasonGoals} />
+      )}
 
       {isUpcomingSeason && (
         <OffseasonHub

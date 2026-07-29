@@ -271,7 +271,8 @@ type AllowedPublicProgramReads =
   | "getTeamProgram"
   | "getCoach"
   | "listCoachesByTeam"
-  | "listCoachSeasons";
+  | "listCoachSeasons"
+  | "getSeasonGoalProgress";
 type AllowedPublicHistoryReads = "moduleStatus";
 
 type LeakedPublicDynastyWrites = Exclude<
