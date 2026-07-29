@@ -71,6 +71,12 @@ export type NarrativeInput =
       coachName: string;
       teamName: string;
       seasonName: string;
+    }
+  | {
+      type: "award_won";
+      recipientName: string;
+      awardName: string;
+      positionGroup: string | null;
     };
 
 export type NarrativeEventType = NarrativeInput["type"];
@@ -119,6 +125,12 @@ export function renderHeadline(input: NarrativeInput): string {
     case "coach_fired": {
       return `${input.seasonName}: ${input.teamName} parts ways with ${input.coachName}`;
     }
+    case "award_won": {
+      const position = input.positionGroup
+        ? ` (${input.positionGroup})`
+        : "";
+      return `${input.recipientName}${position} earns ${input.awardName} honors`;
+    }
     default: {
       // Exhaustiveness guard: adding a NarrativeInput variant without a case
       // here fails `tsc`, so a new event type cannot ship copy-less.
@@ -146,6 +158,8 @@ export function defaultSeverity(type: NarrativeEventType): EventSeverity {
       return "info";
     case "coach_fired":
       return "headline";
+    case "award_won":
+      return "notable";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;
@@ -168,6 +182,8 @@ export function categoryFor(type: NarrativeEventType): EventCategory {
       return "offseason";
     case "coach_fired":
       return "program";
+    case "award_won":
+      return "award";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;

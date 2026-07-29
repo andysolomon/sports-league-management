@@ -230,6 +230,9 @@ void api.program.moduleStatus;
 void api.history.moduleStatus;
 void api.history.getCareerTotals;
 void api.history.listProgramRecords;
+void api.history.listSeasonAwards;
+void api.history.listPlayerAwards;
+void api.history.listCoachAwards;
 void internal.history.finalizeSeasonHistory;
 
 type AllowedPublicDynastyReads =
@@ -283,7 +286,10 @@ type AllowedPublicProgramReads =
 type AllowedPublicHistoryReads =
   | "moduleStatus"
   | "getCareerTotals"
-  | "listProgramRecords";
+  | "listProgramRecords"
+  | "listSeasonAwards"
+  | "listPlayerAwards"
+  | "listCoachAwards";
 
 type LeakedPublicDynastyWrites = Exclude<
   keyof typeof api.dynasty,
@@ -327,6 +333,7 @@ void internal.e2eSeed.createRosterFixture;
 void internal.e2eSeed.resetRosterFixture;
 void internal.e2eSeed.createScheduleFixture;
 void internal.e2eSeed.seedHistoryFixture;
+void internal.e2eSeed.seedAwardsFixture;
 // @ts-expect-error createRosterFixture is internal, not public
 void api.e2eSeed.createRosterFixture;
 // @ts-expect-error resetRosterFixture is internal, not public

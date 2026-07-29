@@ -2219,8 +2219,8 @@ export const completeSeason = internalMutationGeneric({
       if (!champion) throw new Error("no_champion");
     }
 
-    await finalizeProgramSeason(ctx, args.seasonId);
     await finalizeSeasonHistoryForSeason(ctx, args.seasonId);
+    await finalizeProgramSeason(ctx, args.seasonId);
 
     await ctx.db.patch(args.seasonId, { status: "completed" });
     return null;
@@ -6662,6 +6662,14 @@ async function rebuildPlayerSeasonAggregate(
     playerId: args.playerId,
     position: player.position,
     positionGroup: player.positionGroup ?? null,
+    playerName: player.name,
+    ...(typeof player.grade === "number" ||
+    typeof player.experienceYears === "number"
+      ? {
+          newcomerEligible:
+            player.grade === 9 || player.experienceYears === 0,
+        }
+      : {}),
     gamesPlayed,
     totalsJson: JSON.stringify(totals),
     updatedAt: new Date().toISOString(),

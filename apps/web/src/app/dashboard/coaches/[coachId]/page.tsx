@@ -9,9 +9,14 @@ import {
   getCoach,
   getTeam,
   getTeamLeagueId,
+  listCoachAwards,
 } from "@/lib/data-api";
 import { resolveOrgContext } from "@/lib/org-context";
-import { dynastyProgramV1, pageGuard } from "@/lib/flags";
+import {
+  dynastyHistoryV1,
+  dynastyProgramV1,
+  pageGuard,
+} from "@/lib/flags";
 import { formatCoachArchetype } from "@/lib/program/coach";
 import { CoachSkillTreeCard } from "@/components/program/CoachSkillTreeCard";
 import { canAdminOrManageTeam } from "@/lib/authorization";
@@ -43,6 +48,10 @@ export default async function CoachHomePage({
 
   const siblings = buildCoachSiblingLinks(coachId);
   const canEdit = await canAdminOrManageTeam(coach.teamId, userId);
+  const historyEnabled = await dynastyHistoryV1();
+  const accolades = historyEnabled
+    ? await listCoachAwards(coachId).catch(() => [])
+    : [];
 
   return (
     <div className="space-y-4">
@@ -102,6 +111,31 @@ export default async function CoachHomePage({
           </div>
         </CardContent>
       </Card>
+
+      {historyEnabled && (
+        <Card data-testid="coach-accolades">
+          <CardContent className="pt-6">
+            <h2 className="text-lg font-semibold">Accolades</h2>
+            {accolades.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No accolades yet.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {accolades.map((award) => (
+                  <li key={award.id} className="text-sm">
+                    <span className="font-medium">{award.typeLabel}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {award.seasonName}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <CoachSkillTreeCard
         coachId={coachId}

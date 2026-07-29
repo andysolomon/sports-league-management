@@ -108,7 +108,13 @@ export function seasonHomeHref(seasonId: string): string {
  */
 export function seasonSubpageHref(
   seasonId: string,
-  subpage: "schedule" | "standings" | "playoffs" | "stats" | "offseason",
+  subpage:
+    | "schedule"
+    | "standings"
+    | "playoffs"
+    | "stats"
+    | "offseason"
+    | "awards",
 ): string {
   return `/dashboard/seasons/${seasonId}/${subpage}`;
 }
@@ -217,6 +223,7 @@ export function buildSeasonSiblingLinks({
   playoffsEnabled,
   statsEnabled,
   offseasonEnabled = false,
+  awardsEnabled = false,
 }: {
   seasonId: string;
   scheduleEnabled: boolean;
@@ -228,6 +235,8 @@ export function buildSeasonSiblingLinks({
    * completed season the link would lead to a page with nothing to do.
    */
   offseasonEnabled?: boolean;
+  /** Epic D history flag; awards remain a Season-owned read surface. */
+  awardsEnabled?: boolean;
 }): ResourceSiblingLink[] {
   const links: (ResourceSiblingLink | false)[] = [
     { label: "Overview", href: seasonHomeHref(seasonId) },
@@ -250,6 +259,10 @@ export function buildSeasonSiblingLinks({
     statsEnabled && {
       label: "Stat leaders",
       href: seasonSubpageHref(seasonId, "stats"),
+    },
+    awardsEnabled && {
+      label: "Awards",
+      href: seasonSubpageHref(seasonId, "awards"),
     },
   ];
   return links.filter((link): link is ResourceSiblingLink => Boolean(link));

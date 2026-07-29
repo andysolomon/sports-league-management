@@ -12,6 +12,7 @@ import {
   type ProgramRecordEntry,
   type RecordCandidate,
 } from "./records";
+import { finalizeSeasonAwards } from "./awardsFinalize";
 
 export interface FinalizeSeasonHistoryResult {
   careerTotalsUpdated: number;
@@ -152,6 +153,14 @@ export async function finalizeSeasonHistoryForSeason(
   }
   if (leagueIds.size !== 1) throw new Error("history_league_mismatch");
   const leagueId = [...leagueIds][0] as Id<"leagues">;
+
+  await finalizeSeasonAwards(
+    ctx,
+    seasonId,
+    leagueId,
+    aggregates,
+    teamRecords,
+  );
 
   const careerRows = await ctx.db
     .query("playerCareerTotals")

@@ -19,13 +19,18 @@ import {
   computeSeasonSprt,
   getTeamLeagueId,
   getLeagueOrgId,
+  listPlayerAwards,
 } from "@/lib/data-api";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageRoster } from "@/lib/permissions";
 import { derivePositionGroup } from "@/lib/position-group";
 import { gradeToClassYear } from "@/lib/class-year";
 import { orderedMaddenAttributes } from "@/lib/madden/attributes";
-import { playerAttributesV1, statKeepingV1 } from "@/lib/flags";
+import {
+  dynastyHistoryV1,
+  playerAttributesV1,
+  statKeepingV1,
+} from "@/lib/flags";
 import { SeasonStatsCard } from "@/components/stats/SeasonStatsCard";
 import {
   HsRatingCard,
@@ -83,6 +88,10 @@ export default async function PlayerProfilePage({
   const classYear = gradeToClassYear(player.grade);
   const age = player.dateOfBirth ? ageFrom(player.dateOfBirth) : null;
   const attributesEnabled = await playerAttributesV1();
+  const historyEnabled = await dynastyHistoryV1();
+  const accolades = historyEnabled
+    ? await listPlayerAwards(playerId).catch(() => [])
+    : [];
 
   // SPRT rating breakdown (WSM-000093) — the player's current-season snapshot
   // when Phase 2 is on. The season is resolved server-side, including workspace
@@ -268,6 +277,34 @@ export default async function PlayerProfilePage({
           )}
         </CardContent>
       </Card>
+
+      {historyEnabled && (
+        <Card data-testid="player-accolades">
+          <CardContent className="pt-6">
+            <h2 className="text-lg font-semibold">Accolades</h2>
+            {accolades.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                No accolades yet.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {accolades.map((award) => (
+                  <li key={award.id} className="text-sm">
+                    <span className="font-medium">{award.typeLabel}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {award.seasonName}
+                      {award.positionGroup
+                        ? ` · ${award.positionGroup}`
+                        : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {seasonStats && (
         <SeasonStatsCard

@@ -8,6 +8,26 @@ import { v } from "convex/values";
  * Season: a career and a record book only become meaningful across seasons.
  */
 export const historyTables = {
+  awards: defineTable({
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    type: v.string(),
+    tier: v.string(),
+    playerId: v.union(v.id("players"), v.null()),
+    coachId: v.union(v.id("coaches"), v.null()),
+    teamId: v.id("teams"),
+    divisionId: v.union(v.id("divisions"), v.null()),
+    positionGroup: v.union(v.string(), v.null()),
+    /** Exact output of `lib/awards.ts`; never a rounded display value. */
+    scoreValue: v.number(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_seasonId", ["seasonId"])
+    .index("by_seasonId_type", ["seasonId", "type"])
+    .index("by_playerId", ["playerId"])
+    .index("by_coachId", ["coachId"]),
+
   playerCareerTotals: defineTable({
     leagueId: v.id("leagues"),
     playerId: v.id("players"),
