@@ -23,7 +23,22 @@ export const seedLeague = internalMutation({
     coachSeasonsCreated: v.number(),
     teamsScanned: v.number(),
   }),
-  handler: async (ctx, args) => {
+  /*
+   * The return type is annotated rather than inferred. Inferring it would make
+   * this module's entry in the generated `api` depend on `internal.program`,
+   * which is itself read off `api` — a cycle TypeScript resolves to `any`,
+   * poisoning every `Exclude<keyof typeof api.X, …>` guard in the codebase.
+   * `pnpm turbo type-check` cannot see it because it reads the checked-in
+   * `_generated/api.d.ts`; only `convex deploy`'s regenerated types expose it.
+   */
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    coachesCreated: number;
+    coachSeasonsCreated: number;
+    teamsScanned: number;
+  }> => {
     return ctx.runMutation(internal.program.seedAiHeadCoachesForLeague, {
       leagueId: args.leagueId,
     });
@@ -37,7 +52,13 @@ export const seedAllLeagues = internalMutation({
     coachesCreated: v.number(),
     coachSeasonsCreated: v.number(),
   }),
-  handler: async (ctx) => {
+  handler: async (
+    ctx,
+  ): Promise<{
+    leaguesScanned: number;
+    coachesCreated: number;
+    coachSeasonsCreated: number;
+  }> => {
     const leagues = await ctx.db.query("leagues").collect();
     let coachesCreated = 0;
     let coachSeasonsCreated = 0;
