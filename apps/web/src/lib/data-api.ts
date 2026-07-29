@@ -2987,6 +2987,88 @@ export async function setTeamProgram(input: {
 }
 
 /*
+ * Coaches (C1). Typed refs on the program module.
+ */
+
+export interface CoachDto {
+  id: string;
+  leagueId: string;
+  teamId: string;
+  userId: string | null;
+  displayName: string;
+  role: string;
+  status: string;
+  archetype: string;
+  offensiveSchemePreference: string | null;
+  defensiveSchemePreference: string | null;
+  aggression: number | null;
+  clockManagement: number | null;
+  developmentRating: number | null;
+  recruitingRating: number | null;
+  gameplanRating: number | null;
+  prestige: number;
+  skillPoints: number | null;
+  unlockedNodesJson: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoachSeasonDto {
+  id: string;
+  coachId: string;
+  seasonId: string;
+  teamId: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  playoffResult: string | null;
+  goalsMetJson: string | null;
+  prestigeDelta: number | null;
+  finalizedAt: string | null;
+}
+
+export async function getCoach(coachId: string): Promise<CoachDto | null> {
+  const client = getConvexClient();
+  return client.query(programRef.query<CoachDto | null>("getCoach"), {
+    coachId,
+  });
+}
+
+export async function listCoachesByTeam(teamId: string): Promise<CoachDto[]> {
+  const client = getConvexClient();
+  return client.query(programRef.query<CoachDto[]>("listCoachesByTeam"), {
+    teamId,
+  });
+}
+
+export async function listCoachSeasons(
+  coachId: string,
+): Promise<CoachSeasonDto[]> {
+  const client = getConvexClient();
+  return client.query(programRef.query<CoachSeasonDto[]>("listCoachSeasons"), {
+    coachId,
+  });
+}
+
+export async function seedAiHeadCoachesForLeague(input: {
+  leagueId: string;
+}): Promise<{
+  coachesCreated: number;
+  coachSeasonsCreated: number;
+  teamsScanned: number;
+}> {
+  const client = getConvexClient();
+  return client.mutation(
+    programRef.mutation<{
+      coachesCreated: number;
+      coachSeasonsCreated: number;
+      teamsScanned: number;
+    }>("seedAiHeadCoachesForLeague"),
+    input,
+  );
+}
+
+/*
  * Persisted offseason phase machine (B1). Same typed-ref discipline as the
  * config functions above.
  */

@@ -60,4 +60,64 @@ export const programTables = {
     .index("by_seasonId", ["seasonId"])
     .index("by_seasonId_teamId", ["seasonId", "teamId"])
     .index("by_teamId", ["teamId"]),
+
+  /*
+   * Coach identity (Dynasty Mode C1).
+   *
+   * A program is run by people, not anonymous team rows. `userId` and
+   * `by_userId` exist from day one so Wave 5 can bind a real operator to a
+   * coach without a migration. Until then, `status: "ai"` head coaches are
+   * seeded per team.
+   *
+   * Scheme preferences here are identity — what this coach tends to run — not
+   * the season-scoped dial on `teamSeasonPrograms`, which is what the sim
+   * reads today.
+   */
+  coaches: defineTable({
+    leagueId: v.id("leagues"),
+    teamId: v.id("teams"),
+    userId: v.optional(v.string()),
+    displayName: v.string(),
+    role: v.string(),
+    status: v.string(),
+    archetype: v.string(),
+    offensiveSchemePreference: v.optional(v.string()),
+    defensiveSchemePreference: v.optional(v.string()),
+    aggression: v.optional(v.number()),
+    clockManagement: v.optional(v.number()),
+    developmentRating: v.optional(v.number()),
+    recruitingRating: v.optional(v.number()),
+    gameplanRating: v.optional(v.number()),
+    prestige: v.number(),
+    skillPoints: v.optional(v.number()),
+    unlockedNodesJson: v.optional(v.string()),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  })
+    .index("by_leagueId", ["leagueId"])
+    .index("by_teamId", ["teamId"])
+    .index("by_teamId_role", ["teamId", "role"])
+    .index("by_userId", ["userId"]),
+
+  /*
+   * Per-season coach ledger (Dynasty Mode C1).
+   *
+   * C2 will write these from `completeSeason`; C1 backfills from
+   * `seasonTeamRecords` when a head coach is seeded so Career has history
+   * without touching the sim.
+   */
+  coachSeasons: defineTable({
+    coachId: v.id("coaches"),
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    wins: v.number(),
+    losses: v.number(),
+    ties: v.number(),
+    playoffResult: v.optional(v.string()),
+    goalsMetJson: v.optional(v.string()),
+    prestigeDelta: v.optional(v.number()),
+    finalizedAt: v.optional(v.string()),
+  })
+    .index("by_coach_season", ["coachId", "seasonId"])
+    .index("by_season_team", ["seasonId", "teamId"]),
 };

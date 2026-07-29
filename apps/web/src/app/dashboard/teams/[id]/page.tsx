@@ -11,6 +11,7 @@ import {
   listTeamInjuries,
   listFixturesBySeason,
   getTeamProgram,
+  listCoachesByTeam,
 } from "@/lib/data-api";
 import { isSeasonStarted } from "@/lib/season-started";
 import { resolveOrgContext } from "@/lib/org-context";
@@ -18,6 +19,7 @@ import { canManageTeam, canAdministerTeam } from "@/lib/authorization";
 import {
   depthChartV1,
   dynastySimV2,
+  dynastyProgramV1,
   playerAttributesV1,
   rosterSnapshotsV1,
   syntheticRostersV1,
@@ -28,6 +30,7 @@ import { ClaimTeamButton } from "./claim-team-button";
 import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import { InjuryReportCard } from "@/components/dynasty/InjuryReportCard";
 import { TeamSchemeCard } from "@/components/dynasty/TeamSchemeCard";
+import { TeamStaffCard } from "@/components/dynasty/TeamStaffCard";
 import {
   buildTeamSiblingLinks,
   teamHomeHref,
@@ -110,6 +113,11 @@ export default async function TeamDetailPage({
       ? await getTeamProgram(activeSeason.id, id).catch(() => null)
       : null;
 
+  const programEnabled = await dynastyProgramV1();
+  const coaches = programEnabled
+    ? await listCoachesByTeam(id).catch(() => [])
+    : [];
+
   // WSM-000090: attribute snapshots feed the SPRT stat columns. Phase 2-gated;
   // the season is resolved server-side — including workspace forks, which read
   // their source league's current season (WSM-000122). Failure here must never
@@ -149,6 +157,8 @@ export default async function TeamDetailPage({
           canManage={canManage}
         />
       )}
+
+      {programEnabled && <TeamStaffCard coaches={coaches} />}
 
       {injuries.length > 0 && (
         <InjuryReportCard

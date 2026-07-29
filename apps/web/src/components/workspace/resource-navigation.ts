@@ -8,7 +8,7 @@
  * (`/dashboard/seasons/<id>/<subpage>`) as of issue #575; the legacy
  * League-owned URLs now permanently redirect to these.
  */
-export type ResourceHeaderKind = "league" | "team" | "player" | "season";
+export type ResourceHeaderKind = "league" | "team" | "player" | "season" | "coach";
 
 export interface ResourceSiblingLink {
   label: string;
@@ -95,6 +95,10 @@ export function playerHomeHref(playerId: string): string {
   return `/dashboard/players/${playerId}`;
 }
 
+export function coachHomeHref(coachId: string): string {
+  return `/dashboard/coaches/${coachId}`;
+}
+
 export function seasonHomeHref(seasonId: string): string {
   return `/dashboard/seasons/${seasonId}`;
 }
@@ -135,6 +139,23 @@ export function playerSubpageHref(
   subpage: "development",
 ): string {
   return `/dashboard/players/${playerId}/${subpage}`;
+}
+
+export function coachSubpageHref(
+  coachId: string,
+  subpage: "career",
+): string {
+  return `/dashboard/coaches/${coachId}/${subpage}`;
+}
+
+/**
+ * Sibling links shown in the Resource Header for a Coach Home.
+ */
+export function buildCoachSiblingLinks(coachId: string): ResourceSiblingLink[] {
+  return [
+    { label: "Overview", href: coachHomeHref(coachId) },
+    { label: "Career", href: coachSubpageHref(coachId, "career") },
+  ];
 }
 
 /**

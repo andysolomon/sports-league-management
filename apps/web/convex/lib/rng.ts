@@ -52,7 +52,8 @@ export type SeedDomain =
   | "injury"
   | "penalty"
   | "goals"
-  | "roster";
+  | "roster"
+  | "coach";
 
 /**
  * FNV-1a over the string, returned as an unsigned 32-bit int. Stable across

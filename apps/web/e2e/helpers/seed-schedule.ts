@@ -183,3 +183,14 @@ export async function seedRosterMoveCandidates(
     count,
   });
 }
+
+const seedAiHeadCoachesRef = makeFunctionReference<
+  "mutation",
+  { leagueId: string },
+  { coachesCreated: number; coachSeasonsCreated: number; teamsScanned: number }
+>("e2eSeed:seedAiHeadCoaches");
+
+export async function seedAiHeadCoachesForLeague(leagueId: string): Promise<void> {
+  const client = getSeedClient();
+  await client.mutation(seedAiHeadCoachesRef, { leagueId });
+}

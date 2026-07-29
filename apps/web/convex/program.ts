@@ -2,6 +2,12 @@ import { v } from "convex/values";
 import type { Infer } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import { DYNASTY_MODULES, moduleStatusValidator } from "./lib/moduleStatus";
+import {
+  COACH_ROLE_HEAD,
+  COACH_STATUS_AI,
+  generateAiHeadCoachProfile,
+} from "./lib/coach";
+import type { Id } from "./_generated/dataModel";
 
 /*
  * Dynasty Mode — program management (Epic C).
@@ -201,5 +207,262 @@ export const setTeamProgram = internalMutation({
     const created = await ctx.db.get(id);
     if (!created) throw new Error("program_not_found");
     return toTeamProgramDto(created);
+  },
+});
+
+/*
+ * ── Coaches (C1) ───────────────────────────────────────────────────────────
+ */
+
+const coachDtoValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  teamId: v.string(),
+  userId: v.union(v.string(), v.null()),
+  displayName: v.string(),
+  role: v.string(),
+  status: v.string(),
+  archetype: v.string(),
+  offensiveSchemePreference: v.union(v.string(), v.null()),
+  defensiveSchemePreference: v.union(v.string(), v.null()),
+  aggression: v.union(v.number(), v.null()),
+  clockManagement: v.union(v.number(), v.null()),
+  developmentRating: v.union(v.number(), v.null()),
+  recruitingRating: v.union(v.number(), v.null()),
+  gameplanRating: v.union(v.number(), v.null()),
+  prestige: v.number(),
+  skillPoints: v.union(v.number(), v.null()),
+  unlockedNodesJson: v.union(v.string(), v.null()),
+  createdAt: v.string(),
+  updatedAt: v.string(),
+});
+
+type CoachDto = Infer<typeof coachDtoValidator>;
+
+function toCoachDto(row: {
+  _id: string;
+  leagueId: string;
+  teamId: string;
+  userId?: string;
+  displayName: string;
+  role: string;
+  status: string;
+  archetype: string;
+  offensiveSchemePreference?: string;
+  defensiveSchemePreference?: string;
+  aggression?: number;
+  clockManagement?: number;
+  developmentRating?: number;
+  recruitingRating?: number;
+  gameplanRating?: number;
+  prestige: number;
+  skillPoints?: number;
+  unlockedNodesJson?: string;
+  createdAt: string;
+  updatedAt: string;
+}): CoachDto {
+  return {
+    id: row._id,
+    leagueId: row.leagueId,
+    teamId: row.teamId,
+    userId: row.userId ?? null,
+    displayName: row.displayName,
+    role: row.role,
+    status: row.status,
+    archetype: row.archetype,
+    offensiveSchemePreference: row.offensiveSchemePreference ?? null,
+    defensiveSchemePreference: row.defensiveSchemePreference ?? null,
+    aggression: row.aggression ?? null,
+    clockManagement: row.clockManagement ?? null,
+    developmentRating: row.developmentRating ?? null,
+    recruitingRating: row.recruitingRating ?? null,
+    gameplanRating: row.gameplanRating ?? null,
+    prestige: row.prestige,
+    skillPoints: row.skillPoints ?? null,
+    unlockedNodesJson: row.unlockedNodesJson ?? null,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+const coachSeasonDtoValidator = v.object({
+  id: v.string(),
+  coachId: v.string(),
+  seasonId: v.string(),
+  teamId: v.string(),
+  wins: v.number(),
+  losses: v.number(),
+  ties: v.number(),
+  playoffResult: v.union(v.string(), v.null()),
+  goalsMetJson: v.union(v.string(), v.null()),
+  prestigeDelta: v.union(v.number(), v.null()),
+  finalizedAt: v.union(v.string(), v.null()),
+});
+
+type CoachSeasonDto = Infer<typeof coachSeasonDtoValidator>;
+
+function toCoachSeasonDto(row: {
+  _id: string;
+  coachId: string;
+  seasonId: string;
+  teamId: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  playoffResult?: string;
+  goalsMetJson?: string;
+  prestigeDelta?: number;
+  finalizedAt?: string;
+}): CoachSeasonDto {
+  return {
+    id: row._id,
+    coachId: row.coachId,
+    seasonId: row.seasonId,
+    teamId: row.teamId,
+    wins: row.wins,
+    losses: row.losses,
+    ties: row.ties,
+    playoffResult: row.playoffResult ?? null,
+    goalsMetJson: row.goalsMetJson ?? null,
+    prestigeDelta: row.prestigeDelta ?? null,
+    finalizedAt: row.finalizedAt ?? null,
+  };
+}
+
+export const getCoach = query({
+  args: { coachId: v.id("coaches") },
+  returns: v.union(coachDtoValidator, v.null()),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.coachId);
+    return row ? toCoachDto(row) : null;
+  },
+});
+
+export const listCoachesByTeam = query({
+  args: { teamId: v.id("teams") },
+  returns: v.array(coachDtoValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("coaches")
+      .withIndex("by_teamId", (q) => q.eq("teamId", args.teamId))
+      .collect();
+    return rows.map(toCoachDto);
+  },
+});
+
+export const listCoachSeasons = query({
+  args: { coachId: v.id("coaches") },
+  returns: v.array(coachSeasonDtoValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("coachSeasons")
+      .withIndex("by_coach_season", (q) => q.eq("coachId", args.coachId))
+      .collect();
+    return rows.map(toCoachSeasonDto);
+  },
+});
+
+async function backfillCoachSeasonsForTeam(
+  ctx: { db: any },
+  coachId: Id<"coaches">,
+  teamId: Id<"teams">,
+): Promise<number> {
+  const records = await ctx.db
+    .query("seasonTeamRecords")
+    .withIndex("by_teamId", (q: any) => q.eq("teamId", teamId))
+    .collect();
+
+  let written = 0;
+  const now = new Date().toISOString();
+
+  for (const record of records) {
+    const existing = await ctx.db
+      .query("coachSeasons")
+      .withIndex("by_coach_season", (q: any) =>
+        q.eq("coachId", coachId).eq("seasonId", record.seasonId),
+      )
+      .unique();
+    if (existing) continue;
+
+    await ctx.db.insert("coachSeasons", {
+      coachId,
+      seasonId: record.seasonId,
+      teamId,
+      wins: record.wins,
+      losses: record.losses,
+      ties: record.ties,
+      finalizedAt: now,
+    });
+    written += 1;
+  }
+  return written;
+}
+
+/**
+ * Seed an AI head coach for every team in a league that lacks one.
+ *
+ * Idempotent: a second run must not change the coach count. Coach-season rows
+ * are backfilled from `seasonTeamRecords` only when a coach is first created.
+ */
+export const seedAiHeadCoachesForLeague = internalMutation({
+  args: { leagueId: v.id("leagues") },
+  returns: v.object({
+    coachesCreated: v.number(),
+    coachSeasonsCreated: v.number(),
+    teamsScanned: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+
+    let coachesCreated = 0;
+    let coachSeasonsCreated = 0;
+    const now = new Date().toISOString();
+
+    for (const team of teams) {
+      const existingHead = await ctx.db
+        .query("coaches")
+        .withIndex("by_teamId_role", (q) =>
+          q.eq("teamId", team._id).eq("role", COACH_ROLE_HEAD),
+        )
+        .unique();
+
+      if (existingHead) continue;
+
+      const profile = generateAiHeadCoachProfile(team._id as string);
+      const coachId = await ctx.db.insert("coaches", {
+        leagueId: args.leagueId,
+        teamId: team._id,
+        displayName: profile.displayName,
+        role: COACH_ROLE_HEAD,
+        status: COACH_STATUS_AI,
+        archetype: profile.archetype,
+        offensiveSchemePreference: profile.offensiveSchemePreference ?? undefined,
+        defensiveSchemePreference: profile.defensiveSchemePreference ?? undefined,
+        aggression: profile.aggression,
+        clockManagement: profile.clockManagement,
+        developmentRating: profile.developmentRating,
+        recruitingRating: profile.recruitingRating,
+        gameplanRating: profile.gameplanRating,
+        prestige: profile.prestige,
+        skillPoints: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      coachesCreated += 1;
+      coachSeasonsCreated += await backfillCoachSeasonsForTeam(
+        ctx,
+        coachId,
+        team._id,
+      );
+    }
+
+    return {
+      coachesCreated,
+      coachSeasonsCreated,
+      teamsScanned: teams.length,
+    };
   },
 });
