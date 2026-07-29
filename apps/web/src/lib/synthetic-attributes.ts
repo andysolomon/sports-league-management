@@ -11,22 +11,24 @@
  * output shape matches what `ingestPlayerAttributesBatch` expects: a
  * position-group code, a 0–99 attribute map, and a weighted overall.
  */
-import { derivePositionGroup } from "@/lib/position-group";
 import { seedFromString } from "@/lib/synthetic-roster";
 
-/** Attribute-domain position groups (kicker/punter split, unlike the roster
- *  K/P group). Mirrors `lib/attributes/position-groups.ts`. */
-export type AttributeGroup =
-  | "QB"
-  | "RB"
-  | "WR"
-  | "TE"
-  | "OL"
-  | "DL"
-  | "LB"
-  | "DB"
-  | "K"
-  | "P";
+/*
+ * `AttributeGroup` and `attributeGroupForPosition` moved to
+ * `convex/lib/positions.ts` in B5 — a position change has to resolve a
+ * player's new attribute group inside a Convex mutation, and a second copy of
+ * that mapping would be a fork of the app's football vocabulary. Re-exported
+ * here so every existing import is untouched.
+ */
+export {
+  attributeGroupForPosition,
+  type AttributeGroup,
+} from "../../convex/lib/positions";
+
+import {
+  attributeGroupForPosition,
+  type AttributeGroup,
+} from "../../convex/lib/positions";
 
 /** Universal athletic attributes every group carries. */
 export const COMMON_KEYS: readonly string[] = ["SPD", "STR", "AGI", "ACC", "AWR", "STA"];
@@ -44,21 +46,6 @@ export const GROUP_KEYS: Readonly<Record<AttributeGroup, readonly string[]>> = {
   K: ["KPW", "KAC"],
   P: ["KPW", "KAC"],
 };
-
-/**
- * Map a concrete roster position to an attribute-domain group. The roster
- * util collapses kickers + punters into "K/P"; here we split them by the
- * concrete position. Unmappable positions (e.g. "ATH") fall back to "WR" — a
- * generic athletic skill profile — so every synthetic player gets ratings.
- */
-export function attributeGroupForPosition(position: string): AttributeGroup {
-  const group = derivePositionGroup(position);
-  if (group === "K/P") {
-    return position.trim().toUpperCase() === "P" ? "P" : "K";
-  }
-  if (group === null) return "WR";
-  return group;
-}
 
 /** mulberry32 — tiny deterministic PRNG (same family as synthetic-roster). */
 function rng(seed: number): () => number {

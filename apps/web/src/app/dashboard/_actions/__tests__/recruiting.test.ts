@@ -20,7 +20,19 @@ const {
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
 vi.mock("@/lib/org-context", () => ({ resolveOrgRole: mockResolveOrgRole }));
-vi.mock("@/lib/authorization", () => ({ canManageTeam: mockCanManageTeam }));
+/*
+ * `canAdminOrManageTeam` moved to `@/lib/authorization` in B5. The mock
+ * composes it from the same two inputs the real one reads, so every case below
+ * still drives it by setting an org role and a per-team coach seat.
+ */
+vi.mock("@/lib/authorization", () => ({
+  canManageTeam: mockCanManageTeam,
+  canAdminOrManageTeam: async (teamId: string) => {
+    const role = await mockResolveOrgRole();
+    if (role === "admin" || role === "owner") return true;
+    return mockCanManageTeam(teamId);
+  },
+}));
 vi.mock("@/lib/data-api", () => ({
   getLeagueOrgId: mockGetLeagueOrgId,
   getTeamLeagueId: mockGetTeamLeagueId,

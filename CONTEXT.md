@@ -88,6 +88,10 @@ _Avoid_: Offseason page, preseason, transfer window
 The Offseason Hub list of players who have asked to leave a Team and the offers other Teams have made for them, for one upcoming Season. A Transfer moves a player between Teams in the same League; nobody arrives from outside it.
 _Avoid_: Portal, trade, free agency, waiver
 
+**Squad**:
+Which of a Team's two rosters a player is on for a Season — Varsity or JV. Ninth-graders are always JV and eleventh- and twelfth-graders are always Varsity, so only a tenth-grader's Squad is a coaching decision.
+_Avoid_: Team level, sub-team, second string, reserves
+
 **Prospect**:
 An incoming ninth-grader on the Recruiting class for one upcoming Season, shown as a projected range rather than a rating until a Team signs him. Scouting narrows the range and never removes it.
 _Avoid_: Recruit rating, star rating, draft prospect, blue-chip
@@ -122,6 +126,8 @@ _Avoid_: Playbook, formation, strategy, system
 - A **Prospect** is scouted and signed from the **Offseason Hub**, because the class is shared by the whole League rather than owned by one Team
 - A **Transfer Window** entry needs two decisions: the Team losing the player releases or keeps him, and a Team offering a spot signs or passes
 - A **Transfer** never changes the number of players in a League, only which Team each belongs to
+- A player's **Squad** and position are changed from the **Offseason Hub**, and both are one Team's decision about its own roster
+- Cutting a player from the **Offseason Hub** releases him to free agency rather than removing him from the League
 - **Account Settings** contains cross-league **Import** and **Account Billing**
 - A successful **Import** may set the imported League as the **Active League** and offer navigation to its **League Home**
 - The **League Directory** provides access to **Discover**

@@ -156,3 +156,30 @@ export async function seedTransferCandidates(
     count,
   });
 }
+
+const seedRosterMoveCandidatesRef = makeFunctionReference<
+  "mutation",
+  any,
+  { created: number }
+>("e2eSeed:seedRosterMoveCandidates");
+
+/**
+ * Seed a roster with an obvious promotion in it (B5).
+ *
+ * A weak senior starting ahead of strong sophomores. The MOVES are still made
+ * through the real buttons and the real mutations; this only guarantees the
+ * panel has a decision to show, rather than depending on whatever the rollover
+ * happened to generate.
+ */
+export async function seedRosterMoveCandidates(
+  seasonId: string,
+  teamId: string,
+  count = 3,
+): Promise<{ created: number }> {
+  const client = getSeedClient();
+  return client.mutation(seedRosterMoveCandidatesRef, {
+    seasonId,
+    teamId,
+    count,
+  });
+}

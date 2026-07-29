@@ -6,7 +6,11 @@ import {
   getTeamOwnerOrgId,
   forkTeamToWorkspace,
 } from "./data-api";
-import { requireOrgAdmin, resolveBestOrgRole } from "./org-context";
+import {
+  requireOrgAdmin,
+  resolveBestOrgRole,
+  resolveOrgRole,
+} from "./org-context";
 import {
   canManageRoster,
   canManageOrgSettings,
@@ -102,6 +106,30 @@ export async function canManageTeam(
 ): Promise<boolean> {
   const result = await authorizeTeamMutation(teamId, userId);
   return result.isAuthorized;
+}
+
+/**
+ * Whether the user may act FOR a team: a league admin acting on any of them,
+ * or the coach of that one.
+ *
+ * The offseason's per-team gate. It lived as a private copy in four server
+ * action modules (free agency, recruiting, transfers, and B5's roster moves)
+ * before B5 pulled it here — four copies of an authorization predicate is how
+ * one of them quietly stops matching the others.
+ *
+ * The two halves answer different questions and both are needed. In solo play
+ * the commissioner acts for all twelve programs and holds no coach seat on any
+ * of them; in Wave 5 a coach acts for exactly one and holds no admin role.
+ */
+export async function canAdminOrManageTeam(
+  teamId: string,
+  userId: string,
+): Promise<boolean> {
+  const leagueId = await getTeamLeagueId(teamId);
+  const orgId = await getLeagueOrgId(leagueId);
+  const role = orgId ? await resolveOrgRole(orgId, userId) : null;
+  if (canManageOrgSettings(role)) return true;
+  return canManageTeam(teamId, userId);
 }
 
 /**

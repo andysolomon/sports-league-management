@@ -788,3 +788,115 @@ export const seedTransferCandidates = internalMutation({
     return { created };
   },
 });
+
+/**
+ * Seed a roster the B5 panel has an obvious decision about.
+ *
+ * One weak senior holding the starting job and `count` strong sophomores on JV
+ * behind him, so `recommendPromotions` has a comparative case to make. Grades
+ * are explicit because every rule in B5 turns on them — a roster of
+ * grade-less players would make the panel correctly show nothing.
+ */
+export const seedRosterMoveCandidates = internalMutation({
+  args: {
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    count: v.optional(v.number()),
+  },
+  returns: v.object({ created: v.number() }),
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("team_not_found");
+
+    const count = Math.max(1, Math.min(args.count ?? 3, 20));
+    const now = new Date().toISOString();
+    let created = 0;
+
+    async function addPlayer(spec: {
+      name: string;
+      grade: number;
+      squad: string;
+      overall: number;
+      depthRank: number;
+    }) {
+      const playerId = await ctx.db.insert("players", {
+        name: spec.name,
+        leagueId: season!.leagueId,
+        teamId: args.teamId,
+        position: "WR",
+        positionGroup: "WR",
+        jerseyNumber: null,
+        dateOfBirth: null,
+        status: "active",
+        headshotUrl: null,
+        experienceYears: null,
+        grade: spec.grade,
+        squad: spec.squad,
+        hometown: null,
+        synthetic: true,
+      });
+      await ctx.db.insert("rosterAssignments", {
+        seasonId: args.seasonId,
+        teamId: args.teamId,
+        playerId,
+        leagueId: season!.leagueId,
+        depthRank: spec.depthRank,
+        positionSlot: "WR",
+        status: "active",
+        assignedAt: now,
+        assignedBy: SEED_ACTOR,
+      });
+      await ctx.db.insert("depthChartEntries", {
+        teamId: args.teamId,
+        seasonId: args.seasonId,
+        playerId,
+        positionSlot: "WR",
+        sortOrder: spec.depthRank - 1,
+        updatedAt: now,
+      });
+      await ctx.db.insert("playerAttributes", {
+        playerId,
+        seasonId: args.seasonId,
+        positionGroup: "WR",
+        attributesJson: JSON.stringify({
+          SPD: spec.overall,
+          AGI: spec.overall,
+          ACC: spec.overall,
+          STR: 55,
+          AWR: 60,
+          STA: 70,
+        }),
+        pffSourceJson: null,
+        maddenSourceJson: null,
+        pffWeight: 0,
+        maddenWeight: 0,
+        weightedOverall: spec.overall,
+        ingestedAt: now,
+      });
+      created += 1;
+    }
+
+    // The incumbent: a senior who cannot be sent down, holding the job.
+    await addPlayer({
+      name: "E2E Starter Senior",
+      grade: 12,
+      squad: "Varsity",
+      overall: 62,
+      depthRank: 1,
+    });
+    for (let i = 0; i < count; i++) {
+      await addPlayer({
+        name: `E2E JV Sophomore ${i + 1}`,
+        grade: 10,
+        squad: "JV",
+        overall: 88 - i,
+        depthRank: i + 2,
+      });
+    }
+
+    return { created };
+  },
+});

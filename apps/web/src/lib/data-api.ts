@@ -3203,3 +3203,67 @@ export async function resolveTransfer(input: {
     input,
   );
 }
+
+/*
+ * Roster shaping (B5): promotions, position changes and cuts.
+ *
+ * A cut has no entry here on purpose — it routes through the free-agency
+ * `releasePlayerToFreeAgency` that has shipped since WSM-000231. A second
+ * release path would be a second set of rules about what leaving a roster
+ * means.
+ */
+
+export interface RosterBoardPlayerDto {
+  playerId: string;
+  name: string;
+  position: string;
+  positionGroup: string | null;
+  grade: number | null;
+  squad: string | null;
+  overall: number | null;
+  depthRank: number | null;
+  attributesJson: string | null;
+}
+
+export async function listRosterBoard(
+  seasonId: string,
+  teamId: string,
+): Promise<RosterBoardPlayerDto[]> {
+  const client = getConvexClient();
+  return client.query(dynastyRef.query<RosterBoardPlayerDto[]>("listRosterBoard"), {
+    seasonId,
+    teamId,
+  });
+}
+
+export async function setPlayerSquad(input: {
+  playerId: string;
+  teamId: string;
+  seasonId: string;
+  squad: string;
+  actorUserId: string;
+}): Promise<{ squad: string; changed: boolean }> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{ squad: string; changed: boolean }>("setPlayerSquad"),
+    input,
+  );
+}
+
+export async function changePlayerPosition(input: {
+  playerId: string;
+  teamId: string;
+  seasonId: string;
+  position: string;
+  actorUserId: string;
+}): Promise<{ position: string; positionGroup: string; changed: boolean }> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{
+      position: string;
+      positionGroup: string;
+      changed: boolean;
+    }>("changePlayerPosition"),
+    input,
+  );
+}

@@ -4,6 +4,14 @@
  */
 import { mulberry32, seedFromString } from "@/lib/simulate-game";
 import { attributeGroupForPosition } from "@/lib/synthetic-attributes";
+/*
+ * The development weights moved to `convex/lib/positions.ts` in B5, where
+ * B5's `positionChangeFit` also reads them. Progression asks where a player's
+ * growth GOES; fit asks whether the athlete he already is SUITS a position.
+ * Same emphasis, opposite directions — two tables that agreed by coincidence
+ * would drift the first time either was tuned.
+ */
+import { attrWeight } from "../../convex/lib/positions";
 
 const ATTRIBUTE_GROUPS = [
   "QB",
@@ -18,22 +26,6 @@ const ATTRIBUTE_GROUPS = [
   "P",
 ] as const;
 
-/** Position-tilted attribute keys (higher weight → larger typical gain). */
-const POSITION_ATTR_WEIGHTS: Readonly<
-  Record<string, Partial<Record<string, number>>>
-> = {
-  QB: { THP: 1.4, SAC: 1.2, AWR: 1.3, SPD: 0.8 },
-  RB: { SPD: 1.5, AGI: 1.3, ACC: 1.2, CAR: 1.1 },
-  WR: { SPD: 1.4, CTH: 1.2, SRR: 1.2, AGI: 1.1 },
-  TE: { CTH: 1.3, STR: 1.2, SPD: 1.0 },
-  OL: { STR: 1.4, RBK: 1.2, PBK: 1.2 },
-  DL: { STR: 1.3, PMV: 1.2, FMV: 1.2, BSH: 1.1 },
-  LB: { SPD: 1.2, TAK: 1.3, PRC: 1.2, AWR: 1.1 },
-  DB: { SPD: 1.4, AGI: 1.3, MCV: 1.2, ZCV: 1.2 },
-  K: { KPW: 1.2, KAC: 1.2 },
-  P: { KPW: 1.2, KAC: 1.2 },
-};
-
 function clamp(n: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, n));
 }
@@ -43,10 +35,6 @@ function weightedOverall(attributes: Record<string, number>): number {
   if (values.length === 0) return 0;
   const sum = values.reduce((a, b) => a + b, 0);
   return clamp(Math.round(sum / values.length), 0, 99);
-}
-
-function attrWeight(positionGroup: string, key: string): number {
-  return POSITION_ATTR_WEIGHTS[positionGroup]?.[key] ?? 1;
 }
 
 export interface ProgressionInput {

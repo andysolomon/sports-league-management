@@ -242,7 +242,14 @@ type AllowedPublicDynastyReads =
    * program can see who is looking. What is NOT public is acting on it:
    * `resolveTransfer` is an internalMutation behind a per-`teamId` gate.
    */
-  | "listTransfers";
+  | "listTransfers"
+  /*
+   * B5. A roster is already readable through the team and roster pages; this
+   * query returns the same players with their grade, squad and ratings so the
+   * panel can compute position fit without a round trip per candidate. The
+   * MOVES are internalMutations behind the same per-`teamId` gate.
+   */
+  | "listRosterBoard";
 type AllowedPublicSimReads =
   | "moduleStatus"
   | "listRivalries"
