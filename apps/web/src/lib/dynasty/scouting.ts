@@ -22,6 +22,7 @@ export {
   clampScoutLevel,
   isPotentialTier,
   nextScoutCost,
+  recruitingClassTilt,
   scoutingBand,
   scoutingBands,
 } from "../../../convex/lib/scouting";

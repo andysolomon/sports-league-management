@@ -24,6 +24,12 @@ import {
 import { applyPrestigeDelta } from "./prestige";
 import { computeJobSecurity, shouldFireCoach } from "./jobSecurity";
 import { resolveProgram } from "./resolveProgram";
+import {
+  computeSeasonSkillPointsAward,
+  ratingsFromSkillState,
+  coachSkillsStateFromRow,
+  serializeUnlockedNodes,
+} from "./coachSkills";
 
 export function coachFiredDedupeKey(coachId: string, seasonId: string): string {
   return `coach_fired:${coachId}:${seasonId}`;
@@ -178,12 +184,28 @@ export async function finalizeProgramSeason(
         )
         .unique();
 
+      const skillPointsAward = computeSeasonSkillPointsAward({
+        evaluatedGoals: evaluated,
+        prestigeDelta,
+      });
+      const previousAward = coachSeason?.skillPointsAwarded ?? 0;
+      const currentPoints =
+        typeof headCoach.skillPoints === "number" &&
+        Number.isFinite(headCoach.skillPoints)
+          ? Math.max(0, headCoach.skillPoints)
+          : 0;
+      const nextSkillPoints = Math.max(
+        0,
+        currentPoints - previousAward + skillPointsAward,
+      );
+
       const coachSeasonPayload = {
         wins: recordInput.wins,
         losses: recordInput.losses,
         ties: recordInput.ties,
         goalsMetJson: JSON.stringify(evaluated),
         prestigeDelta,
+        skillPointsAwarded: skillPointsAward,
         finalizedAt: now,
       };
 
@@ -197,6 +219,33 @@ export async function finalizeProgramSeason(
           ...coachSeasonPayload,
         });
       }
+
+      const skillRatings = ratingsFromSkillState(
+        coachSkillsStateFromRow({
+          skillPoints: nextSkillPoints,
+          unlockedNodesJson: headCoach.unlockedNodesJson,
+        }),
+      );
+      const coachPatch: {
+        skillPoints: number;
+        updatedAt: string;
+        developmentRating?: number;
+        recruitingRating?: number;
+        gameplanRating?: number;
+      } = {
+        skillPoints: nextSkillPoints,
+        updatedAt: now,
+      };
+      if (skillRatings.developmentRating !== null) {
+        coachPatch.developmentRating = skillRatings.developmentRating;
+      }
+      if (skillRatings.recruitingRating !== null) {
+        coachPatch.recruitingRating = skillRatings.recruitingRating;
+      }
+      if (skillRatings.gameplanRating !== null) {
+        coachPatch.gameplanRating = skillRatings.gameplanRating;
+      }
+      await ctx.db.patch(headCoach._id, coachPatch);
 
       if (shouldFireCoach(jobSecurity, config.jobSecurityEnabled)) {
         await ctx.db.patch(headCoach._id, {

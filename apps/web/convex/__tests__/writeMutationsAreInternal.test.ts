@@ -52,6 +52,7 @@ void internal.sports.rebuildSeasonPlayerAggregates;
 void internal.dynasty.setDynastyConfig;
 void internal.program.setTeamProgram;
 void internal.program.seedAiHeadCoachesForLeague;
+void internal.program.spendCoachSkillPoints;
 void internal.sports.assignPlayerToRoster;
 void internal.sports.forkTeamToWorkspace;
 void internal.sports.forkDivisionToWorkspace;

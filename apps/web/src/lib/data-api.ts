@@ -3072,6 +3072,7 @@ export interface CoachSeasonDto {
   playoffResult: string | null;
   goalsMetJson: string | null;
   prestigeDelta: number | null;
+  skillPointsAwarded: number | null;
   finalizedAt: string | null;
 }
 
@@ -3122,6 +3123,19 @@ export async function getSeasonGoalProgress(
   return client.query(
     programRef.query<EvaluatedGoalDto[]>("getSeasonGoalProgress"),
     { seasonId, teamId },
+  );
+}
+
+export async function spendCoachSkillPoints(input: {
+  coachId: string;
+  teamId: string;
+  nodeId: string;
+  actorUserId: string;
+}): Promise<CoachDto> {
+  const client = getConvexClient();
+  return client.mutation(
+    programRef.mutation<CoachDto>("spendCoachSkillPoints"),
+    input,
   );
 }
 

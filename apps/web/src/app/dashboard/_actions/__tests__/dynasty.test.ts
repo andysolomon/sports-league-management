@@ -22,6 +22,7 @@ const {
   mockHealSeasonInjuries,
   mockCreateProspectClass,
   mockGetDynastyConfig,
+  mockListCoachesByLeague,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockResolveOrgContext: vi.fn(),
@@ -44,6 +45,7 @@ const {
   mockHealSeasonInjuries: vi.fn(),
   mockCreateProspectClass: vi.fn(),
   mockGetDynastyConfig: vi.fn(),
+  mockListCoachesByLeague: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
@@ -70,6 +72,7 @@ vi.mock("@/lib/data-api", () => ({
   healSeasonInjuries: mockHealSeasonInjuries,
   createProspectClass: mockCreateProspectClass,
   getDynastyConfig: mockGetDynastyConfig,
+  listCoachesByLeague: mockListCoachesByLeague,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -115,6 +118,7 @@ beforeEach(() => {
   });
   mockGetLeagueOrgId.mockResolvedValue(ORG);
   mockResolveOrgRole.mockResolvedValue("admin");
+  mockListCoachesByLeague.mockResolvedValue([]);
   mockGetSeasons.mockResolvedValue([ACTIVE]);
   mockBeginSeasonRollover.mockResolvedValue({
     rolloverId: "rollover_1",

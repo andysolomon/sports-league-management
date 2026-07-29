@@ -33,6 +33,7 @@ import { rngFor, seedFor } from "@/lib/rng";
 import {
   OVERALL_MAX,
   OVERALL_MIN,
+  recruitingClassTilt,
   type PotentialTier,
 } from "@/lib/dynasty/scouting";
 
@@ -103,6 +104,11 @@ export interface GenerateProspectClassInput {
   count: number;
   /** Names already in the league, so a prospect never shares one. */
   excludeNames?: string[];
+  /**
+   * Head-coach recruiting investment (0–100). Absent leaves class generation
+   * identical to pre-C4; see `recruitingClassTilt` in `convex/lib/scouting.ts`.
+   */
+  recruitingRating?: number | null;
 }
 
 /**
@@ -162,7 +168,9 @@ export function generateProspectClass(
      * 45–95 so the top of the board is genuinely worth the points.
      */
     const shape = rngFor("prospects", prospectKey, "shape");
-    const tilt = Math.round((shape() - 0.55) * 18);
+    const tilt =
+      Math.round((shape() - 0.55) * 18) +
+      recruitingClassTilt(input.recruitingRating);
     const trueAttributes: Record<string, number> = {};
     for (const [key, value] of Object.entries(attributes.attributes)) {
       trueAttributes[key] = Math.round(

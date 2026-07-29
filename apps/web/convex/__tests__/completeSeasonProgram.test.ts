@@ -5,6 +5,7 @@ import schema from "../schema";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import * as goalsModule from "../lib/goals";
+import { computeSeasonSkillPointsAward } from "../lib/coachSkills";
 
 const modules = import.meta.glob("../**/*.*s");
 
@@ -159,5 +160,39 @@ describe("completeSeason program finalize (C2)", () => {
     expect(fixtureReads).toBe(0);
     expect(gameStatReads).toBe(0);
     evaluateSpy.mockRestore();
+  });
+
+  it("awards skill points matching the pure calculation", async () => {
+    const t = convexTest(schema, modules);
+    const { leagueId, seasonId } = await seedLeagueWithCoaches(t);
+    await t.mutation(internal.program.seedAiHeadCoachesForLeague, { leagueId });
+
+    await t.mutation(internal.sports.completeSeason, { seasonId, force: true });
+
+    const coachRows = await t.run((ctx) => ctx.db.query("coaches").collect());
+    expect(coachRows.length).toBeGreaterThan(0);
+
+    for (const coach of coachRows) {
+      const coachSeason = await t.run((ctx) =>
+        ctx.db
+          .query("coachSeasons")
+          .withIndex("by_coach_season", (q) =>
+            q.eq("coachId", coach._id).eq("seasonId", seasonId),
+          )
+          .unique(),
+      );
+      expect(coachSeason?.skillPointsAwarded).toBeTypeOf("number");
+      const goals = coachSeason?.goalsMetJson
+        ? (JSON.parse(coachSeason.goalsMetJson) as ReturnType<
+            typeof goalsModule.evaluateGoals
+          >)
+        : [];
+      const expected = computeSeasonSkillPointsAward({
+        evaluatedGoals: goals,
+        prestigeDelta: coachSeason?.prestigeDelta ?? 0,
+      });
+      expect(coachSeason?.skillPointsAwarded).toBe(expected);
+      expect(coach.skillPoints).toBe(expected);
+    }
   });
 });
