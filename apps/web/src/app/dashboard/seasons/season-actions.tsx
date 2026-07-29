@@ -444,6 +444,13 @@ export function SeasonRowActions({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isActive = season.status === "active";
+  /*
+   * A completed season is terminal — `activateSeason` throws
+   * `completed_season_cannot_reactivate`. Offering "Make active" on one put a
+   * button on screen whose only possible outcome was an error toast, so gate
+   * on what can actually succeed rather than on "not currently active".
+   */
+  const canActivate = season.status === "upcoming";
 
   async function runActivate() {
     setBusy(true);
@@ -592,7 +599,7 @@ export function SeasonRowActions({
   return (
     <>
       <div className="flex items-center gap-1">
-        {!isActive && (
+        {canActivate && (
           <Button
             size="sm"
             variant="outline"
