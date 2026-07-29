@@ -2,14 +2,13 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { canManageTeam } from "@/lib/authorization";
+import { canAdminOrManageTeam } from "@/lib/authorization";
 import { resolveOrgRole } from "@/lib/org-context";
 import { canManageOrgSettings } from "@/lib/permissions";
 import {
   generateTransferWindow,
   getLeagueOrgId,
   getSeason,
-  getTeamLeagueId,
   resolveTransfer,
 } from "@/lib/data-api";
 
@@ -31,16 +30,6 @@ import {
 
 type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
-async function canAdminOrManageTeam(
-  userId: string,
-  teamId: string,
-): Promise<boolean> {
-  const leagueId = await getTeamLeagueId(teamId);
-  const orgId = await getLeagueOrgId(leagueId);
-  const role = orgId ? await resolveOrgRole(orgId, userId) : null;
-  if (canManageOrgSettings(role)) return true;
-  return canManageTeam(teamId, userId);
-}
 
 function messageOf(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -98,7 +87,7 @@ export async function resolveTransferAction(input: {
 > {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "unauthorized" };
-  if (!(await canAdminOrManageTeam(userId, input.teamId))) {
+  if (!(await canAdminOrManageTeam(input.teamId, userId))) {
     return { ok: false, error: "not_authorized" };
   }
 

@@ -2,12 +2,8 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { canManageTeam } from "@/lib/authorization";
-import { resolveOrgRole } from "@/lib/org-context";
-import { canManageOrgSettings } from "@/lib/permissions";
+import { canAdminOrManageTeam } from "@/lib/authorization";
 import {
-  getLeagueOrgId,
-  getTeamLeagueId,
   scoutProspect,
   signProspect,
   type ProspectDto,
@@ -23,23 +19,13 @@ import {
  * you an admin" would have to be rewritten — along with every call site — the
  * day a second person joins a league.
  *
- * `canAdminOrManageTeam` mirrors the free-agency actions in `offseason.ts`
- * rather than inventing a second predicate, so "who may act for this team" has
- * one answer across the offseason.
+ * `canAdminOrManageTeam` comes from `@/lib/authorization` rather than being
+ * redefined here, so "who may act for this team" has exactly one answer across
+ * the offseason (B5 consolidated the four copies).
  */
 
 type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
-async function canAdminOrManageTeam(
-  userId: string,
-  teamId: string,
-): Promise<boolean> {
-  const leagueId = await getTeamLeagueId(teamId);
-  const orgId = await getLeagueOrgId(leagueId);
-  const role = orgId ? await resolveOrgRole(orgId, userId) : null;
-  if (canManageOrgSettings(role)) return true;
-  return canManageTeam(teamId, userId);
-}
 
 function messageOf(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error);
@@ -75,7 +61,7 @@ export async function scoutProspectAction(input: {
 > {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "unauthorized" };
-  if (!(await canAdminOrManageTeam(userId, input.teamId))) {
+  if (!(await canAdminOrManageTeam(input.teamId, userId))) {
     return { ok: false, error: "not_authorized" };
   }
 
@@ -105,7 +91,7 @@ export async function signProspectAction(input: {
 > {
   const { userId } = await auth();
   if (!userId) return { ok: false, error: "unauthorized" };
-  if (!(await canAdminOrManageTeam(userId, input.teamId))) {
+  if (!(await canAdminOrManageTeam(input.teamId, userId))) {
     return { ok: false, error: "not_authorized" };
   }
 

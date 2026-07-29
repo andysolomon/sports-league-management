@@ -25,6 +25,11 @@ import {
   matchTransfersIn,
   type TransferCandidate,
 } from "./lib/transfers";
+import { VARSITY, squadChange } from "./lib/promotions";
+import {
+  attributeGroupForPosition,
+  derivePositionGroup,
+} from "./lib/positions";
 import { MAX_TARGET_ROSTER_SIZE } from "./lib/offseason";
 import { emitDynastyEvent } from "./lib/events";
 import { transferResolvedDedupeKey } from "./lib/narrative";
@@ -1328,5 +1333,286 @@ export const resolveTransfer = internalMutation({
     });
 
     return { status: "accepted", moved: true, withdrawn };
+  },
+});
+
+/*
+ * ── Roster shaping: promotions, position changes, cuts (B5) ────────────────
+ *
+ * Three operations on one board, and zero new tables. A promotion is a patch
+ * to `players.squad`; a position change is a patch to `players.position` plus
+ * the season rows that mirror it; a cut is the free-agency release that has
+ * shipped since WSM-000231. Inventing a `rosterMoves` table would have given
+ * the offseason a second, quieter record of roster state that the roster pages
+ * do not read — the audit log already answers "what happened", and the roster
+ * itself answers "what is true".
+ */
+
+const rosterBoardPlayerValidator = v.object({
+  playerId: v.string(),
+  name: v.string(),
+  position: v.string(),
+  positionGroup: v.union(v.string(), v.null()),
+  grade: v.union(v.number(), v.null()),
+  squad: v.union(v.string(), v.null()),
+  overall: v.union(v.number(), v.null()),
+  depthRank: v.union(v.number(), v.null()),
+  /** Ratings map, JSON-encoded. Null when the player has no rated season. */
+  attributesJson: v.union(v.string(), v.null()),
+});
+
+/**
+ * One team's roster for a season, with everything roster shaping needs.
+ *
+ * Attributes come along because `positionChangeFit` is computed in the panel,
+ * per candidate position, as the coach scrubs the control — a round trip per
+ * hover would be a worse version of the same answer.
+ *
+ * The per-player attribute read is one indexed `.first()` each, bounded by
+ * roster size (~40). That is deliberately NOT the `by_seasonId_positionGroup`
+ * prefix B4 switched to: that index would return every rated player in the
+ * league for the season (~600) to serve one team.
+ */
+export const listRosterBoard = query({
+  args: { seasonId: v.id("seasons"), teamId: v.id("teams") },
+  returns: v.array(rosterBoardPlayerValidator),
+  handler: async (ctx, args) => {
+    const assignments = (
+      await ctx.db
+        .query("rosterAssignments")
+        .withIndex("by_seasonId_teamId", (q) =>
+          q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+        )
+        .collect()
+    ).filter((row) => row.status === "active");
+
+    const rows: Infer<typeof rosterBoardPlayerValidator>[] = [];
+    for (const assignment of assignments) {
+      const player = await ctx.db.get(assignment.playerId);
+      if (!player) continue;
+
+      /*
+       * Ratings resolve through `sourcePlayerId` when the player is a
+       * workspace fork, matching `resolvePlayerOverall` in `sports.ts`. A fork
+       * that read its own empty attribute row would show every player as
+       * unrated.
+       */
+      const ratingPlayerId = player.sourcePlayerId ?? assignment.playerId;
+      const attributes = await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_playerId_seasonId", (q) =>
+          q.eq("playerId", ratingPlayerId).eq("seasonId", args.seasonId),
+        )
+        .first();
+
+      rows.push({
+        playerId: assignment.playerId as string,
+        name: player.name,
+        position: player.position,
+        positionGroup: player.positionGroup ?? null,
+        grade: player.grade ?? null,
+        squad: player.squad ?? null,
+        overall: attributes?.weightedOverall ?? null,
+        depthRank: assignment.depthRank,
+        attributesJson: attributes?.attributesJson ?? null,
+      });
+    }
+
+    return rows.sort((a, b) =>
+      a.position === b.position
+        ? (a.depthRank ?? 0) - (b.depthRank ?? 0)
+        : a.position < b.position
+          ? -1
+          : 1,
+    );
+  },
+});
+
+/**
+ * Move a player between Varsity and JV.
+ *
+ * `teamId` is an argument rather than something derived from the player so the
+ * Next layer's per-team gate and this check are about the SAME team: an action
+ * that authorized team A and then patched a player who had already moved to
+ * team B would be a real hole, and deriving the team here would hide it.
+ */
+export const setPlayerSquad = internalMutation({
+  args: {
+    playerId: v.id("players"),
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    squad: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: v.object({ squad: v.string(), changed: v.boolean() }),
+  handler: async (ctx, args) => {
+    const player = await ctx.db.get(args.playerId);
+    if (!player) throw new Error("player_not_found");
+    if (player.teamId !== args.teamId) throw new Error("player_not_on_team");
+
+    const decision = squadChange({
+      grade: player.grade ?? null,
+      from: player.squad ?? null,
+      to: args.squad,
+    });
+    if (!decision.ok) throw new Error(decision.reason);
+    if (decision.kind === "noop") {
+      return { squad: args.squad, changed: false };
+    }
+
+    await ctx.db.patch(args.playerId, { squad: args.squad });
+    await ctx.db.insert("rosterAuditLog", {
+      leagueId: player.leagueId,
+      teamId: args.teamId,
+      seasonId: args.seasonId,
+      actorUserId: args.actorUserId,
+      action: args.squad === VARSITY ? "promote" : "demote",
+      beforeJson: JSON.stringify({ squad: player.squad ?? null }),
+      afterJson: JSON.stringify({
+        squad: args.squad,
+        playerId: args.playerId as string,
+      }),
+      createdAt: new Date().toISOString(),
+    });
+
+    return { squad: args.squad, changed: true };
+  },
+});
+
+/**
+ * Move a player to a different position.
+ *
+ * Rewrites three things, because a position lives in three places: the player
+ * row (what he is), the season's roster assignment (where he is slotted this
+ * year) and the depth chart (where he is in the pecking order). Leaving any of
+ * them behind is the stale-slot bug this is tested against — a player listed
+ * at QB whose depth-chart card still sits under DB.
+ *
+ * ONLY the season passed in is rewritten. `players.position` is global and a
+ * completed season's assignment is a record of where he actually played; a
+ * coach who converts a safety to receiver in the offseason has not retroped
+ * last year's snaps to receiver, and rewriting them would be falsifying a
+ * result. The disagreement between the two is the honest reading.
+ */
+export const changePlayerPosition = internalMutation({
+  args: {
+    playerId: v.id("players"),
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    position: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: v.object({
+    position: v.string(),
+    positionGroup: v.string(),
+    changed: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const position = args.position.trim().toUpperCase();
+    if (derivePositionGroup(position) === null) {
+      throw new Error("invalid_position");
+    }
+    const positionGroup = attributeGroupForPosition(position);
+
+    const player = await ctx.db.get(args.playerId);
+    if (!player) throw new Error("player_not_found");
+    if (player.teamId !== args.teamId) throw new Error("player_not_on_team");
+
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (season.rosterLocked === true) throw new Error("season_locked");
+
+    if (player.position === position) {
+      return { position, positionGroup, changed: false };
+    }
+
+    const previous = { position: player.position, group: player.positionGroup };
+    await ctx.db.patch(args.playerId, { position, positionGroup });
+
+    const teamAssignments = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .collect();
+
+    /*
+     * He joins the BACK of the new position's depth, not the rank he held at
+     * the old one. A converted player has not earned a starting job at a
+     * position he has never played, and inheriting rank 1 would silently
+     * demote whoever actually held it.
+     */
+    const nextDepthRank =
+      teamAssignments
+        .filter(
+          (row) =>
+            row.status === "active" &&
+            row.positionSlot === position &&
+            row.playerId !== args.playerId,
+        )
+        .reduce((max, row) => Math.max(max, row.depthRank), 0) + 1;
+
+    for (const row of teamAssignments) {
+      if (row.playerId !== args.playerId) continue;
+      await ctx.db.patch(row._id, {
+        positionSlot: position,
+        depthRank: nextDepthRank,
+      });
+    }
+
+    const depthEntries = await ctx.db
+      .query("depthChartEntries")
+      .withIndex("by_team_season", (q) =>
+        q.eq("teamId", args.teamId).eq("seasonId", args.seasonId),
+      )
+      .collect();
+    const mine = depthEntries.filter((row) => row.playerId === args.playerId);
+    const nextSortOrder =
+      depthEntries
+        .filter(
+          (row) =>
+            row.positionSlot === position && row.playerId !== args.playerId,
+        )
+        .reduce((max, row) => Math.max(max, row.sortOrder), -1) + 1;
+
+    const now = new Date().toISOString();
+    if (mine.length === 0) {
+      /*
+       * No depth entry to move. Nothing is created here: a player absent from
+       * the depth chart was absent before the change too, and adding him now
+       * would make a position change quietly do roster work nobody asked for.
+       */
+    } else {
+      // Keep the first, drop any duplicates rather than leaving him listed at
+      // two positions at once.
+      await ctx.db.patch(mine[0]._id, {
+        positionSlot: position,
+        sortOrder: nextSortOrder,
+        updatedAt: now,
+      });
+      for (const extra of mine.slice(1)) {
+        await ctx.db.delete(extra._id);
+      }
+    }
+
+    await ctx.db.insert("rosterAuditLog", {
+      leagueId: player.leagueId,
+      teamId: args.teamId,
+      seasonId: args.seasonId,
+      actorUserId: args.actorUserId,
+      action: "position_change",
+      beforeJson: JSON.stringify({
+        position: previous.position,
+        positionGroup: previous.group,
+      }),
+      afterJson: JSON.stringify({
+        position,
+        positionGroup,
+        playerId: args.playerId as string,
+      }),
+      createdAt: now,
+    });
+
+    return { position, positionGroup, changed: true };
   },
 });

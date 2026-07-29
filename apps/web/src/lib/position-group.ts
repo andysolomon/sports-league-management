@@ -1,54 +1,20 @@
-export type PositionGroup =
-  | "QB"
-  | "RB"
-  | "WR"
-  | "TE"
-  | "OL"
-  | "DL"
-  | "LB"
-  | "DB"
-  | "K/P";
+/*
+ * The group map and `derivePositionGroup` moved to `convex/lib/positions.ts`
+ * in B5 so a Convex mutation can validate a position change against the same
+ * vocabulary this file renders. They are re-exported here unchanged — every
+ * existing import keeps working, and there is still exactly one map.
+ */
+export {
+  derivePositionGroup,
+  POSITION_TO_GROUP,
+  type PositionGroup,
+} from "../../convex/lib/positions";
+
+import { derivePositionGroup, type PositionGroup } from "../../convex/lib/positions";
 
 /** Bucket for positions `derivePositionGroup` can't map — shown last, never dropped. */
 export const OTHER_GROUP = "Other" as const;
 export type RosterGroup = PositionGroup | typeof OTHER_GROUP;
-
-const POSITION_TO_GROUP: Readonly<Record<string, PositionGroup>> = {
-  QB: "QB",
-  HB: "RB",
-  RB: "RB",
-  FB: "RB",
-  WR: "WR",
-  TE: "TE",
-  LT: "OL",
-  LG: "OL",
-  C: "OL",
-  RG: "OL",
-  RT: "OL",
-  G: "OL",
-  OG: "OL",
-  OT: "OL",
-  OL: "OL",
-  DE: "DL",
-  DT: "DL",
-  NT: "DL",
-  EDGE: "DL",
-  DL: "DL",
-  OLB: "LB",
-  MLB: "LB",
-  ILB: "LB",
-  LB: "LB",
-  CB: "DB",
-  S: "DB",
-  FS: "DB",
-  SS: "DB",
-  NB: "DB",
-  DB: "DB",
-  K: "K/P",
-  PK: "K/P",
-  P: "K/P",
-  LS: "K/P",
-};
 
 /** Canonical football ordering — offense, defense, special teams. */
 export const POSITION_GROUP_ORDER: readonly PositionGroup[] = [
@@ -76,11 +42,6 @@ const POSITION_ORDER_IN_GROUP: Readonly<Partial<Record<PositionGroup, readonly s
   DB: ["CB", "NB", "FS", "SS", "S", "DB"],
   "K/P": ["K", "PK", "P", "LS"],
 };
-
-export function derivePositionGroup(position: string): PositionGroup | null {
-  const normalized = position.trim().toUpperCase();
-  return POSITION_TO_GROUP[normalized] ?? null;
-}
 
 /**
  * Madden-style name abbreviation: "Adam Thielen" → "A. Thielen".

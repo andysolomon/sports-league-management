@@ -8,6 +8,7 @@ import {
   getSeason,
   getTeamsByLeague,
   listProspects,
+  listRosterBoard,
   listTransfers,
 } from "@/lib/data-api";
 import { canManageTeam } from "@/lib/authorization";
@@ -19,6 +20,7 @@ import { seasonHomeHref } from "@/components/workspace/resource-navigation";
 import { OffseasonPhaseControls } from "@/components/offseason/OffseasonPhaseControls";
 import { ScoutingPanel } from "@/components/offseason/ScoutingPanel";
 import { TransferPanel } from "@/components/offseason/TransferPanel";
+import { PromotionsPanel } from "@/components/offseason/PromotionsPanel";
 import { resolveOffseasonState } from "@/lib/dynasty/offseason-phases";
 import { DYNASTY_CONFIG_DEFAULTS } from "@/lib/dynasty-config";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
@@ -82,6 +84,15 @@ export default async function SeasonOffseasonPage({
   }
   const actingTeam = managed[0] ?? (isAdmin ? (teams[0] ?? null) : null);
 
+  /*
+   * The roster board is fetched AFTER the acting team is known, because it is
+   * one team's roster rather than the league's. Loading it alongside the
+   * others would mean fetching twelve rosters to render one.
+   */
+  const rosterBoard = actingTeam
+    ? await listRosterBoard(season.id, actingTeam.id).catch(() => [])
+    : [];
+
   const draftStatus = !draft
     ? ("none" as const)
     : draft.status === "complete"
@@ -128,6 +139,12 @@ export default async function SeasonOffseasonPage({
             transfers={transfers}
             actingTeam={actingTeam}
             isAdmin={isAdmin}
+          />
+
+          <PromotionsPanel
+            seasonId={season.id}
+            players={rosterBoard}
+            actingTeam={actingTeam}
           />
         </CardContent>
       </Card>
