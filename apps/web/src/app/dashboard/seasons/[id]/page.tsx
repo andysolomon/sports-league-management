@@ -23,6 +23,7 @@ import {
   listFreeAgents,
   getDraft,
   getOffseason,
+  listDynastyEvents,
 } from "@/lib/data-api";
 import { canManageTeam } from "@/lib/authorization";
 import { resolveOrgContext, requireOrgAdmin, resolveOrgRole } from "@/lib/org-context";
@@ -49,6 +50,7 @@ import {
   seasonHomeHref,
 } from "@/components/workspace/resource-navigation";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
+import { DynastyNewsFeed } from "@/components/dynasty/DynastyNewsFeed";
 
 /**
  * Season hub (WSM-000213): one home per season. Progress, standings snapshot,
@@ -173,6 +175,9 @@ export default async function SeasonHubPage({
     goalsTeam && programEnabled
       ? await getSeasonGoalProgress(season.id, goalsTeam.id).catch(() => [])
       : [];
+  const dynastyEvents = historyEnabled
+    ? await listDynastyEvents(league.id, season.id, orgContext).catch(() => [])
+    : [];
 
   const isUpcomingSeason = season.status === "upcoming";
   let freeAgents: Awaited<ReturnType<typeof listFreeAgents>> = [];
@@ -255,9 +260,12 @@ export default async function SeasonHubPage({
           offseasonEnabled: offseasonEnabled && isUpcomingSeason,
           awardsEnabled: historyEnabled,
           rankingsEnabled: historyEnabled,
+          recapEnabled: historyEnabled && season.status === "completed",
         })}
       />
       <WorkspaceNav links={links} />
+
+      {historyEnabled ? <DynastyNewsFeed events={dynastyEvents} /> : null}
 
       {programEnabled && seasonGoals.length > 0 && goalsTeam && (
         <SeasonGoalsCard teamName={goalsTeam.name} goals={seasonGoals} />

@@ -93,6 +93,7 @@ export default async function SeasonAwardsPage({
           offseasonEnabled: offseasonEnabled && season.status === "upcoming",
           awardsEnabled: true,
           rankingsEnabled: true,
+          recapEnabled: season.status === "completed",
         })}
       />
 

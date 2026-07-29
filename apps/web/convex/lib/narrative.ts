@@ -81,6 +81,28 @@ export type NarrativeInput =
 
 export type NarrativeEventType = NarrativeInput["type"];
 
+/** Every type currently passed by an `emitDynastyEvent` producer. */
+export const PRODUCING_EVENT_TYPES = [
+  "game_final",
+  "player_injured",
+  "transfer_completed",
+  "transfer_retained",
+  "coach_fired",
+  "award_won",
+] as const satisfies readonly NarrativeEventType[];
+
+/** Includes supported lifecycle copy that does not yet have a producer. */
+export const NARRATIVE_EVENT_TYPES = [
+  ...PRODUCING_EVENT_TYPES,
+  "season_completed",
+] as const satisfies readonly NarrativeEventType[];
+
+export function isNarrativeEventType(
+  value: string,
+): value is NarrativeEventType {
+  return (NARRATIVE_EVENT_TYPES as readonly string[]).includes(value);
+}
+
 /** Ordinal-free week phrasing: "Week 7" reads better than "the 7th week". */
 function weekPrefix(week: number | null): string {
   return week === null ? "" : `Week ${week}: `;

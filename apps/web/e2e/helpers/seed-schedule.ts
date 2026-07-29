@@ -176,6 +176,37 @@ export async function seedRankingsFixture(
   });
 }
 
+const seedNewsRecapFixtureRef = makeFunctionReference<
+  "mutation",
+  {
+    leagueId: string;
+    seasonId: string;
+    homeTeamId: string;
+    awayTeamId: string;
+  },
+  {
+    incompleteSeasonId: string;
+    eventsCreated: number;
+    blocksCreated: number;
+  }
+>("e2eSeed:seedNewsRecapFixture");
+
+export async function seedNewsRecapFixture(
+  fixture: ScheduleFixtureResult,
+): Promise<{
+  incompleteSeasonId: string;
+  eventsCreated: number;
+  blocksCreated: number;
+}> {
+  const client = getSeedClient();
+  return client.mutation(seedNewsRecapFixtureRef, {
+    leagueId: fixture.leagueId,
+    seasonId: fixture.seasonId,
+    homeTeamId: fixture.homeTeamId,
+    awayTeamId: fixture.awayTeamId,
+  });
+}
+
 const seedProspectClassRef = makeFunctionReference<
   "mutation",
   any,

@@ -12,6 +12,8 @@ import {
 } from "./lib/historyFinalize";
 import { computeWeeklyPollForSeason } from "./lib/weeklyPolls";
 import type { PowerRanking } from "./lib/powerRankings";
+import { finalizeSeasonRecapForSeason } from "./lib/seasonRecaps";
+import type { StorylineBlock } from "./lib/recap";
 
 /*
  * Dynasty Mode — history, awards and narrative (Epic D).
@@ -79,6 +81,79 @@ export const computeWeeklyPoll = internalMutation({
       throw new Error("invalid_poll_week");
     }
     return computeWeeklyPollForSeason(ctx, args);
+  },
+});
+
+const finalizeSeasonRecapResultValidator = v.object({
+  blocksWritten: v.number(),
+  updated: v.boolean(),
+});
+type FinalizeSeasonRecapDto = Infer<
+  typeof finalizeSeasonRecapResultValidator
+>;
+
+export const finalizeSeasonRecap = internalMutation({
+  args: { seasonId: v.id("seasons") },
+  returns: finalizeSeasonRecapResultValidator,
+  handler: async (ctx, args): Promise<FinalizeSeasonRecapDto> =>
+    finalizeSeasonRecapForSeason(ctx, args.seasonId),
+});
+
+const storylineBlockValidator = v.object({
+  order: v.number(),
+  key: v.string(),
+  title: v.string(),
+  body: v.string(),
+  eventIds: v.array(v.string()),
+});
+const seasonRecapDtoValidator = v.object({
+  seasonId: v.string(),
+  generatedAt: v.string(),
+  updatedAt: v.string(),
+  blocks: v.array(storylineBlockValidator),
+});
+type SeasonRecapDto = Infer<typeof seasonRecapDtoValidator>;
+
+function parseStorylineBlocks(json: string): StorylineBlock[] {
+  try {
+    const parsed: unknown = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((value): value is StorylineBlock => {
+      if (!value || typeof value !== "object") return false;
+      const block = value as Partial<StorylineBlock>;
+      return (
+        typeof block.order === "number" &&
+        typeof block.key === "string" &&
+        typeof block.title === "string" &&
+        typeof block.body === "string" &&
+        Array.isArray(block.eventIds) &&
+        block.eventIds.every((id) => typeof id === "string")
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+export const listSeasonRecaps = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(seasonRecapDtoValidator),
+  handler: async (ctx, args): Promise<SeasonRecapDto[]> => {
+    const row = await ctx.db
+      .query("seasonRecaps")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .unique();
+    if (!row) return [];
+    return [
+      {
+        seasonId: row.seasonId,
+        generatedAt: row.generatedAt,
+        updatedAt: row.updatedAt,
+        blocks: parseStorylineBlocks(row.storylineBlocksJson).sort(
+          (a, b) => a.order - b.order,
+        ),
+      },
+    ];
   },
 });
 
