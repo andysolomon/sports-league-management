@@ -294,6 +294,11 @@ describe("advanceOffseasonPhase", () => {
       "transfers",
       "draft",
       "free_agency",
+      // B6 inserted `training` in front of `activate`. The list is spelled out
+      // rather than derived from `OFFSEASON_PHASES` on purpose: a phase that
+      // silently vanished from the machine should fail this test, and a loop
+      // over the machine would agree with itself either way.
+      "training",
     ]);
   });
 });

@@ -114,6 +114,37 @@ export function attributeGroupForPosition(position: string): AttributeGroup {
 }
 
 /**
+ * Universal athletic attributes every player carries, whatever he plays.
+ *
+ * Moved here from `src/lib/synthetic-attributes.ts` in B6 alongside
+ * `GROUP_KEYS` — training resolves a focus to attribute keys inside a Convex
+ * mutation, and a second copy of "which ratings does a linebacker have" is the
+ * kind of fork that shows up as a focus quietly training nothing.
+ */
+export const COMMON_KEYS: readonly string[] = [
+  "SPD",
+  "STR",
+  "AGI",
+  "ACC",
+  "AWR",
+  "STA",
+];
+
+/** Madden-style position-specific attribute codes per attribute group. */
+export const GROUP_KEYS: Readonly<Record<AttributeGroup, readonly string[]>> = {
+  QB: ["THP", "SAC", "MAC", "DAC", "TUP", "PAC"],
+  RB: ["CAR", "BCV", "TRK", "ELU", "JKM", "BTK"],
+  WR: ["CTH", "SRR", "MRR", "DRR", "CIT", "RLS"],
+  TE: ["CTH", "RBK", "CIT", "SRR", "PBK"],
+  OL: ["RBK", "PBK", "RBP", "PBP", "IBL"],
+  DL: ["PMV", "FMV", "BSH", "TAK", "PUR"],
+  LB: ["TAK", "PUR", "PRC", "ZCV", "MCV", "POW"],
+  DB: ["MCV", "ZCV", "PRS", "CTH", "PUR"],
+  K: ["KPW", "KAC"],
+  P: ["KPW", "KAC"],
+};
+
+/**
  * Position-tilted attribute weights (higher weight → the position leans on
  * that attribute more).
  *

@@ -168,6 +168,55 @@ export const offseasonTables = {
     .index("by_leagueId", ["leagueId"]),
 
   /*
+   * Offseason training (Dynasty Mode B6). One row per allocation — a coach
+   * committing points to one player in one direction.
+   *
+   * ## Why the rows survive being applied
+   *
+   * The obvious design patches the player's ratings and keeps nothing. That
+   * loses the only record of WHY a rating moved: a coach who comes back in
+   * March and finds his safety four points faster has no way to tell his own
+   * spring from the seeded progression that ran at rollover. `appliedAt` turns
+   * these into a ledger — what was bought, and whether it has landed yet.
+   *
+   * It is also the idempotency guard. Applying is additive (it patches the
+   * already-progressed snapshot rather than re-deriving it, because a freshman
+   * signed this offseason has no prior season to re-derive from), so a second
+   * apply without the stamp would train everyone twice.
+   *
+   * ## Why the budget is per TEAM, unlike scouting
+   *
+   * B3 put one league-wide scouting budget on the offseason row and noted that
+   * per-team is a Wave 5 concern. Training does not get that deferral: scouting
+   * a shared recruiting class out of a shared pool is at least arguable, but a
+   * shared training budget means the first coach to open the hub can spend the
+   * whole league's spring on his own quarterback. `trainingPointsTotal` on the
+   * offseason row is therefore read as each team's allowance, and a team's
+   * spend is the sum of its own rows through `by_seasonId_teamId`. The league
+   * total on the offseason row is kept in step for audit and for the admin view.
+   */
+  playerTrainingAllocations: defineTable({
+    leagueId: v.id("leagues"),
+    /** The UPCOMING season these points develop a player for. */
+    seasonId: v.id("seasons"),
+    /** The program that spent the points — the unit the budget belongs to. */
+    teamId: v.id("teams"),
+    playerId: v.id("players"),
+    /** "athleticism" | "strength" | "technique" | "football_iq". */
+    focus: v.string(),
+    points: v.number(),
+    /** Set when the gain has landed on `playerAttributes`. See the note above. */
+    appliedAt: v.optional(v.string()),
+    /** Attribute points actually placed, for "what did my points buy". */
+    appliedGainJson: v.optional(v.string()),
+    createdAt: v.string(),
+    createdBy: v.string(),
+  })
+    .index("by_seasonId_teamId", ["seasonId", "teamId"])
+    .index("by_playerId_seasonId", ["playerId", "seasonId"])
+    .index("by_seasonId", ["seasonId"]),
+
+  /*
    * Offseason snake draft (WSM-000233). One draft per target season; order is
    * reverse final standings. Writes are internalMutation only.
    */

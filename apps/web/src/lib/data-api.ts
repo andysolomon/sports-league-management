@@ -3267,3 +3267,70 @@ export async function changePlayerPosition(input: {
     input,
   );
 }
+
+/* Offseason training (B6). */
+
+export interface TrainingAllocationDto {
+  id: string;
+  seasonId: string;
+  teamId: string;
+  playerId: string;
+  focus: string;
+  points: number;
+  appliedAt: string | null;
+  appliedGainJson: string | null;
+  createdAt: string;
+}
+
+export async function listTrainingAllocations(
+  seasonId: string,
+  teamId: string,
+): Promise<TrainingAllocationDto[]> {
+  const client = getConvexClient();
+  return client.query(
+    dynastyRef.query<TrainingAllocationDto[]>("listTrainingAllocations"),
+    { seasonId, teamId },
+  );
+}
+
+export async function allocateTraining(input: {
+  playerId: string;
+  teamId: string;
+  seasonId: string;
+  focus: string;
+  points: number;
+  actorUserId: string;
+}): Promise<{
+  allocation: TrainingAllocationDto;
+  pointsSpent: number;
+  pointsTotal: number;
+}> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{
+      allocation: TrainingAllocationDto;
+      pointsSpent: number;
+      pointsTotal: number;
+    }>("allocateTraining"),
+    input,
+  );
+}
+
+export async function applyTrainingAllocations(input: {
+  seasonId: string;
+  actorUserId: string;
+}): Promise<{
+  applied: number;
+  playersTrained: number;
+  pointsPlaced: number;
+}> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{
+      applied: number;
+      playersTrained: number;
+      pointsPlaced: number;
+    }>("applyTrainingAllocations"),
+    input,
+  );
+}

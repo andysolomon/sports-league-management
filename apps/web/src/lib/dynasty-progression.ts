@@ -12,6 +12,10 @@ import { attributeGroupForPosition } from "@/lib/synthetic-attributes";
  * would drift the first time either was tuned.
  */
 import { attrWeight } from "../../convex/lib/positions";
+import {
+  applyTraining,
+  type TrainingAllocation,
+} from "../../convex/lib/training";
 
 const ATTRIBUTE_GROUPS = [
   "QB",
@@ -45,6 +49,22 @@ export interface ProgressionInput {
   previousGrade: number | null;
   previousAttributes: Record<string, number>;
   positionGroup?: string;
+  /*
+   * Training a coach bought for this player (B6). Optional, and absent means
+   * absent — not zero — so every caller that predates B6 gets a byte-identical
+   * result. Applied AFTER the seeded base delta and outside its RNG stream, so
+   * adding training cannot shift a single natural-growth draw.
+   *
+   * The offseason applies training on its own, additively, because it runs
+   * after the rollover has already progressed everyone (see
+   * `applyTrainingAllocations` in `convex/dynasty.ts`). This hook is for the
+   * other direction: a rollover that ever carries an unapplied spring forward,
+   * and C4's development economy, which will supply `developmentMultiplier`
+   * from a coach's development rating.
+   */
+  training?: readonly TrainingAllocation[];
+  /** Scales what training buys. Absent is neutral, not zero — see B6. */
+  developmentMultiplier?: number | null;
 }
 
 export interface ProgressionResult {
@@ -90,10 +110,27 @@ export function computeProgressedAttributes(
     );
   }
 
+  /*
+   * Training lands on top of the finished base delta, never inside it. Placing
+   * it here — after the RNG stream is exhausted — is what makes the B6 promise
+   * checkable: with `training` absent or empty the function has not drawn a
+   * different number, taken a different branch, or rounded differently, so the
+   * result is byte-identical to the pre-B6 one for the same seed.
+   */
+  const trained =
+    input.training && input.training.length > 0
+      ? applyTraining({
+          attributes,
+          positionGroup,
+          allocations: input.training,
+          multiplier: input.developmentMultiplier,
+        }).attributes
+      : attributes;
+
   return {
     positionGroup,
-    attributes,
-    weightedOverall: weightedOverall(attributes),
+    attributes: trained,
+    weightedOverall: weightedOverall(trained),
   };
 }
 

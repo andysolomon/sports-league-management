@@ -27,6 +27,11 @@ import {
 } from "./lib/transfers";
 import { VARSITY, squadChange } from "./lib/promotions";
 import {
+  applyTraining,
+  totalAllocatedPoints,
+  trainingGate,
+} from "./lib/training";
+import {
   attributeGroupForPosition,
   derivePositionGroup,
 } from "./lib/positions";
@@ -1614,5 +1619,302 @@ export const changePlayerPosition = internalMutation({
     });
 
     return { position, positionGroup, changed: true };
+  },
+});
+
+/*
+ * ── Offseason training (B6) ────────────────────────────────────────────────
+ *
+ * A finite budget, spent on named players in a named direction, applied to the
+ * ratings the rollover already wrote for the upcoming season.
+ *
+ * ## Why allocation and application are two steps
+ *
+ * Scouting (B3) applies the instant you spend, and that is right for scouting:
+ * you are buying information and you should see it. Training is a PLAN. A coach
+ * assembling a spring wants to move points between players while he decides,
+ * and a mechanic that rewrote his roster on every click would make undo the
+ * first thing he asked for. So allocations accumulate against the budget and
+ * land together when the offseason leaves the training phase.
+ *
+ * The rules themselves live in `lib/training.ts`, Convex-free and tested there.
+ * This end owns storage, the budget check and the idempotency stamp.
+ */
+
+const trainingAllocationValidator = v.object({
+  id: v.string(),
+  seasonId: v.string(),
+  teamId: v.string(),
+  playerId: v.string(),
+  focus: v.string(),
+  points: v.number(),
+  appliedAt: v.union(v.string(), v.null()),
+  /** Per-attribute gain once applied, JSON-encoded. Null until then. */
+  appliedGainJson: v.union(v.string(), v.null()),
+  createdAt: v.string(),
+});
+
+type TrainingAllocationDoc = Doc<"playerTrainingAllocations">;
+
+function toTrainingAllocationDto(
+  row: TrainingAllocationDoc,
+): Infer<typeof trainingAllocationValidator> {
+  return {
+    id: row._id as string,
+    seasonId: row.seasonId as string,
+    teamId: row.teamId as string,
+    playerId: row.playerId as string,
+    focus: row.focus,
+    points: row.points,
+    appliedAt: row.appliedAt ?? null,
+    appliedGainJson: row.appliedGainJson ?? null,
+    createdAt: row.createdAt,
+  };
+}
+
+/**
+ * One team's training ledger for a season.
+ *
+ * Scoped to a team rather than the season on purpose. The budget is per team
+ * (see `convex/tables/offseason.ts`), so the number the panel needs is this
+ * team's spend — returning the league's rows to compute it would leak every
+ * other program's spring plan to anyone who opened the hub.
+ */
+export const listTrainingAllocations = query({
+  args: { seasonId: v.id("seasons"), teamId: v.id("teams") },
+  returns: v.array(trainingAllocationValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("playerTrainingAllocations")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .collect();
+    return rows
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map(toTrainingAllocationDto);
+  },
+});
+
+/**
+ * Commit points to one player.
+ *
+ * `teamId` is an argument and is checked against the player, for the same
+ * reason as `setPlayerSquad` (B5): the Next layer's per-team gate and this
+ * check must be about the SAME team, and deriving it here would hide a coach
+ * spending on a player who has already left.
+ *
+ * The budget is read from this team's own rows, so two coaches allocating at
+ * the same moment cannot oversell a shared pool — Convex serializes the
+ * mutations, and the second one sees the first one's row.
+ */
+export const allocateTraining = internalMutation({
+  args: {
+    playerId: v.id("players"),
+    teamId: v.id("teams"),
+    seasonId: v.id("seasons"),
+    focus: v.string(),
+    points: v.number(),
+    actorUserId: v.string(),
+  },
+  returns: v.object({
+    allocation: trainingAllocationValidator,
+    pointsSpent: v.number(),
+    pointsTotal: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const player = await ctx.db.get(args.playerId);
+    if (!player) throw new Error("player_not_found");
+    if (player.teamId !== args.teamId) throw new Error("player_not_on_team");
+
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (season.rosterLocked) throw new Error("season_locked");
+
+    const offseason = await ensureOffseason(
+      ctx,
+      args.seasonId,
+      args.actorUserId,
+    );
+
+    const existing = await ctx.db
+      .query("playerTrainingAllocations")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", args.seasonId).eq("teamId", args.teamId),
+      )
+      .collect();
+    const spent = totalAllocatedPoints(existing);
+
+    const decision = trainingGate({
+      focus: args.focus,
+      points: args.points,
+      spent,
+      total: offseason.trainingPointsTotal,
+    });
+    if (!decision.ok) throw new Error(decision.reason);
+
+    const now = new Date().toISOString();
+    const id = await ctx.db.insert("playerTrainingAllocations", {
+      leagueId: season.leagueId,
+      seasonId: args.seasonId,
+      teamId: args.teamId,
+      playerId: args.playerId,
+      focus: args.focus,
+      points: args.points,
+      createdAt: now,
+      createdBy: args.actorUserId,
+    });
+
+    /*
+     * The league counter on the offseason row is the audit total across every
+     * team, kept in step here so an admin can see how much of the league's
+     * spring has been planned. The gate above deliberately does NOT read it —
+     * it is a sum of per-team budgets, not a budget itself.
+     */
+    await ctx.db.patch(offseason._id, {
+      trainingPointsSpent: offseason.trainingPointsSpent + args.points,
+      updatedAt: now,
+      updatedBy: args.actorUserId,
+    });
+
+    const row = await ctx.db.get(id);
+    if (!row) throw new Error("allocation_not_found");
+    return {
+      allocation: toTrainingAllocationDto(row),
+      pointsSpent: spent + args.points,
+      pointsTotal: offseason.trainingPointsTotal,
+    };
+  },
+});
+
+/**
+ * Land every unapplied allocation for a season on the players' ratings.
+ *
+ * Called when the offseason leaves the training phase. Additive rather than a
+ * re-derivation of progression: a freshman signed in this same offseason has no
+ * prior season to re-derive from, and a mechanic that worked for veterans and
+ * silently skipped the class you just recruited would be worse than no
+ * mechanic. `appliedAt` is therefore load-bearing, not decorative — it is the
+ * only thing standing between a retry and a roster trained twice.
+ *
+ * Grouped per player so a player with three allocations gets one patch and one
+ * consistent `weightedOverall`, rather than three that each recompute from a
+ * map the previous one had already moved.
+ */
+export const applyTrainingAllocations = internalMutation({
+  args: { seasonId: v.id("seasons"), actorUserId: v.string() },
+  returns: v.object({
+    applied: v.number(),
+    playersTrained: v.number(),
+    pointsPlaced: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const pending = (
+      await ctx.db
+        .query("playerTrainingAllocations")
+        .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+        .collect()
+    ).filter((row) => row.appliedAt === undefined);
+    if (pending.length === 0) {
+      return { applied: 0, playersTrained: 0, pointsPlaced: 0 };
+    }
+
+    const byPlayer = new Map<Id<"players">, TrainingAllocationDoc[]>();
+    for (const row of pending) {
+      const bucket = byPlayer.get(row.playerId);
+      if (bucket) bucket.push(row);
+      else byPlayer.set(row.playerId, [row]);
+    }
+
+    const now = new Date().toISOString();
+    let applied = 0;
+    let playersTrained = 0;
+    let pointsPlaced = 0;
+
+    for (const [playerId, rows] of byPlayer) {
+      const player = await ctx.db.get(playerId);
+      /*
+       * A player who left between allocation and application. His points are
+       * stamped rather than left pending: they were spent, the spring happened
+       * somewhere else, and leaving them unapplied would make them land on
+       * whoever holds that id next.
+       */
+      if (!player) {
+        for (const row of rows) {
+          await ctx.db.patch(row._id, { appliedAt: now });
+          applied++;
+        }
+        continue;
+      }
+
+      const ratingPlayerId = player.sourcePlayerId ?? playerId;
+      const snapshot = await ctx.db
+        .query("playerAttributes")
+        .withIndex("by_playerId_seasonId", (q) =>
+          q.eq("playerId", ratingPlayerId).eq("seasonId", args.seasonId),
+        )
+        .first();
+      if (!snapshot) {
+        // Nothing to train. An unrated player would need ratings invented for
+        // him, which is a different decision than the one a coach made here.
+        for (const row of rows) {
+          await ctx.db.patch(row._id, { appliedAt: now });
+          applied++;
+        }
+        continue;
+      }
+
+      const attributes = parseAttributes(snapshot.attributesJson);
+      const positionGroup =
+        snapshot.positionGroup || attributeGroupForPosition(player.position);
+      const result = applyTraining({
+        attributes,
+        positionGroup,
+        allocations: rows.map((row) => ({
+          focus: row.focus,
+          points: row.points,
+        })),
+      });
+
+      if (result.pointsPlaced > 0) {
+        /*
+         * The overall moves by the DELTA, not by a fresh mean of the map.
+         *
+         * `weightedOverall` is not always the mean: for a player with real
+         * ratings it is a PFF/Madden blend written by `ingestPlayerAttributesBatch`.
+         * Recomputing it here would silently replace that blend with an average
+         * the first time anyone trained him, and the rating would jump for a
+         * reason no coach could connect to the points he spent. Spreading
+         * `pointsPlaced` over the map raises its mean by exactly
+         * `pointsPlaced / keys`, so applying that same shift moves the stored
+         * number without redefining what it means.
+         */
+        const keys = Object.keys(result.attributes).length;
+        const shift = keys > 0 ? result.pointsPlaced / keys : 0;
+        const values = Object.values(result.attributes);
+        const overall =
+          snapshot.weightedOverall === null
+            ? values.length > 0
+              ? Math.round(values.reduce((a, b) => a + b, 0) / values.length)
+              : null
+            : Math.min(99, Math.round(snapshot.weightedOverall + shift));
+        await ctx.db.patch(snapshot._id, {
+          attributesJson: JSON.stringify(result.attributes),
+          weightedOverall: overall,
+        });
+        playersTrained++;
+        pointsPlaced += result.pointsPlaced;
+      }
+
+      for (const row of rows) {
+        await ctx.db.patch(row._id, {
+          appliedAt: now,
+          appliedGainJson: JSON.stringify(result.gains),
+        });
+        applied++;
+      }
+    }
+
+    return { applied, playersTrained, pointsPlaced };
   },
 });

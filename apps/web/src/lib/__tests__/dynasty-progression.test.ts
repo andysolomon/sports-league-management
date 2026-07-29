@@ -67,3 +67,58 @@ describe("computeProgressedAttributes", () => {
     expect(Object.keys(next.attributes).length).toBe(Object.keys(BASE_ATTRS).length);
   });
 });
+
+/*
+ * B6 added optional `training` and `developmentMultiplier` to `ProgressionInput`.
+ * The promise attached to them is that they cost nothing when unused: every
+ * league that has ever rolled over must keep progressing exactly as it did.
+ */
+describe("computeProgressedAttributes with training (B6)", () => {
+  const INPUT = {
+    playerId: "player_training",
+    newSeasonId: "season_2028",
+    position: "WR",
+    previousGrade: 10,
+    previousAttributes: { SPD: 70, STR: 68, AGI: 72, AWR: 65, ACC: 71 },
+    positionGroup: "WR",
+  };
+
+  it("is byte-identical to the pre-B6 result when no training was bought", () => {
+    const bare = computeProgressedAttributes(INPUT);
+    for (const training of [undefined, []]) {
+      expect(
+        JSON.stringify(computeProgressedAttributes({ ...INPUT, training })),
+      ).toBe(JSON.stringify(bare));
+    }
+  });
+
+  it("is byte-identical when a multiplier is supplied but nothing was bought", () => {
+    // A multiplier alone must not be a development bonus. It scales training,
+    // and no training is still no training.
+    expect(
+      computeProgressedAttributes({ ...INPUT, developmentMultiplier: 2 }),
+    ).toEqual(computeProgressedAttributes(INPUT));
+  });
+
+  it("adds training on top of the base delta without disturbing it", () => {
+    /*
+     * The RNG stream must be exhausted before training is placed, or adding a
+     * focus would silently reshuffle a player's natural growth.
+     */
+    const bare = computeProgressedAttributes(INPUT);
+    const trained = computeProgressedAttributes({
+      ...INPUT,
+      training: [{ focus: "athleticism", points: 5 }],
+    });
+
+    expect(trained.attributes.STR).toBe(bare.attributes.STR);
+    expect(trained.attributes.AWR).toBe(bare.attributes.AWR);
+    const athleticGain =
+      trained.attributes.SPD! +
+      trained.attributes.AGI! +
+      trained.attributes.ACC! -
+      (bare.attributes.SPD! + bare.attributes.AGI! + bare.attributes.ACC!);
+    expect(athleticGain).toBeGreaterThan(0);
+    expect(trained.weightedOverall).toBeGreaterThan(bare.weightedOverall);
+  });
+});

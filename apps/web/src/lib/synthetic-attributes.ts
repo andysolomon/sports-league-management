@@ -20,32 +20,23 @@ import { seedFromString } from "@/lib/synthetic-roster";
  * that mapping would be a fork of the app's football vocabulary. Re-exported
  * here so every existing import is untouched.
  */
+/*
+ * `COMMON_KEYS` and `GROUP_KEYS` followed them in B6, so a training focus can
+ * be resolved to attribute keys inside a Convex mutation.
+ */
 export {
   attributeGroupForPosition,
+  COMMON_KEYS,
+  GROUP_KEYS,
   type AttributeGroup,
 } from "../../convex/lib/positions";
 
 import {
   attributeGroupForPosition,
+  COMMON_KEYS,
+  GROUP_KEYS,
   type AttributeGroup,
 } from "../../convex/lib/positions";
-
-/** Universal athletic attributes every group carries. */
-export const COMMON_KEYS: readonly string[] = ["SPD", "STR", "AGI", "ACC", "AWR", "STA"];
-
-/** Madden-style position-specific attribute codes per group. */
-export const GROUP_KEYS: Readonly<Record<AttributeGroup, readonly string[]>> = {
-  QB: ["THP", "SAC", "MAC", "DAC", "TUP", "PAC"],
-  RB: ["CAR", "BCV", "TRK", "ELU", "JKM", "BTK"],
-  WR: ["CTH", "SRR", "MRR", "DRR", "CIT", "RLS"],
-  TE: ["CTH", "RBK", "CIT", "SRR", "PBK"],
-  OL: ["RBK", "PBK", "RBP", "PBP", "IBL"],
-  DL: ["PMV", "FMV", "BSH", "TAK", "PUR"],
-  LB: ["TAK", "PUR", "PRC", "ZCV", "MCV", "POW"],
-  DB: ["MCV", "ZCV", "PRS", "CTH", "PUR"],
-  K: ["KPW", "KAC"],
-  P: ["KPW", "KAC"],
-};
 
 /** mulberry32 — tiny deterministic PRNG (same family as synthetic-roster). */
 function rng(seed: number): () => number {

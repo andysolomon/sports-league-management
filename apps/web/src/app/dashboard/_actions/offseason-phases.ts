@@ -6,6 +6,7 @@ import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
 import { canManageOrgSettings } from "@/lib/permissions";
 import {
   advanceOffseasonPhase,
+  applyTrainingAllocations,
   beginOffseason,
   getDraft,
   getLeagueOrgId,
@@ -90,6 +91,22 @@ export async function advanceOffseasonPhaseAction(input: {
      * module would couple two Convex modules for one boolean.
      */
     const draft = await getDraft(input.seasonId).catch(() => null);
+
+    /*
+     * Leaving the training phase is when a spring lands (B6). It runs BEFORE
+     * the advance, not after, so a failure here leaves the offseason in
+     * `training` with the allocations still pending — a state an admin can
+     * retry — rather than past the phase with the points silently unspent.
+     *
+     * `applyTrainingAllocations` is idempotent through each row's `appliedAt`,
+     * so the retry that follows a lost response trains nobody twice.
+     */
+    if (input.expectedPhase === "training") {
+      await applyTrainingAllocations({
+        seasonId: input.seasonId,
+        actorUserId: userId,
+      });
+    }
 
     const result = await advanceOffseasonPhase({
       seasonId: input.seasonId,

@@ -96,6 +96,10 @@ _Avoid_: Team level, sub-team, second string, reserves
 An incoming ninth-grader on the Recruiting class for one upcoming Season, shown as a projected range rather than a rating until a Team signs him. Scouting narrows the range and never removes it.
 _Avoid_: Recruit rating, star rating, draft prospect, blue-chip
 
+**Training**:
+Points a Team commits from its own offseason budget to develop named players in a named direction — athleticism, strength, technique or football IQ. Committing is a plan; the ratings move when the Offseason Hub leaves the Training phase.
+_Avoid_: XP, skill points, upgrades, boosts, practice reps
+
 **Resource Header**:
 The orientation and sibling-navigation surface shared by a Home and its child pages without using breadcrumb trails.
 _Avoid_: Breadcrumb, back-link row
@@ -128,6 +132,8 @@ _Avoid_: Playbook, formation, strategy, system
 - A **Transfer** never changes the number of players in a League, only which Team each belongs to
 - A player's **Squad** and position are changed from the **Offseason Hub**, and both are one Team's decision about its own roster
 - Cutting a player from the **Offseason Hub** releases him to free agency rather than removing him from the League
+- **Training** is budgeted per Team rather than per League, so one coach cannot spend another program's offseason
+- **Training** a Team commits is applied to that Season's ratings once, when the Offseason Hub advances past the Training phase
 - **Account Settings** contains cross-league **Import** and **Account Billing**
 - A successful **Import** may set the imported League as the **Active League** and offer navigation to its **League Home**
 - The **League Directory** provides access to **Discover**

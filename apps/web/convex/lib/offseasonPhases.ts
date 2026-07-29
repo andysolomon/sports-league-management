@@ -30,6 +30,7 @@ export const OFFSEASON_PHASES = [
   "transfers",
   "draft",
   "free_agency",
+  "training",
   "activate",
 ] as const;
 
@@ -41,6 +42,7 @@ export const OFFSEASON_PHASE_LABELS: Record<OffseasonPhase, string> = {
   transfers: "Transfers",
   draft: "Draft",
   free_agency: "Free agency",
+  training: "Training",
   activate: "Activate",
 };
 
@@ -59,11 +61,16 @@ export const OFFSEASON_PHASE_LABELS: Record<OffseasonPhase, string> = {
  * unresolved transfer is a decision NOT to decide, and a coach who never opens
  * the window has implicitly kept everybody. Blocking on it would let one
  * absent coach freeze the league.
+ *
+ * Training joined it in B6. An unspent budget is a coach declining to run a
+ * spring, and the cost is already paid in the ratings he did not buy. Blocking
+ * would make the phase a chore rather than an opportunity.
  */
 const OPTIONAL_PHASES: ReadonlySet<OffseasonPhase> = new Set([
   "recruiting",
   "transfers",
   "draft",
+  "training",
 ]);
 
 /*
