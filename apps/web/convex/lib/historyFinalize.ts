@@ -20,6 +20,28 @@ export interface FinalizeSeasonHistoryResult {
   recordsBroken: number;
 }
 
+function championTeamId(
+  format: string,
+  matchups: Doc<"playoffMatchups">[],
+): Id<"teams"> | null {
+  if (format === "double") {
+    return (
+      matchups.find((matchup) => matchup.bracketType === "grandFinal")
+        ?.winnerTeamId ?? null
+    );
+  }
+  return (
+    matchups.reduce<Doc<"playoffMatchups"> | null>(
+      (best, matchup) =>
+        (matchup.bracketType ?? "winners") === "winners" &&
+        matchup.round > (best?.round ?? -1)
+          ? matchup
+          : best,
+      null,
+    )?.winnerTeamId ?? null
+  );
+}
+
 function recordEntryFromRow(
   row: Doc<"programRecords">,
 ): ProgramRecordEntry {
@@ -162,10 +184,37 @@ export async function finalizeSeasonHistoryForSeason(
     teamRecords,
   );
 
-  const careerRows = await ctx.db
-    .query("playerCareerTotals")
-    .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
-    .collect();
+  const [careerRows, seasonAttributes, bracket] = await Promise.all([
+    ctx.db
+      .query("playerCareerTotals")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", leagueId))
+      .collect(),
+    ctx.db
+      .query("playerAttributes")
+      .withIndex("by_seasonId_positionGroup", (q) =>
+        q.eq("seasonId", seasonId),
+      )
+      .collect(),
+    ctx.db
+      .query("playoffBrackets")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", seasonId))
+      .first(),
+  ]);
+  const playoffMatchups = bracket
+    ? await ctx.db
+        .query("playoffMatchups")
+        .withIndex("by_bracketId", (q) => q.eq("bracketId", bracket._id))
+        .collect()
+    : [];
+  const championId = bracket
+    ? championTeamId(bracket.format ?? "single", playoffMatchups)
+    : null;
+  const overallByPlayerId = new Map(
+    seasonAttributes.map((row) => [
+      row.playerId as string,
+      row.weightedOverall,
+    ]),
+  );
   const existingRecordRows = await ctx.db
     .query("programRecords")
     .withIndex("by_leagueId_category_rank", (q) =>
@@ -187,15 +236,37 @@ export async function finalizeSeasonHistoryForSeason(
     seasons[seasonId as string] = parseCareerStatLine(aggregate.totalsJson);
     const seasonTotalsJson = serializeCareerSeasonTotals(seasons);
     const totalsJson = JSON.stringify(sumCareerSeasonTotals(seasons));
+    const currentOverall =
+      overallByPlayerId.get(aggregate.playerId as string) ?? null;
+    const peakOverall =
+      currentOverall === null
+        ? existing?.peakOverall
+        : Math.max(existing?.peakOverall ?? 0, currentOverall);
+    const championshipSeasonIds = new Set(
+      existing?.championshipSeasonIds ?? [],
+    );
+    if (championId === aggregate.teamId) {
+      championshipSeasonIds.add(seasonId);
+    } else {
+      championshipSeasonIds.delete(seasonId);
+    }
+    const nextChampionshipSeasonIds = [...championshipSeasonIds].sort((a, b) =>
+      String(a).localeCompare(String(b)),
+    );
 
     if (existing) {
       if (
         existing.seasonTotalsJson !== seasonTotalsJson ||
-        existing.totalsJson !== totalsJson
+        existing.totalsJson !== totalsJson ||
+        existing.peakOverall !== peakOverall ||
+        JSON.stringify(existing.championshipSeasonIds ?? []) !==
+          JSON.stringify(nextChampionshipSeasonIds)
       ) {
         await ctx.db.patch(existing._id, {
           seasonTotalsJson,
           totalsJson,
+          peakOverall,
+          championshipSeasonIds: nextChampionshipSeasonIds,
           updatedAt: now,
         });
         careerTotalsUpdated += 1;
@@ -206,6 +277,8 @@ export async function finalizeSeasonHistoryForSeason(
         playerId: aggregate.playerId,
         totalsJson,
         seasonTotalsJson,
+        peakOverall,
+        championshipSeasonIds: nextChampionshipSeasonIds,
         updatedAt: now,
       });
       careerByPlayerId.set(aggregate.playerId as string, {
@@ -215,6 +288,8 @@ export async function finalizeSeasonHistoryForSeason(
         playerId: aggregate.playerId,
         totalsJson,
         seasonTotalsJson,
+        peakOverall,
+        championshipSeasonIds: nextChampionshipSeasonIds,
         updatedAt: now,
       });
       careerTotalsUpdated += 1;

@@ -46,6 +46,7 @@ export const historyTables = {
     createdAt: v.string(),
     updatedAt: v.string(),
   })
+    .index("by_leagueId", ["leagueId"])
     .index("by_seasonId", ["seasonId"])
     .index("by_seasonId_type", ["seasonId", "type"])
     .index("by_playerId", ["playerId"])
@@ -61,10 +62,30 @@ export const historyTables = {
      * re-summing is what makes season finalization retry-safe.
      */
     seasonTotalsJson: v.string(),
+    /** D5 metadata, optional for career rows materialized before HoF shipped. */
+    peakOverall: v.optional(v.number()),
+    championshipSeasonIds: v.optional(v.array(v.id("seasons"))),
     updatedAt: v.string(),
   })
     .index("by_playerId", ["playerId"])
     .index("by_leagueId", ["leagueId"]),
+
+  hallOfFame: defineTable({
+    leagueId: v.id("leagues"),
+    /** Exactly one recipient reference is non-null on every induction row. */
+    playerId: v.union(v.id("players"), v.null()),
+    coachId: v.union(v.id("coaches"), v.null()),
+    inductedSeasonId: v.id("seasons"),
+    classLabel: v.string(),
+    citation: v.string(),
+    /** Exact output of `lib/hallOfFame.ts`, retained for explainability. */
+    score: v.number(),
+    inductedAt: v.string(),
+  })
+    .index("by_leagueId", ["leagueId"])
+    .index("by_inductedSeasonId", ["inductedSeasonId"])
+    .index("by_playerId", ["playerId"])
+    .index("by_coachId", ["coachId"]),
 
   programRecords: defineTable({
     leagueId: v.id("leagues"),

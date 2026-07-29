@@ -130,6 +130,29 @@ export async function seedHistoryFixture(
   });
 }
 
+const seedHallOfFameFixtureRef = makeFunctionReference<
+  "mutation",
+  {
+    leagueId: string;
+    seasonId: string;
+    homeTeamId: string;
+    awayTeamId: string;
+  },
+  { created: number; classLabel: string }
+>("e2eSeed:seedHallOfFameFixture");
+
+export async function seedHallOfFameFixture(
+  fixture: ScheduleFixtureResult,
+): Promise<{ created: number; classLabel: string }> {
+  const client = getSeedClient();
+  return client.mutation(seedHallOfFameFixtureRef, {
+    leagueId: fixture.leagueId,
+    seasonId: fixture.seasonId,
+    homeTeamId: fixture.homeTeamId,
+    awayTeamId: fixture.awayTeamId,
+  });
+}
+
 const seedAwardsFixtureRef = makeFunctionReference<
   "mutation",
   {

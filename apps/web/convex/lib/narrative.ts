@@ -240,3 +240,38 @@ export function seasonCompletedDedupeKey(seasonId: string): string {
 export function transferResolvedDedupeKey(transferId: string): string {
   return `transfer_resolved:${transferId}`;
 }
+
+export interface HallOfFameCitationInput {
+  recipientName: string;
+  kind: "player" | "coach";
+  seasonsPlayed: number;
+  careerProduction: number;
+  careerWins: number;
+  accolades: number;
+  championships: number;
+  peakOverall: number;
+}
+
+function countLabel(count: number, singular: string, plural = `${singular}s`) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+/**
+ * Hall of Fame citations share the narrative template library used by the
+ * recap and news feed. Stored copy is deterministic and makes no network call.
+ */
+export function renderHallOfFameCitation(
+  input: HallOfFameCitationInput,
+): string {
+  const seasons = countLabel(input.seasonsPlayed, "season");
+  const honors = countLabel(input.accolades, "career honor");
+  const titles = countLabel(input.championships, "championship");
+  if (input.kind === "coach") {
+    return `${input.recipientName} is inducted after ${seasons}, ${countLabel(input.careerWins, "win")}, ${honors}, and ${titles}.`;
+  }
+  const peak =
+    input.peakOverall > 0
+      ? ` and a peak overall of ${input.peakOverall}`
+      : "";
+  return `${input.recipientName} is inducted after ${seasons}, ${input.careerProduction.toLocaleString("en-US")} career production, ${honors}, and ${titles}${peak}.`;
+}

@@ -6,6 +6,7 @@ import { finalizeSeasonHistoryForSeason } from "./lib/historyFinalize";
 import { computeWeeklyPollForSeason } from "./lib/weeklyPolls";
 import { emitDynastyEvent } from "./lib/events";
 import { finalizeSeasonRecapForSeason } from "./lib/seasonRecaps";
+import { renderHallOfFameCitation } from "./lib/narrative";
 
 /*
  * e2e seed fixtures (WSM-000139, fast-follow to WSM-000096).
@@ -251,6 +252,14 @@ async function cascadeDeleteLeague(
     .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
     .collect()) as Array<{ _id: Id<"playerCareerTotals"> }>;
   for (const row of careerTotals) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
+  const hallOfFameRows = (await ctx.db
+    .query("hallOfFame")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"hallOfFame"> }>;
+  for (const row of hallOfFameRows) {
     await ctx.db.delete(row._id);
     deleted += 1;
   }
@@ -699,6 +708,77 @@ export const seedHistoryFixture = internalMutation({
       created += 2;
     }
     return { created };
+  },
+});
+
+/** D5 route fixture: one inductee from each fixture Team in one class. */
+export const seedHallOfFameFixture = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+  },
+  returns: v.object({ created: v.number(), classLabel: v.string() }),
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+    const [season, homeTeam, awayTeam] = await Promise.all([
+      ctx.db.get(args.seasonId),
+      ctx.db.get(args.homeTeamId),
+      ctx.db.get(args.awayTeamId),
+    ]);
+    if (
+      !season ||
+      season.leagueId !== args.leagueId ||
+      !homeTeam ||
+      homeTeam.leagueId !== args.leagueId ||
+      !awayTeam ||
+      awayTeam.leagueId !== args.leagueId
+    ) {
+      throw new Error("hall_of_fame_fixture_scope_mismatch");
+    }
+
+    const classLabel = `Hall of Fame Class of ${season.name}`;
+    const inductedAt = new Date().toISOString();
+    const recipients = [
+      { name: "E2E Home Legend", teamId: args.homeTeamId, score: 2_500 },
+      { name: "E2E Away Legend", teamId: args.awayTeamId, score: 2_250 },
+    ];
+    let created = 0;
+    for (const [index, recipient] of recipients.entries()) {
+      const playerId = await ctx.db.insert("players", {
+        name: recipient.name,
+        leagueId: args.leagueId,
+        teamId: recipient.teamId,
+        position: "ATH",
+        positionGroup: "ATH",
+        jerseyNumber: 90 + index,
+        dateOfBirth: null,
+        status: "graduated",
+        headshotUrl: null,
+      });
+      await ctx.db.insert("hallOfFame", {
+        leagueId: args.leagueId,
+        playerId,
+        coachId: null,
+        inductedSeasonId: args.seasonId,
+        classLabel,
+        citation: renderHallOfFameCitation({
+          recipientName: recipient.name,
+          kind: "player",
+          seasonsPlayed: 4,
+          careerProduction: 7_500 - index * 500,
+          careerWins: 0,
+          accolades: 2,
+          championships: 1,
+          peakOverall: 94 - index,
+        }),
+        score: recipient.score,
+        inductedAt,
+      });
+      created += 1;
+    }
+    return { created, classLabel };
   },
 });
 
