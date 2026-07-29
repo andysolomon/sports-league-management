@@ -153,6 +153,29 @@ export async function seedAwardsFixture(
   });
 }
 
+const seedRankingsFixtureRef = makeFunctionReference<
+  "mutation",
+  {
+    leagueId: string;
+    seasonId: string;
+    homeTeamId: string;
+    awayTeamId: string;
+  },
+  { rankingsCreated: number }
+>("e2eSeed:seedRankingsFixture");
+
+export async function seedRankingsFixture(
+  fixture: ScheduleFixtureResult,
+): Promise<{ rankingsCreated: number }> {
+  const client = getSeedClient();
+  return client.mutation(seedRankingsFixtureRef, {
+    leagueId: fixture.leagueId,
+    seasonId: fixture.seasonId,
+    homeTeamId: fixture.homeTeamId,
+    awayTeamId: fixture.awayTeamId,
+  });
+}
+
 const seedProspectClassRef = makeFunctionReference<
   "mutation",
   any,

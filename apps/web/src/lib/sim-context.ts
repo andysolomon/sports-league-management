@@ -32,6 +32,12 @@ import { resolveAggression } from "@/lib/program/resolveProgram";
 /** Everything a run of the simulator needs beyond the fixtures themselves. */
 export interface SeasonSimContext {
   leagueId: string;
+  /**
+   * D3 is not an engine feature, but the weekly action already resolves this
+   * config once per run. Carrying it here avoids a second settings read after
+   * the games finish.
+   */
+  pollsEnabled: boolean;
   /** Resolved once per run — every fixture in the run simulates alike. */
   features: PbpFeatureGates;
   /** `pairKey` → intensity, for the rivalry lookup (A5). */
@@ -126,6 +132,7 @@ export async function loadSeasonSimContext(input: {
   );
   return {
     leagueId: input.leagueId,
+    pollsEnabled: config?.pollsEnabled ?? false,
     features,
     injurySeverityScale: config?.injurySeverityScale ?? 1,
     rivalries: new Map(
@@ -176,6 +183,7 @@ export async function loadSeasonSimContext(input: {
 export function emptySimContext(leagueId: string): SeasonSimContext {
   return {
     leagueId,
+    pollsEnabled: false,
     features: {},
     rivalries: new Map(),
     injurySeverityScale: 1,

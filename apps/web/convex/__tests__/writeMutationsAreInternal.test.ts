@@ -233,7 +233,9 @@ void api.history.listProgramRecords;
 void api.history.listSeasonAwards;
 void api.history.listPlayerAwards;
 void api.history.listCoachAwards;
+void api.history.getWeeklyPoll;
 void internal.history.finalizeSeasonHistory;
+void internal.history.computeWeeklyPoll;
 
 type AllowedPublicDynastyReads =
   | "moduleStatus"
@@ -289,7 +291,8 @@ type AllowedPublicHistoryReads =
   | "listProgramRecords"
   | "listSeasonAwards"
   | "listPlayerAwards"
-  | "listCoachAwards";
+  | "listCoachAwards"
+  | "getWeeklyPoll";
 
 type LeakedPublicDynastyWrites = Exclude<
   keyof typeof api.dynasty,

@@ -120,6 +120,9 @@ describe("resource-navigation helpers", () => {
     expect(seasonSubpageHref("s1", "awards")).toBe(
       "/dashboard/seasons/s1/awards",
     );
+    expect(seasonSubpageHref("s1", "rankings")).toBe(
+      "/dashboard/seasons/s1/rankings",
+    );
   });
 });
 
@@ -228,6 +231,21 @@ describe("buildSeasonSiblingLinks", () => {
     });
     expect(enabled.map((link) => link.label)).toEqual(["Overview", "Awards"]);
     expect(enabled[1]!.href).toBe("/dashboard/seasons/s1/awards");
+  });
+
+  it("gates the Rankings sibling independently", () => {
+    const enabled = buildSeasonSiblingLinks({
+      seasonId: "s1",
+      scheduleEnabled: false,
+      playoffsEnabled: false,
+      statsEnabled: false,
+      rankingsEnabled: true,
+    });
+    expect(enabled.map((link) => link.label)).toEqual([
+      "Overview",
+      "Rankings",
+    ]);
+    expect(enabled[1]!.href).toBe("/dashboard/seasons/s1/rankings");
   });
 });
 

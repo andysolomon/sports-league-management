@@ -254,6 +254,7 @@ export default async function SeasonHubPage({
           // Only an upcoming season has an offseason to prepare.
           offseasonEnabled: offseasonEnabled && isUpcomingSeason,
           awardsEnabled: historyEnabled,
+          rankingsEnabled: historyEnabled,
         })}
       />
       <WorkspaceNav links={links} />

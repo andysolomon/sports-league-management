@@ -10,6 +10,8 @@ import {
   finalizeSeasonHistoryForSeason,
   type FinalizeSeasonHistoryResult,
 } from "./lib/historyFinalize";
+import { computeWeeklyPollForSeason } from "./lib/weeklyPolls";
+import type { PowerRanking } from "./lib/powerRankings";
 
 /*
  * Dynasty Mode — history, awards and narrative (Epic D).
@@ -57,6 +59,125 @@ export const finalizeSeasonHistory = internalMutation({
   returns: finalizeSeasonHistoryResultValidator,
   handler: async (ctx, args): Promise<FinalizeSeasonHistoryResult> =>
     finalizeSeasonHistoryForSeason(ctx, args.seasonId),
+});
+
+const weeklyPollWriteResultValidator = v.object({
+  rankings: v.number(),
+  written: v.boolean(),
+});
+type WeeklyPollWriteDto = Infer<typeof weeklyPollWriteResultValidator>;
+
+export const computeWeeklyPoll = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    week: v.number(),
+  },
+  returns: weeklyPollWriteResultValidator,
+  handler: async (ctx, args): Promise<WeeklyPollWriteDto> => {
+    if (!Number.isInteger(args.week) || args.week < 1) {
+      throw new Error("invalid_poll_week");
+    }
+    return computeWeeklyPollForSeason(ctx, args);
+  },
+});
+
+const weeklyPollRankingDtoValidator = v.object({
+  teamId: v.string(),
+  teamName: v.string(),
+  rank: v.number(),
+  previousRank: v.union(v.number(), v.null()),
+  points: v.number(),
+  record: v.object({
+    wins: v.number(),
+    losses: v.number(),
+    ties: v.number(),
+  }),
+  trend: v.union(
+    v.literal("up"),
+    v.literal("down"),
+    v.literal("same"),
+    v.literal("new"),
+  ),
+});
+const weeklyPollDtoValidator = v.object({
+  week: v.number(),
+  publishedAt: v.string(),
+  rankings: v.array(weeklyPollRankingDtoValidator),
+});
+type WeeklyPollDto = Infer<typeof weeklyPollDtoValidator>;
+
+function parseRankings(json: string): PowerRanking[] {
+  try {
+    const parsed: unknown = JSON.parse(json);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((row): row is PowerRanking => {
+      if (!row || typeof row !== "object") return false;
+      const ranking = row as Partial<PowerRanking>;
+      return (
+        typeof ranking.teamId === "string" &&
+        typeof ranking.rank === "number" &&
+        (ranking.previousRank === null ||
+          typeof ranking.previousRank === "number") &&
+        typeof ranking.points === "number" &&
+        Boolean(ranking.record) &&
+        typeof ranking.record?.wins === "number" &&
+        typeof ranking.record?.losses === "number" &&
+        typeof ranking.record?.ties === "number" &&
+        (ranking.trend === "up" ||
+          ranking.trend === "down" ||
+          ranking.trend === "same" ||
+          ranking.trend === "new")
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+export const getWeeklyPoll = query({
+  args: {
+    seasonId: v.id("seasons"),
+    week: v.optional(v.number()),
+  },
+  returns: v.union(weeklyPollDtoValidator, v.null()),
+  handler: async (ctx, args): Promise<WeeklyPollDto | null> => {
+    const requestedWeek = args.week;
+    const row =
+      requestedWeek !== undefined
+        ? await ctx.db
+            .query("weeklyPolls")
+            .withIndex("by_seasonId_week", (q) =>
+              q.eq("seasonId", args.seasonId).eq("week", requestedWeek),
+            )
+            .unique()
+        : await ctx.db
+            .query("weeklyPolls")
+            .withIndex("by_seasonId_week", (q) =>
+              q.eq("seasonId", args.seasonId),
+            )
+            .order("desc")
+            .first();
+    if (!row) return null;
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", row.leagueId))
+      .collect();
+    const teamNames = new Map(
+      teams.map((team) => [team._id as string, team.name]),
+    );
+    return {
+      week: row.week,
+      publishedAt: row.publishedAt,
+      rankings: parseRankings(row.rankingsJson).map(
+        (ranking): WeeklyPollDto["rankings"][number] => ({
+          ...ranking,
+          teamName: teamNames.get(ranking.teamId) ?? "Unknown program",
+        }),
+      ),
+    };
+  },
 });
 
 const careerTotalsDtoValidator = v.object({

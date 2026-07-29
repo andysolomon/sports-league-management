@@ -25,6 +25,7 @@ const {
   mockListTeamPrograms,
   mockListCoachesByLeague,
   mockListFixtureGameplans,
+  mockComputeWeeklyPoll,
 } = vi.hoisted(() => ({
   mockSchedulesStandingsV1: vi.fn(),
   mockAuth: vi.fn(),
@@ -48,6 +49,7 @@ const {
   mockListTeamPrograms: vi.fn(),
   mockListCoachesByLeague: vi.fn(),
   mockListFixtureGameplans: vi.fn(),
+  mockComputeWeeklyPoll: vi.fn(),
 }));
 
 vi.mock("@/lib/flags", () => ({
@@ -62,6 +64,7 @@ vi.mock("@/lib/data-api", () => ({
   listTeamPrograms: mockListTeamPrograms,
   listCoachesByLeague: mockListCoachesByLeague,
   listFixtureGameplans: mockListFixtureGameplans,
+  computeWeeklyPoll: mockComputeWeeklyPoll,
   getFixture: mockGetFixture,
   recordGameResult: mockRecordGameResult,
   upsertGamePlayLog: mockUpsertGamePlayLog,
@@ -146,6 +149,7 @@ function authorize() {
   mockListTeamPrograms.mockResolvedValue([]);
   mockListCoachesByLeague.mockResolvedValue([]);
   mockListFixtureGameplans.mockResolvedValue([]);
+  mockComputeWeeklyPoll.mockResolvedValue({ rankings: 2, written: true });
   mockAuth.mockResolvedValue({ userId: USER });
   mockResolveOrgContext.mockResolvedValue({ visibleLeagueIds: [LEAGUE] });
   mockGetLeague.mockResolvedValue({ id: LEAGUE, name: "League" });
@@ -195,6 +199,7 @@ describe("simulateGameAction (PBP Slice B)", () => {
       // default settings, every Epic A mechanic is live.
       simContext: {
         leagueId: LEAGUE,
+        pollsEnabled: true,
         features: {
           scoringV2: true,
           penalties: true,
@@ -247,6 +252,30 @@ describe("simulateWeekAction", () => {
       bulkStats: true,
       profileCache: expect.any(Map),
     });
+    expect(mockComputeWeeklyPoll).toHaveBeenCalledWith({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+      week: 1,
+    });
+  });
+
+  it("writes no poll row when polls are disabled", async () => {
+    mockGetDynastyConfig.mockResolvedValue({
+      ...DYNASTY_CONFIG_DEFAULTS,
+      pollsEnabled: false,
+    });
+    mockListFixturesBySeason.mockResolvedValue([
+      fixture({ id: "w1a", week: 1 }),
+    ]);
+
+    const res = await simulateWeekAction({
+      leagueId: LEAGUE,
+      seasonId: SEASON,
+      week: 1,
+    });
+
+    expect(res).toEqual({ ok: true, simulated: 1 });
+    expect(mockComputeWeeklyPoll).not.toHaveBeenCalled();
   });
 });
 

@@ -15,6 +15,7 @@ import {
   generatePlayoffBracket,
   getPlayoffBracket,
   recordGameResult,
+  computeWeeklyPoll,
 } from "@/lib/data-api";
 import type { PlayoffMatchupDto } from "@/lib/data-api";
 import type { OrgContext } from "@/lib/org-context";
@@ -611,6 +612,14 @@ export async function simulateWeekAction(input: {
         simContext,
       });
       simulated += 1;
+    }
+    if (simContext.pollsEnabled) {
+      await computeWeeklyPoll({
+        leagueId: input.leagueId,
+        seasonId: input.seasonId,
+        week: input.week,
+      });
+      revalidatePath(`/dashboard/seasons/${input.seasonId}/rankings`);
     }
     revalidateSchedulePaths(input.leagueId, input.seasonId);
     return { ok: true, simulated };
