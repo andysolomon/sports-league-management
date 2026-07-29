@@ -130,3 +130,29 @@ export async function seedProspectClass(
   const client = getSeedClient();
   return client.mutation(seedProspectClassRef, { seasonId, count });
 }
+
+const seedTransferCandidatesRef = makeFunctionReference<
+  "mutation",
+  any,
+  { created: number }
+>("e2eSeed:seedTransferCandidates");
+
+/**
+ * Stack a team with buried players so the transfer window has somebody in it (B4).
+ *
+ * The window itself is still opened through the real button and the real
+ * mutation — this only guarantees the seeded likelihood roll has candidates to
+ * find, so the spec is not testing whether the RNG felt generous today.
+ */
+export async function seedTransferCandidates(
+  seasonId: string,
+  teamId: string,
+  count = 6,
+): Promise<{ created: number }> {
+  const client = getSeedClient();
+  return client.mutation(seedTransferCandidatesRef, {
+    seasonId,
+    teamId,
+    count,
+  });
+}

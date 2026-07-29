@@ -27,6 +27,7 @@
 export const OFFSEASON_PHASES = [
   "rollover",
   "recruiting",
+  "transfers",
   "draft",
   "free_agency",
   "activate",
@@ -37,6 +38,7 @@ export type OffseasonPhase = (typeof OFFSEASON_PHASES)[number];
 export const OFFSEASON_PHASE_LABELS: Record<OffseasonPhase, string> = {
   rollover: "Rollover",
   recruiting: "Recruiting",
+  transfers: "Transfers",
   draft: "Draft",
   free_agency: "Free agency",
   activate: "Activate",
@@ -52,9 +54,15 @@ export const OFFSEASON_PHASE_LABELS: Record<OffseasonPhase, string> = {
  * Recruiting joined it in B3 for a stronger reason than convenience: a class
  * left entirely unsigned must not be able to trap an offseason. The cost of
  * skipping it is a roster of walk-ons, which is a consequence, not a block.
+ *
+ * Transfers joined it in B4 for the same reason, plus one of its own: an
+ * unresolved transfer is a decision NOT to decide, and a coach who never opens
+ * the window has implicitly kept everybody. Blocking on it would let one
+ * absent coach freeze the league.
  */
 const OPTIONAL_PHASES: ReadonlySet<OffseasonPhase> = new Set([
   "recruiting",
+  "transfers",
   "draft",
 ]);
 

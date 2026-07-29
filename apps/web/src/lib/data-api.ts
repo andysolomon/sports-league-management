@@ -3138,3 +3138,68 @@ export async function signProspect(input: {
     input,
   );
 }
+
+/*
+ * Offseason transfers (B4).
+ *
+ * Player and team names arrive already resolved on the DTO — see the note on
+ * `listTransfers`. The Next layer never joins them back up.
+ */
+
+export interface TransferDto {
+  id: string;
+  leagueId: string;
+  seasonId: string;
+  playerId: string;
+  playerName: string;
+  position: string;
+  grade: number | null;
+  direction: string;
+  fromTeamId: string;
+  fromTeamName: string;
+  toTeamId: string | null;
+  toTeamName: string | null;
+  reason: string;
+  likelihood: number;
+  status: string;
+  released: boolean;
+}
+
+export async function listTransfers(seasonId: string): Promise<TransferDto[]> {
+  const client = getConvexClient();
+  return client.query(dynastyRef.query<TransferDto[]>("listTransfers"), {
+    seasonId,
+  });
+}
+
+export async function generateTransferWindow(input: {
+  seasonId: string;
+  actorUserId: string;
+}): Promise<{ outbound: number; offers: number; alreadyExisted: boolean }> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{
+      outbound: number;
+      offers: number;
+      alreadyExisted: boolean;
+    }>("generateTransferWindow"),
+    input,
+  );
+}
+
+export async function resolveTransfer(input: {
+  transferId: string;
+  teamId: string;
+  decision: string;
+  actorUserId: string;
+}): Promise<{ status: string; moved: boolean; withdrawn: number }> {
+  const client = getConvexClient();
+  return client.mutation(
+    dynastyRef.mutation<{
+      status: string;
+      moved: boolean;
+      withdrawn: number;
+    }>("resolveTransfer"),
+    input,
+  );
+}

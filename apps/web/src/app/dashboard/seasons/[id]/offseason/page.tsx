@@ -8,6 +8,7 @@ import {
   getSeason,
   getTeamsByLeague,
   listProspects,
+  listTransfers,
 } from "@/lib/data-api";
 import { canManageTeam } from "@/lib/authorization";
 import { resolveOrgContext, resolveOrgRole } from "@/lib/org-context";
@@ -17,6 +18,7 @@ import { ResourceHeader } from "@/components/workspace/ResourceHeader";
 import { seasonHomeHref } from "@/components/workspace/resource-navigation";
 import { OffseasonPhaseControls } from "@/components/offseason/OffseasonPhaseControls";
 import { ScoutingPanel } from "@/components/offseason/ScoutingPanel";
+import { TransferPanel } from "@/components/offseason/TransferPanel";
 import { resolveOffseasonState } from "@/lib/dynasty/offseason-phases";
 import { DYNASTY_CONFIG_DEFAULTS } from "@/lib/dynasty-config";
 import { syncActiveLeagueForResource } from "@/lib/active-league-server";
@@ -55,11 +57,12 @@ export default async function SeasonOffseasonPage({
   if (!league) notFound();
   await syncActiveLeagueForResource(league.id);
 
-  const [offseason, draft, teams, prospects] = await Promise.all([
+  const [offseason, draft, teams, prospects, transfers] = await Promise.all([
     getOffseason(season.id).catch(() => null),
     getDraft(season.id).catch(() => null),
     getTeamsByLeague(league.id, orgContext).catch(() => []),
     listProspects(season.id).catch(() => []),
+    listTransfers(season.id).catch(() => []),
   ]);
 
   const role = league.orgId ? await resolveOrgRole(league.orgId, userId) : null;
@@ -117,6 +120,14 @@ export default async function SeasonOffseasonPage({
               offseason?.scoutingPointsTotal ??
               DYNASTY_CONFIG_DEFAULTS.scoutingPointsPerOffseason
             }
+          />
+
+          <TransferPanel
+            leagueId={league.id}
+            seasonId={season.id}
+            transfers={transfers}
+            actingTeam={actingTeam}
+            isAdmin={isAdmin}
           />
         </CardContent>
       </Card>

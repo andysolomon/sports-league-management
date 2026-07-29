@@ -7,6 +7,7 @@ import {
   hasReachedPhase,
   isOffseasonPhase,
   nextPhase,
+  phaseIndex,
   phaseGate,
   resolveOffseasonState,
   type OffseasonPhase,
@@ -51,15 +52,21 @@ describe("phase ordering", () => {
     expect(resolveOffseasonState(null).completedPhases).toContain("rollover");
   });
 
-  it("puts recruiting between the rollover and the draft (B3)", () => {
+  it("puts recruiting and transfers between the rollover and the draft", () => {
     /*
-     * Order is the contract, not the membership. Recruiting has to run before
-     * the draft because a prospect a team signs is a roster spot the draft can
-     * no longer fill — the other order would let a coach draft into a class he
-     * has not chosen yet.
+     * Order is the contract, not adjacency. Recruiting has to run before the
+     * draft because a prospect a team signs is a roster spot the draft can no
+     * longer fill; transfers sit between them (B4) because the roster should
+     * shake out after the class is signed and before the draft backfills what
+     * is left.
+     *
+     * Asserted by index rather than by `nextPhase`, so inserting a further
+     * phase between two of these does not fail a test that was never about
+     * adjacency in the first place.
      */
-    expect(nextPhase("rollover")).toBe("recruiting");
-    expect(nextPhase("recruiting")).toBe("draft");
+    expect(phaseIndex("rollover")).toBeLessThan(phaseIndex("recruiting"));
+    expect(phaseIndex("recruiting")).toBeLessThan(phaseIndex("transfers"));
+    expect(phaseIndex("transfers")).toBeLessThan(phaseIndex("draft"));
   });
 });
 

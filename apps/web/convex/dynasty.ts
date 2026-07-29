@@ -20,6 +20,14 @@ import {
   isPotentialTier,
   nextScoutCost,
 } from "./lib/scouting";
+import {
+  generateTransferSlate,
+  matchTransfersIn,
+  type TransferCandidate,
+} from "./lib/transfers";
+import { MAX_TARGET_ROSTER_SIZE } from "./lib/offseason";
+import { emitDynastyEvent } from "./lib/events";
+import { transferResolvedDedupeKey } from "./lib/narrative";
 
 /*
  * Dynasty Mode — offseason pipeline (Epic B).
@@ -803,5 +811,522 @@ export const signProspect = internalMutation({
       playerId: playerId as string,
       alreadySigned: false,
     };
+  },
+});
+
+/*
+ * ── Offseason transfers (B4) ────────────────────────────────────────────────
+ */
+
+const transferValidator = v.object({
+  id: v.string(),
+  leagueId: v.string(),
+  seasonId: v.string(),
+  playerId: v.string(),
+  playerName: v.string(),
+  position: v.string(),
+  grade: v.union(v.number(), v.null()),
+  direction: v.string(),
+  fromTeamId: v.string(),
+  fromTeamName: v.string(),
+  toTeamId: v.union(v.string(), v.null()),
+  toTeamName: v.union(v.string(), v.null()),
+  reason: v.string(),
+  likelihood: v.number(),
+  status: v.string(),
+  /**
+   * Whether the losing coach has released him yet. Derived, not stored: it is a
+   * property of the `out` row, and duplicating it onto every offer would need
+   * a second write on every retention — the exact denormalisation that goes
+   * stale first.
+   */
+  released: v.boolean(),
+});
+
+type TransferDoc = Doc<"transferEvents">;
+
+function toTransferDto(
+  row: TransferDoc,
+  names: {
+    playerName: string;
+    position: string;
+    grade: number | null;
+    fromTeamName: string;
+    toTeamName: string | null;
+  },
+  released: boolean,
+): Infer<typeof transferValidator> {
+  return {
+    id: row._id as string,
+    leagueId: row.leagueId as string,
+    seasonId: row.seasonId as string,
+    playerId: row.playerId as string,
+    playerName: names.playerName,
+    position: names.position,
+    grade: names.grade,
+    direction: row.direction,
+    fromTeamId: row.fromTeamId as string,
+    fromTeamName: names.fromTeamName,
+    toTeamId: (row.toTeamId as string | null) ?? null,
+    toTeamName: names.toTeamName,
+    reason: row.reason,
+    likelihood: row.likelihood,
+    status: row.status,
+    released,
+  };
+}
+
+/**
+ * A season's transfer window, both directions.
+ *
+ * Player and team NAMES are resolved here rather than in the panel. The slate
+ * is bounded by roster size and every row needs three lookups; doing them in
+ * the Next layer would be an N+1 across the Convex boundary, which is the exact
+ * shape F2/F3 existed to remove.
+ */
+export const listTransfers = query({
+  args: { seasonId: v.id("seasons") },
+  returns: v.array(transferValidator),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("transferEvents")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+    if (rows.length === 0) return [];
+
+    const players = new Map<string, Doc<"players"> | null>();
+    const teams = new Map<string, Doc<"teams"> | null>();
+    for (const row of rows) {
+      if (!players.has(row.playerId as string)) {
+        players.set(row.playerId as string, await ctx.db.get(row.playerId));
+      }
+      for (const teamId of [row.fromTeamId, row.toTeamId]) {
+        if (teamId && !teams.has(teamId as string)) {
+          teams.set(teamId as string, await ctx.db.get(teamId));
+        }
+      }
+    }
+
+    // One pass to learn who has been released, so `released` costs no extra
+    // reads per offer.
+    const releasedPlayers = new Set(
+      rows
+        .filter((row) => row.direction === "out" && row.status === "accepted")
+        .map((row) => row.playerId as string),
+    );
+
+    return rows.map((row) => {
+      const player = players.get(row.playerId as string) ?? null;
+      const from = teams.get(row.fromTeamId as string) ?? null;
+      const to = row.toTeamId
+        ? (teams.get(row.toTeamId as string) ?? null)
+        : null;
+      return toTransferDto(
+        row,
+        {
+          playerName: player?.name ?? "Unknown player",
+          position: player?.position ?? "ATH",
+          grade: player?.grade ?? null,
+          fromTeamName: from?.name ?? "Unknown team",
+          toTeamName: to ? to.name : null,
+        },
+        releasedPlayers.has(row.playerId as string),
+      );
+    });
+  },
+});
+
+/**
+ * Open the transfer window for a season.
+ *
+ * Idempotent on the season: an existing window is returned untouched. The slate
+ * is seeded per `(playerId, seasonId)`, so a retry would regenerate the same
+ * names anyway — but "same names" written twice is still two rows per decision,
+ * and a coach would be asked about the same player repeatedly.
+ *
+ * Not gated on the offseason phase. A commissioner who opens the window early
+ * has made a scheduling choice; the phase machine already governs when the
+ * panel is reachable, and enforcing it twice would mean a phase advance could
+ * strand a half-generated window.
+ */
+export const generateTransferWindow = internalMutation({
+  args: { seasonId: v.id("seasons"), actorUserId: v.string() },
+  returns: v.object({
+    outbound: v.number(),
+    offers: v.number(),
+    alreadyExisted: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("transferEvents")
+      .withIndex("by_seasonId", (q) => q.eq("seasonId", args.seasonId))
+      .collect();
+    if (existing.length > 0) {
+      return {
+        outbound: existing.filter((r) => r.direction === "out").length,
+        offers: existing.filter((r) => r.direction === "in").length,
+        alreadyExisted: true,
+      };
+    }
+
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+
+    const configRow = await ctx.db
+      .query("dynastyConfig")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .first();
+    const config = resolveDynastyConfig(configRow);
+
+    const teams = await ctx.db
+      .query("teams")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", season.leagueId))
+      .collect();
+
+    /*
+     * Ratings come from the season's own `playerAttributes` snapshot, which the
+     * rollover's `attributes_copied` stage writes. Reading the live player row
+     * instead would rate everyone on last year's form, so a junior who
+     * developed would still look like the freshman he was.
+     */
+    const overallByPlayer = new Map<string, number>();
+    for (const row of await ctx.db
+      .query("playerAttributes")
+      // Prefix of `by_seasonId_positionGroup` — one indexed range for the
+      // season rather than a scan of every snapshot ever ingested.
+      .withIndex("by_seasonId_positionGroup", (q) =>
+        q.eq("seasonId", args.seasonId),
+      )
+      .collect()) {
+      if (row.weightedOverall !== null) {
+        overallByPlayer.set(row.playerId as string, row.weightedOverall);
+      }
+    }
+
+    const candidates: TransferCandidate[] = [];
+    const rosterCount = new Map<string, number>();
+    const positionCount = new Map<string, number>();
+    for (const team of teams) {
+      const assignments = await ctx.db
+        .query("rosterAssignments")
+        .withIndex("by_seasonId_teamId", (q) =>
+          q.eq("seasonId", args.seasonId).eq("teamId", team._id),
+        )
+        .collect();
+      const active = assignments.filter((row) => row.status === "active");
+      rosterCount.set(team._id as string, active.length);
+
+      for (const assignment of active) {
+        const player = await ctx.db.get(assignment.playerId);
+        if (!player) continue;
+        const key = `${team._id as string}:${assignment.positionSlot}`;
+        positionCount.set(key, (positionCount.get(key) ?? 0) + 1);
+        candidates.push({
+          playerId: assignment.playerId as string,
+          teamId: team._id as string,
+          position: assignment.positionSlot,
+          depthRank: assignment.depthRank,
+          overall: overallByPlayer.get(assignment.playerId as string) ?? 60,
+          grade: player.grade ?? null,
+          status: player.status,
+        });
+      }
+    }
+
+    const outbound = generateTransferSlate({
+      seasonId: args.seasonId as string,
+      candidates,
+      volume: config.transferVolume,
+      enabled: config.transfersEnabled,
+    });
+
+    const offers = matchTransfersIn({
+      seasonId: args.seasonId as string,
+      outbound,
+      destinationsFor: (transfer) =>
+        teams.map((team) => ({
+          teamId: team._id as string,
+          rosterCount: rosterCount.get(team._id as string) ?? 0,
+          countAtPosition:
+            positionCount.get(`${team._id as string}:${transfer.position}`) ?? 0,
+        })),
+    });
+
+    const now = new Date().toISOString();
+    const byPlayer = new Map(outbound.map((t) => [t.playerId, t]));
+    for (const transfer of outbound) {
+      await ctx.db.insert("transferEvents", {
+        leagueId: season.leagueId,
+        seasonId: args.seasonId,
+        playerId: transfer.playerId as Id<"players">,
+        direction: "out",
+        fromTeamId: transfer.fromTeamId as Id<"teams">,
+        toTeamId: null,
+        reason: transfer.reason,
+        likelihood: transfer.likelihood,
+        status: "pending",
+        createdAt: now,
+      });
+    }
+    for (const offer of offers) {
+      const source = byPlayer.get(offer.playerId);
+      await ctx.db.insert("transferEvents", {
+        leagueId: season.leagueId,
+        seasonId: args.seasonId,
+        playerId: offer.playerId as Id<"players">,
+        direction: "in",
+        fromTeamId: offer.fromTeamId as Id<"teams">,
+        toTeamId: offer.toTeamId as Id<"teams">,
+        reason: source?.reason ?? "opportunity",
+        likelihood: source?.likelihood ?? 0,
+        status: "pending",
+        createdAt: now,
+      });
+    }
+
+    return {
+      outbound: outbound.length,
+      offers: offers.length,
+      alreadyExisted: false,
+    };
+  },
+});
+
+/**
+ * Accept or reject one transfer decision.
+ *
+ * `teamId` is the team acting, and it must be the side that owns the row — the
+ * losing coach for an `out`, the destination for an `in`. Passing it explicitly
+ * rather than deriving it from the row is the multiplayer hook the roadmap
+ * requires: the Next action authorizes the caller against this id, and in Wave
+ * 5 the same mutation serves a coach scoped to one team.
+ *
+ * Resolution cascades. Retaining a player withdraws every offer for him;
+ * signing him withdraws every rival offer. Both happen here rather than in the
+ * action so a coach cannot be shown an offer that a concurrent decision has
+ * already invalidated.
+ */
+export const resolveTransfer = internalMutation({
+  args: {
+    transferId: v.id("transferEvents"),
+    teamId: v.id("teams"),
+    decision: v.string(),
+    actorUserId: v.string(),
+  },
+  returns: v.object({
+    status: v.string(),
+    moved: v.boolean(),
+    withdrawn: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    if (args.decision !== "accept" && args.decision !== "reject") {
+      throw new Error("invalid_decision");
+    }
+    const transfer = await ctx.db.get(args.transferId);
+    if (!transfer) throw new Error("transfer_not_found");
+    if (transfer.status !== "pending") throw new Error("transfer_not_pending");
+
+    const owningTeamId =
+      transfer.direction === "out" ? transfer.fromTeamId : transfer.toTeamId;
+    if (!owningTeamId || owningTeamId !== args.teamId) {
+      throw new Error("transfer_team_mismatch");
+    }
+
+    const now = new Date().toISOString();
+    const siblings = (
+      await ctx.db
+        .query("transferEvents")
+        .withIndex("by_playerId", (q) => q.eq("playerId", transfer.playerId))
+        .collect()
+    ).filter(
+      (row) => row.seasonId === transfer.seasonId && row._id !== transfer._id,
+    );
+
+    async function withdraw(rows: TransferDoc[]): Promise<number> {
+      let count = 0;
+      for (const row of rows) {
+        if (row.status !== "pending") continue;
+        await ctx.db.patch(row._id, {
+          status: "withdrawn",
+          resolvedAt: now,
+          resolvedBy: args.actorUserId,
+        });
+        count += 1;
+      }
+      return count;
+    }
+
+    const player = await ctx.db.get(transfer.playerId);
+    const fromTeam = await ctx.db.get(transfer.fromTeamId);
+
+    /* ── The losing coach's decision ───────────────────────────────────── */
+    if (transfer.direction === "out") {
+      const status = args.decision === "accept" ? "accepted" : "rejected";
+      await ctx.db.patch(transfer._id, {
+        status,
+        resolvedAt: now,
+        resolvedBy: args.actorUserId,
+      });
+
+      if (status === "rejected") {
+        // Retained. Every offer for him dies with the decision.
+        const withdrawn = await withdraw(
+          siblings.filter((row) => row.direction === "in"),
+        );
+        await emitDynastyEvent(ctx, {
+          leagueId: transfer.leagueId,
+          seasonId: transfer.seasonId,
+          teamId: transfer.fromTeamId,
+          playerId: transfer.playerId,
+          dedupeKey: transferResolvedDedupeKey(transfer._id as string),
+          narrative: {
+            type: "transfer_retained",
+            playerName: player?.name ?? "A player",
+            teamName: fromTeam?.name ?? "The program",
+            position: player?.position ?? "ATH",
+          },
+        });
+        return { status, moved: false, withdrawn };
+      }
+
+      /*
+       * Released. No event yet — nothing has happened to any roster, and a
+       * feed entry here would announce a move that may never occur.
+       */
+      return { status, moved: false, withdrawn: 0 };
+    }
+
+    /* ── A destination coach's decision ────────────────────────────────── */
+    const outRow = siblings.find((row) => row.direction === "out");
+    if (args.decision === "reject") {
+      await ctx.db.patch(transfer._id, {
+        status: "rejected",
+        resolvedAt: now,
+        resolvedBy: args.actorUserId,
+      });
+      return { status: "rejected", moved: false, withdrawn: 0 };
+    }
+
+    /*
+     * A destination cannot sign a player his own coach has not released. The
+     * check is here rather than only in the UI because the two decisions are
+     * made by different people and can race.
+     */
+    if (!outRow || outRow.status !== "accepted") {
+      throw new Error("transfer_not_released");
+    }
+    if (!player) throw new Error("player_not_found");
+
+    const toTeam = await ctx.db.get(args.teamId);
+    if (!toTeam) throw new Error("team_not_found");
+    if (toTeam.leagueId !== transfer.leagueId) {
+      throw new Error("team_league_mismatch");
+    }
+    const season = await ctx.db.get(transfer.seasonId);
+    if (!season) throw new Error("season_not_found");
+    if (season.rosterLocked === true) throw new Error("season_locked");
+
+    /*
+     * Re-checked at acceptance, not only at generation. The offer was made
+     * against a roster count that recruiting, the draft or another transfer
+     * may have moved since.
+     */
+    const destinationRoster = await ctx.db
+      .query("rosterAssignments")
+      .withIndex("by_seasonId_teamId", (q) =>
+        q.eq("seasonId", transfer.seasonId).eq("teamId", args.teamId),
+      )
+      .collect();
+    const activeCount = destinationRoster.filter(
+      (row) => row.status === "active",
+    ).length;
+    if (activeCount >= MAX_TARGET_ROSTER_SIZE) {
+      throw new Error("roster_full");
+    }
+
+    // Move him: player row, roster assignment, depth chart.
+    const assignments = (
+      await ctx.db
+        .query("rosterAssignments")
+        .withIndex("by_playerId", (q) => q.eq("playerId", transfer.playerId))
+        .collect()
+    ).filter((row) => row.seasonId === transfer.seasonId);
+    for (const row of assignments) {
+      await ctx.db.delete(row._id);
+    }
+
+    const oldDepth = (
+      await ctx.db
+        .query("depthChartEntries")
+        .withIndex("by_team_season", (q) =>
+          q
+            .eq("teamId", transfer.fromTeamId)
+            .eq("seasonId", transfer.seasonId),
+        )
+        .collect()
+    ).filter((row) => row.playerId === transfer.playerId);
+    for (const row of oldDepth) {
+      await ctx.db.delete(row._id);
+    }
+
+    await ctx.db.patch(transfer.playerId, { teamId: args.teamId });
+
+    const slot = player.position;
+    const depthRank =
+      destinationRoster
+        .filter((row) => row.status === "active" && row.positionSlot === slot)
+        .reduce((max, row) => Math.max(max, row.depthRank), 0) + 1;
+    await ctx.db.insert("rosterAssignments", {
+      seasonId: transfer.seasonId,
+      teamId: args.teamId,
+      playerId: transfer.playerId,
+      leagueId: transfer.leagueId,
+      depthRank,
+      positionSlot: slot,
+      status: "active",
+      assignedAt: now,
+      assignedBy: args.actorUserId,
+    });
+
+    await ctx.db.patch(transfer._id, {
+      status: "accepted",
+      resolvedAt: now,
+      resolvedBy: args.actorUserId,
+    });
+    const withdrawn = await withdraw(
+      siblings.filter((row) => row.direction === "in"),
+    );
+
+    await ctx.db.insert("rosterAuditLog", {
+      leagueId: transfer.leagueId,
+      teamId: args.teamId,
+      seasonId: transfer.seasonId,
+      actorUserId: args.actorUserId,
+      action: "transfer_in",
+      beforeJson: JSON.stringify({ teamId: transfer.fromTeamId as string }),
+      afterJson: JSON.stringify({
+        teamId: args.teamId as string,
+        playerId: transfer.playerId as string,
+        transferId: transfer._id as string,
+      }),
+      createdAt: now,
+    });
+
+    await emitDynastyEvent(ctx, {
+      leagueId: transfer.leagueId,
+      seasonId: transfer.seasonId,
+      teamId: args.teamId,
+      playerId: transfer.playerId,
+      dedupeKey: transferResolvedDedupeKey(transfer._id as string),
+      narrative: {
+        type: "transfer_completed",
+        playerName: player.name,
+        fromTeamName: fromTeam?.name ?? "another program",
+        toTeamName: toTeam.name,
+        position: player.position,
+      },
+    });
+
+    return { status: "accepted", moved: true, withdrawn };
   },
 });
