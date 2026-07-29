@@ -120,6 +120,54 @@ export const offseasonTables = {
     .index("by_leagueId", ["leagueId"]),
 
   /*
+   * Offseason transfers (Dynasty Mode B4). One row per DECISION, not per move.
+   *
+   * A player who wants out produces one `out` row (his current coach's decision:
+   * retain him or let him go) and up to `OFFERS_PER_TRANSFER` `in` rows (each
+   * destination coach's decision). They share a `playerId`, which is what lets
+   * one resolution withdraw the others — retaining a player kills every offer
+   * for him, and the first destination to accept kills its rivals.
+   *
+   * ## Why the direction is stored rather than derived
+   *
+   * `fromTeamId` and `toTeamId` would nearly determine it: an `out` row has no
+   * destination yet. But "nearly" is the problem — the two rows for the same
+   * move would then be distinguished by a null, and every query that wanted one
+   * side would encode that trick. Storing the direction makes
+   * `by_seasonId_status` usable for both panels without a second index.
+   *
+   * `likelihood` is kept after generation even though it is only read once, so
+   * a coach can see how close a call it was and so a slate can be audited
+   * against `transferOutLikelihood` without re-deriving depth charts that have
+   * since changed.
+   */
+  transferEvents: defineTable({
+    leagueId: v.id("leagues"),
+    /** The UPCOMING season this window belongs to. */
+    seasonId: v.id("seasons"),
+    playerId: v.id("players"),
+    /** "out" | "in" — see the note above. */
+    direction: v.string(),
+    /** The program losing him. Always set: transfers are conserved. */
+    fromTeamId: v.id("teams"),
+    /** The program offering a spot. Null on the `out` row. */
+    toTeamId: v.union(v.id("teams"), v.null()),
+    /** "buried" | "role" | "opportunity" — the argument the coach answers. */
+    reason: v.string(),
+    /** 0–1 chance that produced this row, kept for audit. */
+    likelihood: v.number(),
+    /** "pending" | "accepted" | "rejected" | "withdrawn". */
+    status: v.string(),
+    resolvedAt: v.optional(v.string()),
+    resolvedBy: v.optional(v.string()),
+    createdAt: v.string(),
+  })
+    .index("by_seasonId", ["seasonId"])
+    .index("by_seasonId_status", ["seasonId", "status"])
+    .index("by_playerId", ["playerId"])
+    .index("by_leagueId", ["leagueId"]),
+
+  /*
    * Offseason snake draft (WSM-000233). One draft per target season; order is
    * reverse final standings. Writes are internalMutation only.
    */

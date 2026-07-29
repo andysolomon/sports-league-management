@@ -3,7 +3,12 @@ import { describe, it, expect } from "vitest";
 import { convexTest } from "convex-test";
 import schema from "../schema";
 import { api, internal } from "../_generated/api";
-import { OFFSEASON_PHASES, phaseGate } from "../lib/offseasonPhases";
+import {
+  INITIAL_OFFSEASON_PHASE,
+  OFFSEASON_PHASES,
+  nextPhase,
+  phaseGate,
+} from "../lib/offseasonPhases";
 import {
   OFFSEASON_PHASES as NEXT_PHASES,
   phaseGate as nextPhaseGate,
@@ -146,19 +151,36 @@ describe("advanceOffseasonPhase", () => {
   ) =>
     t.mutation(internal.dynasty.advanceOffseasonPhase, {
       seasonId,
-      // Defaults are the FIRST advance a fresh offseason can make. B3 inserted
-      // `recruiting` ahead of `draft`, so that is now recruiting → draft.
-      expectedPhase: args.expectedPhase ?? "recruiting",
-      to: args.to ?? "draft",
+      /*
+       * Defaults are the FIRST advance a fresh offseason can make, DERIVED
+       * from the machine rather than named. Slices keep inserting phases here
+       * (B3 added recruiting, B4 added transfers), and a hard-coded pair has
+       * to be edited every time — which is churn on a test that is not about
+       * which phases exist.
+       */
+      expectedPhase: args.expectedPhase ?? INITIAL_OFFSEASON_PHASE,
+      to: args.to ?? (nextPhase(INITIAL_OFFSEASON_PHASE) as string),
       ownerId: args.ownerId ?? "owner_a",
       actorUserId: ACTOR,
       draftStatus: args.draftStatus ?? "none",
     });
 
-  /** An offseason moved forward to the draft phase, for the draft-only gates. */
+  /**
+   * An offseason walked forward to the draft phase, for the draft-only gates.
+   *
+   * Walks the machine rather than hard-coding the hops, so inserting a phase
+   * ahead of `draft` (B3 added recruiting, B4 added transfers) does not need
+   * this helper edited again.
+   */
   async function atDraft() {
     const { t, seasonId } = await opened();
-    await advance(t, seasonId as never);
+    const target = OFFSEASON_PHASES.indexOf("draft");
+    for (let i = OFFSEASON_PHASES.indexOf(INITIAL_OFFSEASON_PHASE); i < target; i++) {
+      await advance(t, seasonId as never, {
+        expectedPhase: OFFSEASON_PHASES[i],
+        to: OFFSEASON_PHASES[i + 1],
+      });
+    }
     return { t, seasonId };
   }
 
@@ -166,7 +188,7 @@ describe("advanceOffseasonPhase", () => {
     const { t, seasonId } = await opened();
     const result = await advance(t, seasonId as never);
     expect(result.changed).toBe(true);
-    expect(result.offseason.phase).toBe("draft");
+    expect(result.offseason.phase).toBe("transfers");
     expect(result.offseason.completedPhases).toEqual([
       "rollover",
       "recruiting",
@@ -182,7 +204,7 @@ describe("advanceOffseasonPhase", () => {
     expect(second.offseason.completedPhases).toEqual(
       first.offseason.completedPhases,
     );
-    expect(second.offseason.phase).toBe("draft");
+    expect(second.offseason.phase).toBe("transfers");
   });
 
   it("rejects a backward request as phase_regression", async () => {
@@ -216,7 +238,7 @@ describe("advanceOffseasonPhase", () => {
     );
 
     const final = await t.query(api.dynasty.getOffseason, { seasonId });
-    expect(final?.phase).toBe("draft");
+    expect(final?.phase).toBe("transfers");
     expect(final?.completedPhases).toEqual(["rollover", "recruiting"]);
   });
 
@@ -240,7 +262,7 @@ describe("advanceOffseasonPhase", () => {
     const { t, seasonId } = await opened();
     const result = await advance(t, seasonId as never);
     expect(result.changed).toBe(true);
-    expect(result.offseason.phase).toBe("draft");
+    expect(result.offseason.phase).toBe("transfers");
   });
 
   it("reports an invalid request as invalid rather than as a conflict", async () => {
@@ -269,6 +291,7 @@ describe("advanceOffseasonPhase", () => {
     expect(final?.completedPhases).toEqual([
       "rollover",
       "recruiting",
+      "transfers",
       "draft",
       "free_agency",
     ]);

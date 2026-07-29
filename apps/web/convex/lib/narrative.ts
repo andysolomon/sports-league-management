@@ -52,6 +52,19 @@ export type NarrativeInput =
       label: string;
       gamesOut: number;
       week: number | null;
+    }
+  | {
+      type: "transfer_completed";
+      playerName: string;
+      fromTeamName: string;
+      toTeamName: string;
+      position: string;
+    }
+  | {
+      type: "transfer_retained";
+      playerName: string;
+      teamName: string;
+      position: string;
     };
 
 export type NarrativeEventType = NarrativeInput["type"];
@@ -89,6 +102,14 @@ export function renderHeadline(input: NarrativeInput): string {
           : `and is out ${input.gamesOut} game${input.gamesOut === 1 ? "" : "s"}`;
       return `${weekPrefix(input.week)}${input.teamName}'s ${input.playerName} was hurt ${duration}`;
     }
+    case "transfer_completed": {
+      return `${input.playerName} (${input.position}) transfers from ${input.fromTeamName} to ${input.toTeamName}`;
+    }
+    case "transfer_retained": {
+      // The non-move is news too — a program talking a player out of leaving
+      // is exactly the kind of thing a dynasty should remember.
+      return `${input.teamName} keeps ${input.playerName} (${input.position})`;
+    }
     default: {
       // Exhaustiveness guard: adding a NarrativeInput variant without a case
       // here fails `tsc`, so a new event type cannot ship copy-less.
@@ -109,6 +130,11 @@ export function defaultSeverity(type: NarrativeEventType): EventSeverity {
     case "player_injured":
       // A knock is background; anything costing games is worth surfacing.
       return "info";
+    case "transfer_completed":
+      // A roster changing hands between programs is the offseason's headline.
+      return "notable";
+    case "transfer_retained":
+      return "info";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;
@@ -126,6 +152,9 @@ export function categoryFor(type: NarrativeEventType): EventCategory {
       return "program";
     case "player_injured":
       return "game";
+    case "transfer_completed":
+    case "transfer_retained":
+      return "offseason";
     default: {
       const _exhaustive: never = type;
       void _exhaustive;
@@ -147,4 +176,16 @@ export function gameFinalDedupeKey(fixtureId: string): string {
 
 export function seasonCompletedDedupeKey(seasonId: string): string {
   return `season_completed:${seasonId}`;
+}
+
+/*
+ * Keyed on the TRANSFER ROW, not on the player and season.
+ *
+ * A player can be offered to several programs and can be looked at again in a
+ * later window; the happening being recorded is "this decision resolved this
+ * way". Keying on the player would make a retained-then-released player
+ * overwrite his own history, which is precisely the story worth keeping.
+ */
+export function transferResolvedDedupeKey(transferId: string): string {
+  return `transfer_resolved:${transferId}`;
 }

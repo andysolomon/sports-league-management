@@ -176,6 +176,18 @@ async function cascadeDeleteLeague(
     await ctx.db.delete(row._id);
     deleted += 1;
   }
+  // Transfer windows (B4). A leaked row is worse than stale: the window is
+  // generated once per season and never regenerated, so an old row would make
+  // a later run's panel offer a player who belongs to a team that no longer
+  // exists — and `resolveTransfer` would then move a ghost.
+  const transferRows = (await ctx.db
+    .query("transferEvents")
+    .withIndex("by_leagueId", (q: any) => q.eq("leagueId", leagueId))
+    .collect()) as Array<{ _id: Id<"transferEvents"> }>;
+  for (const row of transferRows) {
+    await ctx.db.delete(row._id);
+    deleted += 1;
+  }
   // Dynasty feed (F4) — league-scoped, so cleared once rather than per season.
   const events = (await ctx.db
     .query("dynastyEvents")
@@ -701,5 +713,78 @@ export const seedProspectClass = internalMutation({
       seasonId: args.seasonId,
       prospects,
     });
+  },
+});
+
+/*
+ * Stack a team with buried players so a transfer window has somebody in it (B4).
+ *
+ * The slate is a seeded roll against `transferOutLikelihood`, which is driven
+ * by depth rank and rating. A realistic fixture roster would make the spec
+ * depend on the RNG landing well; six high-rated juniors behind one starter
+ * makes it a certainty without touching the production path — the window is
+ * still opened by the real mutation, through the real button.
+ */
+export const seedTransferCandidates = internalMutation({
+  args: {
+    seasonId: v.id("seasons"),
+    teamId: v.id("teams"),
+    count: v.optional(v.number()),
+  },
+  returns: v.object({ created: v.number() }),
+  handler: async (ctx, args) => {
+    assertSeedEnabled();
+    const season = await ctx.db.get(args.seasonId);
+    if (!season) throw new Error("season_not_found");
+    const team = await ctx.db.get(args.teamId);
+    if (!team) throw new Error("team_not_found");
+
+    const count = Math.max(1, Math.min(args.count ?? 6, 20));
+    const now = new Date().toISOString();
+    let created = 0;
+    for (let i = 0; i < count; i++) {
+      const playerId = await ctx.db.insert("players", {
+        name: `E2E Transfer ${i + 1}`,
+        leagueId: season.leagueId,
+        teamId: args.teamId,
+        position: "WR",
+        positionGroup: null,
+        jerseyNumber: null,
+        dateOfBirth: null,
+        status: "active",
+        headshotUrl: null,
+        experienceYears: null,
+        grade: 11,
+        squad: "Varsity",
+        hometown: null,
+        synthetic: true,
+      });
+      await ctx.db.insert("rosterAssignments", {
+        seasonId: args.seasonId,
+        teamId: args.teamId,
+        playerId,
+        leagueId: season.leagueId,
+        // Rank 1 is the starter; everyone behind him is a transfer candidate.
+        depthRank: i + 1,
+        positionSlot: "WR",
+        status: "active",
+        assignedAt: now,
+        assignedBy: SEED_ACTOR,
+      });
+      await ctx.db.insert("playerAttributes", {
+        playerId,
+        seasonId: args.seasonId,
+        positionGroup: "WR",
+        attributesJson: JSON.stringify({ SPD: 95 }),
+        pffSourceJson: null,
+        maddenSourceJson: null,
+        pffWeight: 0,
+        maddenWeight: 0,
+        weightedOverall: 95,
+        ingestedAt: now,
+      });
+      created += 1;
+    }
+    return { created };
   },
 });

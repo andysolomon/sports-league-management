@@ -236,7 +236,13 @@ type AllowedPublicDynastyReads =
    * `returns:` validator — see `prospectsHideTruth.test.ts`, which is the test
    * that makes this line reviewable rather than trusting.
    */
-  | "listProspects";
+  | "listProspects"
+  /*
+   * B4. Public because the transfer window is public information — every
+   * program can see who is looking. What is NOT public is acting on it:
+   * `resolveTransfer` is an internalMutation behind a per-`teamId` gate.
+   */
+  | "listTransfers";
 type AllowedPublicSimReads =
   | "moduleStatus"
   | "listRivalries"

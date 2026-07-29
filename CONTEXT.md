@@ -81,8 +81,12 @@ The single Season currently in progress for a League and the primary seasonal de
 _Avoid_: Viewed season, selected year
 
 **Offseason Hub**:
-The phase-machine surface for one upcoming Season at `/dashboard/seasons/[seasonId]/offseason`, where an administrator moves the league through Rollover, Recruiting, Draft, Free agency and Activate.
+The phase-machine surface for one upcoming Season at `/dashboard/seasons/[seasonId]/offseason`, where an administrator moves the league through Rollover, Recruiting, Transfers, Draft, Free agency and Activate.
 _Avoid_: Offseason page, preseason, transfer window
+
+**Transfer Window**:
+The Offseason Hub list of players who have asked to leave a Team and the offers other Teams have made for them, for one upcoming Season. A Transfer moves a player between Teams in the same League; nobody arrives from outside it.
+_Avoid_: Portal, trade, free agency, waiver
 
 **Prospect**:
 An incoming ninth-grader on the Recruiting class for one upcoming Season, shown as a projected range rather than a rating until a Team signs him. Scouting narrows the range and never removes it.
@@ -116,6 +120,8 @@ _Avoid_: Playbook, formation, strategy, system
 - A Team has at most one **Scheme** per Season, set from **Team Home** because a Scheme changes only that Team's own games
 - An upcoming **Season** has at most one recruiting class, and every **Prospect** in it belongs to exactly one Team once signed
 - A **Prospect** is scouted and signed from the **Offseason Hub**, because the class is shared by the whole League rather than owned by one Team
+- A **Transfer Window** entry needs two decisions: the Team losing the player releases or keeps him, and a Team offering a spot signs or passes
+- A **Transfer** never changes the number of players in a League, only which Team each belongs to
 - **Account Settings** contains cross-league **Import** and **Account Billing**
 - A successful **Import** may set the imported League as the **Active League** and offer navigation to its **League Home**
 - The **League Directory** provides access to **Discover**

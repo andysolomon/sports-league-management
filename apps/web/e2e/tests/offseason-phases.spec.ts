@@ -113,7 +113,7 @@ test.describe("Offseason phase machine (B1)", () => {
 
     await page.getByTestId("offseason-advance").click();
     await expect(page.getByTestId("offseason-phase-message")).toContainText(
-      "Draft",
+      "Transfers",
       { timeout: 30_000 },
     );
 
@@ -121,7 +121,7 @@ test.describe("Offseason phase machine (B1)", () => {
     await page.reload();
     await expect(page.getByTestId("offseason-phase-stepper")).toHaveAttribute(
       "data-phase",
-      "draft",
+      "transfers",
     );
     await expect(
       page.getByTestId("offseason-phase-recruiting"),
