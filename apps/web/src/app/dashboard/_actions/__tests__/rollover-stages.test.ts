@@ -76,6 +76,15 @@ describe("rollover stage order", () => {
     );
   });
 
+  it("inducts the Hall of Fame class after season mechanics and before completion", () => {
+    expect(clientStages.indexOf("hall_of_fame_inducted")).toBeGreaterThan(
+      clientStages.indexOf("prospects_generated"),
+    );
+    expect(clientStages.indexOf("hall_of_fame_inducted")).toBeLessThan(
+      clientStages.indexOf("completed"),
+    );
+  });
+
   it("keeps `completed` terminal", () => {
     expect(clientStages.at(-1)).toBe("completed");
     expect(serverStages.at(-1)).toBe("completed");

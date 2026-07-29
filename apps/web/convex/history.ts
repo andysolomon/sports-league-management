@@ -1,6 +1,6 @@
 import { v, type Infer } from "convex/values";
 import { internalMutation, query, type QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { DYNASTY_MODULES, moduleStatusValidator } from "./lib/moduleStatus";
 import {
   RECORD_CATEGORY_LABELS,
@@ -14,6 +14,15 @@ import { computeWeeklyPollForSeason } from "./lib/weeklyPolls";
 import type { PowerRanking } from "./lib/powerRankings";
 import { finalizeSeasonRecapForSeason } from "./lib/seasonRecaps";
 import type { StorylineBlock } from "./lib/recap";
+import {
+  parseCareerSeasonTotals,
+  parseCareerStatLine,
+} from "./lib/careerTotals";
+import {
+  eligibleClass,
+  type HallOfFameCandidate,
+} from "./lib/hallOfFame";
+import { renderHallOfFameCitation } from "./lib/narrative";
 
 /*
  * Dynasty Mode — history, awards and narrative (Epic D).
@@ -488,5 +497,315 @@ export const listCoachAwards = query({
       .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
       .collect();
     return hydrateAwards(ctx, rows);
+  },
+});
+
+const hallOfFameWriteResultValidator = v.object({
+  classLabel: v.union(v.string(), v.null()),
+  inducted: v.number(),
+});
+type HallOfFameWriteResultDto = Infer<
+  typeof hallOfFameWriteResultValidator
+>;
+
+type HydratedHofCandidate = HallOfFameCandidate & {
+  recipientName: string;
+  careerProduction: number;
+  careerWins: number;
+};
+
+function careerProduction(totals: Record<string, Record<string, number>>) {
+  return Object.values(totals).reduce(
+    (sum, group) =>
+      sum +
+      Object.values(group).reduce(
+        (groupSum, value) =>
+          groupSum +
+          (Number.isFinite(value) ? Math.max(0, value) : 0),
+        0,
+      ),
+    0,
+  );
+}
+
+/**
+ * Persist one retry-safe Hall of Fame class during rollover.
+ *
+ * Convex mutations are serializable: concurrent attempts that read the same
+ * empty season class conflict and retry, at which point this mutation returns
+ * the already-persisted rows.
+ */
+export const inductHallOfFameClass = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    inductedSeasonId: v.id("seasons"),
+  },
+  returns: hallOfFameWriteResultValidator,
+  handler: async (ctx, args): Promise<HallOfFameWriteResultDto> => {
+    const inductedSeason = await ctx.db.get(args.inductedSeasonId);
+    if (!inductedSeason || inductedSeason.leagueId !== args.leagueId) {
+      throw new Error("hall_of_fame_season_scope_mismatch");
+    }
+
+    const existingClass = (
+      await ctx.db
+        .query("hallOfFame")
+        .withIndex("by_inductedSeasonId", (q) =>
+          q.eq("inductedSeasonId", args.inductedSeasonId),
+        )
+        .collect()
+    ).filter((row) => row.leagueId === args.leagueId);
+    if (existingClass.length > 0) {
+      return {
+        classLabel: existingClass[0]?.classLabel ?? null,
+        inducted: existingClass.length,
+      };
+    }
+
+    const [seasons, careerRows, awards, players, coaches, priorInductees] =
+      await Promise.all([
+        ctx.db
+          .query("seasons")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+          .collect(),
+        ctx.db
+          .query("playerCareerTotals")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+          .collect(),
+        ctx.db
+          .query("awards")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+          .collect(),
+        ctx.db
+          .query("players")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+          .collect(),
+        ctx.db
+          .query("coaches")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+          .collect(),
+        ctx.db
+          .query("hallOfFame")
+          .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+          .collect(),
+      ]);
+    const completedSeasons = seasons
+      .filter((season) => season.status === "completed")
+      .sort((a, b) => a._creationTime - b._creationTime);
+    const inductionSeasonIndex = completedSeasons.findIndex(
+      (season) => season._id === args.inductedSeasonId,
+    );
+    if (inductionSeasonIndex < 0) {
+      throw new Error("hall_of_fame_season_not_completed");
+    }
+    const seasonIndex = new Map(
+      completedSeasons.map((season, index) => [season._id as string, index]),
+    );
+    const playerNames = new Map(
+      players.map((player) => [player._id as string, player.name]),
+    );
+    const playerAccolades = new Map<string, number>();
+    const coachAccolades = new Map<string, number>();
+    for (const award of awards) {
+      if (award.playerId) {
+        playerAccolades.set(
+          award.playerId as string,
+          (playerAccolades.get(award.playerId as string) ?? 0) + 1,
+        );
+      }
+      if (award.coachId) {
+        coachAccolades.set(
+          award.coachId as string,
+          (coachAccolades.get(award.coachId as string) ?? 0) + 1,
+        );
+      }
+    }
+
+    const candidates: HydratedHofCandidate[] = [];
+    for (const row of careerRows) {
+      const seasonTotals = parseCareerSeasonTotals(row.seasonTotalsJson);
+      const playedSeasonIndexes = Object.keys(seasonTotals)
+        .map((seasonId) => seasonIndex.get(seasonId))
+        .filter((index): index is number => index !== undefined);
+      const production = careerProduction(
+        parseCareerStatLine(row.totalsJson),
+      );
+      candidates.push({
+        recipientId: row.playerId as string,
+        recipientName:
+          playerNames.get(row.playerId as string) ?? "Unknown player",
+        kind: "player",
+        seasonsPlayed: playedSeasonIndexes.length,
+        lastPlayedSeasonIndex:
+          playedSeasonIndexes.length > 0
+            ? Math.max(...playedSeasonIndexes)
+            : inductionSeasonIndex,
+        careerTotals: production,
+        careerProduction: production,
+        careerWins: 0,
+        accolades: playerAccolades.get(row.playerId as string) ?? 0,
+        championships: row.championshipSeasonIds?.length ?? 0,
+        peakOverall: row.peakOverall ?? 0,
+      });
+    }
+
+    const coachSeasonRows = (
+      await Promise.all(
+        completedSeasons.map((season) =>
+          ctx.db
+            .query("coachSeasons")
+            .withIndex("by_season_team", (q) =>
+              q.eq("seasonId", season._id),
+            )
+            .collect(),
+        ),
+      )
+    ).flat();
+    const coachSeasonsById = new Map<
+      string,
+      typeof coachSeasonRows
+    >();
+    for (const row of coachSeasonRows) {
+      const rows = coachSeasonsById.get(row.coachId as string) ?? [];
+      rows.push(row);
+      coachSeasonsById.set(row.coachId as string, rows);
+    }
+    for (const coach of coaches) {
+      const rows = coachSeasonsById.get(coach._id as string) ?? [];
+      const playedSeasonIndexes = rows
+        .map((row) => seasonIndex.get(row.seasonId as string))
+        .filter((index): index is number => index !== undefined);
+      const wins = rows.reduce((sum, row) => sum + Math.max(0, row.wins), 0);
+      candidates.push({
+        recipientId: coach._id as string,
+        recipientName: coach.displayName,
+        kind: "coach",
+        seasonsPlayed: playedSeasonIndexes.length,
+        lastPlayedSeasonIndex:
+          playedSeasonIndexes.length > 0
+            ? Math.max(...playedSeasonIndexes)
+            : inductionSeasonIndex,
+        careerTotals: wins * 100,
+        careerProduction: 0,
+        careerWins: wins,
+        accolades: coachAccolades.get(coach._id as string) ?? 0,
+        championships: rows.filter((row) =>
+          row.playoffResult?.toLowerCase().includes("champion"),
+        ).length,
+        peakOverall: coach.prestige,
+      });
+    }
+
+    const inductedRecipientIds = new Set(
+      priorInductees.flatMap((row) =>
+        row.playerId
+          ? [row.playerId as string]
+          : row.coachId
+            ? [row.coachId as string]
+            : [],
+      ),
+    );
+    const selected = eligibleClass(candidates, {
+      inductionSeasonIndex,
+      inductedRecipientIds,
+    });
+    const classLabel = `Hall of Fame Class of ${inductedSeason.name}`;
+    const inductedAt = new Date().toISOString();
+
+    for (const candidate of selected) {
+      await ctx.db.insert("hallOfFame", {
+        leagueId: args.leagueId,
+        playerId:
+          candidate.kind === "player"
+            ? (candidate.recipientId as Id<"players">)
+            : null,
+        coachId:
+          candidate.kind === "coach"
+            ? (candidate.recipientId as Id<"coaches">)
+            : null,
+        inductedSeasonId: args.inductedSeasonId,
+        classLabel,
+        citation: renderHallOfFameCitation(candidate),
+        score: candidate.score,
+        inductedAt,
+      });
+    }
+    return {
+      classLabel: selected.length > 0 ? classLabel : null,
+      inducted: selected.length,
+    };
+  },
+});
+
+const hallOfFameDtoValidator = v.object({
+  id: v.string(),
+  recipientType: v.union(v.literal("player"), v.literal("coach")),
+  recipientId: v.string(),
+  recipientName: v.string(),
+  inductedSeasonId: v.string(),
+  inductedSeasonName: v.string(),
+  classLabel: v.string(),
+  citation: v.string(),
+  score: v.number(),
+});
+type HallOfFameDto = Infer<typeof hallOfFameDtoValidator>;
+
+export const listHallOfFame = query({
+  args: { leagueId: v.id("leagues") },
+  returns: v.array(hallOfFameDtoValidator),
+  handler: async (ctx, args): Promise<HallOfFameDto[]> => {
+    const rows = await ctx.db
+      .query("hallOfFame")
+      .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+      .collect();
+    if (rows.length === 0) return [];
+    const [players, coaches, seasons] = await Promise.all([
+      ctx.db
+        .query("players")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+        .collect(),
+      ctx.db
+        .query("coaches")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+        .collect(),
+      ctx.db
+        .query("seasons")
+        .withIndex("by_leagueId", (q) => q.eq("leagueId", args.leagueId))
+        .collect(),
+    ]);
+    const playerNames = new Map(
+      players.map((row) => [row._id as string, row.name]),
+    );
+    const coachNames = new Map(
+      coaches.map((row) => [row._id as string, row.displayName]),
+    );
+    const seasonNames = new Map(
+      seasons.map((row) => [row._id as string, row.name]),
+    );
+    return rows
+      .map((row): HallOfFameDto => {
+        const recipientType = row.playerId ? "player" : "coach";
+        const recipientId = (row.playerId ?? row.coachId) as string;
+        return {
+          id: row._id,
+          recipientType,
+          recipientId,
+          recipientName: row.playerId
+            ? (playerNames.get(row.playerId as string) ?? "Unknown player")
+            : (coachNames.get(row.coachId as string) ?? "Unknown coach"),
+          inductedSeasonId: row.inductedSeasonId,
+          inductedSeasonName:
+            seasonNames.get(row.inductedSeasonId as string) ?? "Unknown season",
+          classLabel: row.classLabel,
+          citation: row.citation,
+          score: row.score,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.inductedSeasonName.localeCompare(a.inductedSeasonName) ||
+          b.score - a.score ||
+          a.recipientName.localeCompare(b.recipientName),
+      );
   },
 });

@@ -135,6 +135,10 @@ const getWeeklyPollRef = historyRef.query<WeeklyPollDto | null>(
 );
 const listSeasonRecapsRef =
   historyRef.query<SeasonRecapDto[]>("listSeasonRecaps");
+const listHallOfFameRef =
+  historyRef.query<HallOfFameDto[]>("listHallOfFame");
+const inductHallOfFameClassRef =
+  historyRef.mutation<HallOfFameWriteResult>("inductHallOfFameClass");
 const listDynastyEventsRef =
   sportsRef.query<DynastyEventDto[]>("listDynastyEvents");
 
@@ -274,6 +278,23 @@ export interface SeasonRecapDto {
     body: string;
     eventIds: string[];
   }>;
+}
+
+export interface HallOfFameDto {
+  id: string;
+  recipientType: "player" | "coach";
+  recipientId: string;
+  recipientName: string;
+  inductedSeasonId: string;
+  inductedSeasonName: string;
+  classLabel: string;
+  citation: string;
+  score: number;
+}
+
+export interface HallOfFameWriteResult {
+  classLabel: string | null;
+  inducted: number;
 }
 
 const refs = {
@@ -1342,6 +1363,21 @@ export async function listProgramRecords(
     leagueId,
     ...(teamId ? { teamId } : {}),
   });
+}
+
+export async function listHallOfFame(
+  leagueId: string,
+  orgContext: OrgContext,
+): Promise<HallOfFameDto[]> {
+  requireLeagueAccessLocal(leagueId, orgContext);
+  return queryConvex(listHallOfFameRef, { leagueId });
+}
+
+export async function inductHallOfFameClass(input: {
+  leagueId: string;
+  inductedSeasonId: string;
+}): Promise<HallOfFameWriteResult> {
+  return mutateConvex(inductHallOfFameClassRef, input);
 }
 
 export async function listSeasonAwards(

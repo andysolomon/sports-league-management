@@ -23,6 +23,7 @@ const {
   mockCreateProspectClass,
   mockGetDynastyConfig,
   mockListCoachesByLeague,
+  mockInductHallOfFameClass,
 } = vi.hoisted(() => ({
   mockAuth: vi.fn(),
   mockResolveOrgContext: vi.fn(),
@@ -46,6 +47,7 @@ const {
   mockCreateProspectClass: vi.fn(),
   mockGetDynastyConfig: vi.fn(),
   mockListCoachesByLeague: vi.fn(),
+  mockInductHallOfFameClass: vi.fn(),
 }));
 
 vi.mock("@clerk/nextjs/server", () => ({ auth: mockAuth }));
@@ -73,6 +75,7 @@ vi.mock("@/lib/data-api", () => ({
   createProspectClass: mockCreateProspectClass,
   getDynastyConfig: mockGetDynastyConfig,
   listCoachesByLeague: mockListCoachesByLeague,
+  inductHallOfFameClass: mockInductHallOfFameClass,
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -119,6 +122,10 @@ beforeEach(() => {
   mockGetLeagueOrgId.mockResolvedValue(ORG);
   mockResolveOrgRole.mockResolvedValue("admin");
   mockListCoachesByLeague.mockResolvedValue([]);
+  mockInductHallOfFameClass.mockResolvedValue({
+    classLabel: null,
+    inducted: 0,
+  });
   mockGetSeasons.mockResolvedValue([ACTIVE]);
   mockBeginSeasonRollover.mockResolvedValue({
     rolloverId: "rollover_1",
@@ -166,7 +173,9 @@ beforeEach(() => {
                     ? "freshmen_created"
                     : stage === "prospects_generated"
                       ? "injuries_healed"
-                      : "prospects_generated",
+                      : stage === "hall_of_fame_inducted"
+                        ? "prospects_generated"
+                        : "hall_of_fame_inducted",
         status: "in_progress",
         graduatedPlayerIds: [],
         advancedPlayerIds: ["p1"],
@@ -691,9 +700,9 @@ describe("startNextSeasonAction success path", () => {
   });
 
   /*
-   * Recruiting class generation (B3, #621). The stage runs LAST, after the
-   * backfill has already filled every roster — the class is talent on top of a
-   * playable floor, not a replacement for one.
+   * Recruiting class generation (B3, #621). The stage runs after the backfill
+   * has filled every roster — the class is talent on top of a playable floor,
+   * not a replacement for one.
    */
   describe("prospects_generated stage", () => {
     it("builds a class for the TARGET season and records the count", async () => {
@@ -765,6 +774,24 @@ describe("startNextSeasonAction success path", () => {
       const res = await startNextSeasonAction({ leagueId: LEAGUE });
 
       expect(mockCreateProspectClass).not.toHaveBeenCalled();
+      expect(res).toMatchObject({ ok: true });
+    });
+  });
+
+  describe("hall_of_fame_inducted stage", () => {
+    it("inducts against the completed source season before checkpointing", async () => {
+      const res = await startNextSeasonAction({ leagueId: LEAGUE });
+
+      expect(mockInductHallOfFameClass).toHaveBeenCalledWith({
+        leagueId: LEAGUE,
+        inductedSeasonId: ACTIVE.id,
+      });
+      expect(mockAdvanceSeasonRollover).toHaveBeenCalledWith({
+        rolloverId: "rollover_1",
+        stage: "hall_of_fame_inducted",
+        summaryJson: expect.any(String),
+        ownerId: expect.any(String),
+      });
       expect(res).toMatchObject({ ok: true });
     });
   });

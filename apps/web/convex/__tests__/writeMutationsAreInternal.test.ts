@@ -235,9 +235,11 @@ void api.history.listPlayerAwards;
 void api.history.listCoachAwards;
 void api.history.getWeeklyPoll;
 void api.history.listSeasonRecaps;
+void api.history.listHallOfFame;
 void internal.history.finalizeSeasonHistory;
 void internal.history.computeWeeklyPoll;
 void internal.history.finalizeSeasonRecap;
+void internal.history.inductHallOfFameClass;
 
 type AllowedPublicDynastyReads =
   | "moduleStatus"
@@ -295,7 +297,8 @@ type AllowedPublicHistoryReads =
   | "listPlayerAwards"
   | "listCoachAwards"
   | "getWeeklyPoll"
-  | "listSeasonRecaps";
+  | "listSeasonRecaps"
+  | "listHallOfFame";
 
 type LeakedPublicDynastyWrites = Exclude<
   keyof typeof api.dynasty,

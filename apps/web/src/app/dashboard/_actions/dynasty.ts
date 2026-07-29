@@ -24,6 +24,7 @@ import {
   createProspectClass,
   getDynastyConfig,
   listCoachesByLeague,
+  inductHallOfFameClass,
 } from "@/lib/data-api";
 import { activeNonGraduatedNames } from "@/lib/dynasty";
 import {
@@ -57,6 +58,7 @@ const ROLLOVER_STAGES = [
   "freshmen_created",
   "injuries_healed",
   "prospects_generated",
+  "hall_of_fame_inducted",
   "completed",
 ] as const;
 
@@ -601,6 +603,36 @@ export async function startNextSeasonAction(input: {
       }
     }
 
+    /*
+     * Induct the source season's Hall of Fame class (D5).
+     *
+     * This is a durable rollover stage, not a best-effort side effect: a lost
+     * response retries the idempotent mutation, while a real failure releases
+     * the existing stage lease so the same rollover can resume safely.
+     */
+    if (!hasReachedRolloverStage(stage, "hall_of_fame_inducted")) {
+      const acquired = await claimStage("hall_of_fame_inducted");
+      if (acquired) {
+        try {
+          await inductHallOfFameClass({
+            leagueId: input.leagueId,
+            inductedSeasonId: activeSeason.id,
+          });
+          const checkpoint = await advanceSeasonRollover({
+            rolloverId: rollover.rolloverId,
+            stage: "hall_of_fame_inducted",
+            summaryJson: serializeRolloverSummary(summary),
+            ownerId,
+          });
+          stage = checkpoint.stage;
+          summary = parseRolloverSummary(checkpoint.summaryJson, summary);
+        } catch (err) {
+          await releaseClaimedStage("hall_of_fame_inducted", err);
+          throw err;
+        }
+      }
+    }
+
     if (!hasReachedRolloverStage(stage, "completed")) {
       const acquired = await claimStage("completed");
       if (acquired) {
@@ -620,6 +652,7 @@ export async function startNextSeasonAction(input: {
     }
 
     revalidatePath(`/dashboard/leagues/${input.leagueId}`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/history`);
     revalidatePath("/dashboard/seasons");
     revalidatePath(`/dashboard/seasons/${nextSeasonId}`);
 

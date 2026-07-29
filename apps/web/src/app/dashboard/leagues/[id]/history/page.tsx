@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import {
   getLeague,
   getTeamsByLeague,
+  listHallOfFame,
   listProgramRecords,
   type ProgramRecordDto,
 } from "@/lib/data-api";
@@ -65,7 +66,10 @@ export default async function LeagueHistoryPage({
   if (!league) notFound();
   await syncActiveLeagueForResource(league.id);
 
-  const teams = await getTeamsByLeague(id, orgContext).catch(() => []);
+  const [teams, hallOfFame] = await Promise.all([
+    getTeamsByLeague(id, orgContext).catch(() => []),
+    listHallOfFame(id, orgContext).catch(() => []),
+  ]);
   const requestedTeamId =
     typeof query.team === "string" ? query.team : null;
   const selectedTeam =
@@ -177,6 +181,50 @@ export default async function LeagueHistoryPage({
           )}
         </CardContent>
       </Card>
+
+      <section aria-labelledby="hall-of-fame-heading" data-testid="hall-of-fame">
+        <Card>
+          <CardHeader>
+            <h2 id="hall-of-fame-heading" className="text-lg font-semibold">
+              Hall of Fame
+            </h2>
+          </CardHeader>
+          <CardContent>
+            {hallOfFame.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                No Hall of Fame class has been inducted yet.
+              </p>
+            ) : (
+              <div className="space-y-6">
+                {Array.from(
+                  hallOfFame.reduce((classes, inductee) => {
+                    const rows = classes.get(inductee.classLabel) ?? [];
+                    rows.push(inductee);
+                    classes.set(inductee.classLabel, rows);
+                    return classes;
+                  }, new Map<string, typeof hallOfFame>()),
+                ).map(([classLabel, inductees]) => (
+                  <div className="rounded-lg border p-4" key={classLabel}>
+                    <h3 className="font-semibold">{classLabel}</h3>
+                    <ul className="mt-3 space-y-3">
+                      {inductees.map((inductee) => (
+                        <li key={inductee.id}>
+                          <div className="font-medium">
+                            {inductee.recipientName}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {inductee.citation}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }
