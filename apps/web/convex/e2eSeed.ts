@@ -1,8 +1,9 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { finalizeSeasonHistoryForSeason } from "./lib/historyFinalize";
+import { computeWeeklyPollForSeason } from "./lib/weeklyPolls";
 
 /*
  * e2e seed fixtures (WSM-000139, fast-follow to WSM-000096).
@@ -161,6 +162,16 @@ async function cascadeDeleteLeague(
       .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
       .collect()) as Array<{ _id: Id<"awards"> }>;
     for (const row of awards) {
+      await ctx.db.delete(row._id);
+      deleted += 1;
+    }
+    // Weekly polls (D3). The rankings JSON retains team ids, so it must be
+    // removed before the fixture's teams and season are deleted.
+    const weeklyPolls = (await ctx.db
+      .query("weeklyPolls")
+      .withIndex("by_seasonId", (q: any) => q.eq("seasonId", season._id))
+      .collect()) as Array<{ _id: Id<"weeklyPolls"> }>;
+    for (const row of weeklyPolls) {
       await ctx.db.delete(row._id);
       deleted += 1;
     }
@@ -815,6 +826,103 @@ export const seedAwardsFixture = internalMutation({
       .collect();
     if (!winnerPlayerId) throw new Error("awards_fixture_winner_missing");
     return { winnerPlayerId, awardsCreated: awards.length };
+  },
+});
+
+/**
+ * D3 route fixture: seed one persisted record for BOTH schedule-fixture teams,
+ * then run the real weekly-poll materializer.
+ */
+const seedRankingsFixtureResultValidator = v.object({
+  rankingsCreated: v.number(),
+});
+type SeedRankingsFixtureResult = Infer<
+  typeof seedRankingsFixtureResultValidator
+>;
+
+export const seedRankingsFixture = internalMutation({
+  args: {
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    homeTeamId: v.id("teams"),
+    awayTeamId: v.id("teams"),
+  },
+  returns: seedRankingsFixtureResultValidator,
+  handler: async (
+    ctx,
+    args,
+  ): Promise<SeedRankingsFixtureResult> => {
+    assertSeedEnabled();
+    const [season, homeTeam, awayTeam] = await Promise.all([
+      ctx.db.get(args.seasonId),
+      ctx.db.get(args.homeTeamId),
+      ctx.db.get(args.awayTeamId),
+    ]);
+    if (
+      !season ||
+      season.leagueId !== args.leagueId ||
+      !homeTeam ||
+      homeTeam.leagueId !== args.leagueId ||
+      !awayTeam ||
+      awayTeam.leagueId !== args.leagueId
+    ) {
+      throw new Error("rankings_fixture_scope_mismatch");
+    }
+
+    const now = new Date().toISOString();
+    const records = [
+      {
+        teamId: args.homeTeamId,
+        opponentTeamId: args.awayTeamId,
+        wins: 1,
+        losses: 0,
+        pointsFor: 28,
+        pointsAgainst: 14,
+        result: "W",
+      },
+      {
+        teamId: args.awayTeamId,
+        opponentTeamId: args.homeTeamId,
+        wins: 0,
+        losses: 1,
+        pointsFor: 14,
+        pointsAgainst: 28,
+        result: "L",
+      },
+    ] as const;
+    for (const record of records) {
+      await ctx.db.insert("seasonTeamRecords", {
+        leagueId: args.leagueId,
+        seasonId: args.seasonId,
+        teamId: record.teamId,
+        divisionId: null,
+        wins: record.wins,
+        losses: record.losses,
+        ties: 0,
+        pointsFor: record.pointsFor,
+        pointsAgainst: record.pointsAgainst,
+        divisionWins: 0,
+        divisionLosses: 0,
+        divisionTies: 0,
+        headToHeadJson: JSON.stringify({
+          [record.opponentTeamId]: {
+            w: record.wins,
+            l: record.losses,
+            t: 0,
+          },
+        }),
+        streak: record.result === "W" ? 1 : -1,
+        lastResults: [record.result],
+        gamesCounted: 1,
+        updatedAt: now,
+      });
+    }
+    const result = await computeWeeklyPollForSeason(ctx, {
+      leagueId: args.leagueId,
+      seasonId: args.seasonId,
+      week: 1,
+    });
+    return { rankingsCreated: result.rankings };
   },
 });
 

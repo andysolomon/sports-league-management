@@ -114,7 +114,8 @@ export function seasonSubpageHref(
     | "playoffs"
     | "stats"
     | "offseason"
-    | "awards",
+    | "awards"
+    | "rankings",
 ): string {
   return `/dashboard/seasons/${seasonId}/${subpage}`;
 }
@@ -224,6 +225,7 @@ export function buildSeasonSiblingLinks({
   statsEnabled,
   offseasonEnabled = false,
   awardsEnabled = false,
+  rankingsEnabled = false,
 }: {
   seasonId: string;
   scheduleEnabled: boolean;
@@ -237,6 +239,8 @@ export function buildSeasonSiblingLinks({
   offseasonEnabled?: boolean;
   /** Epic D history flag; awards remain a Season-owned read surface. */
   awardsEnabled?: boolean;
+  /** Epic D history flag; rankings remain a Season-owned read surface. */
+  rankingsEnabled?: boolean;
 }): ResourceSiblingLink[] {
   const links: (ResourceSiblingLink | false)[] = [
     { label: "Overview", href: seasonHomeHref(seasonId) },
@@ -259,6 +263,10 @@ export function buildSeasonSiblingLinks({
     statsEnabled && {
       label: "Stat leaders",
       href: seasonSubpageHref(seasonId, "stats"),
+    },
+    rankingsEnabled && {
+      label: "Rankings",
+      href: seasonSubpageHref(seasonId, "rankings"),
     },
     awardsEnabled && {
       label: "Awards",

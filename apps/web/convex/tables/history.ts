@@ -8,6 +8,20 @@ import { v } from "convex/values";
  * Season: a career and a record book only become meaningful across seasons.
  */
 export const historyTables = {
+  weeklyPolls: defineTable({
+    leagueId: v.id("leagues"),
+    seasonId: v.id("seasons"),
+    week: v.number(),
+    /**
+     * JSON `PowerRanking[]`: teamId, rank, previousRank, points, record and
+     * trend. Keeping the slate atomic prevents readers seeing half a poll.
+     */
+    rankingsJson: v.string(),
+    publishedAt: v.string(),
+  })
+    .index("by_seasonId_week", ["seasonId", "week"])
+    .index("by_seasonId", ["seasonId"]),
+
   awards: defineTable({
     leagueId: v.id("leagues"),
     seasonId: v.id("seasons"),

@@ -129,6 +129,9 @@ const listProgramRecordsRef = historyRef.query<ProgramRecordDto[]>(
 const listSeasonAwardsRef = historyRef.query<AwardDto[]>("listSeasonAwards");
 const listPlayerAwardsRef = historyRef.query<AwardDto[]>("listPlayerAwards");
 const listCoachAwardsRef = historyRef.query<AwardDto[]>("listCoachAwards");
+const getWeeklyPollRef = historyRef.query<WeeklyPollDto | null>(
+  "getWeeklyPoll",
+);
 
 /** A single bracket node (WSM-000164). Team/score fields are null until played. */
 export interface PlayoffMatchupDto {
@@ -213,6 +216,31 @@ export interface AwardDto {
   divisionName: string | null;
   positionGroup: string | null;
   scoreValue: number;
+}
+
+export interface WeeklyPollRankingDto {
+  teamId: string;
+  teamName: string;
+  rank: number;
+  previousRank: number | null;
+  points: number;
+  record: {
+    wins: number;
+    losses: number;
+    ties: number;
+  };
+  trend: "up" | "down" | "same" | "new";
+}
+
+export interface WeeklyPollDto {
+  week: number;
+  publishedAt: string;
+  rankings: WeeklyPollRankingDto[];
+}
+
+export interface WeeklyPollWriteResult {
+  rankings: number;
+  written: boolean;
 }
 
 const refs = {
@@ -1297,6 +1325,28 @@ export async function listPlayerAwards(
 
 export async function listCoachAwards(coachId: string): Promise<AwardDto[]> {
   return queryConvex(listCoachAwardsRef, { coachId });
+}
+
+export async function getWeeklyPoll(
+  seasonId: string,
+  week?: number,
+): Promise<WeeklyPollDto | null> {
+  return queryConvex(getWeeklyPollRef, {
+    seasonId,
+    ...(week !== undefined ? { week } : {}),
+  });
+}
+
+export async function computeWeeklyPoll(input: {
+  leagueId: string;
+  seasonId: string;
+  week: number;
+}): Promise<WeeklyPollWriteResult> {
+  const client = getConvexClient();
+  return client.mutation(
+    historyRef.mutation<WeeklyPollWriteResult>("computeWeeklyPoll"),
+    input,
+  );
 }
 
 export async function getTeam(
