@@ -1,5 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { computePlayListScrollTop } from "@/components/gamecast/play-list-scroll";
+import {
+  computePlayListScrollTop,
+  shouldFollowCurrentPlay,
+} from "@/components/gamecast/play-list-scroll";
+
+describe("shouldFollowCurrentPlay", () => {
+  it("follows during playback in review mode", () => {
+    // The reported bug: pressing play advanced the highlight but the list
+    // never moved, so the current play scrolled out of view.
+    expect(shouldFollowCurrentPlay("review", true)).toBe(true);
+  });
+
+  it("does not follow a manual selection while paused in review mode", () => {
+    expect(shouldFollowCurrentPlay("review", false)).toBe(false);
+  });
+
+  it("always follows in sim mode", () => {
+    expect(shouldFollowCurrentPlay("sim", false)).toBe(true);
+    expect(shouldFollowCurrentPlay("sim", true)).toBe(true);
+  });
+});
 
 describe("computePlayListScrollTop", () => {
   const clientHeight = 100;

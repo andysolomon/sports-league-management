@@ -7,6 +7,7 @@ import { Flag, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Scoreboard } from "@/components/live/Scoreboard";
+import { nextPeriod, nextPeriodLabel } from "@/lib/live/game-periods";
 import {
   startLiveGameAction,
   addLiveScoreAction,
@@ -146,10 +147,13 @@ export default function LiveScoreboard({
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={pending}
-                onClick={() => patch({ period: state.period + 1 })}
+                disabled={pending || nextPeriod(state.period) === null}
+                onClick={() => {
+                  const next = nextPeriod(state.period);
+                  if (next !== null) patch({ period: next });
+                }}
               >
-                Next period
+                {nextPeriodLabel(state.period)}
               </Button>
               <Button
                 type="button"

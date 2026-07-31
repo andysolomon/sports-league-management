@@ -13,7 +13,10 @@ import { formatPlayContributors } from "@/lib/gamecast/play-contributors";
 import type { GamecastPlayerNameMap } from "@/lib/gamecast/player-names";
 import type { PbpPlay } from "@/lib/pbp";
 import { cn } from "@/lib/utils";
-import { computePlayListScrollTop } from "./play-list-scroll";
+import {
+  computePlayListScrollTop,
+  shouldFollowCurrentPlay,
+} from "./play-list-scroll";
 
 export interface PlayListProps {
   groups: DrivePlayGroup[];
@@ -23,6 +26,14 @@ export interface PlayListProps {
   awayTeam: TeamDisplay & { name: string };
   playIndex: number;
   mode: "sim" | "review";
+  /**
+   * True while the transport is auto-advancing. In `review` mode the list is
+   * fully rendered and the viewer may be scrolling it by hand, so following the
+   * highlighted row would fight them — but once playback is driving `playIndex`
+   * the row moves on its own and the list has to keep up, or the current play
+   * scrolls out of sight and the widget looks frozen.
+   */
+  playing: boolean;
   animate: boolean;
   onPlaySelect: (playIndex: number) => void;
   playerNameMap?: GamecastPlayerNameMap;
@@ -40,6 +51,7 @@ export default function PlayList({
   awayTeam,
   playIndex,
   mode,
+  playing,
   animate,
   onPlaySelect,
   playerNameMap = {},
@@ -48,7 +60,7 @@ export default function PlayList({
   const currentRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
-    if (mode !== "sim") return;
+    if (!shouldFollowCurrentPlay(mode, playing)) return;
 
     const container = containerRef.current;
     const row = currentRef.current;
@@ -72,7 +84,7 @@ export default function PlayList({
     } else {
       container.scrollTop = targetTop;
     }
-  }, [playIndex, animate, mode]);
+  }, [playIndex, animate, mode, playing]);
 
   if (groups.length === 0) {
     return (

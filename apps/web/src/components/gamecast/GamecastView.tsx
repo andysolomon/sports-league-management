@@ -394,6 +394,7 @@ export default function GamecastView({
         awayTeam={awayTeamWithMeta}
         playIndex={playIndex}
         mode={mode}
+        playing={playing}
         animate={!reducedMotion}
         onPlaySelect={pauseAndJump}
         playerNameMap={playerNameMap}

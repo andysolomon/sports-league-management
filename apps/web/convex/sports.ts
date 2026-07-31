@@ -36,6 +36,7 @@ import {
   type HsRatingInput,
 } from "./lib/hsSprt";
 import { applyScore, isLiveStatus, isNonNegInt } from "./lib/liveScore";
+import { isValidPeriod } from "./lib/gamePeriods";
 import {
   roundRobinSchedule,
   doubleRoundRobinSchedule,
@@ -7356,7 +7357,7 @@ export const updateLiveState = internalMutation({
   },
   returns: liveStateDtoValidator,
   handler: async (ctx, args) => {
-    if (args.period !== undefined && (!Number.isInteger(args.period) || args.period < 1)) {
+    if (args.period !== undefined && !isValidPeriod(args.period)) {
       throw new Error("invalid_period");
     }
     if (args.status !== undefined && !isLiveStatus(args.status)) {
