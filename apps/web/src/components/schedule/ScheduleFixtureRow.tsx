@@ -12,6 +12,7 @@ import { WeatherChip } from "@/components/dynasty/WeatherChip";
 import { deriveWeather } from "@/lib/pbp/weather";
 import RecordResultDialog from "@/components/schedule/RecordResultDialog";
 import DeleteFixtureButton from "@/components/schedule/DeleteFixtureButton";
+import AssignFixtureWeekDialog from "@/components/schedule/AssignFixtureWeekDialog";
 import GoLiveControl from "@/components/schedule/GoLiveControl";
 import ClipsControl from "@/components/schedule/ClipsControl";
 import { SimulateGameButton } from "@/components/schedule/SimulateControls";
@@ -191,6 +192,14 @@ export function ScheduleFixtureRow({
               ) : null}
               {canMutate && fixture.status === "scheduled" ? (
                 <SimulateGameButton
+                  leagueId={leagueId}
+                  fixtureId={fixture.id}
+                  homeTeamName={fixture.homeTeamName}
+                  awayTeamName={fixture.awayTeamName}
+                />
+              ) : null}
+              {canMutate && fixture.week === null ? (
+                <AssignFixtureWeekDialog
                   leagueId={leagueId}
                   fixtureId={fixture.id}
                   homeTeamName={fixture.homeTeamName}

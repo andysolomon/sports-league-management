@@ -85,6 +85,22 @@ describe("roundRobinSchedule (WSM-000153)", () => {
     }
   });
 
+  it.each([3, 4, 5, 6, 7, 8])(
+    "pins one game per team per week for odd and even counts (%i teams)",
+    (n) => {
+      const teamsByWeek = new Map<number, string[]>();
+      for (const pairing of roundRobinSchedule(ids(n))) {
+        const teams = teamsByWeek.get(pairing.week) ?? [];
+        teams.push(pairing.homeTeamId, pairing.awayTeamId);
+        teamsByWeek.set(pairing.week, teams);
+      }
+
+      for (const teams of teamsByWeek.values()) {
+        expect(new Set(teams).size).toBe(teams.length);
+      }
+    },
+  );
+
   it("never pairs a team against itself", () => {
     for (const p of roundRobinSchedule(ids(7))) {
       expect(p.homeTeamId).not.toBe(p.awayTeamId);
