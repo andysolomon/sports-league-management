@@ -17,8 +17,8 @@ The cross-league page at `/dashboard/leagues` for selecting, creating, and manag
 _Avoid_: Leagues Home, Overview
 
 **League Home**:
-The read-oriented homepage for an individual League at `/dashboard/leagues/[leagueId]`, labeled “Overview” in the sidebar.
-_Avoid_: League Overview, league detail page
+The read-oriented homepage for an individual League at `/dashboard/leagues/[leagueId]`, labeled “Overview” in the sidebar. **A League is the dynasty** — the thing that spans many Seasons — so everything multi-season lives here: the season timeline and rollover, class distribution, and the Record Book, Hall of Fame and champions under Program History. There is no separate Dynasty entity or route.
+_Avoid_: League Overview, league detail page, Dynasty Home, dynasty page
 
 **Settings Home**:
 The neutral settings directory at `/dashboard/settings` that branches to League Settings and Account Settings.
@@ -73,8 +73,8 @@ The Active League’s season directory at `/dashboard/seasons`.
 _Avoid_: Season Home, league schedule
 
 **Season Home**:
-The canonical homepage for one Season at `/dashboard/seasons/[seasonId]`, from which schedule, standings, playoffs, and statistics branch.
-_Avoid_: Seasons Home, league schedule
+The canonical homepage for one Season at `/dashboard/seasons/[seasonId]`, from which schedule, standings, playoffs, and statistics branch. Scoped to a single year: multi-season concerns belong on League Home, which is the dynasty.
+_Avoid_: Seasons Home, league schedule, Dynasty Home
 
 **Active Season**:
 The single Season currently in progress for a League and the primary seasonal destination linked from League Home.
