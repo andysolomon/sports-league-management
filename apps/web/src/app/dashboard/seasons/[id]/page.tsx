@@ -39,6 +39,8 @@ import { DynastyPanel } from "@/components/dynasty/DynastyPanel";
 import { SeasonGoalsCard } from "@/components/program/SeasonGoalsCard";
 import { regularSeasonProgress } from "@/lib/playoffs";
 import { resolveLifecycleSeason } from "@/lib/season-view";
+import { resolvePlayoffHandoff } from "@/lib/playoff-handoff";
+import AdvanceToPlayoffsButton from "@/components/playoffs/AdvanceToPlayoffsButton";
 import { formatDate } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
@@ -159,6 +161,30 @@ export default async function SeasonHubPage({
 
   const progress = regularSeasonProgress(fixtures);
   const playoffFixtures = fixtures.filter((f) => f.stage === "playoff");
+
+  /*
+   * The same playoff handoff the schedule subpage offers (WSM-000239). Season
+   * Home already reported "Regular season 120/120 played · Playoff games 0/4"
+   * and then gave no way to act on it, so finishing a season looked like a
+   * dead end unless you knew to open Schedule. Same pure resolver, same
+   * button — the state is derived, never duplicated.
+   *
+   * `resolveLifecycleSeason` runs over ALL seasons here: it decides which
+   * season may hand off, so filtering to completed ones first would ask the
+   * wrong question.
+   */
+  const decidedSeason = resolveLifecycleSeason(seasons);
+  const playoffHandoff = resolvePlayoffHandoff({
+    playoffsEnabled,
+    viewedSeasonId: season.id,
+    viewedSeasonStatus: season.status,
+    decidedSeasonId: decidedSeason?.id ?? null,
+    playoffTeams: season.playoffTeams,
+    regularTotal: progress.total,
+    regularComplete: progress.complete,
+    bracketExists: bracket !== null,
+    canManage: isAdmin,
+  });
   const playoffPlayed = playoffFixtures.filter(
     (f) => f.status === "final",
   ).length;
@@ -300,6 +326,42 @@ export default async function SeasonHubPage({
           </CardContent>
         </Card>
       )}
+
+      {playoffHandoff !== "hidden" ? (
+        <Card
+          className="mb-6 border-accent/40 bg-accent/5"
+          data-testid="season-playoff-handoff"
+        >
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-3.5">
+              <Trophy
+                className="h-6 w-6 shrink-0 text-accent"
+                aria-hidden="true"
+              />
+              <div>
+                <p className="font-bold text-foreground">
+                  Regular season complete
+                </p>
+                <p className="mt-0.5 text-[13px] text-muted-foreground">
+                  All {progress.total} games are final — seed the bracket to
+                  begin the playoffs.
+                </p>
+              </div>
+            </div>
+            {playoffHandoff === "start" ? (
+              <AdvanceToPlayoffsButton
+                leagueId={league.id}
+                seasonId={season.id}
+                triggerLabel="Start playoffs"
+              />
+            ) : (
+              <p className="text-sm text-foreground">
+                Waiting for playoffs to start.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
