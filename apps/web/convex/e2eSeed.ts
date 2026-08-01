@@ -560,6 +560,8 @@ const scheduleFixtureResultValidator = v.object({
   awayTeamId: v.id("teams"),
   homeTeamName: v.string(),
   awayTeamName: v.string(),
+  extraTeamIds: v.array(v.id("teams")),
+  extraTeamNames: v.array(v.string()),
 });
 
 export const createScheduleFixture = internalMutation({
@@ -568,6 +570,12 @@ export const createScheduleFixture = internalMutation({
     clerkOrgId: v.union(v.string(), v.null()),
     homeTeamName: v.optional(v.string()),
     awayTeamName: v.optional(v.string()),
+    /*
+     * Additional teams beyond the home/away pair. A two-team league can only
+     * hold one game per week now that a team cannot be booked twice in a week,
+     * so any spec needing two fixtures in the SAME week needs a second pair.
+     */
+    extraTeamNames: v.optional(v.array(v.string())),
   },
   returns: scheduleFixtureResultValidator,
   handler: async (ctx, args) => {
@@ -617,6 +625,24 @@ export const createScheduleFixture = internalMutation({
       rosterLimit: 53,
     });
 
+    const extraTeamNames = args.extraTeamNames ?? [];
+    const extraTeamIds: Id<"teams">[] = [];
+    for (const name of extraTeamNames) {
+      extraTeamIds.push(
+        await ctx.db.insert("teams", {
+          name,
+          leagueId,
+          divisionId: null,
+          city: "Extra City",
+          stadium: "Extra Stadium",
+          foundedYear: null,
+          location: "Extra City, EC",
+          logoUrl: null,
+          rosterLimit: 53,
+        }),
+      );
+    }
+
     return {
       fixtureKey: args.fixtureKey,
       leagueId,
@@ -625,6 +651,8 @@ export const createScheduleFixture = internalMutation({
       awayTeamId,
       homeTeamName,
       awayTeamName,
+      extraTeamIds,
+      extraTeamNames,
     };
   },
 });
