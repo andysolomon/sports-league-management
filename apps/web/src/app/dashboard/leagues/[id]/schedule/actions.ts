@@ -6,6 +6,7 @@ import { schedulesStandingsV1 } from "@/lib/flags";
 import {
   createFixture,
   deleteFixture,
+  updateFixture,
   generateSeasonSchedule,
   getLeague,
   getLeagueOrgId,
@@ -130,6 +131,56 @@ export async function createFixtureAction(
     return { ok: true, id: fixture.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("week_required")) {
+      return { ok: false, error: "week_required" };
+    }
+    if (message.includes("team_already_scheduled_that_week")) {
+      return { ok: false, error: "team_already_scheduled_that_week" };
+    }
+    if (message.includes("season_completed")) {
+      return { ok: false, error: "season_completed" };
+    }
+    return { ok: false, error: message };
+  }
+}
+
+export async function assignFixtureWeekAction(input: {
+  leagueId: string;
+  fixtureId: string;
+  week: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const guard = await authorizeManagerAction(input.leagueId);
+  if (!guard.ok) return guard;
+
+  const { userId } = await auth();
+  if (!userId) return { ok: false, error: "unauthorized" };
+
+  const fixture = await getFixture(input.fixtureId).catch(() => null);
+  if (!fixture) return { ok: false, error: "fixture_not_found" };
+
+  const orgContext = await resolveOrgContext(userId);
+  const seasonGuard = await assertSeasonBelongsToLeague(
+    fixture.seasonId,
+    input.leagueId,
+    orgContext,
+  );
+  if (!seasonGuard.ok) return seasonGuard;
+
+  try {
+    await updateFixture({ fixtureId: input.fixtureId, week: input.week });
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/schedule`);
+    revalidatePath(`/dashboard/seasons/${fixture.seasonId}/standings`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/schedule`);
+    revalidatePath(`/dashboard/leagues/${input.leagueId}/standings`);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("week_required")) {
+      return { ok: false, error: "week_required" };
+    }
+    if (message.includes("team_already_scheduled_that_week")) {
+      return { ok: false, error: "team_already_scheduled_that_week" };
+    }
     if (message.includes("season_completed")) {
       return { ok: false, error: "season_completed" };
     }

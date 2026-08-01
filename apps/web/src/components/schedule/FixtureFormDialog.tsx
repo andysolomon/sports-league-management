@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createFixtureAction } from "@/app/dashboard/leagues/[id]/schedule/actions";
+import { isValidWeek } from "@/lib/schedule/schedule-conflicts";
 
 export interface FixtureFormDialogProps {
   leagueId: string;
@@ -39,6 +40,7 @@ export default function FixtureFormDialog({
   const [awayTeamId, setAwayTeamId] = useState<string>("");
   const [scheduledAt, setScheduledAt] = useState<string>("");
   const [week, setWeek] = useState<string>("");
+  const [weekError, setWeekError] = useState<string | null>(null);
   const [venue, setVenue] = useState<string>("");
   const [pending, startTransition] = useTransition();
 
@@ -47,6 +49,7 @@ export default function FixtureFormDialog({
     setAwayTeamId("");
     setScheduledAt("");
     setWeek("");
+    setWeekError(null);
     setVenue("");
   }
 
@@ -60,11 +63,12 @@ export default function FixtureFormDialog({
       return;
     }
 
-    const weekNum = week.trim() === "" ? null : Number(week);
-    if (weekNum !== null && !Number.isFinite(weekNum)) {
-      toast.error("Week must be a number.");
+    const weekNum = Number(week);
+    if (week.trim() === "" || !isValidWeek(weekNum)) {
+      setWeekError("Enter a positive whole-number week.");
       return;
     }
+    setWeekError(null);
 
     startTransition(async () => {
       const result = await createFixtureAction({
@@ -136,11 +140,25 @@ export default function FixtureFormDialog({
               <Label htmlFor="fix-week">Week</Label>
               <Input
                 id="fix-week"
+                type="number"
                 inputMode="numeric"
+                min={1}
+                step={1}
+                required
                 placeholder="1"
                 value={week}
-                onChange={(e) => setWeek(e.target.value)}
+                aria-invalid={weekError !== null}
+                aria-describedby={weekError ? "fix-week-error" : undefined}
+                onChange={(e) => {
+                  setWeek(e.target.value);
+                  setWeekError(null);
+                }}
               />
+              {weekError ? (
+                <p id="fix-week-error" className="text-sm text-destructive">
+                  {weekError}
+                </p>
+              ) : null}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="fix-date">Date / time</Label>
@@ -200,6 +218,10 @@ function mapError(code: string): string {
       return "Team not found.";
     case "teams_outside_league":
       return "Both teams must belong to this league.";
+    case "week_required":
+      return "Enter a positive whole-number week.";
+    case "team_already_scheduled_that_week":
+      return "One of those teams already has a game that week.";
     default:
       return code;
   }

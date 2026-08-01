@@ -18,6 +18,12 @@ export interface ScheduleFixtureConfig {
   clerkOrgId: string | null;
   homeTeamName?: string;
   awayTeamName?: string;
+  /**
+   * Teams beyond the home/away pair. A two-team league can hold only one game
+   * per week now that a team cannot be booked twice in the same week, so a
+   * spec that needs two fixtures in ONE week must seed a second pair.
+   */
+  extraTeamNames?: string[];
 }
 
 export interface ScheduleFixtureResult {
@@ -28,6 +34,8 @@ export interface ScheduleFixtureResult {
   awayTeamId: string;
   homeTeamName: string;
   awayTeamName: string;
+  extraTeamIds: string[];
+  extraTeamNames: string[];
 }
 
 const createFixtureRef = makeFunctionReference<

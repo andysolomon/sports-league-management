@@ -37,6 +37,7 @@ import {
 } from "./lib/hsSprt";
 import { applyScore, isLiveStatus, isNonNegInt } from "./lib/liveScore";
 import { isValidPeriod } from "./lib/gamePeriods";
+import { findWeekConflict, isValidWeek } from "./lib/scheduleConflicts";
 import {
   roundRobinSchedule,
   doubleRoundRobinSchedule,
@@ -4496,13 +4497,42 @@ const fixtureDtoValidator = v.object({
   createdBy: v.string(),
 });
 
+async function assertFixtureWeekAvailable(
+  ctx: MutationCtx,
+  candidate: {
+    seasonId: Id<"seasons">;
+    week: number;
+    homeTeamId: Id<"teams">;
+    awayTeamId: Id<"teams">;
+    excludeFixtureId?: Id<"fixtures">;
+  },
+): Promise<void> {
+  const fixturesThatWeek = await ctx.db
+    .query("fixtures")
+    .withIndex("by_seasonId_week", (q) =>
+      q.eq("seasonId", candidate.seasonId).eq("week", candidate.week),
+    )
+    .collect();
+
+  const conflict = findWeekConflict(
+    fixturesThatWeek.map((fixture) => ({
+      id: fixture._id,
+      week: fixture.week,
+      homeTeamId: fixture.homeTeamId,
+      awayTeamId: fixture.awayTeamId,
+    })),
+    candidate,
+  );
+  if (conflict) throw new Error("team_already_scheduled_that_week");
+}
+
 export const createFixture = internalMutationGeneric({
   args: {
     seasonId: v.id("seasons"),
     homeTeamId: v.id("teams"),
     awayTeamId: v.id("teams"),
     scheduledAt: v.union(v.string(), v.null()),
-    week: v.union(v.number(), v.null()),
+    week: v.optional(v.union(v.number(), v.null())),
     venue: v.union(v.string(), v.null()),
     actorUserId: v.string(),
   },
@@ -4513,6 +4543,7 @@ export const createFixture = internalMutationGeneric({
     }
 
     const season = await assertSeasonWritable(ctx, args.seasonId);
+    if (!isValidWeek(args.week)) throw new Error("week_required");
 
     const home = await ctx.db.get(args.homeTeamId);
     const away = await ctx.db.get(args.awayTeamId);
@@ -4523,6 +4554,13 @@ export const createFixture = internalMutationGeneric({
     ) {
       throw new Error("teams_outside_league");
     }
+
+    await assertFixtureWeekAvailable(ctx, {
+      seasonId: args.seasonId,
+      week: args.week,
+      homeTeamId: args.homeTeamId,
+      awayTeamId: args.awayTeamId,
+    });
 
     const createdAt = new Date().toISOString();
     const id = await ctx.db.insert("fixtures", {
@@ -4568,6 +4606,17 @@ export const updateFixture = internalMutationGeneric({
     const existing = await ctx.db.get(args.fixtureId);
     if (!existing) return null;
     await assertSeasonWritable(ctx, existing.seasonId);
+
+    if (args.week !== undefined) {
+      if (!isValidWeek(args.week)) throw new Error("week_required");
+      await assertFixtureWeekAvailable(ctx, {
+        seasonId: existing.seasonId,
+        week: args.week,
+        homeTeamId: existing.homeTeamId,
+        awayTeamId: existing.awayTeamId,
+        excludeFixtureId: existing._id,
+      });
+    }
 
     const patch: Record<string, unknown> = {};
     if (args.scheduledAt !== undefined) patch.scheduledAt = args.scheduledAt;

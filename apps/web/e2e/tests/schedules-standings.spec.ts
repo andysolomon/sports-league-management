@@ -202,6 +202,13 @@ const ACCORDION_KEY = "schedule-accordion";
 const ACC_LEAGUE_NAME = `E2E:${ACCORDION_KEY}`;
 const ACC_HOME = "E2E Acc Home";
 const ACC_AWAY = "E2E Acc Away";
+/*
+ * A "mixed" week needs one final game and one scheduled game in the SAME week,
+ * which takes four teams: a team can no longer be booked twice in one week, so
+ * the original pair cannot supply both fixtures.
+ */
+const ACC_HOME_2 = "E2E Acc Home 2";
+const ACC_AWAY_2 = "E2E Acc Away 2";
 
 test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
   let fixture: ScheduleFixtureResult | null = null;
@@ -215,6 +222,7 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
       clerkOrgId: orgId,
       homeTeamName: ACC_HOME,
       awayTeamName: ACC_AWAY,
+      extraTeamNames: [ACC_HOME_2, ACC_AWAY_2],
     });
     fixture = handle.fixture;
     teardown = handle.teardown;
@@ -296,8 +304,10 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     await expect(page.getByText("21 – 7")).toBeHidden();
     await expect(weekCard(page, 2).getByText("Scheduled")).toBeVisible();
 
-    // Add a second Week 1 game → the week becomes MIXED and opens.
-    await createFixture(page, 1, ACC_AWAY, ACC_HOME);
+    // Add a second Week 1 game → the week becomes MIXED and opens. It uses the
+    // second pair of teams: the original two already play in Week 1, and a team
+    // can no longer be booked twice in the same week.
+    await createFixture(page, 1, ACC_HOME_2, ACC_AWAY_2);
     await page.reload();
     await expect(week1Trigger).toHaveAttribute("aria-expanded", "true");
 
@@ -335,8 +345,8 @@ test.describe("Schedule lifecycle accordion (WSM-000239)", () => {
     await recordResult(
       page,
       weekCard(page, 1),
-      new RegExp(`${ACC_AWAY} \\(home\\)`),
-      new RegExp(`${ACC_HOME} \\(away\\)`),
+      new RegExp(`${ACC_HOME_2} \\(home\\)`),
+      new RegExp(`${ACC_AWAY_2} \\(away\\)`),
       10,
       13,
     );
